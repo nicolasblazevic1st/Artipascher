@@ -2,7 +2,7 @@
 
 Plateforme d'**enchères inversées** pour travaux, spécialisée **Nord (59) / Pas-de-Calais (62)**.
 
-Modèle inspiré de [encherestravaux.fr](https://encherestravaux.fr/) : le particulier fixe son budget, les artisans proposent des prix de plus en plus bas, le moins-disant remporte le chantier.
+Modèle inspiré de [encherestravaux.fr](https://encherestravaux.fr/) : le particulier fixe son budget, les artisans proposent des prix de plus en plus bas, puis le client choisit librement son artisan.
 
 ## Pages
 

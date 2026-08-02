@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SAMPLE_AUCTIONS } from "@/lib/data";
 import {
   BID_FEE_EUR,
   computeCurrentPrice,
   validateBidAmount,
 } from "@/lib/auctions";
+import { resolveAuction } from "@/lib/work-request-auctions";
 import { getProSession } from "@/lib/pro-auth";
 import {
   createBidCheckout,
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  const auction = SAMPLE_AUCTIONS.find((a) => a.id === auctionId);
+  const auction = await resolveAuction(auctionId);
   if (!auction || auction.status !== "active") {
     return NextResponse.json({ error: "Enchère introuvable ou terminée." }, { status: 404 });
   }

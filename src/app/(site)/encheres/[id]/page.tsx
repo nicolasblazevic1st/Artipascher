@@ -71,7 +71,7 @@ export default async function EnchereDetailPage({ params }: Props) {
               {formatLocation(auction.city, auction.department)}
             </p>
           </div>
-          <span className="rounded-full bg-emerald-50 px-4 py-1.5 text-sm font-medium text-emerald-700">
+          <span className="rounded-full bg-brand-50 px-4 py-1.5 text-sm font-medium text-brand-700">
             Enchère active
           </span>
         </div>
@@ -102,7 +102,7 @@ export default async function EnchereDetailPage({ params }: Props) {
         </dl>
 
         {savings > 0 && (
-          <p className="mt-4 text-center text-sm font-medium text-emerald-600">
+          <p className="mt-4 text-center text-sm font-medium text-brand-600">
             Économie actuelle : {formatPrice(savings)} par rapport au budget initial
           </p>
         )}

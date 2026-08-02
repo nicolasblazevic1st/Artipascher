@@ -1,9 +1,11 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { verifyPassword } from "./password";
+import { hashPassword, verifyPassword, validatePassword } from "./password";
+import { createShareToken } from "./share";
 import {
   EMPTY_STORE,
   type Bid,
+  type ClientAccount,
   type ContactUnlock,
   type DataStore,
   type ProRegistration,
@@ -29,6 +31,7 @@ export async function readStore(): Promise<DataStore> {
   return {
     ...EMPTY_STORE,
     ...parsed,
+    clientAccounts: parsed.clientAccounts ?? [],
     proRegistrations: parsed.proRegistrations ?? [],
     workRequests: parsed.workRequests ?? [],
     contactUnlocks: parsed.contactUnlocks ?? [],
@@ -114,7 +117,16 @@ export async function updateProRegistration(
 export async function updateWorkRequest(
   id: string,
   patch: Partial<
-    Pick<WorkRequest, "status" | "reviewedAt" | "auctionId">
+    Pick<
+      WorkRequest,
+      | "status"
+      | "reviewedAt"
+      | "auctionId"
+      | "auctionEndsAt"
+      | "selectedBidId"
+      | "clientId"
+      | "shareToken"
+    >
   >
 ): Promise<WorkRequest | null> {
   const store = await readStore();
@@ -262,3 +274,149 @@ export async function getProDashboardStats(proId: string) {
 }
 
 export type { Bid, ContactUnlock };
+
+export async function getClientById(clientId: string): Promise<ClientAccount | null> {
+  const store = await readStore();
+  return store.clientAccounts.find((c) => c.id === clientId) ?? null;
+}
+
+export async function getClientByEmail(email: string): Promise<ClientAccount | null> {
+  const store = await readStore();
+  return (
+    store.clientAccounts.find((c) => c.email.toLowerCase() === email.toLowerCase()) ?? null
+  );
+}
+
+export async function authenticateClient(
+  email: string,
+  password: string
+): Promise<ClientAccount | null> {
+  const client = await getClientByEmail(email);
+  if (!client?.passwordHash) return null;
+  if (!verifyPassword(password, client.passwordHash)) return null;
+  return client;
+}
+
+export async function linkOrphanWorkRequests(clientId: string, email: string): Promise<void> {
+  const store = await readStore();
+  let changed = false;
+  for (const request of store.workRequests) {
+    if (!request.clientId && request.email.toLowerCase() === email.toLowerCase()) {
+      request.clientId = clientId;
+      changed = true;
+    }
+  }
+  if (changed) await writeStore(store);
+}
+
+export async function ensureClientAccount(data: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}): Promise<{ client: ClientAccount } | { error: string }> {
+  const store = await readStore();
+  const emailLower = data.email.toLowerCase();
+  const existing = store.clientAccounts.find((c) => c.email.toLowerCase() === emailLower);
+
+  if (existing) {
+    if (!verifyPassword(data.password, existing.passwordHash)) {
+      return {
+        error:
+          "Un compte existe déjà avec cet email. Connectez-vous à votre espace particulier ou utilisez le bon mot de passe.",
+      };
+    }
+    return { client: existing };
+  }
+
+  const passwordError = validatePassword(data.password);
+  if (passwordError) return { error: passwordError };
+
+  const client: ClientAccount = {
+    id: newId("client"),
+    email: data.email.trim(),
+    passwordHash: hashPassword(data.password),
+    firstName: data.firstName.trim(),
+    lastName: data.lastName.trim(),
+    createdAt: new Date().toISOString(),
+  };
+  store.clientAccounts.push(client);
+  await writeStore(store);
+  return { client };
+}
+
+export async function getWorkRequestsByClientId(clientId: string): Promise<WorkRequest[]> {
+  const store = await readStore();
+  return store.workRequests
+    .filter((r) => r.clientId === clientId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function getWorkRequestForClient(
+  requestId: string,
+  clientId: string
+): Promise<WorkRequest | null> {
+  const store = await readStore();
+  const request = store.workRequests.find((r) => r.id === requestId);
+  if (!request || request.clientId !== clientId) return null;
+  return request;
+}
+
+export async function selectBidForWorkRequest(
+  requestId: string,
+  clientId: string,
+  bidId: string
+): Promise<{ request: WorkRequest } | { error: string }> {
+  const store = await readStore();
+  const index = store.workRequests.findIndex((r) => r.id === requestId);
+  if (index === -1) return { error: "Demande introuvable." };
+
+  const request = store.workRequests[index];
+  if (request.clientId !== clientId) return { error: "Accès refusé." };
+  if (request.status !== "approved") {
+    return { error: "L'enchère n'est pas encore active." };
+  }
+  if (!request.auctionId) return { error: "Aucune enchère associée." };
+
+  const bid = store.bids.find((b) => b.id === bidId);
+  if (!bid || bid.auctionId !== request.auctionId) {
+    return { error: "Offre introuvable." };
+  }
+
+  store.workRequests[index] = {
+    ...request,
+    selectedBidId: bidId,
+  };
+  await writeStore(store);
+  return { request: store.workRequests[index] };
+}
+
+export async function getClientDashboardStats(clientId: string) {
+  const requests = await getWorkRequestsByClientId(clientId);
+  const pending = requests.filter((r) => r.status === "pending").length;
+  const active = requests.filter(
+    (r) => r.status === "approved" && !r.selectedBidId
+  ).length;
+  const chosen = requests.filter((r) => r.selectedBidId).length;
+
+  return {
+    totalRequests: requests.length,
+    pending,
+    active,
+    chosen,
+    recentRequests: requests.slice(0, 5),
+  };
+}
+
+export async function ensureWorkRequestShareToken(
+  requestId: string,
+  clientId: string
+): Promise<string | null> {
+  const request = await getWorkRequestForClient(requestId, clientId);
+  if (!request || request.status !== "approved") return null;
+  if (request.shareToken) return request.shareToken;
+
+  const shareToken = createShareToken();
+  await updateWorkRequest(requestId, { shareToken });
+  return shareToken;
+}

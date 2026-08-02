@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { computeAuctionEndsAt } from "@/lib/auction-duration";
+import { createShareToken } from "@/lib/share";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { readStore, updateWorkRequest } from "@/lib/store";
 
@@ -26,7 +28,27 @@ export async function PATCH(request: NextRequest) {
   }
 
   const auctionId = status === "approved" ? `auction-${id}` : undefined;
-  const updated = await updateWorkRequest(id, { status, auctionId });
+
+  let auctionEndsAt: string | undefined;
+  let shareToken: string | undefined;
+  if (status === "approved") {
+    const store = await readStore();
+    const request = store.workRequests.find((r) => r.id === id);
+    if (request) {
+      auctionEndsAt = computeAuctionEndsAt(
+        new Date(),
+        request.auctionDurationDays ?? 30
+      ).toISOString();
+      shareToken = request.shareToken ?? createShareToken();
+    }
+  }
+
+  const updated = await updateWorkRequest(id, {
+    status,
+    auctionId,
+    auctionEndsAt,
+    shareToken,
+  });
   if (!updated) {
     return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
   }

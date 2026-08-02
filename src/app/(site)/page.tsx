@@ -20,9 +20,9 @@ const STEPS = [
       "Une enchère est créée. Les artisans du Nord proposent des prix de plus en plus bas, par paliers de 100 €.",
   },
   {
-    title: "Le meilleur prix gagne",
+    title: "Choisissez votre artisan",
     description:
-      "À la fin de l'enchère, l'artisan avec l'offre la plus basse est automatiquement sélectionné.",
+      "À la fin de l'enchère, comparez les offres reçues et sélectionnez librement l'artisan avec lequel vous souhaitez travailler.",
   },
 ];
 
@@ -41,7 +41,7 @@ export default function HomePage() {
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             Enchères inversées pour vos travaux dans le Nord
           </h1>
-          <p className="mt-6 max-w-2xl text-lg text-blue-100">
+          <p className="mt-6 max-w-2xl text-lg text-brand-100">
             Artipascher connecte particuliers et artisans locaux inscrits au
             registre du commerce. Vous fixez votre budget, les professionnels
             vérifiés font baisser le prix.
@@ -49,7 +49,7 @@ export default function HomePage() {
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
               href="/particulier"
-              className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-700 transition hover:bg-blue-50"
+              className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
             >
               Demander des travaux
             </Link>
@@ -153,16 +153,16 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-brand-700 py-16 text-white">
+      <section className="bg-brand-800 py-16 text-white">
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-bold">Prêt à lancer votre projet ?</h2>
-          <p className="mt-4 text-blue-100">
+          <p className="mt-4 text-brand-100">
             Gratuit pour les particuliers. Artisans vérifiés du Nord et
             Pas-de-Calais.
           </p>
           <Link
             href="/particulier"
-            className="mt-8 inline-block rounded-xl bg-white px-8 py-3 font-semibold text-brand-700 transition hover:bg-blue-50"
+            className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white transition hover:bg-accent-600"
           >
             Demander des travaux maintenant
           </Link>

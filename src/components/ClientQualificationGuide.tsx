@@ -18,9 +18,9 @@ const LEVEL_STYLES: Record<
     header: "bg-slate-50",
   },
   2: {
-    ring: "border-blue-200",
-    badge: "bg-blue-100 text-blue-800",
-    header: "bg-blue-50",
+    ring: "border-brand-200",
+    badge: "bg-brand-100 text-brand-800",
+    header: "bg-brand-50",
   },
   3: {
     ring: "border-amber-200",
@@ -72,10 +72,10 @@ export default function ClientQualificationGuide({ selectedCategory = "" }: Prop
             <details
               key={tier.level}
               open={tier.level === 1 || isHighlighted}
-              className={`rounded-xl border ${styles.ring} overflow-hidden`}
+              className={`rounded-xl border ${styles.ring}`}
             >
               <summary
-                className={`cursor-pointer list-none px-4 py-3 ${styles.header} [&::-webkit-details-marker]:hidden`}
+                className={`cursor-pointer list-none rounded-t-xl px-4 py-3 ${styles.header} [&::-webkit-details-marker]:hidden`}
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span
@@ -92,13 +92,13 @@ export default function ClientQualificationGuide({ selectedCategory = "" }: Prop
                 </div>
                 <p className="mt-1 text-xs text-slate-500">{tier.summary}</p>
               </summary>
-              <ul className="divide-y divide-slate-100 border-t border-slate-100 bg-white px-4 py-2">
+              <ul className="divide-y divide-slate-100 rounded-b-xl border-t border-slate-100 bg-white px-4 py-2">
                 {tier.documents.map((doc) => (
                   <li
                     key={doc.id}
                     className="flex items-start gap-1 py-2.5 text-sm text-slate-700"
                   >
-                    <span className="mt-0.5 text-emerald-600" aria-hidden>
+                    <span className="mt-0.5 text-brand-600" aria-hidden>
                       ✓
                     </span>
                     <span>

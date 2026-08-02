@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { SAMPLE_AUCTIONS } from "@/lib/data";
 import { computeCurrentPrice } from "@/lib/auctions";
+import { resolveAuction } from "@/lib/work-request-auctions";
 import { getBidsForAuction } from "@/lib/store";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const auction = SAMPLE_AUCTIONS.find((a) => a.id === id);
+  const auction = await resolveAuction(id);
   if (!auction) {
     return NextResponse.json({ error: "Enchère introuvable." }, { status: 404 });
   }

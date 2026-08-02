@@ -148,7 +148,7 @@ export const FAQ_ITEMS = [
   {
     question: "Comment fonctionnent les enchères inversées ?",
     answer:
-      "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Vous fixez votre budget maximum, et les professionnels du Nord proposent des prix de plus en plus bas. L'artisan avec le prix le plus bas remporte l'enchère.",
+      "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Vous fixez votre budget maximum, et les professionnels du Nord proposent des prix de plus en plus bas. À la clôture, vous comparez les offres et choisissez vous-même l'artisan retenu.",
   },
   {
     question: "Artipascher couvre quelles zones ?",
@@ -173,7 +173,7 @@ export const FAQ_ITEMS = [
   {
     question: "Combien de temps dure une enchère ?",
     answer:
-      "La durée est définie à la création de l'enchère. Un compteur en temps réel indique le temps restant sur chaque fiche projet.",
+      "Vous choisissez la durée lors de votre demande : de 7 jours à 3 mois maximum. Un compteur en temps réel indique le temps restant sur chaque fiche projet une fois l'enchère lancée.",
   },
   {
     question: "Combien coûte une enchère pour le professionnel ?",
@@ -184,6 +184,11 @@ export const FAQ_ITEMS = [
     question: "Les coordonnées du client sont-elles visibles par tous ?",
     answer:
       "Non. Nom, téléphone, email et adresse exacte sont masqués. Seuls les artisans inscrits au RCS, approuvés par l'admin, peuvent débloquer les coordonnées d'un chantier moyennant 1 € par enchère.",
+  },
+  {
+    question: "Comment choisir mon artisan à la fin de l'enchère ?",
+    answer:
+      "Une fois l'enchère terminée, vous recevez la liste des offres des artisans vérifiés. Vous comparez les prix, les profils et les qualifications, puis vous sélectionnez librement l'artisan avec lequel vous souhaitez travailler. Le moins-disant n'est jamais imposé.",
   },
   {
     question: "Le service est-il gratuit pour les particuliers ?",

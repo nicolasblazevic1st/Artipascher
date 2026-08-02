@@ -24,7 +24,7 @@ const FEATURES = [
   {
     title: "Gain de temps",
     description:
-      "Une seule demande, la plateforme sélectionne automatiquement le meilleur prix. Fini les multiples devis.",
+      "Une seule demande, vous comparez les offres reçues et choisissez librement l'artisan qui vous convient.",
   },
   {
     title: "Transparence totale",
@@ -52,12 +52,12 @@ const STEPS = [
   {
     title: "Enchère inversée",
     description:
-      "Votre budget devient le prix de départ. Les pros proposent des prix de plus en plus bas par paliers de 100 €.",
+      "Votre budget devient le prix de départ. Vous fixez aussi la durée (jusqu'à 3 mois). Les pros proposent des prix de plus en plus bas par paliers de 100 €.",
   },
   {
-    title: "Sélection automatique",
+    title: "Vous choisissez votre artisan",
     description:
-      "À la fin, l'artisan au prix le plus bas est sélectionné et mis en relation avec vous.",
+      "À la fin de l'enchère, comparez les offres (prix, profil, qualifications) et sélectionnez l'artisan qui vous convient.",
   },
 ];
 
@@ -67,13 +67,13 @@ export default function ParticulierPage() {
       <section className="bg-gradient-to-br from-brand-800 to-brand-600 py-16 text-white">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h1 className="text-4xl font-bold">Réalisez vos travaux au meilleur prix</h1>
-          <p className="mt-4 text-lg text-blue-100">
+          <p className="mt-4 text-lg text-brand-100">
             Enchères inversées dans les Hauts-de-France. Les professionnels
             disputent votre projet en proposant des prix toujours plus bas.
           </p>
           <Link
             href="#demande"
-            className="mt-8 inline-block rounded-xl bg-white px-8 py-3 font-semibold text-brand-700"
+            className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
           >
             Demander des travaux
           </Link>
@@ -110,10 +110,14 @@ export default function ParticulierPage() {
             <li>Prix de départ : 5 000 €</li>
             <li>Artisan A : 4 500 €</li>
             <li>Artisan B : 4 200 €</li>
-            <li className="font-semibold text-brand-700">Artisan C : 3 800 € — Meilleur prix</li>
+            <li>Artisan C : 3 800 €</li>
           </ul>
-          <p className="mt-4 text-sm text-emerald-600 font-medium">
-            Économie : 1 200 € sans comparer les devis vous-même.
+          <p className="mt-4 text-sm text-slate-700">
+            Vous comparez les trois offres et <strong>choisissez vous-même</strong> l&apos;artisan
+            retenu — le moins cher n&apos;est pas imposé.
+          </p>
+          <p className="mt-2 text-sm text-brand-600 font-medium">
+            Économie possible jusqu&apos;à 1 200 €, avec la liberté de choisir selon vos critères.
           </p>
         </div>
       </section>

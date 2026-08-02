@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200 bg-slate-900 text-slate-300">
+    <footer className="border-t border-brand-900 bg-brand-950 text-brand-100">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
         <div>
           <p className="text-lg font-bold text-white">Artipascher</p>
@@ -42,10 +42,10 @@ export default function Footer() {
             Lille · Roubaix · Tourcoing · Valenciennes · Dunkerque · Douai ·
             Lens · Arras · Cambrai · Maubeuge
           </p>
-          <p className="mt-2 text-xs text-slate-400">Départements 59 et 62</p>
+          <p className="mt-2 text-xs text-brand-300">Départements 59 et 62</p>
         </div>
       </div>
-      <div className="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+      <div className="border-t border-brand-900 py-4 text-center text-xs text-brand-300">
         © {new Date().getFullYear()} Artipascher — Enchères inversées travaux Nord
       </div>
     </footer>

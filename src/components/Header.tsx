@@ -104,6 +104,13 @@ export default function Header() {
             ))}
 
             <Link
+              href="/particulier/espace/login"
+              className="flex items-center gap-1.5 rounded-lg border-2 border-client-700 px-2.5 py-1 text-sm font-medium whitespace-nowrap text-client-800 transition-colors hover:bg-client-700 hover:text-white xl:px-3 xl:py-1.5 xl:text-base"
+            >
+              <span>Mon espace</span>
+            </Link>
+
+            <Link
               href="/pro/login"
               className="flex items-center gap-1.5 rounded-lg border-2 border-gray-800 px-2.5 py-1 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-800 hover:text-white xl:px-3 xl:py-1.5 xl:text-base"
             >
@@ -113,7 +120,7 @@ export default function Header() {
 
             <Link
               href="/particulier#demande"
-              className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-2.5 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-brand-700 xl:px-4 xl:py-2 xl:text-base"
+              className="flex items-center gap-1.5 rounded-lg bg-accent-500 px-2.5 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-accent-600 xl:px-4 xl:py-2 xl:text-base"
             >
               <HammerIcon className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
               <span>Demander mes travaux</span>
@@ -139,6 +146,14 @@ export default function Header() {
               ))}
 
               <Link
+                href="/particulier/espace/login"
+                className="flex items-center gap-2 rounded-lg border-2 border-client-700 px-3 py-1.5 text-sm font-medium text-client-800 transition-colors hover:bg-client-700 hover:text-white"
+                onClick={() => setMobileOpen(false)}
+              >
+                <span>Mon espace</span>
+              </Link>
+
+              <Link
                 href="/pro/login"
                 className="flex items-center gap-2 rounded-lg border-2 border-gray-800 px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-800 hover:text-white"
                 onClick={() => setMobileOpen(false)}
@@ -149,7 +164,7 @@ export default function Header() {
 
               <Link
                 href="/particulier#demande"
-                className="flex items-center gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                className="flex items-center gap-2 rounded-lg bg-accent-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-600"
                 onClick={() => setMobileOpen(false)}
               >
                 <HammerIcon className="h-4 w-4" />

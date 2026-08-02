@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
   MIN_DESCRIPTION_LENGTH,
@@ -8,6 +9,10 @@ import {
   validateDescription,
   validatePhotoFiles,
 } from "@/lib/demandes-validation";
+import {
+  AUCTION_DURATION_OPTIONS,
+  DEFAULT_AUCTION_DURATION_DAYS,
+} from "@/lib/auction-duration";
 
 export default function WorkRequestForm() {
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
@@ -16,6 +21,8 @@ export default function WorkRequestForm() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [category, setCategory] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const descriptionLength = description.trim().length;
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
@@ -51,6 +58,12 @@ export default function WorkRequestForm() {
       return;
     }
 
+    if (password !== passwordConfirm) {
+      setError("Les mots de passe ne correspondent pas.");
+      setStatus("error");
+      return;
+    }
+
     setStatus("submitting");
 
     const form = e.currentTarget;
@@ -77,6 +90,8 @@ export default function WorkRequestForm() {
     previews.forEach((url) => URL.revokeObjectURL(url));
     setPreviews([]);
     setCategory("");
+    setPassword("");
+    setPasswordConfirm("");
     form.reset();
   }
 
@@ -86,9 +101,9 @@ export default function WorkRequestForm() {
   return (
     <div className="mt-8 space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
-      <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+      <div className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
         <p className="font-medium">Pour une enchère de qualité :</p>
-        <ul className="mt-1 list-inside list-disc text-blue-800">
+        <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
         </ul>
@@ -140,7 +155,7 @@ export default function WorkRequestForm() {
           onChange={(e) => setDescription(e.target.value)}
         />
         <p
-          className={`mt-1 text-xs ${descriptionOk ? "text-emerald-600" : "text-slate-500"}`}
+          className={`mt-1 text-xs ${descriptionOk ? "text-brand-600" : "text-slate-500"}`}
         >
           {descriptionLength} / {MIN_DESCRIPTION_LENGTH} caractères minimum
           {descriptionOk ? " ✓" : ""}
@@ -189,6 +204,71 @@ export default function WorkRequestForm() {
         min={100}
       />
 
+      <div>
+        <label htmlFor="auctionDurationDays" className="mb-1 block text-sm font-medium text-slate-700">
+          Durée de l&apos;enchère <span className="text-red-500">*</span>
+        </label>
+        <select
+          id="auctionDurationDays"
+          name="auctionDurationDays"
+          className={`${inputClass} text-slate-700`}
+          defaultValue={DEFAULT_AUCTION_DURATION_DAYS}
+          required
+        >
+          {AUCTION_DURATION_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-xs text-slate-500">
+          Vous choisissez la durée pendant laquelle les artisans peuvent enchérir (maximum 3 mois).
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
+            Mot de passe <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+            placeholder="Min. 8 caractères, lettre + chiffre"
+            required
+            minLength={8}
+            autoComplete="new-password"
+          />
+        </div>
+        <div>
+          <label htmlFor="passwordConfirm" className="mb-1 block text-sm font-medium text-slate-700">
+            Confirmer le mot de passe <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="passwordConfirm"
+            name="passwordConfirm"
+            type="password"
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            className={inputClass}
+            placeholder="Retapez le mot de passe"
+            required
+            autoComplete="new-password"
+          />
+        </div>
+      </div>
+      <p className="-mt-2 text-xs text-slate-500">
+        Ce mot de passe vous permet d&apos;accéder à votre{" "}
+        <Link href="/particulier/espace/login" className="font-medium text-client-700">
+          espace particulier
+        </Link>{" "}
+        pour suivre votre enchère et choisir votre artisan.
+      </p>
+
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
@@ -196,7 +276,7 @@ export default function WorkRequestForm() {
       <button
         type="submit"
         disabled={status === "submitting" || status === "success" || !descriptionOk || !photosOk}
-        className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === "submitting"
           ? "Envoi…"
@@ -206,8 +286,12 @@ export default function WorkRequestForm() {
       </button>
 
       {status === "success" && (
-        <p className="text-center text-sm text-emerald-600">
-          Votre demande sera validée par notre équipe avant création de l&apos;enchère.
+        <p className="text-center text-sm text-brand-600">
+          Demande envoyée.{" "}
+          <Link href="/particulier/espace/login" className="font-semibold underline">
+            Connectez-vous à votre espace particulier
+          </Link>{" "}
+          pour suivre votre enchère.
         </p>
       )}
       </form>

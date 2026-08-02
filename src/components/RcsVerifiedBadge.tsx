@@ -2,7 +2,7 @@ export default function RcsVerifiedBadge({ compact = false }: { compact?: boolea
   if (compact) {
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
+        className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700"
         title="Inscrit au registre du commerce (RCS) — vérifié"
       >
         ✓ RCS
@@ -11,7 +11,7 @@ export default function RcsVerifiedBadge({ compact = false }: { compact?: boolea
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 ring-1 ring-brand-200">
       <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
         <path
           fillRule="evenodd"

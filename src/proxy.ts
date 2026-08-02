@@ -7,6 +7,10 @@ import {
   PRO_SESSION_COOKIE,
   isValidProSessionToken,
 } from "@/lib/pro-auth";
+import {
+  CLIENT_SESSION_COOKIE,
+  isValidClientSessionToken,
+} from "@/lib/client-auth";
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -37,9 +41,22 @@ export function proxy(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/particulier/espace/login")) {
+    return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/particulier/espace")) {
+    const token = request.cookies.get(CLIENT_SESSION_COOKIE)?.value;
+    if (!isValidClientSessionToken(token)) {
+      const loginUrl = new URL("/particulier/espace/login", request.url);
+      loginUrl.searchParams.set("from", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/pro/:path*"],
+  matcher: ["/admin/:path*", "/pro/:path*", "/particulier/espace/:path*"],
 };

@@ -25,7 +25,8 @@ const FEATURES = [
   },
   {
     title: "Concurrence équitable",
-    description: "Le meilleur prix gagne. Votre compétitivité compte, pas votre taille.",
+    description:
+      "Proposez votre meilleur prix. Le client compare les offres et choisit librement l'artisan retenu.",
   },
   {
     title: "Transparence",
@@ -49,9 +50,9 @@ const STEPS = [
       "Parcourez les enchères actives 59/62. Proposez un prix inférieur par paliers de 100 €.",
   },
   {
-    title: "Remportez le projet",
+    title: "Soyez retenu par le client",
     description:
-      "Si vous avez le meilleur prix, mise en relation client. Devis conforme à votre enchère.",
+      "Le particulier compare les offres et choisit l'artisan qui lui convient. Devis conforme à votre enchère.",
   },
 ];
 
@@ -83,7 +84,7 @@ export default function ProfessionnelPage() {
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               href="#inscription"
-              className="rounded-xl bg-brand-600 px-8 py-3 font-semibold text-white hover:bg-brand-700"
+              className="rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
             >
               S&apos;inscrire
             </Link>

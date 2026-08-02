@@ -15,7 +15,7 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
         <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
           {CATEGORY_LABELS[auction.category]}
         </span>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+        <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
           Active
         </span>
       </div>
@@ -50,7 +50,7 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
       </dl>
 
       {savings > 0 && (
-        <p className="mt-2 text-center text-xs font-medium text-emerald-600">
+        <p className="mt-2 text-center text-xs font-medium text-brand-600">
           −{formatPrice(savings)} depuis le départ
         </p>
       )}

@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
+import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatPrice } from "@/lib/data";
 import type { WorkRequest } from "@/lib/store-types";
 
@@ -115,8 +117,18 @@ export default function AdminDemandesPage() {
                     <div>{r.city} ({r.department})</div>
                     <div>{r.category}</div>
                     <div>Budget max : {formatPrice(r.budget)}</div>
+                    <div>
+                      Durée enchère :{" "}
+                      {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}
+                    </div>
                     <div>{r.email}</div>
                   </dl>
+                  {r.auctionEndsAt && (
+                    <p className="mt-2 text-xs text-emerald-600">
+                      Fin prévue :{" "}
+                      {new Date(r.auctionEndsAt).toLocaleString("fr-FR")}
+                    </p>
+                  )}
                   {r.auctionId && (
                     <p className="mt-2 text-xs text-emerald-600">
                       Enchère : {r.auctionId}
@@ -125,6 +137,7 @@ export default function AdminDemandesPage() {
                   <p className="mt-2 text-xs text-slate-400">
                     Reçue le {new Date(r.createdAt).toLocaleString("fr-FR")}
                   </p>
+                  <NearbyBusinessesPanel requestId={r.id} />
                 </div>
                 {r.status === "pending" && (
                   <div className="flex gap-2">
