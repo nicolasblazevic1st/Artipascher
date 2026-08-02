@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from "next/server";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import { BID_FEE_EUR } from "@/lib/auctions";
+import { getStripe } from "@/lib/payments";
+import { addBid, addContactUnlock, getApprovedProById } from "@/lib/store";
+
+export async function POST(request: NextRequest) {
+  const stripe = getStripe();
+  if (!stripe) {
+    return NextResponse.json({ error: "Stripe non configuré." }, { status: 503 });
+  }
+
+  const body = await request.text();
+  const signature = request.headers.get("stripe-signature");
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!signature || !webhookSecret) {
+    return NextResponse.json({ error: "Webhook non configuré." }, { status: 400 });
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+  } catch {
+    return NextResponse.json({ error: "Signature invalide." }, { status: 400 });
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+
+    if (
+      session.metadata?.type === "contact_unlock" &&
+      session.metadata.proId &&
+      session.metadata.auctionId
+    ) {
+      await addContactUnlock({
+        proId: session.metadata.proId,
+        auctionId: session.metadata.auctionId,
+        amountEur: UNLOCK_PRICE_EUR,
+        stripeSessionId: session.id,
+      });
+    }
+
+    if (
+      session.metadata?.type === "auction_bid" &&
+      session.metadata.proId &&
+      session.metadata.auctionId &&
+      session.metadata.bidAmount
+    ) {
+      const pro = await getApprovedProById(session.metadata.proId);
+      if (pro) {
+        await addBid({
+          auctionId: session.metadata.auctionId,
+          proId: session.metadata.proId,
+          companyName: pro.companyName,
+          amount: Number(session.metadata.bidAmount),
+          feeEur: BID_FEE_EUR,
+          stripeSessionId: session.id,
+        });
+      }
+    }
+  }
+
+  return NextResponse.json({ received: true });
+}

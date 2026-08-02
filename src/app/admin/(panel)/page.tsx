@@ -1,0 +1,119 @@
+import Link from "next/link";
+import { SAMPLE_AUCTIONS } from "@/lib/data";
+import { getAdminStats, readStore } from "@/lib/store";
+import { VERIFIED_PROFESSIONALS } from "@/lib/professionals";
+
+export default async function AdminDashboardPage() {
+  const stats = await getAdminStats();
+  const store = await readStore();
+  const recentPending = store.proRegistrations.filter((p) => p.status === "pending").slice(0, 3);
+  const recentRequests = store.workRequests.filter((r) => r.status === "pending").slice(0, 3);
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-slate-900">Tableau de bord</h1>
+      <p className="mt-1 text-sm text-slate-600">
+        Vue d&apos;ensemble — Artipascher Nord 59/62
+      </p>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Inscriptions en attente"
+          value={stats.pendingPros}
+          href="/admin/professionnels"
+          urgent={stats.pendingPros > 0}
+        />
+        <StatCard
+          label="Demandes travaux en attente"
+          value={stats.pendingRequests}
+          href="/admin/demandes"
+          urgent={stats.pendingRequests > 0}
+        />
+        <StatCard label="Artisans approuvés" value={stats.approvedPros} />
+        <StatCard label="Enchères actives" value={SAMPLE_AUCTIONS.length} href="/admin/encheres" />
+      </div>
+
+      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Inscriptions artisans à valider</h2>
+            <Link href="/admin/professionnels" className="text-sm text-brand-600">
+              Voir tout →
+            </Link>
+          </div>
+          {recentPending.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">Aucune inscription en attente.</p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {recentPending.map((p) => (
+                <li key={p.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+                  <p className="font-medium">{p.companyName}</p>
+                  <p className="text-slate-500">
+                    SIRET {p.siret} · {p.city} ({p.department})
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Demandes particuliers à valider</h2>
+            <Link href="/admin/demandes" className="text-sm text-brand-600">
+              Voir tout →
+            </Link>
+          </div>
+          {recentRequests.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">Aucune demande en attente.</p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {recentRequests.map((r) => (
+                <li key={r.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+                  <p className="font-medium">
+                    {r.firstName} {r.lastName} — {r.city}
+                  </p>
+                  <p className="text-slate-500">
+                    {r.category} · Budget {r.budget} €
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="font-semibold">Artisans RCS vérifiés (catalogue démo)</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          {VERIFIED_PROFESSIONALS.length} artisans actifs dans les enchères de démonstration
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  href,
+  urgent,
+}: {
+  label: string;
+  value: number;
+  href?: string;
+  urgent?: boolean;
+}) {
+  const content = (
+    <div
+      className={`rounded-xl border bg-white p-5 ${urgent ? "border-amber-300 ring-1 ring-amber-200" : "border-slate-200"}`}
+    >
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
+      {urgent && <p className="mt-1 text-xs font-medium text-amber-600">Action requise</p>}
+    </div>
+  );
+
+  if (href) return <Link href={href}>{content}</Link>;
+  return content;
+}
