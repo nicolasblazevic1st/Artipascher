@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import HelpTooltip from "@/components/HelpTooltip";
 import {
   QUALIFICATION_TIERS,
-  getMinimumLevelForCategory,
+  getRecommendedLevelForCategory,
   type QualificationLevel,
 } from "@/lib/qualification-tiers";
 
@@ -35,8 +35,8 @@ interface Props {
 }
 
 export default function ClientQualificationGuide({ selectedCategory = "" }: Props) {
-  const minLevel = useMemo(
-    () => (selectedCategory ? getMinimumLevelForCategory(selectedCategory) : 1),
+  const recommendedLevel = useMemo(
+    () => (selectedCategory ? getRecommendedLevelForCategory(selectedCategory) : 1),
     [selectedCategory]
   );
 
@@ -46,32 +46,33 @@ export default function ClientQualificationGuide({ selectedCategory = "" }: Prop
         Documents vérifiés chez nos artisans
       </h3>
       <p className="mt-1 text-sm text-slate-600">
-        Seules les entreprises qualifiées peuvent enchérir sur votre projet.
-        Survolez ou cliquez sur le{" "}
+        Chaque artisan affiche son niveau de qualification lors des enchères. Aucune entreprise
+        n&apos;est refusée pour son niveau — vous comparez librement prix et profils. Survolez
+        le{" "}
         <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600">
           ?
         </span>{" "}
-        pour comprendre l&apos;importance de chaque document.
+        pour comprendre chaque document.
       </p>
 
       {selectedCategory && (
         <p className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
-          Pour <strong>{selectedCategory}</strong>, niveau minimum requis :{" "}
-          <strong>Niveau {minLevel}</strong>
-          {minLevel >= 2 && " (qualifications renforcées)"}.
+          Pour <strong>{selectedCategory}</strong>, nous recommandons de privilégier les artisans{" "}
+          <strong>niveau {recommendedLevel}</strong> ou plus
+          {recommendedLevel >= 2 ? " (qualifications renforcées)" : ""} — sans obligation.
         </p>
       )}
 
       <div className="mt-4 space-y-3">
         {QUALIFICATION_TIERS.map((tier) => {
           const styles = LEVEL_STYLES[tier.level];
-          const isRequired = tier.level >= minLevel && selectedCategory !== "";
-          const isHighlighted = tier.level === minLevel && selectedCategory !== "";
+          const isRecommended =
+            selectedCategory !== "" && tier.level === recommendedLevel;
 
           return (
             <details
               key={tier.level}
-              open={tier.level === 1 || isHighlighted}
+              open={tier.level === 1 || isRecommended}
               className={`rounded-xl border ${styles.ring}`}
             >
               <summary
@@ -84,9 +85,9 @@ export default function ClientQualificationGuide({ selectedCategory = "" }: Prop
                     {tier.badge}
                   </span>
                   <span className="text-sm font-medium text-slate-900">{tier.title}</span>
-                  {isRequired && (
+                  {isRecommended && (
                     <span className="text-xs font-medium text-brand-700">
-                      {isHighlighted ? "· requis pour votre projet" : "· inclus"}
+                      · particulièrement adapté à votre projet
                     </span>
                   )}
                 </div>

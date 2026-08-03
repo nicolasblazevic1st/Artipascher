@@ -8,6 +8,7 @@ import {
   MAX_PHOTOS,
   validateDescription,
   validatePhotoFiles,
+  validatePreviousQuotePair,
 } from "@/lib/demandes-validation";
 import {
   AUCTION_DURATION_OPTIONS,
@@ -24,6 +25,11 @@ export default function WorkRequestForm() {
   const [category, setCategory] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [hasPreviousQuote, setHasPreviousQuote] = useState(false);
+  const [previousQuoteAmount, setPreviousQuoteAmount] = useState("");
+  const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
+  const [previousQuoteNote, setPreviousQuoteNote] = useState("");
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
@@ -48,6 +54,18 @@ export default function WorkRequestForm() {
     setError(null);
   }
 
+  function handleProofChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (proofPreview) URL.revokeObjectURL(proofPreview);
+    setPreviousQuoteProof(file);
+    if (file && file.type.startsWith("image/")) {
+      setProofPreview(URL.createObjectURL(file));
+    } else {
+      setProofPreview(null);
+    }
+    setError(null);
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -66,6 +84,15 @@ export default function WorkRequestForm() {
       return;
     }
 
+    if (hasPreviousQuote) {
+      const quoteError = validatePreviousQuotePair(previousQuoteAmount, previousQuoteProof);
+      if (quoteError) {
+        setError(quoteError);
+        setStatus("error");
+        return;
+      }
+    }
+
     if (password !== passwordConfirm) {
       setError("Les mots de passe ne correspondent pas.");
       setStatus("error");
@@ -79,6 +106,16 @@ export default function WorkRequestForm() {
     formData.set("description", getDescriptionValue().trim());
     formData.delete("photos");
     photoFiles.forEach((file) => formData.append("photos", file));
+    if (hasPreviousQuote) {
+      formData.set("previousQuoteAmount", previousQuoteAmount);
+      formData.set("previousQuoteNote", previousQuoteNote);
+      formData.delete("previousQuoteProof");
+      if (previousQuoteProof) formData.append("previousQuoteProof", previousQuoteProof);
+    } else {
+      formData.delete("previousQuoteAmount");
+      formData.delete("previousQuoteNote");
+      formData.delete("previousQuoteProof");
+    }
 
     const res = await fetch("/api/demandes", {
       method: "POST",
@@ -103,6 +140,12 @@ export default function WorkRequestForm() {
     setCategory("");
     setPassword("");
     setPasswordConfirm("");
+    setHasPreviousQuote(false);
+    setPreviousQuoteAmount("");
+    setPreviousQuoteProof(null);
+    setPreviousQuoteNote("");
+    if (proofPreview) URL.revokeObjectURL(proofPreview);
+    setProofPreview(null);
     form.reset();
   }
 
@@ -117,7 +160,8 @@ export default function WorkRequestForm() {
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
-          <li>Prix de départ fixé au premier devis validé par un artisan</li>
+          <li>Prix de départ : devis précédent (si fourni) ou 1er devis Artipascher validé</li>
+          <li>Option : joindre un devis déjà reçu (montant + justificatif)</li>
         </ul>
       </div>
 
@@ -207,6 +251,102 @@ export default function WorkRequestForm() {
         )}
         {!photosOk && (
           <p className="mt-1 text-xs text-amber-600">Ajoutez au moins une photo.</p>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={hasPreviousQuote}
+            onChange={(e) => {
+              setHasPreviousQuote(e.target.checked);
+              if (!e.target.checked) {
+                setPreviousQuoteAmount("");
+                setPreviousQuoteProof(null);
+                setPreviousQuoteNote("");
+                if (proofPreview) URL.revokeObjectURL(proofPreview);
+                setProofPreview(null);
+              }
+              setError(null);
+            }}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600"
+          />
+          <span>
+            <span className="block text-sm font-medium text-slate-800">
+              J&apos;ai déjà reçu un devis d&apos;un autre artisan
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              Optionnel — ce montant deviendra le prix de départ de l&apos;enchère (avec
+              justificatif). Il sera remplacé par le premier devis Artipascher validé après
+              visite sur site.
+            </span>
+          </span>
+        </label>
+
+        {hasPreviousQuote && (
+          <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
+            <div>
+              <label htmlFor="previousQuoteAmount" className="mb-1 block text-sm font-medium text-slate-700">
+                Montant du devis (€) <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="previousQuoteAmount"
+                name="previousQuoteAmount"
+                type="number"
+                min={1}
+                step={1}
+                value={previousQuoteAmount}
+                onChange={(e) => setPreviousQuoteAmount(e.target.value)}
+                placeholder="Ex. 4500"
+                className={inputClass}
+                required={hasPreviousQuote}
+              />
+            </div>
+            <div>
+              <label htmlFor="previousQuoteProof" className="mb-1 block text-sm font-medium text-slate-700">
+                Justificatif (photo ou PDF) <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="previousQuoteProof"
+                name="previousQuoteProof"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={handleProofChange}
+                className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+                required={hasPreviousQuote}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Photo du devis papier, capture d&apos;écran ou PDF · max 10 Mo
+              </p>
+              {proofPreview && (
+                <img
+                  src={proofPreview}
+                  alt="Aperçu du justificatif"
+                  className="mt-2 max-h-32 rounded-lg border border-slate-200 object-contain"
+                />
+              )}
+              {previousQuoteProof?.type === "application/pdf" && (
+                <p className="mt-2 text-xs text-brand-700">
+                  PDF sélectionné : {previousQuoteProof.name}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="previousQuoteNote" className="mb-1 block text-sm font-medium text-slate-700">
+                Précisions (optionnel)
+              </label>
+              <input
+                id="previousQuoteNote"
+                name="previousQuoteNote"
+                type="text"
+                value={previousQuoteNote}
+                onChange={(e) => setPreviousQuoteNote(e.target.value)}
+                placeholder="Ex. Devis SARL Dupont, reçu en mars 2026"
+                className={inputClass}
+              />
+            </div>
+          </div>
         )}
       </div>
 

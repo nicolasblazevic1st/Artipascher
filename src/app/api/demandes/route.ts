@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   validateDescription,
   validatePhotoFiles,
+  validatePreviousQuotePair,
 } from "@/lib/demandes-validation";
 import {
   DEFAULT_AUCTION_DURATION_DAYS,
   validateAuctionDurationDays,
 } from "@/lib/auction-duration";
 import { validatePassword } from "@/lib/password";
-import { addWorkRequest, ensureClientAccount, linkOrphanWorkRequests, setWorkRequestPhotos } from "@/lib/store";
-import { saveRequestPhotos } from "@/lib/uploads";
+import { addWorkRequest, ensureClientAccount, linkOrphanWorkRequests, setWorkRequestPhotos, setWorkRequestPreviousQuote } from "@/lib/store";
+import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,11 +27,16 @@ export async function POST(request: NextRequest) {
     );
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+    const previousQuoteAmountRaw = String(formData.get("previousQuoteAmount") ?? "").trim();
+    const previousQuoteNote = String(formData.get("previousQuoteNote") ?? "").trim();
 
     const photoEntries = formData.getAll("photos");
     const photos = photoEntries.filter(
       (f): f is File => f instanceof File && f.size > 0
     );
+    const proofEntry = formData.get("previousQuoteProof");
+    const previousQuoteProof =
+      proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
 
     if (!firstName || !lastName || !email || !city) {
       return NextResponse.json(
@@ -47,6 +53,14 @@ export async function POST(request: NextRequest) {
     const photosError = validatePhotoFiles(photos);
     if (photosError) {
       return NextResponse.json({ error: photosError }, { status: 400 });
+    }
+
+    const previousQuoteError = validatePreviousQuotePair(
+      previousQuoteAmountRaw,
+      previousQuoteProof
+    );
+    if (previousQuoteError) {
+      return NextResponse.json({ error: previousQuoteError }, { status: 400 });
     }
 
     const durationError = validateAuctionDurationDays(durationRaw);
@@ -97,6 +111,15 @@ export async function POST(request: NextRequest) {
 
     const photoPaths = await saveRequestPhotos(entry.id, photos);
     await setWorkRequestPhotos(entry.id, photoPaths);
+
+    if (previousQuoteAmountRaw && previousQuoteProof) {
+      const proofUrl = await savePreviousQuoteProof(entry.id, previousQuoteProof);
+      await setWorkRequestPreviousQuote(entry.id, {
+        previousQuoteAmount: Number(previousQuoteAmountRaw),
+        previousQuoteProofUrl: proofUrl,
+        previousQuoteNote: previousQuoteNote || undefined,
+      });
+    }
 
     return NextResponse.json(
       { success: true, id: entry.id, photoCount: photoPaths.length },

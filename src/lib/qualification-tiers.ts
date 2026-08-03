@@ -19,7 +19,7 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
     level: 1,
     badge: "Certifié",
     title: "Niveau 1 — Essentiel",
-    summary: "Minimum pour enchérir sur Artipascher (travaux courants).",
+    summary: "Documents de base vérifiés pour les travaux courants.",
     documents: [
       {
         id: "rcs",
@@ -47,7 +47,7 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
     level: 2,
     badge: "Qualifié",
     title: "Niveau 2 — Qualifié",
-    summary: "Requis pour la rénovation énergétique et les chantiers techniques.",
+    summary: "Profil renforcé pour la rénovation énergétique et les chantiers techniques.",
     documents: [
       {
         id: "rge",
@@ -91,14 +91,14 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
   },
 ];
 
-/** Travaux nécessitant au minimum le niveau 2 */
+/** Travaux pour lesquels un niveau 2+ est particulièrement pertinent (informatif). */
 export const LEVEL_2_CATEGORIES = [
   "Rénovation énergétique",
   "Isolation",
   "Chauffage / Pompe à chaleur",
 ] as const;
 
-export function getMinimumLevelForCategory(category: string): QualificationLevel {
+export function getRecommendedLevelForCategory(category: string): QualificationLevel {
   if (category === "Rénovation complète") return 3;
   if (
     category === "Rénovation énergétique" ||
@@ -108,4 +108,11 @@ export function getMinimumLevelForCategory(category: string): QualificationLevel
     return 2;
   }
   return 1;
+}
+
+/** @deprecated Utiliser getRecommendedLevelForCategory */
+export const getMinimumLevelForCategory = getRecommendedLevelForCategory;
+
+export function getQualificationTier(level: QualificationLevel = 1) {
+  return QUALIFICATION_TIERS.find((t) => t.level === level) ?? QUALIFICATION_TIERS[0];
 }

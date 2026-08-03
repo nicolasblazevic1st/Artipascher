@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
+import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatPrice } from "@/lib/data";
 import { getClientSession } from "@/lib/client-auth";
@@ -10,6 +11,8 @@ import {
   getApprovedProQuotesForAuction,
   getBidsForAuction,
   getWorkRequestForClient,
+  mapBidsWithQualification,
+  mapQuotesWithQualification,
 } from "@/lib/store";
 
 type Props = { params: Promise<{ id: string }> };
@@ -32,6 +35,8 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
   const quotes = request.auctionId
     ? await getApprovedProQuotesForAuction(request.auctionId)
     : [];
+  const bidsWithLevel = await mapBidsWithQualification(bids);
+  const quotesWithLevel = await mapQuotesWithQualification(quotes);
   const canSelect =
     request.status === "approved" && !request.selectedQuoteId && !request.selectedBidId;
   const shareToken =
@@ -90,6 +95,16 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           </div>
         )}
 
+        {request.previousQuoteAmount != null && request.previousQuoteProofUrl && (
+          <div className="mt-6">
+            <PreviousQuotePanel
+              amount={request.previousQuoteAmount}
+              proofUrl={request.previousQuoteProofUrl}
+              note={request.previousQuoteNote}
+            />
+          </div>
+        )}
+
         <dl className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
@@ -126,17 +141,19 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           <div className="mt-4">
             <SelectArtisanPanel
               requestId={request.id}
-              quotes={quotes.map((q) => ({
+              quotes={quotesWithLevel.map((q) => ({
                 id: q.id,
                 companyName: q.companyName,
                 amount: q.amount,
                 description: q.description,
                 visitDate: q.visitDate,
+                qualificationLevel: q.qualificationLevel,
               }))}
-              bids={bids.map((b) => ({
+              bids={bidsWithLevel.map((b) => ({
                 id: b.id,
                 companyName: b.companyName,
                 amount: b.amount,
+                qualificationLevel: b.qualificationLevel,
               }))}
               selectedQuoteId={request.selectedQuoteId}
               selectedBidId={request.selectedBidId}

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/data";
+import QualificationBadge from "@/components/QualificationBadge";
+import type { QualificationLevel } from "@/lib/qualification-tiers";
 
 interface QuoteOption {
   id: string;
@@ -10,12 +12,14 @@ interface QuoteOption {
   amount: number;
   description: string;
   visitDate: string;
+  qualificationLevel?: QualificationLevel;
 }
 
 interface BidOption {
   id: string;
   companyName: string;
   amount: number;
+  qualificationLevel?: QualificationLevel;
 }
 
 interface Props {
@@ -114,7 +118,12 @@ export default function SelectArtisanPanel({
                 <li key={quote.id} className="px-4 py-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-900">{quote.companyName}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-slate-900">{quote.companyName}</p>
+                        {quote.qualificationLevel != null && (
+                          <QualificationBadge level={quote.qualificationLevel} compact />
+                        )}
+                      </div>
                       <p className="text-lg font-bold text-brand-700">
                         {formatPrice(quote.amount)}
                       </p>
@@ -186,7 +195,12 @@ export default function SelectArtisanPanel({
                 className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
               >
                 <div>
-                  <p className="font-medium text-slate-900">{bid.companyName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-slate-900">{bid.companyName}</p>
+                    {bid.qualificationLevel != null && (
+                      <QualificationBadge level={bid.qualificationLevel} compact />
+                    )}
+                  </div>
                   <p className="text-lg font-bold text-brand-700">{formatPrice(bid.amount)}</p>
                   <p className="text-xs text-slate-400">Offre indicative en ligne</p>
                 </div>

@@ -1,12 +1,20 @@
 export const MIN_DESCRIPTION_LENGTH = 100;
 export const MAX_PHOTOS = 5;
 export const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
+export const MAX_PROOF_SIZE_BYTES = 10 * 1024 * 1024; // 10 Mo
 export const ALLOWED_PHOTO_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/heic",
   "image/heif",
+] as const;
+
+export const ALLOWED_PROOF_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
 ] as const;
 
 export function validateDescription(description: unknown): string | null {
@@ -36,4 +44,50 @@ export function validatePhotoFiles(files: File[]): string | null {
     }
   }
   return null;
+}
+
+export function validatePreviousQuoteAmount(amountRaw: unknown): string | null {
+  if (amountRaw === null || amountRaw === undefined || amountRaw === "") {
+    return null;
+  }
+  const amount = Number(amountRaw);
+  if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
+    return "Indiquez un montant de devis valide (nombre entier en euros).";
+  }
+  if (amount > 10_000_000) {
+    return "Le montant du devis semble trop élevé.";
+  }
+  return null;
+}
+
+export function validateProofFile(file: File | null | undefined): string | null {
+  if (!file || file.size === 0) {
+    return "Joignez une photo ou un PDF du devis reçu.";
+  }
+  if (!ALLOWED_PROOF_TYPES.includes(file.type as (typeof ALLOWED_PROOF_TYPES)[number])) {
+    return "Justificatif non accepté. Utilisez JPG, PNG, WebP ou PDF.";
+  }
+  if (file.size > MAX_PROOF_SIZE_BYTES) {
+    return `Le justificatif doit faire moins de ${MAX_PROOF_SIZE_BYTES / 1024 / 1024} Mo.`;
+  }
+  return null;
+}
+
+export function validatePreviousQuotePair(
+  amountRaw: unknown,
+  proofFile: File | null | undefined
+): string | null {
+  const hasAmount =
+    amountRaw !== null && amountRaw !== undefined && String(amountRaw).trim() !== "";
+  const hasProof = proofFile != null && proofFile.size > 0;
+
+  if (!hasAmount && !hasProof) return null;
+
+  const amountError = validatePreviousQuoteAmount(amountRaw);
+  if (amountError) return amountError;
+
+  if (!hasAmount) {
+    return "Indiquez le montant du devis précédent.";
+  }
+  return validateProofFile(proofFile);
 }

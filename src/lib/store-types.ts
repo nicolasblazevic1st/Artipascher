@@ -1,6 +1,15 @@
 import type { TradeCategory } from "./data";
+import type { QualificationLevel } from "./qualification-tiers";
 
 export type AdminReviewStatus = "pending" | "approved" | "rejected";
+
+export interface ProDocument {
+  id: string;
+  label: string;
+  fileUrl: string;
+  fileName: string;
+  uploadedAt: string;
+}
 
 export interface ProRegistration {
   id: string;
@@ -14,6 +23,10 @@ export interface ProRegistration {
   category: TradeCategory;
   zone: string;
   rcsVerified: boolean;
+  /** Niveau affiché sur les enchères (1 = Certifié, 2 = Qualifié, 3 = Premium). */
+  qualificationLevel?: QualificationLevel;
+  /** Documents transmis à l'inscription (KBIS, assurances…). */
+  documents?: ProDocument[];
   passwordHash: string;
   status: AdminReviewStatus;
   createdAt: string;
@@ -40,8 +53,10 @@ export interface WorkRequest {
   department: "59" | "62";
   category: string;
   description: string;
-  /** Prix de départ de l'enchère, fixé au premier devis validé par l'admin. */
+  /** Prix de départ de l'enchère. Peut venir du devis précédent client (à l'approbation)
+   *  ou du premier devis Artipascher validé (prioritaire). */
   startPrice?: number;
+  /** Renseigné lorsque le prix de départ provient d'un devis Artipascher validé. */
   startPriceQuoteId?: string;
   /** Durée souhaitée de l'enchère en jours (max. 90). */
   auctionDurationDays: number;
@@ -58,6 +73,11 @@ export interface WorkRequest {
   selectedQuoteId?: string;
   /** Lien public de partage (réseaux sociaux). */
   shareToken?: string;
+  /** Devis concurrent déjà obtenu par le client (montant + justificatif). */
+  previousQuoteAmount?: number;
+  previousQuoteProofUrl?: string;
+  /** Précisions optionnelles (artisan, date…). */
+  previousQuoteNote?: string;
 }
 
 export type ProQuoteStatus = "pending_moderation" | "approved" | "rejected";

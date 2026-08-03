@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import QualificationBadge from "@/components/QualificationBadge";
+import ProDocumentsList from "@/components/ProDocumentsList";
 import { CATEGORY_LABELS } from "@/lib/data";
+import type { QualificationLevel } from "@/lib/qualification-tiers";
 import type { ProRegistration } from "@/lib/store-types";
 
 const STATUS_LABELS = {
@@ -14,6 +17,7 @@ export default function AdminProfessionnelsPage() {
   const [registrations, setRegistrations] = useState<ProRegistration[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
   const [loading, setLoading] = useState(true);
+  const [pendingLevels, setPendingLevels] = useState<Record<string, QualificationLevel>>({});
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/professionnels");
@@ -26,11 +30,24 @@ export default function AdminProfessionnelsPage() {
     load();
   }, [load]);
 
-  async function handleReview(id: string, status: "approved" | "rejected") {
+  async function handleReview(
+    id: string,
+    status: "approved" | "rejected",
+    qualificationLevel?: QualificationLevel
+  ) {
     await fetch("/api/admin/professionnels", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify({ id, status, qualificationLevel }),
+    });
+    load();
+  }
+
+  async function handleLevelChange(id: string, qualificationLevel: QualificationLevel) {
+    await fetch("/api/admin/professionnels", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, qualificationLevel }),
     });
     load();
   }
@@ -43,7 +60,8 @@ export default function AdminProfessionnelsPage() {
     <div>
       <h1 className="text-2xl font-bold">Artisans — inscriptions RCS</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Validez les entreprises inscrites au registre du commerce avant accès aux enchères.
+        Validez les entreprises inscrites au registre du commerce. Le niveau de qualification
+        est affiché sur les enchères — il ne bloque jamais l&apos;accès.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -90,6 +108,9 @@ export default function AdminProfessionnelsPage() {
                         RCS vérifié
                       </span>
                     )}
+                    {r.status === "approved" && (
+                      <QualificationBadge level={r.qualificationLevel ?? 1} compact />
+                    )}
                   </div>
                   <dl className="mt-3 grid gap-1 text-sm text-slate-600 sm:grid-cols-2">
                     <div>SIRET : {r.siret}</div>
@@ -101,15 +122,43 @@ export default function AdminProfessionnelsPage() {
                     </div>
                     <div>Métier : {CATEGORY_LABELS[r.category]}</div>
                   </dl>
+                  {(r.documents?.length ?? 0) > 0 && (
+                    <div className="mt-4 max-w-lg">
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Documents transmis
+                      </p>
+                      <ProDocumentsList documents={r.documents!} />
+                    </div>
+                  )}
                   <p className="mt-2 text-xs text-slate-400">
                     Inscrit le {new Date(r.createdAt).toLocaleString("fr-FR")}
                   </p>
                 </div>
                 {r.status === "pending" && (
-                  <div className="flex gap-2">
+                  <div className="flex flex-col items-end gap-2">
+                    <label className="text-xs text-slate-500">
+                      Niveau affiché sur les enchères
+                      <select
+                        value={pendingLevels[r.id] ?? 1}
+                        onChange={(e) =>
+                          setPendingLevels((prev) => ({
+                            ...prev,
+                            [r.id]: Number(e.target.value) as QualificationLevel,
+                          }))
+                        }
+                        className="mt-1 block rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                      >
+                        <option value={1}>1 — Certifié</option>
+                        <option value={2}>2 — Qualifié</option>
+                        <option value={3}>3 — Premium</option>
+                      </select>
+                    </label>
+                    <div className="flex gap-2">
                     <button
                       type="button"
-                      onClick={() => handleReview(r.id, "approved")}
+                      onClick={() =>
+                        handleReview(r.id, "approved", pendingLevels[r.id] ?? 1)
+                      }
                       className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                     >
                       Approuver
@@ -121,7 +170,24 @@ export default function AdminProfessionnelsPage() {
                     >
                       Refuser
                     </button>
+                    </div>
                   </div>
+                )}
+                {r.status === "approved" && (
+                  <label className="text-xs text-slate-500">
+                    Niveau enchères
+                    <select
+                      value={r.qualificationLevel ?? 1}
+                      onChange={(e) =>
+                        handleLevelChange(r.id, Number(e.target.value) as QualificationLevel)
+                      }
+                      className="mt-1 block rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                    >
+                      <option value={1}>1 — Certifié</option>
+                      <option value={2}>2 — Qualifié</option>
+                      <option value={3}>3 — Premium</option>
+                    </select>
+                  </label>
                 )}
               </div>
             </li>

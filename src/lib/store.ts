@@ -13,6 +13,7 @@ import {
   type ProQuote,
   type PasswordResetToken,
   type PasswordResetUserType,
+  type ProDocument,
   type ProRegistration,
   type WorkRequest,
 } from "./store-types";
@@ -90,6 +91,18 @@ export async function addProRegistration(
   return entry;
 }
 
+export async function setProRegistrationDocuments(
+  id: string,
+  documents: ProDocument[]
+): Promise<ProRegistration | null> {
+  const store = await readStore();
+  const index = store.proRegistrations.findIndex((p) => p.id === id);
+  if (index === -1) return null;
+  store.proRegistrations[index].documents = documents;
+  await writeStore(store);
+  return store.proRegistrations[index];
+}
+
 export async function addWorkRequest(
   data: Omit<WorkRequest, "id" | "status" | "createdAt">
 ): Promise<WorkRequest> {
@@ -118,9 +131,26 @@ export async function setWorkRequestPhotos(
   return store.workRequests[index];
 }
 
+export async function setWorkRequestPreviousQuote(
+  id: string,
+  data: Pick<WorkRequest, "previousQuoteAmount" | "previousQuoteProofUrl" | "previousQuoteNote">
+): Promise<WorkRequest | null> {
+  const store = await readStore();
+  const index = store.workRequests.findIndex((r) => r.id === id);
+  if (index === -1) return null;
+  store.workRequests[index] = {
+    ...store.workRequests[index],
+    ...data,
+  };
+  await writeStore(store);
+  return store.workRequests[index];
+}
+
 export async function updateProRegistration(
   id: string,
-  patch: Partial<Pick<ProRegistration, "status" | "adminNote" | "reviewedAt">>
+  patch: Partial<
+    Pick<ProRegistration, "status" | "adminNote" | "reviewedAt" | "qualificationLevel">
+  >
 ): Promise<ProRegistration | null> {
   const store = await readStore();
   const index = store.proRegistrations.findIndex((p) => p.id === id);
@@ -265,6 +295,33 @@ export async function getApprovedProById(proId: string): Promise<ProRegistration
   const store = await readStore();
   const pro = store.proRegistrations.find((p) => p.id === proId && p.status === "approved");
   return pro ?? null;
+}
+
+export async function getQualificationLevelForPro(proId: string): Promise<1 | 2 | 3> {
+  const pro = await getApprovedProById(proId);
+  return pro?.qualificationLevel ?? 1;
+}
+
+export async function mapBidsWithQualification<
+  T extends { proId: string },
+>(bids: T[]): Promise<Array<T & { qualificationLevel: 1 | 2 | 3 }>> {
+  return Promise.all(
+    bids.map(async (bid) => ({
+      ...bid,
+      qualificationLevel: await getQualificationLevelForPro(bid.proId),
+    }))
+  );
+}
+
+export async function mapQuotesWithQualification<
+  T extends { proId: string },
+>(quotes: T[]): Promise<Array<T & { qualificationLevel: 1 | 2 | 3 }>> {
+  return Promise.all(
+    quotes.map(async (quote) => ({
+      ...quote,
+      qualificationLevel: await getQualificationLevelForPro(quote.proId),
+    }))
+  );
 }
 
 export async function getBidsForPro(proId: string): Promise<Bid[]> {
@@ -502,7 +559,7 @@ export async function updateProQuoteStatus(
   if (status === "approved") {
     const quote = store.proQuotes[index];
     const requestIndex = store.workRequests.findIndex((r) => r.id === quote.workRequestId);
-    if (requestIndex !== -1 && store.workRequests[requestIndex].startPrice == null) {
+    if (requestIndex !== -1 && store.workRequests[requestIndex].startPriceQuoteId == null) {
       store.workRequests[requestIndex] = {
         ...store.workRequests[requestIndex],
         startPrice: quote.amount,

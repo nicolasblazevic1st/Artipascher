@@ -1,4 +1,6 @@
 import { formatPrice } from "@/lib/data";
+import QualificationBadge from "@/components/QualificationBadge";
+import type { QualificationLevel } from "@/lib/qualification-tiers";
 
 export interface DisplayQuote {
   id: string;
@@ -6,6 +8,7 @@ export interface DisplayQuote {
   amount: number;
   description: string;
   visitDate: string;
+  qualificationLevel?: QualificationLevel;
 }
 
 interface Props {
@@ -37,7 +40,12 @@ export default function ApprovedQuotesList({
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-semibold text-slate-900">{quote.companyName}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-slate-900">{quote.companyName}</p>
+                  {quote.qualificationLevel != null && (
+                    <QualificationBadge level={quote.qualificationLevel} compact />
+                  )}
+                </div>
                 <p className="mt-1 text-xs text-slate-500">
                   Visite le{" "}
                   {new Date(quote.visitDate).toLocaleDateString("fr-FR", {

@@ -5,6 +5,7 @@ import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
+import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { computeCurrentPrice } from "@/lib/auctions";
 import {
   CATEGORY_LABELS,
@@ -12,7 +13,7 @@ import {
   formatLocation,
   formatPrice,
 } from "@/lib/data";
-import { getApprovedProQuotesForAuction, getBidsForAuction } from "@/lib/store";
+import { getApprovedProQuotesForAuction, getBidsForAuction, mapBidsWithQualification, mapQuotesWithQualification } from "@/lib/store";
 import { getWorkRequestByAuctionId, resolveAuction } from "@/lib/work-request-auctions";
 
 type Props = { params: Promise<{ id: string }> };
@@ -34,6 +35,8 @@ export default async function EnchereDetailPage({ params }: Props) {
 
   const bids = await getBidsForAuction(id);
   const quotes = await getApprovedProQuotesForAuction(id);
+  const bidsWithLevel = await mapBidsWithQualification(bids);
+  const quotesWithLevel = await mapQuotesWithQualification(quotes);
   const workRequest = await getWorkRequestByAuctionId(id);
   const currentPrice = computeCurrentPrice(
     resolved.startPrice,
@@ -54,11 +57,12 @@ export default async function EnchereDetailPage({ params }: Props) {
       })
     : "—";
 
-  const bidRows = bids.map((b) => ({
+  const bidRows = bidsWithLevel.map((b) => ({
     id: b.id,
     companyName: b.companyName,
     amount: b.amount,
     createdAt: b.createdAt,
+    qualificationLevel: b.qualificationLevel,
   }));
 
   const sample = SAMPLE_AUCTIONS.find((a) => a.id === id);
@@ -91,6 +95,16 @@ export default async function EnchereDetailPage({ params }: Props) {
         </div>
 
         <p className="mt-6 leading-relaxed text-slate-600">{resolved.description}</p>
+
+        {workRequest?.previousQuoteAmount != null && workRequest.previousQuoteProofUrl && (
+          <div className="mt-6">
+            <PreviousQuotePanel
+              amount={workRequest.previousQuoteAmount}
+              proofUrl={workRequest.previousQuoteProofUrl}
+              note={workRequest.previousQuoteNote}
+            />
+          </div>
+        )}
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
@@ -139,12 +153,13 @@ export default async function EnchereDetailPage({ params }: Props) {
 
         {quotes.length > 0 && (
           <section className="mt-8">
-            <ApprovedQuotesList quotes={quotes.map((q) => ({
+            <ApprovedQuotesList quotes={quotesWithLevel.map((q) => ({
               id: q.id,
               companyName: q.companyName,
               amount: q.amount,
               description: q.description,
               visitDate: q.visitDate,
+              qualificationLevel: q.qualificationLevel,
             }))} />
           </section>
         )}
@@ -158,10 +173,11 @@ export default async function EnchereDetailPage({ params }: Props) {
           </p>
           <div className="mt-4">
             <VerifiedBidsList
-              bids={bids.map((b) => ({
+              bids={bidsWithLevel.map((b) => ({
                 id: b.id,
                 companyName: b.companyName,
                 amount: b.amount,
+                qualificationLevel: b.qualificationLevel,
               }))}
             />
           </div>

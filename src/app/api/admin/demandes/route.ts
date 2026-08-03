@@ -43,11 +43,23 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  const storeBefore = await readStore();
+  const existing = storeBefore.workRequests.find((r) => r.id === id);
+  const startPriceFromPreviousQuote =
+    status === "approved" &&
+    existing?.previousQuoteAmount != null &&
+    existing.startPriceQuoteId == null
+      ? existing.previousQuoteAmount
+      : undefined;
+
   const updated = await updateWorkRequest(id, {
     status,
     auctionId,
     auctionEndsAt,
     shareToken,
+    ...(startPriceFromPreviousQuote != null
+      ? { startPrice: startPriceFromPreviousQuote }
+      : {}),
   });
   if (!updated) {
     return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });

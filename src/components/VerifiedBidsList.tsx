@@ -1,4 +1,6 @@
 import { formatPrice } from "@/lib/data";
+import QualificationBadge from "@/components/QualificationBadge";
+import type { QualificationLevel } from "@/lib/qualification-tiers";
 
 export interface BidDisplay {
   id: string;
@@ -7,6 +9,7 @@ export interface BidDisplay {
   city?: string;
   department?: string;
   siretMasked?: string;
+  qualificationLevel?: QualificationLevel;
 }
 
 export default function VerifiedBidsList({ bids }: { bids: BidDisplay[] }) {
@@ -30,7 +33,12 @@ export default function VerifiedBidsList({ bids }: { bids: BidDisplay[] }) {
             className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
           >
             <div>
-              <p className="font-medium text-slate-900">{bid.companyName}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-slate-900">{bid.companyName}</p>
+                {bid.qualificationLevel != null && (
+                  <QualificationBadge level={bid.qualificationLevel} compact />
+                )}
+              </div>
               {bid.city && (
                 <p className="text-xs text-slate-500">
                   {bid.city}

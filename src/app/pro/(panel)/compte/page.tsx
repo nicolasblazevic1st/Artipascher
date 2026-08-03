@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getProSession } from "@/lib/pro-auth";
+import ProDocumentsList from "@/components/ProDocumentsList";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { getApprovedProById, getContactUnlocksForPro, getProDashboardStats } from "@/lib/store";
 import { maskSiret } from "@/lib/professionals";
@@ -64,6 +65,18 @@ export default async function ProComptePage() {
             />
           </dl>
         </section>
+
+        {(pro.documents?.length ?? 0) > 0 && (
+          <section className="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
+            <h2 className="font-semibold text-slate-900">Documents transmis</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Fichiers déposés lors de votre inscription.
+            </p>
+            <div className="mt-4">
+              <ProDocumentsList documents={pro.documents!} />
+            </div>
+          </section>
+        )}
       </div>
 
       {unlocks.length > 0 && (

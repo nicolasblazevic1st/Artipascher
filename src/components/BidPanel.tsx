@@ -8,12 +8,15 @@ import {
   suggestNextBid,
 } from "@/lib/auctions";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
+import QualificationBadge from "@/components/QualificationBadge";
+import type { QualificationLevel } from "@/lib/qualification-tiers";
 
 interface BidRow {
   id: string;
   companyName: string;
   amount: number;
   createdAt: string;
+  qualificationLevel?: QualificationLevel;
 }
 
 interface Eligibility {
@@ -280,9 +283,16 @@ export default function BidPanel({
           <p className="text-sm font-medium text-slate-700">Historique ({bids.length})</p>
           <ul className="mt-2 space-y-1 text-sm text-slate-600">
             {bids.slice(0, 5).map((b) => (
-              <li key={b.id} className="flex justify-between">
-                <span>{b.companyName}</span>
-                <span className="font-semibold text-brand-700">{formatPrice(b.amount)}</span>
+              <li key={b.id} className="flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="truncate">{b.companyName}</span>
+                  {b.qualificationLevel != null && (
+                    <QualificationBadge level={b.qualificationLevel} compact />
+                  )}
+                </span>
+                <span className="shrink-0 font-semibold text-brand-700">
+                  {formatPrice(b.amount)}
+                </span>
               </li>
             ))}
           </ul>

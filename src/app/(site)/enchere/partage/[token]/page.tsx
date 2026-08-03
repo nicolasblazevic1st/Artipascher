@@ -5,6 +5,7 @@ import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
+import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatLocation, formatPrice } from "@/lib/data";
 import {
@@ -13,7 +14,12 @@ import {
   getPublicShareUrl,
   isAuctionStillActive,
 } from "@/lib/share";
-import { getApprovedProQuotesForAuction, getBidsForAuction } from "@/lib/store";
+import {
+  getApprovedProQuotesForAuction,
+  getBidsForAuction,
+  mapBidsWithQualification,
+  mapQuotesWithQualification,
+} from "@/lib/store";
 import { getWorkRequestByShareToken } from "@/lib/work-request-auctions";
 
 type Props = { params: Promise<{ token: string }> };
@@ -55,6 +61,8 @@ export default async function SharedAuctionPage({ params }: Props) {
 
   const bids = await getBidsForAuction(request.auctionId);
   const quotes = await getApprovedProQuotesForAuction(request.auctionId);
+  const bidsWithLevel = await mapBidsWithQualification(bids);
+  const quotesWithLevel = await mapQuotesWithQualification(quotes);
   const currentPrice = computeCurrentPrice(
     request.startPrice,
     bids.map((b) => b.amount)
@@ -118,6 +126,16 @@ export default async function SharedAuctionPage({ params }: Props) {
           </div>
         )}
 
+        {request.previousQuoteAmount != null && request.previousQuoteProofUrl && (
+          <div className="mt-6">
+            <PreviousQuotePanel
+              amount={request.previousQuoteAmount}
+              proofUrl={request.previousQuoteProofUrl}
+              note={request.previousQuoteNote}
+            />
+          </div>
+        )}
+
         <dl className="mt-8 grid gap-4 sm:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
@@ -160,11 +178,12 @@ export default async function SharedAuctionPage({ params }: Props) {
               auctionId={request.auctionId}
               startPrice={request.startPrice}
               initialCurrentPrice={currentPrice}
-              initialBids={bids.map((b) => ({
+              initialBids={bidsWithLevel.map((b) => ({
                 id: b.id,
                 companyName: b.companyName,
                 amount: b.amount,
                 createdAt: b.createdAt,
+                qualificationLevel: b.qualificationLevel,
               }))}
               requiresQuote
             />
@@ -173,12 +192,13 @@ export default async function SharedAuctionPage({ params }: Props) {
 
         <section className="mt-8">
           <ApprovedQuotesList
-            quotes={quotes.map((q) => ({
+            quotes={quotesWithLevel.map((q) => ({
               id: q.id,
               companyName: q.companyName,
               amount: q.amount,
               description: q.description,
               visitDate: q.visitDate,
+              qualificationLevel: q.qualificationLevel,
             }))}
           />
         </section>
@@ -193,10 +213,11 @@ export default async function SharedAuctionPage({ params }: Props) {
             </p>
             <div className="mt-4">
               <VerifiedBidsList
-                bids={bids.map((b) => ({
+                bids={bidsWithLevel.map((b) => ({
                   id: b.id,
                   companyName: b.companyName,
                   amount: b.amount,
+                  qualificationLevel: b.qualificationLevel,
                 }))}
               />
             </div>

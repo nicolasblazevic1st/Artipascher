@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MIN_QUOTE_DESCRIPTION_LENGTH } from "@/lib/devis-validation";
 
 interface ExistingQuote {
@@ -34,7 +34,16 @@ export default function ProSubmitQuoteForm({ auctionId }: Props) {
 
   const [visitDate, setVisitDate] = useState("");
   const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [descLength, setDescLength] = useState(0);
+
+  function syncDescriptionLength(value: string) {
+    setDescLength(value.trim().length);
+  }
+
+  function getDescriptionValue() {
+    return descriptionRef.current?.value ?? "";
+  }
 
   const loadQuote = useCallback(async () => {
     const res = await fetch(`/api/pro/devis?auctionId=${encodeURIComponent(auctionId)}`);
@@ -62,7 +71,7 @@ export default function ProSubmitQuoteForm({ auctionId }: Props) {
         auctionId,
         visitDate,
         amount: Number(amount),
-        description,
+        description: getDescriptionValue(),
       }),
     });
 
@@ -86,7 +95,6 @@ export default function ProSubmitQuoteForm({ auctionId }: Props) {
 
   const canSubmit =
     !existing || existing.status === "rejected";
-  const descLength = description.trim().length;
 
   return (
     <section id="devis" className="mt-6 rounded-xl border border-brand-200 bg-brand-50 p-6">
@@ -162,11 +170,14 @@ export default function ProSubmitQuoteForm({ auctionId }: Props) {
             </label>
             <textarea
               id="description"
+              ref={descriptionRef}
               name="description"
               required
               rows={6}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              lang="fr"
+              spellCheck
+              onInput={(e) => syncDescriptionLength(e.currentTarget.value)}
+              onChange={(e) => syncDescriptionLength(e.currentTarget.value)}
               placeholder="Prestations, fournitures, main-d'œuvre, délais, garanties…"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />

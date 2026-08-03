@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
+import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatPrice } from "@/lib/data";
 import type { WorkRequest } from "@/lib/store-types";
@@ -113,6 +114,15 @@ export default function AdminDemandesPage() {
                       ))}
                     </div>
                   )}
+                  {r.previousQuoteAmount != null && r.previousQuoteProofUrl && (
+                    <div className="mt-4">
+                      <PreviousQuotePanel
+                        amount={r.previousQuoteAmount}
+                        proofUrl={r.previousQuoteProofUrl}
+                        note={r.previousQuoteNote}
+                      />
+                    </div>
+                  )}
                   <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
                     <div>{r.city} ({r.department})</div>
                     <div>{r.category}</div>
@@ -120,7 +130,15 @@ export default function AdminDemandesPage() {
                       Prix de départ :{" "}
                       {r.startPrice != null
                         ? formatPrice(r.startPrice)
-                        : "En attente du 1er devis"}
+                        : "En attente (devis précédent ou 1er devis Artipascher)"}
+                      {r.startPrice != null &&
+                        r.previousQuoteAmount != null &&
+                        r.startPriceQuoteId == null && (
+                          <span className="text-amber-700"> · devis précédent</span>
+                        )}
+                      {r.startPriceQuoteId != null && (
+                        <span className="text-emerald-700"> · devis Artipascher</span>
+                      )}
                     </div>
                     <div>
                       Durée enchère :{" "}

@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import HelpTooltip from "@/components/HelpTooltip";
+import {
+  PRO_REGISTRATION_DOCUMENTS,
+  proDocumentFieldName,
+  validateProRegistrationDocuments,
+} from "@/lib/pro-documents";
 import { isValidSiretFormat, normalizeSiret, type RcsVerificationResult } from "@/lib/rcs";
 
 type FormStatus = "idle" | "verifying" | "verified" | "submitting" | "success" | "error";
@@ -14,6 +20,7 @@ export default function ProRegistrationForm() {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [zone, setZone] = useState("");
   const [category, setCategory] = useState("");
+  const [documents, setDocuments] = useState<Record<string, File | null>>({});
   const [verification, setVerification] = useState<RcsVerificationResult | null>(null);
   const [status, setStatus] = useState<FormStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +65,11 @@ export default function ProRegistrationForm() {
     }
   }
 
+  function handleDocumentChange(id: string, file: File | null) {
+    setDocuments((prev) => ({ ...prev, [id]: file }));
+    setError(null);
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -73,24 +85,39 @@ export default function ProRegistrationForm() {
       return;
     }
 
+    const documentsError = validateProRegistrationDocuments(documents);
+    if (documentsError) {
+      setError(documentsError);
+      setStatus("error");
+      return;
+    }
+
     setStatus("submitting");
+
+    const formData = new FormData();
+    formData.set("companyName", companyName);
+    formData.set("siret", verification.siret);
+    formData.set("siren", verification.siren ?? verification.siret.slice(0, 9));
+    formData.set("email", email);
+    formData.set("phone", phone);
+    formData.set("city", verification.city ?? "");
+    formData.set("department", verification.department ?? "59");
+    formData.set("category", category);
+    formData.set("zone", zone);
+    formData.set("rcsVerified", "true");
+    formData.set("password", password);
+    formData.set("passwordConfirm", passwordConfirm);
+
+    for (const doc of PRO_REGISTRATION_DOCUMENTS) {
+      const file = documents[doc.id];
+      if (file) {
+        formData.append(proDocumentFieldName(doc.id), file);
+      }
+    }
 
     const res = await fetch("/api/inscriptions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        companyName,
-        siret: verification.siret,
-        siren: verification.siren,
-        email,
-        phone,
-        city: verification.city,
-        department: verification.department,
-        category,
-        zone,
-        rcsVerified: true,
-        password,
-      }),
+      body: formData,
     });
 
     if (!res.ok) {
@@ -106,6 +133,8 @@ export default function ProRegistrationForm() {
   const inputClass =
     "w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
 
+  const fieldsEnabled = verification?.valid;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -113,6 +142,7 @@ export default function ProRegistrationForm() {
         <p className="mt-1 text-amber-800">
           Seules les entreprises vérifiées au registre du commerce (SIRET valide,
           établissement actif, siège en 59 ou 62) peuvent s&apos;inscrire et enchérir.
+          Joignez vos documents dès l&apos;inscription pour accélérer la validation.
         </p>
       </div>
 
@@ -192,7 +222,7 @@ export default function ProRegistrationForm() {
         onChange={(e) => setEmail(e.target.value)}
         className={inputClass}
         required
-        disabled={!verification?.valid}
+        disabled={!fieldsEnabled}
       />
 
       <input
@@ -202,7 +232,7 @@ export default function ProRegistrationForm() {
         onChange={(e) => setPhone(e.target.value)}
         className={inputClass}
         required
-        disabled={!verification?.valid}
+        disabled={!fieldsEnabled}
       />
 
       <input
@@ -212,7 +242,7 @@ export default function ProRegistrationForm() {
         onChange={(e) => setZone(e.target.value)}
         className={inputClass}
         required
-        disabled={!verification?.valid}
+        disabled={!fieldsEnabled}
       />
 
       <select
@@ -220,7 +250,7 @@ export default function ProRegistrationForm() {
         onChange={(e) => setCategory(e.target.value)}
         className={`${inputClass} text-slate-600`}
         required
-        disabled={!verification?.valid}
+        disabled={!fieldsEnabled}
       >
         <option value="" disabled>
           Corps de métier principal
@@ -231,6 +261,46 @@ export default function ProRegistrationForm() {
         <option>Maçonnerie</option>
         <option>Menuiserie</option>
       </select>
+
+      {fieldsEnabled && (
+        <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Vos documents</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            JPG, PNG, WebP ou PDF · max 10 Mo par fichier. KBIS et assurance RC
+            obligatoires.
+          </p>
+          <ul className="mt-4 space-y-4">
+            {PRO_REGISTRATION_DOCUMENTS.map((doc) => (
+              <li key={doc.id}>
+                <label
+                  htmlFor={proDocumentFieldName(doc.id)}
+                  className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700"
+                >
+                  {doc.label}
+                  {doc.required && <span className="text-red-500">*</span>}
+                  <HelpTooltip label={doc.label} content={doc.help} />
+                </label>
+                <input
+                  id={proDocumentFieldName(doc.id)}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  required={doc.required}
+                  disabled={!fieldsEnabled}
+                  onChange={(e) =>
+                    handleDocumentChange(doc.id, e.target.files?.[0] ?? null)
+                  }
+                  className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+                />
+                {documents[doc.id] && (
+                  <p className="mt-1 text-xs text-brand-700">
+                    Fichier sélectionné : {documents[doc.id]!.name}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div>
         <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
@@ -245,7 +315,7 @@ export default function ProRegistrationForm() {
           placeholder="Min. 8 caractères, lettre et chiffre"
           required
           minLength={8}
-          disabled={!verification?.valid}
+          disabled={!fieldsEnabled}
           autoComplete="new-password"
         />
       </div>
@@ -266,7 +336,7 @@ export default function ProRegistrationForm() {
           placeholder="Retapez le mot de passe"
           required
           minLength={8}
-          disabled={!verification?.valid}
+          disabled={!fieldsEnabled}
           autoComplete="new-password"
         />
         <p className="mt-1 text-xs text-slate-500">
@@ -274,19 +344,9 @@ export default function ProRegistrationForm() {
         </p>
       </div>
 
-      <label className="flex items-start gap-2 text-sm text-slate-600">
-        <input
-          type="file"
-          accept=".pdf"
-          className="mt-1 text-xs"
-          disabled={!verification?.valid}
-        />
-        <span>KBIS de moins de 3 mois (PDF) — contrôle complémentaire par l&apos;admin</span>
-      </label>
-
       <button
         type="submit"
-        disabled={!verification?.valid || status === "submitting" || status === "success"}
+        disabled={!fieldsEnabled || status === "submitting" || status === "success"}
         className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === "submitting"
@@ -298,11 +358,12 @@ export default function ProRegistrationForm() {
 
       {status === "success" && (
         <p className="text-center text-sm text-emerald-600">
-          Inscription reçue. Un administrateur validera votre KBIS sous 24-48 h.
+          Inscription et documents reçus. Un administrateur validera votre dossier sous
+          24-48 h.
         </p>
       )}
 
-      {!verification?.valid && (
+      {!fieldsEnabled && (
         <p className="text-center text-xs text-slate-500">
           Les champs ci-dessous seront débloqués après vérification RCS réussie.
         </p>
