@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import QualificationBadge from "@/components/QualificationBadge";
 import ProDocumentsList from "@/components/ProDocumentsList";
 import { CATEGORY_LABELS } from "@/lib/data";
+import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
 import type { ProRegistration } from "@/lib/store-types";
 
@@ -120,7 +121,13 @@ export default function AdminProfessionnelsPage() {
                     <div>
                       Zone : {r.zone || `${r.city} (${r.department})`}
                     </div>
-                    <div>Métier : {CATEGORY_LABELS[r.category]}</div>
+                    <div>
+                      Corps de métier :{" "}
+                      {getProTradeSelections(r)
+                        .map((s) => s.tradeGroupLabel)
+                        .join(" · ") || CATEGORY_LABELS[r.category]}
+                    </div>
+                    <div>Métiers Qualibat : {formatProTradeSelections(r)}</div>
                   </dl>
                   {(r.documents?.length ?? 0) > 0 && (
                     <div className="mt-4 max-w-lg">

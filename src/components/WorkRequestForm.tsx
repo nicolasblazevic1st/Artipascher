@@ -10,10 +10,12 @@ import {
   validatePhotoFiles,
   validatePreviousQuotePair,
 } from "@/lib/demandes-validation";
+import { validateClientAddress } from "@/lib/client-address";
 import {
   AUCTION_DURATION_OPTIONS,
   DEFAULT_AUCTION_DURATION_DAYS,
 } from "@/lib/auction-duration";
+import { WORK_CATEGORIES } from "@/lib/work-categories";
 
 export default function WorkRequestForm() {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -93,6 +95,19 @@ export default function WorkRequestForm() {
       }
     }
 
+    const form = e.currentTarget;
+    const addressError = validateClientAddress({
+      addressLine: (form.elements.namedItem("addressLine") as HTMLInputElement)?.value,
+      addressLine2: (form.elements.namedItem("addressLine2") as HTMLInputElement)?.value,
+      postalCode: (form.elements.namedItem("postalCode") as HTMLInputElement)?.value,
+      city: (form.elements.namedItem("city") as HTMLInputElement)?.value,
+    });
+    if (addressError) {
+      setError(addressError);
+      setStatus("error");
+      return;
+    }
+
     if (password !== passwordConfirm) {
       setError("Les mots de passe ne correspondent pas.");
       setStatus("error");
@@ -101,7 +116,6 @@ export default function WorkRequestForm() {
 
     setStatus("submitting");
 
-    const form = e.currentTarget;
     const formData = new FormData(form);
     formData.set("description", getDescriptionValue().trim());
     formData.delete("photos");
@@ -160,6 +174,7 @@ export default function WorkRequestForm() {
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
+          <li>Adresse complète du chantier (rue, code postal, ville)</li>
           <li>Prix de départ : devis précédent (si fourni) ou 1er devis Artipascher validé</li>
           <li>Option : joindre un devis déjà reçu (montant + justificatif)</li>
         </ul>
@@ -170,13 +185,73 @@ export default function WorkRequestForm() {
         <input name="lastName" type="text" placeholder="Nom" className={inputClass} required />
       </div>
       <input name="email" type="email" placeholder="Email" className={inputClass} required />
-      <input
-        name="city"
-        type="text"
-        placeholder="Ville (ex. Lille, Roubaix, Lens…)"
-        className={inputClass}
-        required
-      />
+
+      <div>
+        <label htmlFor="addressLine" className="mb-1 block text-sm font-medium text-slate-700">
+          Adresse du chantier <span className="text-red-500">*</span>
+        </label>
+        <input
+          id="addressLine"
+          name="addressLine"
+          type="text"
+          placeholder="12 rue de la Barre"
+          className={inputClass}
+          required
+          autoComplete="street-address"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="addressLine2" className="mb-1 block text-sm font-medium text-slate-700">
+          Complément d&apos;adresse
+        </label>
+        <input
+          id="addressLine2"
+          name="addressLine2"
+          type="text"
+          placeholder="Appartement 3, bâtiment B, résidence…"
+          className={inputClass}
+          autoComplete="address-line2"
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="postalCode" className="mb-1 block text-sm font-medium text-slate-700">
+            Code postal <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="postalCode"
+            name="postalCode"
+            type="text"
+            inputMode="numeric"
+            pattern="(59|62)\d{3}"
+            placeholder="59000"
+            className={inputClass}
+            required
+            autoComplete="postal-code"
+          />
+        </div>
+        <div>
+          <label htmlFor="city" className="mb-1 block text-sm font-medium text-slate-700">
+            Ville <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="city"
+            name="city"
+            type="text"
+            placeholder="Lille, Roubaix, Lens…"
+            className={inputClass}
+            required
+            autoComplete="address-level2"
+          />
+        </div>
+      </div>
+      <p className="-mt-2 text-xs text-slate-500">
+        Nord (59) et Pas-de-Calais (62) uniquement. L&apos;adresse exacte n&apos;est
+        communiquée aux artisans qu&apos;après déblocage des coordonnées.
+      </p>
+
       <select
         name="category"
         value={category}
@@ -187,14 +262,11 @@ export default function WorkRequestForm() {
         <option value="" disabled>
           Type de travaux
         </option>
-        <option>Peinture</option>
-        <option>Plomberie</option>
-        <option>Électricité</option>
-        <option>Maçonnerie</option>
-        <option>Isolation</option>
-        <option>Chauffage / Pompe à chaleur</option>
-        <option>Rénovation énergétique</option>
-        <option>Rénovation complète</option>
+        {WORK_CATEGORIES.map((cat) => (
+          <option key={cat} value={cat}>
+            {cat}
+          </option>
+        ))}
       </select>
 
       <ClientQualificationGuide selectedCategory={category} />

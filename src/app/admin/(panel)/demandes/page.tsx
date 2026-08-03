@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatPrice } from "@/lib/data";
 import type { WorkRequest } from "@/lib/store-types";
@@ -124,7 +125,7 @@ export default function AdminDemandesPage() {
                     </div>
                   )}
                   <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
-                    <div>{r.city} ({r.department})</div>
+                    <div>Adresse : {formatWorkRequestAddress(r)}</div>
                     <div>{r.category}</div>
                     <div>
                       Prix de départ :{" "}

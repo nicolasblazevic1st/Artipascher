@@ -6,17 +6,38 @@ import {
   validateProRegistrationDocuments,
 } from "@/lib/pro-documents";
 import { hashPassword, validatePassword } from "@/lib/password";
+import { primaryTradeCategory } from "@/lib/pro-trades";
+import { resolveMultipleTradeSelections } from "@/lib/qualibat-job-groups";
+import type { ProTradeSelection } from "@/lib/store-types";
 import { addProRegistration, setProRegistrationDocuments } from "@/lib/store";
 import { saveProRegistrationDocuments } from "@/lib/uploads";
 
-const CATEGORY_MAP: Record<string, TradeCategory> = {
-  Peinture: "peinture",
-  Plomberie: "plomberie",
-  Électricité: "electricite",
-  Maçonnerie: "maconnerie",
-  Menuiserie: "menuiserie",
-  Carrelage: "carrelage",
-};
+const VALID_CATEGORIES = new Set<TradeCategory>([
+  "maconnerie",
+  "menuiserie",
+  "plaquiste",
+  "carrelage",
+  "electricite",
+  "peinture",
+  "plomberie",
+  "chauffage",
+  "couverture",
+  "charpente",
+]);
+
+function parseTradeSelections(raw: string): ProTradeSelection[] | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const entries = parsed.map((item) => ({
+      tradeGroupId: String((item as ProTradeSelection).tradeGroupId ?? ""),
+      qualibatJobId: Number((item as ProTradeSelection).qualibatJobId),
+    }));
+    return resolveMultipleTradeSelections(entries);
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +50,8 @@ export async function POST(request: NextRequest) {
     const phone = String(formData.get("phone") ?? "").trim();
     const city = String(formData.get("city") ?? "").trim();
     const department = String(formData.get("department") ?? "59");
-    const category = String(formData.get("category") ?? "").trim();
+    const categoryRaw = String(formData.get("category") ?? "").trim();
+    const tradeSelectionsRaw = String(formData.get("tradeSelections") ?? "").trim();
     const zone = String(formData.get("zone") ?? "").trim();
     const rcsVerified = String(formData.get("rcsVerified") ?? "") === "true";
     const password = String(formData.get("password") ?? "");
@@ -61,10 +83,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: passwordError }, { status: 400 });
     }
 
+    const tradeSelections = parseTradeSelections(tradeSelectionsRaw);
+    if (!tradeSelections) {
+      return NextResponse.json(
+        { error: "Sélectionnez au moins un corps de métier avec un métier Qualibat valide." },
+        { status: 400 }
+      );
+    }
+
+    const category = VALID_CATEGORIES.has(categoryRaw as TradeCategory)
+      ? (categoryRaw as TradeCategory)
+      : primaryTradeCategory(tradeSelections);
+
     const documentsError = validateProRegistrationDocuments(documentFiles);
     if (documentsError) {
       return NextResponse.json({ error: documentsError }, { status: 400 });
     }
+
+    const primary = tradeSelections[0];
 
     const entry = await addProRegistration({
       companyName,
@@ -74,7 +110,12 @@ export async function POST(request: NextRequest) {
       phone,
       city,
       department: department === "62" ? "62" : "59",
-      category: CATEGORY_MAP[category] ?? "peinture",
+      category,
+      tradeSelections,
+      tradeGroupId: primary.tradeGroupId,
+      tradeGroupLabel: primary.tradeGroupLabel,
+      qualibatJobId: primary.qualibatJobId,
+      qualibatJobLabel: primary.qualibatJobLabel,
       zone,
       rcsVerified: true,
       passwordHash: hashPassword(password),

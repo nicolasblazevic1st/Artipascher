@@ -1,5 +1,6 @@
 import { geocodeCity } from "./geo";
 import { getNafCodesForCategory } from "./naf-codes";
+import { proCoversTradeCategory } from "./pro-trades";
 import { readStore } from "./store";
 import type { ProRegistration } from "./store-types";
 
@@ -43,28 +44,9 @@ interface GouvNearPointResponse {
   results?: GouvCompany[];
 }
 
-function normalizeCategoryForPro(category: string, proCategory: string): boolean {
-  const c = category.toLowerCase();
-  const p = proCategory.toLowerCase();
-  if (c.includes(p) || p.includes(c.slice(0, 4))) return true;
-  const map: Record<string, string[]> = {
-    peinture: ["peinture"],
-    plomberie: ["plomberie"],
-    électricité: ["electricite", "électricité"],
-    electricite: ["électricité", "electricite"],
-    maconnerie: ["maçonnerie", "maconnerie"],
-    isolation: ["isolation"],
-    chauffage: ["chauffage"],
-  };
-  for (const [key, aliases] of Object.entries(map)) {
-    if (c.includes(key) && aliases.some((a) => p.includes(a.replace("é", "e")))) return true;
-  }
-  return false;
-}
-
 function platformProsToNearby(pros: ProRegistration[], category: string): NearbyBusiness[] {
   return pros
-    .filter((p) => p.status === "approved" && normalizeCategoryForPro(category, p.category))
+    .filter((p) => p.status === "approved" && proCoversTradeCategory(p, category))
     .map((p) => ({
       siret: p.siret,
       siren: p.siren,

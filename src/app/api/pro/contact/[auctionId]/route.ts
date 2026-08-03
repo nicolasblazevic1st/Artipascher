@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { workRequestToClientContactAddress } from "@/lib/client-address";
 import { getClientContact, type ClientContact } from "@/lib/client-contacts";
 import { getProSession } from "@/lib/pro-auth";
 import { hasContactUnlock } from "@/lib/store";
@@ -13,14 +14,16 @@ async function resolveClientContact(auctionId: string): Promise<ClientContact | 
   const request = await getWorkRequestByAuctionId(auctionId);
   if (!request) return null;
 
+  const { address, postalCode } = workRequestToClientContactAddress(request);
+
   return {
     auctionId,
     firstName: request.firstName,
     lastName: request.lastName,
     email: request.email,
     phone: "Contact par email",
-    address: request.city,
-    postalCode: `${request.department}`,
+    address,
+    postalCode,
   };
 }
 

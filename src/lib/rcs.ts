@@ -1,5 +1,10 @@
 /** Validation SIRET / registre du commerce (RCS via INSEE). */
 
+import {
+  buildRcsRegisteredActivities,
+  type RcsRegisteredActivity,
+} from "./naf-trade-groups";
+
 export interface RcsVerificationResult {
   valid: boolean;
   siret: string;
@@ -8,6 +13,8 @@ export interface RcsVerificationResult {
   city?: string;
   department?: string;
   isActive?: boolean;
+  /** Activités NAF déclarées au registre (établissement vérifié). */
+  registeredActivities?: RcsRegisteredActivity[];
   error?: string;
 }
 
@@ -49,15 +56,38 @@ export interface GouvEntrepriseResult {
   results?: Array<{
     nom_complet?: string;
     etat_administratif?: string;
+    activite_principale?: string;
     siege?: {
       libelle_commune?: string;
       code_postal?: string;
+      activite_principale?: string;
     };
     matching_etablissements?: Array<{
       siret?: string;
       etat_administratif?: string;
+      activite_principale?: string;
     }>;
   }>;
+}
+
+function collectRegisteredNafCodes(
+  company: NonNullable<GouvEntrepriseResult["results"]>[number],
+  siret: string
+): string[] {
+  const codes: string[] = [];
+  const matching = company.matching_etablissements?.find((e) => e.siret === siret);
+
+  if (matching?.activite_principale) {
+    codes.push(matching.activite_principale);
+  } else if (company.siege?.activite_principale) {
+    codes.push(company.siege.activite_principale);
+  }
+
+  if (company.activite_principale) {
+    codes.push(company.activite_principale);
+  }
+
+  return codes;
 }
 
 export async function verifyWithRegistry(
@@ -125,6 +155,10 @@ export async function verifyWithRegistry(
       };
     }
 
+    const registeredActivities = buildRcsRegisteredActivities(
+      collectRegisteredNafCodes(company, normalized)
+    );
+
     return {
       valid: true,
       siret: normalized,
@@ -133,6 +167,7 @@ export async function verifyWithRegistry(
       city: company.siege?.libelle_commune,
       department,
       isActive: true,
+      registeredActivities,
     };
   } catch {
     return {

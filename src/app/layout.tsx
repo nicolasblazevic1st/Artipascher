@@ -11,6 +11,15 @@ export const metadata: Metadata = {
   },
   description:
     "Plateforme d'enchères inversées pour vos travaux dans les Hauts-de-France.",
+  icons: {
+    icon: [
+      { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon-48.png",
+    apple: "/apple-icon.png",
+  },
+  manifest: "/site.webmanifest",
   openGraph: {
     siteName: "Artipascher",
     locale: "fr_FR",

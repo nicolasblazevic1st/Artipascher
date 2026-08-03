@@ -7,6 +7,7 @@ import ClientContactPanel from "@/components/ClientContactPanel";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { computeCurrentPrice } from "@/lib/auctions";
+import { formatPublicLocation } from "@/lib/client-address";
 import {
   CATEGORY_LABELS,
   SAMPLE_AUCTIONS,
@@ -86,7 +87,9 @@ export default async function EnchereDetailPage({ params }: Props) {
               {resolved.title}
             </h1>
             <p className="mt-1 text-slate-500">
-              {formatLocation(resolved.city, resolved.department)}
+              {workRequest
+                ? formatPublicLocation(workRequest)
+                : formatLocation(resolved.city, resolved.department)}
             </p>
           </div>
           <span className="rounded-full bg-brand-50 px-4 py-1.5 text-sm font-medium text-brand-700">
@@ -139,8 +142,11 @@ export default async function EnchereDetailPage({ params }: Props) {
 
         <ClientContactPanel
           auctionId={id}
-          city={resolved.city}
-          department={resolved.department}
+          publicLocation={
+            workRequest
+              ? formatPublicLocation(workRequest)
+              : formatLocation(resolved.city, resolved.department)
+          }
         />
 
         <BidPanel

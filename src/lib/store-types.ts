@@ -3,6 +3,14 @@ import type { QualificationLevel } from "./qualification-tiers";
 
 export type AdminReviewStatus = "pending" | "approved" | "rejected";
 
+export interface ProTradeSelection {
+  tradeGroupId: string;
+  tradeGroupLabel: string;
+  qualibatJobId: number;
+  qualibatJobLabel: string;
+  category: TradeCategory;
+}
+
 export interface ProDocument {
   id: string;
   label: string;
@@ -22,6 +30,16 @@ export interface ProRegistration {
   department: "59" | "62";
   category: TradeCategory;
   zone: string;
+  /** Corps de métier et métiers Qualibat (plusieurs possibles). */
+  tradeSelections?: ProTradeSelection[];
+  /** @deprecated Premier corps de métier — préférer tradeSelections. */
+  tradeGroupId?: string;
+  /** @deprecated */
+  tradeGroupLabel?: string;
+  /** @deprecated */
+  qualibatJobId?: number;
+  /** @deprecated */
+  qualibatJobLabel?: string;
   rcsVerified: boolean;
   /** Niveau affiché sur les enchères (1 = Certifié, 2 = Qualifié, 3 = Premium). */
   qualificationLevel?: QualificationLevel;
@@ -49,6 +67,12 @@ export interface WorkRequest {
   lastName: string;
   email: string;
   clientId?: string;
+  /** Numéro et voie du chantier (ex. 12 rue de la Barre). */
+  addressLine?: string;
+  /** Complément d'adresse (appartement, bâtiment…). */
+  addressLine2?: string;
+  /** Code postal (59xxx ou 62xxx). */
+  postalCode?: string;
   city: string;
   department: "59" | "62";
   category: string;

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  validateDescription,
-  validatePhotoFiles,
-  validatePreviousQuotePair,
-} from "@/lib/demandes-validation";
+  departmentFromPostalCode,
+  validateClientAddress,
+} from "@/lib/client-address";
 import {
   DEFAULT_AUCTION_DURATION_DAYS,
   validateAuctionDurationDays,
 } from "@/lib/auction-duration";
+import {
+  validateDescription,
+  validatePhotoFiles,
+  validatePreviousQuotePair,
+} from "@/lib/demandes-validation";
 import { validatePassword } from "@/lib/password";
 import { addWorkRequest, ensureClientAccount, linkOrphanWorkRequests, setWorkRequestPhotos, setWorkRequestPreviousQuote } from "@/lib/store";
 import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
@@ -19,6 +23,9 @@ export async function POST(request: NextRequest) {
     const firstName = String(formData.get("firstName") ?? "").trim();
     const lastName = String(formData.get("lastName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
+    const addressLine = String(formData.get("addressLine") ?? "").trim();
+    const addressLine2 = String(formData.get("addressLine2") ?? "").trim();
+    const postalCode = String(formData.get("postalCode") ?? "").trim();
     const city = String(formData.get("city") ?? "").trim();
     const category = String(formData.get("category") ?? "Autre").trim();
     const description = String(formData.get("description") ?? "");
@@ -38,9 +45,27 @@ export async function POST(request: NextRequest) {
     const previousQuoteProof =
       proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
 
-    if (!firstName || !lastName || !email || !city) {
+    if (!firstName || !lastName || !email || !addressLine || !postalCode || !city) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis." },
+        { status: 400 }
+      );
+    }
+
+    const addressError = validateClientAddress({
+      addressLine,
+      addressLine2,
+      postalCode,
+      city,
+    });
+    if (addressError) {
+      return NextResponse.json({ error: addressError }, { status: 400 });
+    }
+
+    const department = departmentFromPostalCode(postalCode);
+    if (!department) {
+      return NextResponse.json(
+        { error: "Code postal hors zone Artipascher (59 ou 62 uniquement)." },
         { status: 400 }
       );
     }
@@ -91,16 +116,16 @@ export async function POST(request: NextRequest) {
     }
     const { client } = clientResult;
 
-    const dept =
-      /^(62|pas-de-calais)/i.test(city) || city.includes("62") ? "62" : "59";
-
     const entry = await addWorkRequest({
       firstName,
       lastName,
       email,
       clientId: client.id,
+      addressLine,
+      addressLine2: addressLine2 || undefined,
+      postalCode,
       city,
-      department: dept as "59" | "62",
+      department,
       category,
       description: description.trim(),
       auctionDurationDays,

@@ -16,11 +16,10 @@ interface ClientContact {
 
 interface Props {
   auctionId: string;
-  city: string;
-  department: string;
+  publicLocation: string;
 }
 
-export default function ClientContactPanel({ auctionId, city, department }: Props) {
+export default function ClientContactPanel({ auctionId, publicLocation }: Props) {
   const [proLoggedIn, setProLoggedIn] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -161,7 +160,7 @@ export default function ClientContactPanel({ auctionId, city, department }: Prop
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
         <div className="flex justify-between border-b border-slate-100 py-2">
           <dt className="text-slate-500">Localisation</dt>
-          <dd className="font-medium">{city} ({department})</dd>
+          <dd className="font-medium">{publicLocation}</dd>
         </div>
         <div className="flex justify-between border-b border-slate-100 py-2">
           <dt className="text-slate-500">Client</dt>

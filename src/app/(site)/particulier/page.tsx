@@ -111,9 +111,10 @@ export default function ParticulierPage() {
             <li>Artisan A : 4 500 €</li>
             <li>Artisan B : 4 200 €</li>
             <li>Artisan C : 3 800 €</li>
+            <li>Artisan D : 4 100 €</li>
           </ul>
           <p className="mt-4 text-sm text-slate-700">
-            Vous comparez les trois offres et <strong>choisissez vous-même</strong> l&apos;artisan
+            Vous comparez les quatre offres et <strong>choisissez vous-même</strong> l&apos;artisan
             retenu — le moins cher n&apos;est pas imposé.
           </p>
           <p className="mt-2 text-sm text-brand-600 font-medium">

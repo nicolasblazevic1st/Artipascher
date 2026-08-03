@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getProSession } from "@/lib/pro-auth";
 import ProDocumentsList from "@/components/ProDocumentsList";
 import { CATEGORY_LABELS } from "@/lib/data";
+import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import { getApprovedProById, getContactUnlocksForPro, getProDashboardStats } from "@/lib/store";
 import { maskSiret } from "@/lib/professionals";
 
@@ -38,6 +39,15 @@ export default async function ProComptePage() {
             <Row label="Siège" value={`${pro.city} (${pro.department})`} />
             <Row
               label="Corps de métier"
+              value={
+                getProTradeSelections(pro)
+                  .map((s) => s.tradeGroupLabel)
+                  .join(" · ") || CATEGORY_LABELS[pro.category] || pro.category
+              }
+            />
+            <Row label="Métiers Qualibat" value={formatProTradeSelections(pro)} />
+            <Row
+              label="Catégorie enchères (principale)"
               value={CATEGORY_LABELS[pro.category] ?? pro.category}
             />
             <Row label="Zone d'intervention" value={pro.zone} />

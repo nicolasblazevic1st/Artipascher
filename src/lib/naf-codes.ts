@@ -9,6 +9,14 @@ export const CATEGORY_NAF_CODES: Record<string, string[]> = {
   "Chauffage / Pompe à chaleur": ["43.22B", "43.21A"],
   "Rénovation énergétique": ["43.21A", "43.29A", "43.34Z"],
   "Rénovation complète": ["43.99C", "41.20A", "43.34Z"],
+  "Menuiserie (fenêtres, portes, volets)": ["43.32A", "43.32B"],
+  "Toiture / Couverture": ["43.91A", "43.91B"],
+  "Carrelage / Revêtements de sol": ["43.33Z"],
+  "Placo / Cloisons": ["43.31Z", "43.29B"],
+  "Extérieur / Aménagement paysager": ["81.30Z", "43.99C"],
+  Terrassement: ["43.12A", "43.12B"],
+  Serrurerie: ["43.32B", "25.11Z"],
+  "Nettoyage / Multi-services": ["81.21Z", "81.22Z", "81.29B"],
 };
 
 /** Section NAF F = Construction (fallback large). */

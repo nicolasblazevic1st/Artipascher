@@ -96,6 +96,7 @@ export const LEVEL_2_CATEGORIES = [
   "Rénovation énergétique",
   "Isolation",
   "Chauffage / Pompe à chaleur",
+  "Menuiserie (fenêtres, portes, volets)",
 ] as const;
 
 export function getRecommendedLevelForCategory(category: string): QualificationLevel {
@@ -103,7 +104,8 @@ export function getRecommendedLevelForCategory(category: string): QualificationL
   if (
     category === "Rénovation énergétique" ||
     category === "Isolation" ||
-    category === "Chauffage / Pompe à chaleur"
+    category === "Chauffage / Pompe à chaleur" ||
+    category === "Menuiserie (fenêtres, portes, volets)"
   ) {
     return 2;
   }

@@ -7,7 +7,8 @@ import ClientContactPanel from "@/components/ClientContactPanel";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { computeCurrentPrice } from "@/lib/auctions";
-import { formatLocation, formatPrice } from "@/lib/data";
+import { formatPublicLocation } from "@/lib/client-address";
+import { formatPrice } from "@/lib/data";
 import {
   buildShareText,
   absoluteUrl,
@@ -99,7 +100,7 @@ export default async function SharedAuctionPage({ params }: Props) {
               Enchère inversée · {request.city}
             </h1>
             <p className="mt-1 text-slate-500">
-              {formatLocation(request.city, request.department)}
+              {formatPublicLocation(request)}
             </p>
           </div>
           <span
@@ -171,8 +172,7 @@ export default async function SharedAuctionPage({ params }: Props) {
           <>
             <ClientContactPanel
               auctionId={request.auctionId}
-              city={request.city}
-              department={request.department}
+              publicLocation={formatPublicLocation(request)}
             />
             <BidPanel
               auctionId={request.auctionId}

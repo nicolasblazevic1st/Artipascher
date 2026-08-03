@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import { formatPublicLocation, formatWorkRequestAddress } from "@/lib/client-address";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatPrice } from "@/lib/data";
 import { getClientSession } from "@/lib/client-auth";
@@ -60,7 +61,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
               {request.category} · {request.city}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              {request.city} ({request.department}) · {STATUS_LABELS[request.status]}
+              {formatPublicLocation(request)} · {STATUS_LABELS[request.status]}
             </p>
           </div>
           {request.auctionId && request.status === "approved" && (
@@ -81,6 +82,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
         )}
 
         <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
+
+        <p className="mt-4 text-sm text-slate-600">
+          <span className="font-medium text-slate-800">Adresse du chantier :</span>{" "}
+          {formatWorkRequestAddress(request)}
+        </p>
 
         {(request.photos?.length ?? 0) > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
