@@ -37,3 +37,18 @@
 body {
   @apply bg-stone-50 text-slate-900 antialiased;
 }
+
+@keyframes explainer-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.explainer-enter {
+  animation: explainer-enter 0.55s ease-out both;
+}

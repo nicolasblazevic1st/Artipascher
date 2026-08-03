@@ -50,10 +50,32 @@ export interface WorkRequest {
   auctionId?: string;
   /** Date de fin calculée à l'approbation admin. */
   auctionEndsAt?: string;
-  /** Offre retenue par le particulier. */
+  /** Offre indicative retenue (legacy). */
   selectedBidId?: string;
+  /** Devis après visite retenu par le particulier. */
+  selectedQuoteId?: string;
   /** Lien public de partage (réseaux sociaux). */
   shareToken?: string;
+}
+
+export type ProQuoteStatus = "pending_moderation" | "approved" | "rejected";
+
+/** Devis formalisé après visite sur site — validé par l'administration. */
+export interface ProQuote {
+  id: string;
+  workRequestId: string;
+  auctionId: string;
+  proId: string;
+  companyName: string;
+  /** Date de visite sur le chantier (YYYY-MM-DD). */
+  visitDate: string;
+  amount: number;
+  /** Détail des prestations, matériaux, délais… */
+  description: string;
+  status: ProQuoteStatus;
+  createdAt: string;
+  reviewedAt?: string;
+  adminNote?: string;
 }
 
 export interface Bid {
@@ -82,6 +104,7 @@ export interface DataStore {
   workRequests: WorkRequest[];
   contactUnlocks: ContactUnlock[];
   bids: Bid[];
+  proQuotes: ProQuote[];
 }
 
 export const EMPTY_STORE: DataStore = {
@@ -90,4 +113,5 @@ export const EMPTY_STORE: DataStore = {
   workRequests: [],
   contactUnlocks: [],
   bids: [],
+  proQuotes: [],
 };

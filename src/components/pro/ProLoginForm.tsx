@@ -14,15 +14,26 @@ export default function ProLoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const emailValue = String(formData.get("email") ?? email).trim();
+    const passwordValue = String(formData.get("password") ?? password);
+
+    if (!emailValue || !passwordValue) {
+      setError("Email et mot de passe requis.");
+      setLoading(false);
+      return;
+    }
+
     const res = await fetch("/api/pro/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: emailValue, password: passwordValue }),
     });
 
     const data = await res.json();
@@ -45,6 +56,7 @@ export default function ProLoginForm() {
         </label>
         <input
           id="email"
+          name="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -61,6 +73,7 @@ export default function ProLoginForm() {
         </label>
         <input
           id="password"
+          name="password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

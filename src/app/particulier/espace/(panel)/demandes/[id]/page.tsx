@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/data";
 import { getClientSession } from "@/lib/client-auth";
 import {
   ensureWorkRequestShareToken,
+  getApprovedProQuotesForAuction,
   getBidsForAuction,
   getWorkRequestForClient,
 } from "@/lib/store";
@@ -28,7 +29,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
   if (!request) notFound();
 
   const bids = request.auctionId ? await getBidsForAuction(request.auctionId) : [];
-  const canSelect = request.status === "approved" && !request.selectedBidId;
+  const quotes = request.auctionId
+    ? await getApprovedProQuotesForAuction(request.auctionId)
+    : [];
+  const canSelect =
+    request.status === "approved" && !request.selectedQuoteId && !request.selectedBidId;
   const shareToken =
     request.status === "approved"
       ? await ensureWorkRequestShareToken(id, session.clientId)
@@ -97,8 +102,8 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Offres reçues</dt>
-            <dd className="mt-1 text-xl font-semibold">{bids.length}</dd>
+            <dt className="text-xs text-slate-500">Devis validés</dt>
+            <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>
         </dl>
 
@@ -110,15 +115,26 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
         )}
 
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-slate-900">Offres des artisans</h2>
+          <h2 className="text-lg font-semibold text-slate-900">Devis des artisans</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Devis formalisés après visite sur site, validés par Artipascher.
+          </p>
           <div className="mt-4">
             <SelectArtisanPanel
               requestId={request.id}
+              quotes={quotes.map((q) => ({
+                id: q.id,
+                companyName: q.companyName,
+                amount: q.amount,
+                description: q.description,
+                visitDate: q.visitDate,
+              }))}
               bids={bids.map((b) => ({
                 id: b.id,
                 companyName: b.companyName,
                 amount: b.amount,
               }))}
+              selectedQuoteId={request.selectedQuoteId}
               selectedBidId={request.selectedBidId}
               canSelect={canSelect}
             />

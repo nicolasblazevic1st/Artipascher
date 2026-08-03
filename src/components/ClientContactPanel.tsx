@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
+import ProSubmitQuoteForm from "@/components/pro/ProSubmitQuoteForm";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 interface ClientContact {
@@ -100,48 +101,51 @@ export default function ClientContactPanel({ auctionId, city, department }: Prop
 
   if (unlocked && contact) {
     return (
-      <section id="contact" className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <h2 className="text-lg font-semibold text-emerald-900">
-            Coordonnées client débloquées
-          </h2>
-          <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
-            Accès payé · {UNLOCK_PRICE_EUR} €
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-emerald-700">
-          Connecté en tant que {companyName}
-        </p>
-        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-emerald-600">Client</dt>
-            <dd className="font-medium text-emerald-900">
-              {contact.firstName} {contact.lastName}
-            </dd>
+      <>
+        <section id="contact" className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <h2 className="text-lg font-semibold text-emerald-900">
+              Coordonnées client débloquées
+            </h2>
+            <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
+              Accès payé · {UNLOCK_PRICE_EUR} €
+            </span>
           </div>
-          <div>
-            <dt className="text-emerald-600">Téléphone</dt>
-            <dd className="font-medium text-emerald-900">{contact.phone}</dd>
-          </div>
-          <div>
-            <dt className="text-emerald-600">Email</dt>
-            <dd className="font-medium text-emerald-900">{contact.email}</dd>
-          </div>
-          <div>
-            <dt className="text-emerald-600">Adresse</dt>
-            <dd className="font-medium text-emerald-900">
-              {contact.address}, {contact.postalCode}
-            </dd>
-          </div>
-        </dl>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-4 text-xs text-emerald-700 underline"
-        >
-          Se déconnecter
-        </button>
-      </section>
+          <p className="mt-1 text-xs text-emerald-700">
+            Connecté en tant que {companyName}
+          </p>
+          <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-emerald-600">Client</dt>
+              <dd className="font-medium text-emerald-900">
+                {contact.firstName} {contact.lastName}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-emerald-600">Téléphone</dt>
+              <dd className="font-medium text-emerald-900">{contact.phone}</dd>
+            </div>
+            <div>
+              <dt className="text-emerald-600">Email</dt>
+              <dd className="font-medium text-emerald-900">{contact.email}</dd>
+            </div>
+            <div>
+              <dt className="text-emerald-600">Adresse</dt>
+              <dd className="font-medium text-emerald-900">
+                {contact.address}, {contact.postalCode}
+              </dd>
+            </div>
+          </dl>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-4 text-xs text-emerald-700 underline"
+          >
+            Se déconnecter
+          </button>
+        </section>
+        <ProSubmitQuoteForm auctionId={auctionId} />
+      </>
     );
   }
 

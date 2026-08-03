@@ -2,12 +2,14 @@ import { promises as fs } from "fs";
 import path from "path";
 import { hashPassword, verifyPassword, validatePassword } from "./password";
 import { createShareToken } from "./share";
+import { getSampleQuotesForAuction } from "./sample-quotes";
 import {
   EMPTY_STORE,
   type Bid,
   type ClientAccount,
   type ContactUnlock,
   type DataStore,
+  type ProQuote,
   type ProRegistration,
   type WorkRequest,
 } from "./store-types";
@@ -36,6 +38,7 @@ export async function readStore(): Promise<DataStore> {
     workRequests: parsed.workRequests ?? [],
     contactUnlocks: parsed.contactUnlocks ?? [],
     bids: parsed.bids ?? [],
+    proQuotes: parsed.proQuotes ?? [],
   };
 }
 
@@ -146,10 +149,12 @@ export async function getAdminStats() {
   const pendingPros = store.proRegistrations.filter((p) => p.status === "pending").length;
   const pendingRequests = store.workRequests.filter((r) => r.status === "pending").length;
   const approvedPros = store.proRegistrations.filter((p) => p.status === "approved").length;
+  const pendingQuotes = store.proQuotes.filter((q) => q.status === "pending_moderation").length;
 
   return {
     pendingPros,
     pendingRequests,
+    pendingQuotes,
     approvedPros,
     totalPros: store.proRegistrations.length,
     totalRequests: store.workRequests.length,
@@ -391,13 +396,132 @@ export async function selectBidForWorkRequest(
   return { request: store.workRequests[index] };
 }
 
+export async function getProQuotesForAuction(auctionId: string): Promise<ProQuote[]> {
+  const store = await readStore();
+  const stored = store.proQuotes.filter((q) => q.auctionId === auctionId);
+  const storedIds = new Set(stored.map((q) => q.id));
+  const samples = getSampleQuotesForAuction(auctionId).filter((q) => !storedIds.has(q.id));
+  return [...stored, ...samples].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function getApprovedProQuotesForAuction(auctionId: string): Promise<ProQuote[]> {
+  const quotes = await getProQuotesForAuction(auctionId);
+  return quotes.filter((q) => q.status === "approved");
+}
+
+export async function getProQuoteByProAndAuction(
+  proId: string,
+  auctionId: string
+): Promise<ProQuote | null> {
+  const store = await readStore();
+  const quote = store.proQuotes.find((q) => q.proId === proId && q.auctionId === auctionId);
+  return quote ?? null;
+}
+
+export async function getProQuotesForPro(proId: string): Promise<ProQuote[]> {
+  const store = await readStore();
+  return store.proQuotes
+    .filter((q) => q.proId === proId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function addProQuote(data: {
+  workRequestId: string;
+  auctionId: string;
+  proId: string;
+  companyName: string;
+  visitDate: string;
+  amount: number;
+  description: string;
+}): Promise<ProQuote | { error: string }> {
+  const store = await readStore();
+  const existing = store.proQuotes.find(
+    (q) => q.proId === data.proId && q.auctionId === data.auctionId
+  );
+
+  if (existing && existing.status !== "rejected") {
+    return { error: "Vous avez déjà déposé un devis pour ce chantier." };
+  }
+
+  const entry: ProQuote = {
+    id: newId("quote"),
+    ...data,
+    description: data.description.trim(),
+    status: "pending_moderation",
+    createdAt: new Date().toISOString(),
+  };
+
+  if (existing?.status === "rejected") {
+    const index = store.proQuotes.findIndex((q) => q.id === existing.id);
+    store.proQuotes[index] = entry;
+  } else {
+    store.proQuotes.push(entry);
+  }
+
+  await writeStore(store);
+  return entry;
+}
+
+export async function updateProQuoteStatus(
+  quoteId: string,
+  status: "approved" | "rejected",
+  adminNote?: string
+): Promise<ProQuote | null> {
+  const store = await readStore();
+  const index = store.proQuotes.findIndex((q) => q.id === quoteId);
+  if (index === -1) return null;
+
+  store.proQuotes[index] = {
+    ...store.proQuotes[index],
+    status,
+    reviewedAt: new Date().toISOString(),
+    adminNote: adminNote?.trim() || undefined,
+  };
+  await writeStore(store);
+  return store.proQuotes[index];
+}
+
+export async function selectQuoteForWorkRequest(
+  requestId: string,
+  clientId: string,
+  quoteId: string
+): Promise<{ request: WorkRequest } | { error: string }> {
+  const store = await readStore();
+  const index = store.workRequests.findIndex((r) => r.id === requestId);
+  if (index === -1) return { error: "Demande introuvable." };
+
+  const request = store.workRequests[index];
+  if (request.clientId !== clientId) return { error: "Accès refusé." };
+  if (request.status !== "approved") {
+    return { error: "L'enchère n'est pas encore active." };
+  }
+  if (!request.auctionId) return { error: "Aucune enchère associée." };
+
+  const quote = store.proQuotes.find((q) => q.id === quoteId);
+  if (!quote || quote.auctionId !== request.auctionId) {
+    return { error: "Devis introuvable." };
+  }
+  if (quote.status !== "approved") {
+    return { error: "Ce devis n'est pas encore validé." };
+  }
+
+  store.workRequests[index] = {
+    ...request,
+    selectedQuoteId: quoteId,
+  };
+  await writeStore(store);
+  return { request: store.workRequests[index] };
+}
+
 export async function getClientDashboardStats(clientId: string) {
   const requests = await getWorkRequestsByClientId(clientId);
   const pending = requests.filter((r) => r.status === "pending").length;
   const active = requests.filter(
-    (r) => r.status === "approved" && !r.selectedBidId
+    (r) => r.status === "approved" && !r.selectedQuoteId && !r.selectedBidId
   ).length;
-  const chosen = requests.filter((r) => r.selectedBidId).length;
+  const chosen = requests.filter((r) => r.selectedQuoteId || r.selectedBidId).length;
 
   return {
     totalRequests: requests.length,

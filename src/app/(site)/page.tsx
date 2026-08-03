@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AuctionCard from "@/components/AuctionCard";
+import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
 import {
   CATEGORY_LABELS,
@@ -72,6 +73,26 @@ export default function HomePage() {
           {STEPS.map((step, index) => (
             <StepCard key={step.title} number={index + 1} {...step} />
           ))}
+        </div>
+        <p className="mt-8 text-center">
+          <Link
+            href="/comment-ca-marche"
+            className="text-sm font-semibold text-brand-700 hover:text-brand-800"
+          >
+            Voir la présentation animée (~90 s) →
+          </Link>
+        </p>
+      </section>
+
+      <section className="border-y border-slate-200 bg-white py-16">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mb-8 text-center">
+            <h2 className="text-2xl font-bold text-slate-900">Découvrez Artipascher en action</h2>
+            <p className="mt-2 text-slate-600">
+              Présentation animée avec l&apos;interface réelle du site
+            </p>
+          </div>
+          <SiteExplainer compact autoPlay />
         </div>
       </section>
 

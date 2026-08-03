@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanel from "@/components/BidPanel";
+import ClientContactPanel from "@/components/ClientContactPanel";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatLocation, formatPrice } from "@/lib/data";
@@ -11,7 +13,7 @@ import {
   getPublicShareUrl,
   isAuctionStillActive,
 } from "@/lib/share";
-import { getBidsForAuction } from "@/lib/store";
+import { getApprovedProQuotesForAuction, getBidsForAuction } from "@/lib/store";
 import { getWorkRequestByShareToken } from "@/lib/work-request-auctions";
 
 type Props = { params: Promise<{ token: string }> };
@@ -52,6 +54,7 @@ export default async function SharedAuctionPage({ params }: Props) {
   if (!request?.auctionId) notFound();
 
   const bids = await getBidsForAuction(request.auctionId);
+  const quotes = await getApprovedProQuotesForAuction(request.auctionId);
   const currentPrice = computeCurrentPrice(
     request.budget,
     bids.map((b) => b.amount)
@@ -124,8 +127,8 @@ export default async function SharedAuctionPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
-            <dt className="text-xs text-slate-500">Offres</dt>
-            <dd className="mt-1 text-xl font-semibold">{bids.length}</dd>
+            <dt className="text-xs text-slate-500">Devis validés</dt>
+            <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Fin</dt>
@@ -140,33 +143,58 @@ export default async function SharedAuctionPage({ params }: Props) {
         )}
 
         {active && (
-          <BidPanel
-            auctionId={request.auctionId}
-            startPrice={request.budget}
-            initialCurrentPrice={currentPrice}
-            initialBids={bids.map((b) => ({
-              id: b.id,
-              companyName: b.companyName,
-              amount: b.amount,
-              createdAt: b.createdAt,
-            }))}
-          />
-        )}
-
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Offres des artisans (RCS vérifié)
-          </h2>
-          <div className="mt-4">
-            <VerifiedBidsList
-              bids={bids.map((b) => ({
+          <>
+            <ClientContactPanel
+              auctionId={request.auctionId}
+              city={request.city}
+              department={request.department}
+            />
+            <BidPanel
+              auctionId={request.auctionId}
+              startPrice={request.budget}
+              initialCurrentPrice={currentPrice}
+              initialBids={bids.map((b) => ({
                 id: b.id,
                 companyName: b.companyName,
                 amount: b.amount,
+                createdAt: b.createdAt,
               }))}
+              requiresQuote
             />
-          </div>
+          </>
+        )}
+
+        <section className="mt-8">
+          <ApprovedQuotesList
+            quotes={quotes.map((q) => ({
+              id: q.id,
+              companyName: q.companyName,
+              amount: q.amount,
+              description: q.description,
+              visitDate: q.visitDate,
+            }))}
+          />
         </section>
+
+        {bids.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Offres indicatives en ligne
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Estimations avant visite — le devis formalisé prime après passage sur site.
+            </p>
+            <div className="mt-4">
+              <VerifiedBidsList
+                bids={bids.map((b) => ({
+                  id: b.id,
+                  companyName: b.companyName,
+                  amount: b.amount,
+                }))}
+              />
+            </div>
+          </section>
+        )}
 
         <p className="mt-8 text-center text-xs text-slate-500">
           Artipascher · Enchères inversées travaux · Nord 59 / Pas-de-Calais 62

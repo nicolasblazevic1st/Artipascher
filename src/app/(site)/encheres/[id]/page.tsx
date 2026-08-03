@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
@@ -11,39 +12,44 @@ import {
   formatLocation,
   formatPrice,
 } from "@/lib/data";
-import { getBidsForAuction } from "@/lib/store";
+import { getApprovedProQuotesForAuction, getBidsForAuction } from "@/lib/store";
+import { getWorkRequestByAuctionId, resolveAuction } from "@/lib/work-request-auctions";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const auction = SAMPLE_AUCTIONS.find((a) => a.id === id);
-  if (!auction) return { title: "Enchère introuvable" };
+  const resolved = await resolveAuction(id);
+  if (!resolved) return { title: "Enchère introuvable" };
   return {
-    title: `${auction.title} — ${auction.city}`,
+    title: `${resolved.title} — ${resolved.city}`,
   };
 }
 
 export default async function EnchereDetailPage({ params }: Props) {
   const { id } = await params;
-  const auction = SAMPLE_AUCTIONS.find((a) => a.id === id);
+  const resolved = await resolveAuction(id);
 
-  if (!auction) notFound();
+  if (!resolved) notFound();
 
   const bids = await getBidsForAuction(id);
+  const quotes = await getApprovedProQuotesForAuction(id);
+  const workRequest = await getWorkRequestByAuctionId(id);
   const currentPrice = computeCurrentPrice(
-    auction.startPrice,
+    resolved.startPrice,
     bids.map((b) => b.amount)
   );
 
-  const savings = auction.startPrice - currentPrice;
-  const endsAt = new Date(auction.endsAt).toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const savings = resolved.startPrice - currentPrice;
+  const endsAt = resolved.endsAt
+    ? new Date(resolved.endsAt).toLocaleDateString("fr-FR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
 
   const bidRows = bids.map((b) => ({
     id: b.id,
@@ -51,6 +57,11 @@ export default async function EnchereDetailPage({ params }: Props) {
     amount: b.amount,
     createdAt: b.createdAt,
   }));
+
+  const sample = SAMPLE_AUCTIONS.find((a) => a.id === id);
+  const categoryLabel = sample
+    ? CATEGORY_LABELS[sample.category]
+    : (workRequest?.category ?? "Travaux");
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
@@ -62,27 +73,27 @@ export default async function EnchereDetailPage({ params }: Props) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-              {CATEGORY_LABELS[auction.category]}
+              {categoryLabel}
             </span>
             <h1 className="mt-3 text-3xl font-bold text-slate-900">
-              {auction.title}
+              {resolved.title}
             </h1>
             <p className="mt-1 text-slate-500">
-              {formatLocation(auction.city, auction.department)}
+              {formatLocation(resolved.city, resolved.department)}
             </p>
           </div>
           <span className="rounded-full bg-brand-50 px-4 py-1.5 text-sm font-medium text-brand-700">
-            Enchère active
+            {resolved.status === "active" ? "Enchère active" : "Enchère terminée"}
           </span>
         </div>
 
-        <p className="mt-6 leading-relaxed text-slate-600">{auction.description}</p>
+        <p className="mt-6 leading-relaxed text-slate-600">{resolved.description}</p>
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
-              {formatPrice(auction.startPrice)}
+              {formatPrice(resolved.startPrice)}
             </dd>
           </div>
           <div className="rounded-xl bg-brand-50 p-4 text-center">
@@ -92,8 +103,8 @@ export default async function EnchereDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
-            <dt className="text-xs text-slate-500">Offres</dt>
-            <dd className="mt-1 text-xl font-semibold">{bids.length}</dd>
+            <dt className="text-xs text-slate-500">Devis validés</dt>
+            <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Fin</dt>
@@ -107,17 +118,39 @@ export default async function EnchereDetailPage({ params }: Props) {
           </p>
         )}
 
+        <ClientContactPanel
+          auctionId={id}
+          city={resolved.city}
+          department={resolved.department}
+        />
+
         <BidPanel
-          auctionId={auction.id}
-          startPrice={auction.startPrice}
+          auctionId={id}
+          startPrice={resolved.startPrice}
           initialCurrentPrice={currentPrice}
           initialBids={bidRows}
+          requiresQuote={workRequest !== null}
         />
+
+        {quotes.length > 0 && (
+          <section className="mt-8">
+            <ApprovedQuotesList quotes={quotes.map((q) => ({
+              id: q.id,
+              companyName: q.companyName,
+              amount: q.amount,
+              description: q.description,
+              visitDate: q.visitDate,
+            }))} />
+          </section>
+        )}
 
         <section className="mt-8">
           <h2 className="text-lg font-semibold text-slate-900">
-            Offres des artisans (RCS vérifié)
+            Offres indicatives en ligne
           </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Estimations avant visite — le devis formalisé après passage sur site prime.
+          </p>
           <div className="mt-4">
             <VerifiedBidsList
               bids={bids.map((b) => ({
@@ -129,14 +162,8 @@ export default async function EnchereDetailPage({ params }: Props) {
           </div>
         </section>
 
-        <ClientContactPanel
-          auctionId={auction.id}
-          city={auction.city}
-          department={auction.department}
-        />
-
         <p className="mt-8 text-center text-xs text-slate-500">
-          1 € par enchère · Coordonnées client débloquables séparément · Artisans RCS
+          Devis obligatoire avant enchère · Validation admin · Artisans RCS
         </p>
       </div>
     </div>

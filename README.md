@@ -13,6 +13,11 @@ Modèle inspiré de [encherestravaux.fr](https://encherestravaux.fr/) : le parti
 | `/professionnel` | Espace artisan + inscription |
 | `/encheres` | Liste des enchères actives Nord |
 | `/encheres/[id]` | Détail d'une enchère |
+| `/comment-ca-marche` | Présentation animée (~90 s) |
+| `/enchere/partage/[token]` | Page publique partage enchère |
+| `/particulier/espace` | Espace client (demandes, devis) |
+| `/pro` | Espace artisan |
+| `/admin/devis` | Modération des devis après visite |
 | `/faq` | Questions fréquentes |
 | `/admin` | **Administration** — tableau de bord |
 | `/admin/login` | Connexion admin |
@@ -38,18 +43,38 @@ Ouvrir [http://localhost:3000](http://localhost:3000).
 Fonctions admin :
 - Approuver / refuser les **inscriptions artisans** (après vérif RCS + KBIS)
 - Valider les **demandes travaux** des particuliers (création d'enchère)
+- Modérer les **devis** déposés après visite sur chantier
 - Suivre les **enchères actives**
+
+## Déploiement VPS (OVH)
+
+Persistance locale : `data/store.json` et `public/uploads/` (non versionnés).
+
+**Première installation sur le serveur :**
+
+```bash
+sudo bash deploy/setup-vps.sh
+nano /var/www/artipascher/.env.local   # ADMIN_PASSWORD, NEXT_PUBLIC_SITE_URL, PAYMENT_MODE
+```
+
+**Nginx + HTTPS :** copier `deploy/nginx.conf.example` vers `/etc/nginx/sites-available/artipascher`, puis `certbot --nginx`.
+
+**Mises à jour après un push GitHub :**
+
+```bash
+cd /var/www/artipascher && bash deploy/deploy.sh
+```
+
+L'app écoute sur le port **3000** (PM2 via `ecosystem.config.cjs`).
 
 ## Stack
 
-- Next.js 15 (App Router)
+- Next.js 16 (App Router)
 - TypeScript
 - Tailwind CSS 4
 
-## Prochaines étapes
+## Parcours métier
 
-- Authentification particulier / pro
-- Backend enchères en temps réel
-- Validation KBIS et zone géographique 59/62
-- Vérification SIRET / RCS via API entreprises (registre du commerce)
-- Paiement / commission 10 % côté pro
+1. Particulier → demande validée → enchère inversée
+2. Artisan → contact (1 €) → visite → **devis** (modération admin)
+3. Devis approuvé → enchère (cohérente avec le devis) → client choisit l'artisan

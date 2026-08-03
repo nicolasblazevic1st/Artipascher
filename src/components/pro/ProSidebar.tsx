@@ -5,6 +5,7 @@ const NAV = [
   { href: "/pro", label: "Tableau de bord", icon: "📊" },
   { href: "/pro/encheres", label: "Enchères actives", icon: "🔨" },
   { href: "/pro/mes-encheres", label: "Mes offres", icon: "📋" },
+  { href: "/pro/mes-devis", label: "Mes devis", icon: "📄" },
   { href: "/pro/compte", label: "Mon compte", icon: "🏢" },
 ];
 

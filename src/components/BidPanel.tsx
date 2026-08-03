@@ -16,11 +16,25 @@ interface BidRow {
   createdAt: string;
 }
 
+interface Eligibility {
+  requiresQuote: boolean;
+  canBid: boolean;
+  reason?: string;
+  quote?: {
+    id: string;
+    status: string;
+    amount: number;
+    minBidAmount?: number;
+    maxBidAmount?: number;
+  };
+}
+
 interface Props {
   auctionId: string;
   startPrice: number;
   initialCurrentPrice: number;
   initialBids: BidRow[];
+  requiresQuote?: boolean;
 }
 
 export default function BidPanel({
@@ -28,6 +42,7 @@ export default function BidPanel({
   startPrice,
   initialCurrentPrice,
   initialBids,
+  requiresQuote = false,
 }: Props) {
   const [currentPrice, setCurrentPrice] = useState(initialCurrentPrice);
   const [bids, setBids] = useState(initialBids);
@@ -37,6 +52,7 @@ export default function BidPanel({
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [eligibility, setEligibility] = useState<Eligibility | null>(null);
 
   const [showLogin, setShowLogin] = useState(false);
 
@@ -49,6 +65,19 @@ export default function BidPanel({
       setAmount(suggestNextBid(data.currentPrice));
     }
   }, [auctionId]);
+
+  const refreshEligibility = useCallback(
+    async (bidAmount?: number) => {
+      if (!proLoggedIn) return;
+      const params = new URLSearchParams({ auctionId });
+      if (bidAmount !== undefined) params.set("amount", String(bidAmount));
+      const res = await fetch(`/api/pro/bid-eligibility?${params}`);
+      if (res.ok) {
+        setEligibility(await res.json());
+      }
+    },
+    [auctionId, proLoggedIn]
+  );
 
   useEffect(() => {
     async function init() {
@@ -66,6 +95,14 @@ export default function BidPanel({
     }
     init();
   }, [refreshFromServer]);
+
+  useEffect(() => {
+    if (proLoggedIn) {
+      refreshEligibility(amount);
+    } else {
+      setEligibility(null);
+    }
+  }, [proLoggedIn, amount, refreshEligibility]);
 
   useEffect(() => {
     setAmount(suggestNextBid(currentPrice));
@@ -100,15 +137,49 @@ export default function BidPanel({
     }
 
     setError(data.error ?? "Impossible de placer l'enchère.");
+    if (data.requiresQuote) {
+      await refreshEligibility(amount);
+    }
   }
 
+  const quoteBlocked = eligibility?.requiresQuote && !eligibility.canBid;
+  const maxBidFromQuote = eligibility?.quote?.maxBidAmount;
+  const minBidFromQuote = eligibility?.quote?.minBidAmount;
+  const effectiveMax =
+    maxBidFromQuote !== undefined
+      ? Math.min(currentPrice - BID_STEP_EUR, maxBidFromQuote)
+      : currentPrice - BID_STEP_EUR;
+
   return (
-    <section className="mt-8 rounded-xl border border-brand-200 bg-brand-50/50 p-6">
+    <section id="enchere" className="mt-8 rounded-xl border border-brand-200 bg-brand-50/50 p-6">
       <h2 className="text-lg font-semibold text-slate-900">Placer une enchère</h2>
-      <p className="mt-1 text-sm text-slate-600">
+      {requiresQuote && (
+        <p className="mt-2 rounded-lg bg-white px-3 py-2 text-sm text-slate-600 ring-1 ring-brand-100">
+          <strong>Obligatoire :</strong> déposez d&apos;abord un devis après visite sur le
+          chantier, validé par l&apos;administration. L&apos;enchère doit rester cohérente
+          avec le montant de votre devis.
+        </p>
+      )}
+      <p className="mt-2 text-sm text-slate-600">
         Prix actuel : <strong className="text-brand-700">{formatPrice(currentPrice)}</strong>
         {" · "}Palier {BID_STEP_EUR} € · Frais : <strong>{BID_FEE_EUR} €</strong> par enchère
       </p>
+
+      {eligibility?.quote && eligibility.canBid && (
+        <p className="mt-2 text-sm text-emerald-700">
+          Devis validé : {formatPrice(eligibility.quote.amount)} · Enchère autorisée entre{" "}
+          {formatPrice(minBidFromQuote ?? 0)} et {formatPrice(maxBidFromQuote ?? 0)}
+        </p>
+      )}
+
+      {quoteBlocked && eligibility?.reason && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {eligibility.reason}{" "}
+          <a href="#contact" className="font-medium underline">
+            Déposer mon devis
+          </a>
+        </p>
+      )}
 
       {success && (
         <p className="mt-3 rounded-lg bg-emerald-100 px-3 py-2 text-sm text-emerald-800">{success}</p>
@@ -154,23 +225,28 @@ export default function BidPanel({
             onChange={(e) => setAmount(Number(e.target.value))}
             step={BID_STEP_EUR}
             min={BID_STEP_EUR}
-            max={currentPrice - BID_STEP_EUR}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm"
+            max={effectiveMax}
+            disabled={quoteBlocked}
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm disabled:bg-slate-100"
           />
           <p className="text-xs text-slate-500">
             Doit être inférieur à {formatPrice(currentPrice)} par paliers de {BID_STEP_EUR} €
+            {maxBidFromQuote !== undefined &&
+              ` · Max. cohérent avec votre devis : ${formatPrice(maxBidFromQuote)}`}
           </p>
           <button
             type="button"
             onClick={() => handlePlaceBid(false)}
-            disabled={paying || amount >= currentPrice}
+            disabled={paying || amount >= currentPrice || quoteBlocked}
             className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {paying
               ? "Redirection paiement…"
-              : `Payer ${BID_FEE_EUR} € et enchérir à ${formatPrice(amount)}`}
+              : quoteBlocked
+                ? "Devis requis avant d'enchérir"
+                : `Payer ${BID_FEE_EUR} € et enchérir à ${formatPrice(amount)}`}
           </button>
-          {process.env.NODE_ENV === "development" && (
+          {process.env.NODE_ENV === "development" && !quoteBlocked && (
             <button
               type="button"
               onClick={() => handlePlaceBid(true)}

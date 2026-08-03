@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientContact } from "@/lib/client-contacts";
+import { getClientContact, type ClientContact } from "@/lib/client-contacts";
 import { getProSession } from "@/lib/pro-auth";
 import { hasContactUnlock } from "@/lib/store";
+import { getWorkRequestByAuctionId } from "@/lib/work-request-auctions";
 
 type RouteParams = { params: Promise<{ auctionId: string }> };
+
+async function resolveClientContact(auctionId: string): Promise<ClientContact | null> {
+  const staticContact = getClientContact(auctionId);
+  if (staticContact) return staticContact;
+
+  const request = await getWorkRequestByAuctionId(auctionId);
+  if (!request) return null;
+
+  return {
+    auctionId,
+    firstName: request.firstName,
+    lastName: request.lastName,
+    email: request.email,
+    phone: "Contact par email",
+    address: request.city,
+    postalCode: `${request.department}`,
+  };
+}
 
 export async function GET(
   _request: NextRequest,
@@ -24,7 +43,7 @@ export async function GET(
     );
   }
 
-  const contact = getClientContact(auctionId);
+  const contact = await resolveClientContact(auctionId);
   if (!contact) {
     return NextResponse.json({ error: "Contact introuvable." }, { status: 404 });
   }

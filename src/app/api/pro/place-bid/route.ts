@@ -4,6 +4,7 @@ import {
   computeCurrentPrice,
   validateBidAmount,
 } from "@/lib/auctions";
+import { checkBidEligibility } from "@/lib/bid-eligibility";
 import { resolveAuction } from "@/lib/work-request-auctions";
 import { getProSession } from "@/lib/pro-auth";
 import {
@@ -57,6 +58,18 @@ export async function POST(request: NextRequest) {
   const amountError = validateBidAmount(amount, currentPrice);
   if (amountError) {
     return NextResponse.json({ error: amountError }, { status: 400 });
+  }
+
+  const eligibility = await checkBidEligibility(session.proId, auctionId, amount);
+  if (!eligibility.canBid) {
+    return NextResponse.json(
+      {
+        error: eligibility.reason ?? "Devis requis avant d'enchérir.",
+        requiresQuote: eligibility.requiresQuote,
+        quote: eligibility.quote,
+      },
+      { status: 403 }
+    );
   }
 
   const origin = request.nextUrl.origin;
