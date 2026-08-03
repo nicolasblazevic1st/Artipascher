@@ -17,7 +17,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const currentPrice = computeCurrentPrice(auction.startPrice, amounts);
 
   return NextResponse.json({
-    currentPrice,
+    startPrice: auction.startPrice ?? null,
+    currentPrice: currentPrice ?? null,
     bidCount: bids.length,
     bids: bids.map((b) => ({
       id: b.id,

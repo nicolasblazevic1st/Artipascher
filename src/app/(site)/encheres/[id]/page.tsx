@@ -40,7 +40,10 @@ export default async function EnchereDetailPage({ params }: Props) {
     bids.map((b) => b.amount)
   );
 
-  const savings = resolved.startPrice - currentPrice;
+  const savings =
+    resolved.startPrice != null && currentPrice != null
+      ? resolved.startPrice - currentPrice
+      : 0;
   const endsAt = resolved.endsAt
     ? new Date(resolved.endsAt).toLocaleDateString("fr-FR", {
         weekday: "long",
@@ -93,13 +96,15 @@ export default async function EnchereDetailPage({ params }: Props) {
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
-              {formatPrice(resolved.startPrice)}
+              {resolved.startPrice != null
+                ? formatPrice(resolved.startPrice)
+                : "En attente du 1er devis"}
             </dd>
           </div>
           <div className="rounded-xl bg-brand-50 p-4 text-center">
             <dt className="text-xs text-brand-600">Prix actuel</dt>
             <dd className="mt-1 text-xl font-bold text-brand-700">
-              {formatPrice(currentPrice)}
+              {currentPrice != null ? formatPrice(currentPrice) : "—"}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
@@ -114,7 +119,7 @@ export default async function EnchereDetailPage({ params }: Props) {
 
         {savings > 0 && (
           <p className="mt-4 text-center text-sm font-medium text-brand-600">
-            Économie actuelle : {formatPrice(savings)} par rapport au budget initial
+            Économie actuelle : {formatPrice(savings)} par rapport au prix de départ
           </p>
         )}
 

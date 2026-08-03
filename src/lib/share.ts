@@ -31,9 +31,13 @@ export function buildShareTitle(request: Pick<WorkRequest, "category" | "city" |
 }
 
 export function buildShareText(
-  request: Pick<WorkRequest, "category" | "city" | "department" | "budget">
+  request: Pick<WorkRequest, "category" | "city" | "department" | "startPrice">
 ): string {
-  return `${buildShareTitle(request)} — budget max ${formatPrice(request.budget)}. Artisans du Nord, enchérissez sur Artipascher !`;
+  const title = buildShareTitle(request);
+  if (request.startPrice != null) {
+    return `${title} — prix de départ ${formatPrice(request.startPrice)}. Artisans du Nord, enchérissez sur Artipascher !`;
+  }
+  return `${title}. Artisans du Nord, déposez votre devis sur Artipascher !`;
 }
 
 export function buildFacebookShareUrl(pageUrl: string): string {

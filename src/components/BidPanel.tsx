@@ -31,8 +31,8 @@ interface Eligibility {
 
 interface Props {
   auctionId: string;
-  startPrice: number;
-  initialCurrentPrice: number;
+  startPrice?: number;
+  initialCurrentPrice?: number;
   initialBids: BidRow[];
   requiresQuote?: boolean;
 }
@@ -44,11 +44,14 @@ export default function BidPanel({
   initialBids,
   requiresQuote = false,
 }: Props) {
-  const [currentPrice, setCurrentPrice] = useState(initialCurrentPrice);
+  const pricingReady = startPrice != null && initialCurrentPrice != null;
+  const [currentPrice, setCurrentPrice] = useState(initialCurrentPrice ?? 0);
   const [bids, setBids] = useState(initialBids);
   const [proLoggedIn, setProLoggedIn] = useState(false);
   const [companyName, setCompanyName] = useState("");
-  const [amount, setAmount] = useState(suggestNextBid(initialCurrentPrice));
+  const [amount, setAmount] = useState(
+    initialCurrentPrice != null ? suggestNextBid(initialCurrentPrice) ?? BID_STEP_EUR : BID_STEP_EUR
+  );
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -60,9 +63,11 @@ export default function BidPanel({
     const res = await fetch(`/api/encheres/${auctionId}/state`);
     if (res.ok) {
       const data = await res.json();
-      setCurrentPrice(data.currentPrice);
+      if (data.currentPrice != null) {
+        setCurrentPrice(data.currentPrice);
+        setAmount(suggestNextBid(data.currentPrice) ?? BID_STEP_EUR);
+      }
       setBids(data.bids);
-      setAmount(suggestNextBid(data.currentPrice));
     }
   }, [auctionId]);
 
@@ -105,7 +110,9 @@ export default function BidPanel({
   }, [proLoggedIn, amount, refreshEligibility]);
 
   useEffect(() => {
-    setAmount(suggestNextBid(currentPrice));
+    if (currentPrice > 0) {
+      setAmount(suggestNextBid(currentPrice) ?? BID_STEP_EUR);
+    }
   }, [currentPrice]);
 
   async function handlePlaceBid(demo = false) {
@@ -153,6 +160,15 @@ export default function BidPanel({
   return (
     <section id="enchere" className="mt-8 rounded-xl border border-brand-200 bg-brand-50/50 p-6">
       <h2 className="text-lg font-semibold text-slate-900">Placer une enchère</h2>
+
+      {!pricingReady ? (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Le prix de départ sera fixé dès validation du <strong>premier devis</strong> par
+          l&apos;administration. Les artisans peuvent d&apos;ores et déjà visiter le chantier et
+          déposer leur devis.
+        </p>
+      ) : (
+        <>
       {requiresQuote && (
         <p className="mt-2 rounded-lg bg-white px-3 py-2 text-sm text-slate-600 ring-1 ring-brand-100">
           <strong>Obligatoire :</strong> déposez d&apos;abord un devis après visite sur le
@@ -274,8 +290,10 @@ export default function BidPanel({
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Départ : {formatPrice(startPrice)} · Chaque enchère coûte {BID_FEE_EUR} € au professionnel
+        Départ : {formatPrice(startPrice!)} · Chaque enchère coûte {BID_FEE_EUR} € au professionnel
       </p>
+        </>
+      )}
     </section>
   );
 }

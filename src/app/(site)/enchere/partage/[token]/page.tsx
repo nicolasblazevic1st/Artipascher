@@ -56,11 +56,14 @@ export default async function SharedAuctionPage({ params }: Props) {
   const bids = await getBidsForAuction(request.auctionId);
   const quotes = await getApprovedProQuotesForAuction(request.auctionId);
   const currentPrice = computeCurrentPrice(
-    request.budget,
+    request.startPrice,
     bids.map((b) => b.amount)
   );
   const active = isAuctionStillActive(request.auctionEndsAt);
-  const savings = request.budget - currentPrice;
+  const savings =
+    request.startPrice != null && currentPrice != null
+      ? request.startPrice - currentPrice
+      : 0;
 
   const endsAt = request.auctionEndsAt
     ? new Date(request.auctionEndsAt).toLocaleDateString("fr-FR", {
@@ -117,13 +120,17 @@ export default async function SharedAuctionPage({ params }: Props) {
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
-            <dt className="text-xs text-slate-500">Budget de départ</dt>
-            <dd className="mt-1 text-xl font-semibold">{formatPrice(request.budget)}</dd>
+            <dt className="text-xs text-slate-500">Prix de départ</dt>
+            <dd className="mt-1 text-xl font-semibold">
+              {request.startPrice != null
+                ? formatPrice(request.startPrice)
+                : "En attente du 1er devis"}
+            </dd>
           </div>
           <div className="rounded-xl bg-brand-50 p-4 text-center">
             <dt className="text-xs text-brand-600">Prix actuel</dt>
             <dd className="mt-1 text-xl font-bold text-brand-700">
-              {formatPrice(currentPrice)}
+              {currentPrice != null ? formatPrice(currentPrice) : "—"}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
@@ -138,7 +145,7 @@ export default async function SharedAuctionPage({ params }: Props) {
 
         {savings > 0 && (
           <p className="mt-4 text-center text-sm font-medium text-brand-600">
-            Économie actuelle : {formatPrice(savings)} par rapport au budget initial
+            Économie actuelle : {formatPrice(savings)} par rapport au prix de départ
           </p>
         )}
 
@@ -151,7 +158,7 @@ export default async function SharedAuctionPage({ params }: Props) {
             />
             <BidPanel
               auctionId={request.auctionId}
-              startPrice={request.budget}
+              startPrice={request.startPrice}
               initialCurrentPrice={currentPrice}
               initialBids={bids.map((b) => ({
                 id: b.id,

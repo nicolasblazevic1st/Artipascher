@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
@@ -15,18 +15,26 @@ import {
 } from "@/lib/auction-duration";
 
 export default function WorkRequestForm() {
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [description, setDescription] = useState("");
+  const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [category, setCategory] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
 
-  const descriptionLength = description.trim().length;
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
+
+  function syncDescriptionLength(value: string) {
+    setDescriptionLength(value.trim().length);
+  }
+
+  function getDescriptionValue() {
+    return descriptionRef.current?.value ?? "";
+  }
 
   function handlePhotosChange(e: React.ChangeEvent<HTMLInputElement>) {
     const list = e.target.files;
@@ -44,7 +52,7 @@ export default function WorkRequestForm() {
     e.preventDefault();
     setError(null);
 
-    const descError = validateDescription(description);
+    const descError = validateDescription(getDescriptionValue());
     if (descError) {
       setError(descError);
       setStatus("error");
@@ -68,7 +76,7 @@ export default function WorkRequestForm() {
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    formData.set("description", description.trim());
+    formData.set("description", getDescriptionValue().trim());
     formData.delete("photos");
     photoFiles.forEach((file) => formData.append("photos", file));
 
@@ -85,7 +93,10 @@ export default function WorkRequestForm() {
     }
 
     setStatus("success");
-    setDescription("");
+    if (descriptionRef.current) {
+      descriptionRef.current.value = "";
+    }
+    setDescriptionLength(0);
     setPhotoFiles([]);
     previews.forEach((url) => URL.revokeObjectURL(url));
     setPreviews([]);
@@ -106,6 +117,7 @@ export default function WorkRequestForm() {
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
+          <li>Prix de départ fixé au premier devis validé par un artisan</li>
         </ul>
       </div>
 
@@ -145,14 +157,17 @@ export default function WorkRequestForm() {
 
       <div>
         <textarea
+          ref={descriptionRef}
           name="description"
           placeholder="Décrivez précisément votre projet : surface, matériaux, contraintes, accès…"
           rows={5}
+          lang="fr"
+          spellCheck
           className={`${inputClass} ${!descriptionOk && descriptionLength > 0 ? "border-amber-400" : ""}`}
           required
           minLength={MIN_DESCRIPTION_LENGTH}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onInput={(e) => syncDescriptionLength(e.currentTarget.value)}
+          onChange={(e) => syncDescriptionLength(e.currentTarget.value)}
         />
         <p
           className={`mt-1 text-xs ${descriptionOk ? "text-brand-600" : "text-slate-500"}`}
@@ -194,15 +209,6 @@ export default function WorkRequestForm() {
           <p className="mt-1 text-xs text-amber-600">Ajoutez au moins une photo.</p>
         )}
       </div>
-
-      <input
-        name="budget"
-        type="number"
-        placeholder="Budget maximum (€)"
-        className={inputClass}
-        required
-        min={100}
-      />
 
       <div>
         <label htmlFor="auctionDurationDays" className="mb-1 block text-sm font-medium text-slate-700">

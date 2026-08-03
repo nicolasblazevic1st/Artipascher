@@ -13,7 +13,7 @@ const STEPS = [
   {
     title: "Demandez vos travaux",
     description:
-      "Créez une demande avec votre budget, votre ville (59 ou 62) et vos besoins. Notre équipe valide votre projet.",
+      "Créez une demande avec votre ville (59 ou 62), vos photos et une description détaillée. Notre équipe valide votre projet.",
   },
   {
     title: "Enchère inversée",
@@ -44,7 +44,7 @@ export default function HomePage() {
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-brand-100">
             Artipascher connecte particuliers et artisans locaux inscrits au
-            registre du commerce. Vous fixez votre budget, les professionnels
+            registre du commerce. Le prix de départ est fixé au premier devis validé, les professionnels
             vérifiés font baisser le prix.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">

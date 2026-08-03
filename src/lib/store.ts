@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { hashPassword, verifyPassword, validatePassword } from "./password";
+import { randomBytes } from "crypto";
 import { createShareToken } from "./share";
 import { getSampleQuotesForAuction } from "./sample-quotes";
 import {
@@ -10,11 +11,24 @@ import {
   type ContactUnlock,
   type DataStore,
   type ProQuote,
+  type PasswordResetToken,
+  type PasswordResetUserType,
   type ProRegistration,
   type WorkRequest,
 } from "./store-types";
 
 const STORE_PATH = path.join(process.cwd(), "data", "store.json");
+
+/** Anciennes demandes stockées avec `budget` avant migration vers startPrice. */
+type LegacyWorkRequest = WorkRequest & { budget?: number };
+
+function normalizeWorkRequest(request: LegacyWorkRequest): WorkRequest {
+  const { budget, ...rest } = request;
+  return {
+    ...rest,
+    startPrice: rest.startPrice ?? budget,
+  };
+}
 
 async function ensureStore(): Promise<void> {
   const dir = path.dirname(STORE_PATH);
@@ -35,10 +49,13 @@ export async function readStore(): Promise<DataStore> {
     ...parsed,
     clientAccounts: parsed.clientAccounts ?? [],
     proRegistrations: parsed.proRegistrations ?? [],
-    workRequests: parsed.workRequests ?? [],
+    workRequests: (parsed.workRequests ?? []).map((r) =>
+      normalizeWorkRequest(r as LegacyWorkRequest)
+    ),
     contactUnlocks: parsed.contactUnlocks ?? [],
     bids: parsed.bids ?? [],
     proQuotes: parsed.proQuotes ?? [],
+    passwordResetTokens: parsed.passwordResetTokens ?? [],
   };
 }
 
@@ -129,6 +146,8 @@ export async function updateWorkRequest(
       | "selectedBidId"
       | "clientId"
       | "shareToken"
+      | "startPrice"
+      | "startPriceQuoteId"
     >
   >
 ): Promise<WorkRequest | null> {
@@ -479,6 +498,19 @@ export async function updateProQuoteStatus(
     reviewedAt: new Date().toISOString(),
     adminNote: adminNote?.trim() || undefined,
   };
+
+  if (status === "approved") {
+    const quote = store.proQuotes[index];
+    const requestIndex = store.workRequests.findIndex((r) => r.id === quote.workRequestId);
+    if (requestIndex !== -1 && store.workRequests[requestIndex].startPrice == null) {
+      store.workRequests[requestIndex] = {
+        ...store.workRequests[requestIndex],
+        startPrice: quote.amount,
+        startPriceQuoteId: quote.id,
+      };
+    }
+  }
+
   await writeStore(store);
   return store.proQuotes[index];
 }
@@ -543,4 +575,96 @@ export async function ensureWorkRequestShareToken(
   const shareToken = createShareToken();
   await updateWorkRequest(requestId, { shareToken });
   return shareToken;
+}
+
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+
+function createPasswordResetTokenValue(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+export async function getProByEmail(email: string): Promise<ProRegistration | null> {
+  const store = await readStore();
+  return (
+    store.proRegistrations.find((p) => p.email.toLowerCase() === email.toLowerCase()) ?? null
+  );
+}
+
+export async function createPasswordResetToken(
+  email: string,
+  userType: PasswordResetUserType
+): Promise<PasswordResetToken | null> {
+  const store = await readStore();
+  const emailLower = email.trim().toLowerCase();
+
+  let userId: string | null = null;
+  if (userType === "client") {
+    userId = store.clientAccounts.find((c) => c.email.toLowerCase() === emailLower)?.id ?? null;
+  } else {
+    userId =
+      store.proRegistrations.find((p) => p.email.toLowerCase() === emailLower)?.id ?? null;
+  }
+
+  if (!userId) return null;
+
+  store.passwordResetTokens = store.passwordResetTokens.filter(
+    (t) => !(t.userId === userId && t.userType === userType && !t.usedAt)
+  );
+
+  const token: PasswordResetToken = {
+    token: createPasswordResetTokenValue(),
+    email: email.trim(),
+    userType,
+    userId,
+    expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS).toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  store.passwordResetTokens.push(token);
+  await writeStore(store);
+  return token;
+}
+
+export async function getValidPasswordResetToken(
+  token: string
+): Promise<PasswordResetToken | null> {
+  const store = await readStore();
+  const entry = store.passwordResetTokens.find((t) => t.token === token);
+  if (!entry || entry.usedAt) return null;
+  if (new Date(entry.expiresAt).getTime() <= Date.now()) return null;
+  return entry;
+}
+
+export async function resetPasswordWithToken(
+  token: string,
+  newPassword: string
+): Promise<{ success: true } | { error: string }> {
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) return { error: passwordError };
+
+  const store = await readStore();
+  const index = store.passwordResetTokens.findIndex((t) => t.token === token);
+  if (index === -1) return { error: "Lien de réinitialisation invalide ou expiré." };
+
+  const entry = store.passwordResetTokens[index];
+  if (entry.usedAt) return { error: "Ce lien a déjà été utilisé." };
+  if (new Date(entry.expiresAt).getTime() <= Date.now()) {
+    return { error: "Lien de réinitialisation invalide ou expiré." };
+  }
+
+  const passwordHash = hashPassword(newPassword);
+
+  if (entry.userType === "client") {
+    const clientIndex = store.clientAccounts.findIndex((c) => c.id === entry.userId);
+    if (clientIndex === -1) return { error: "Compte introuvable." };
+    store.clientAccounts[clientIndex].passwordHash = passwordHash;
+  } else {
+    const proIndex = store.proRegistrations.findIndex((p) => p.id === entry.userId);
+    if (proIndex === -1) return { error: "Compte introuvable." };
+    store.proRegistrations[proIndex].passwordHash = passwordHash;
+  }
+
+  store.passwordResetTokens[index].usedAt = new Date().toISOString();
+  await writeStore(store);
+  return { success: true };
 }

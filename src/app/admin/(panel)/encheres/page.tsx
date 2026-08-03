@@ -43,7 +43,7 @@ export default async function AdminEncheresPage() {
                 <p>
                   {formatPrice(auction.startPrice)} →{" "}
                   <strong className="text-brand-700">
-                    {formatPrice(currentPrice)}
+                    {formatPrice(currentPrice ?? auction.startPrice)}
                   </strong>
                 </p>
                 <p className="text-slate-500">

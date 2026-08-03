@@ -49,11 +49,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Enchère introuvable ou terminée." }, { status: 404 });
   }
 
+  if (auction.startPrice == null) {
+    return NextResponse.json(
+      {
+        error:
+          "Le prix de départ n'est pas encore fixé. Il sera défini au premier devis validé par l'administration.",
+      },
+      { status: 403 }
+    );
+  }
+
   const existingBids = await getBidsForAuction(auctionId);
   const currentPrice = computeCurrentPrice(
     auction.startPrice,
     existingBids.map((b) => b.amount)
-  );
+  )!;
 
   const amountError = validateBidAmount(amount, currentPrice);
   if (amountError) {

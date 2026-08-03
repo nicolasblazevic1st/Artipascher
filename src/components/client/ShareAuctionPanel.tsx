@@ -15,7 +15,7 @@ interface Props {
   category: string;
   city: string;
   department: "59" | "62";
-  budget: number;
+  startPrice?: number;
 }
 
 export default function ShareAuctionPanel({
@@ -23,7 +23,7 @@ export default function ShareAuctionPanel({
   category,
   city,
   department,
-  budget,
+  startPrice,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [canNativeShare, setCanNativeShare] = useState(false);
@@ -37,7 +37,7 @@ export default function ShareAuctionPanel({
     typeof window !== "undefined"
       ? `${window.location.origin}${sharePath}`
       : sharePath;
-  const shareText = buildShareText({ category, city, department, budget });
+  const shareText = buildShareText({ category, city, department, startPrice });
 
   const copyLink = useCallback(async () => {
     try {

@@ -148,7 +148,7 @@ export const FAQ_ITEMS = [
   {
     question: "Comment fonctionnent les enchères inversées ?",
     answer:
-      "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Vous fixez votre budget maximum, et les professionnels du Nord proposent des prix de plus en plus bas. À la clôture, vous comparez les offres et choisissez vous-même l'artisan retenu.",
+      "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Le prix de départ est fixé au premier devis validé, puis les professionnels du Nord proposent des prix de plus en plus bas. À la clôture, vous comparez les offres et choisissez vous-même l'artisan retenu.",
   },
   {
     question: "Artipascher couvre quelles zones ?",
@@ -158,7 +158,7 @@ export const FAQ_ITEMS = [
   {
     question: "Comment demander des travaux ?",
     answer:
-      "Remplissez le formulaire « Demander des travaux » avec une description d'au moins 100 caractères et au minimum 1 photo. Indiquez votre budget et votre ville. Une fois validée par notre équipe, une enchère est créée.",
+      "Remplissez le formulaire « Demander des travaux » avec une description d'au moins 100 caractères et au minimum 1 photo. Indiquez votre ville. Une fois validée par notre équipe, une enchère est créée ; le prix de départ sera fixé au premier devis validé.",
   },
   {
     question: "Comment devenir professionnel ?",

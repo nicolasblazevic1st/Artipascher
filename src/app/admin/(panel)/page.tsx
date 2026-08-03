@@ -80,7 +80,10 @@ export default async function AdminDashboardPage() {
                     {r.firstName} {r.lastName} — {r.city}
                   </p>
                   <p className="text-slate-500">
-                    {r.category} · Budget {r.budget} €
+                    {r.category} ·{" "}
+                    {r.startPrice != null
+                      ? `Prix de départ ${r.startPrice} €`
+                      : "Prix : en attente du 1er devis"}
                   </p>
                 </li>
               ))}

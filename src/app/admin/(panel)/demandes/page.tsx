@@ -116,7 +116,12 @@ export default function AdminDemandesPage() {
                   <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
                     <div>{r.city} ({r.department})</div>
                     <div>{r.category}</div>
-                    <div>Budget max : {formatPrice(r.budget)}</div>
+                    <div>
+                      Prix de départ :{" "}
+                      {r.startPrice != null
+                        ? formatPrice(r.startPrice)
+                        : "En attente du 1er devis"}
+                    </div>
                     <div>
                       Durée enchère :{" "}
                       {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}

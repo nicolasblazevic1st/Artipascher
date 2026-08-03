@@ -86,7 +86,12 @@ export default function ClientDemandesPage() {
                       {request.description}
                     </p>
                     <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
-                      <div>Budget : {formatPrice(request.budget)}</div>
+                      <div>
+                        Prix de départ :{" "}
+                        {request.startPrice != null
+                          ? formatPrice(request.startPrice)
+                          : "En attente du 1er devis"}
+                      </div>
                       <div>
                         Durée : {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
                       </div>

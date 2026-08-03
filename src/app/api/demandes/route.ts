@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
     const city = String(formData.get("city") ?? "").trim();
     const category = String(formData.get("category") ?? "Autre").trim();
     const description = String(formData.get("description") ?? "");
-    const budgetRaw = String(formData.get("budget") ?? "");
     const durationRaw = String(
       formData.get("auctionDurationDays") ?? DEFAULT_AUCTION_DURATION_DAYS
     );
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
       (f): f is File => f instanceof File && f.size > 0
     );
 
-    if (!firstName || !lastName || !email || !city || !budgetRaw) {
+    if (!firstName || !lastName || !email || !city) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis." },
         { status: 400 }
@@ -48,14 +47,6 @@ export async function POST(request: NextRequest) {
     const photosError = validatePhotoFiles(photos);
     if (photosError) {
       return NextResponse.json({ error: photosError }, { status: 400 });
-    }
-
-    const budget = Number(budgetRaw);
-    if (Number.isNaN(budget) || budget < 100) {
-      return NextResponse.json(
-        { error: "Budget minimum de 100 € requis." },
-        { status: 400 }
-      );
     }
 
     const durationError = validateAuctionDurationDays(durationRaw);
@@ -98,7 +89,6 @@ export async function POST(request: NextRequest) {
       department: dept as "59" | "62",
       category,
       description: description.trim(),
-      budget,
       auctionDurationDays,
       photos: [],
     });

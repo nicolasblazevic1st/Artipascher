@@ -70,7 +70,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
               category={request.category}
               city={request.city}
               department={request.department}
-              budget={request.budget}
+              startPrice={request.startPrice}
             />
           </div>
         )}
@@ -92,8 +92,12 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-3">
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Budget maximum</dt>
-            <dd className="mt-1 text-xl font-semibold">{formatPrice(request.budget)}</dd>
+            <dt className="text-xs text-slate-500">Prix de départ</dt>
+            <dd className="mt-1 text-xl font-semibold">
+              {request.startPrice != null
+                ? formatPrice(request.startPrice)
+                : "En attente du 1er devis"}
+            </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Durée enchère</dt>

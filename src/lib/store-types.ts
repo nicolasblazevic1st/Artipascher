@@ -40,7 +40,9 @@ export interface WorkRequest {
   department: "59" | "62";
   category: string;
   description: string;
-  budget: number;
+  /** Prix de départ de l'enchère, fixé au premier devis validé par l'admin. */
+  startPrice?: number;
+  startPriceQuoteId?: string;
   /** Durée souhaitée de l'enchère en jours (max. 90). */
   auctionDurationDays: number;
   photos: string[];
@@ -98,6 +100,18 @@ export interface ContactUnlock {
   stripeSessionId?: string;
 }
 
+export type PasswordResetUserType = "client" | "pro";
+
+export interface PasswordResetToken {
+  token: string;
+  email: string;
+  userType: PasswordResetUserType;
+  userId: string;
+  expiresAt: string;
+  createdAt: string;
+  usedAt?: string;
+}
+
 export interface DataStore {
   clientAccounts: ClientAccount[];
   proRegistrations: ProRegistration[];
@@ -105,6 +119,7 @@ export interface DataStore {
   contactUnlocks: ContactUnlock[];
   bids: Bid[];
   proQuotes: ProQuote[];
+  passwordResetTokens: PasswordResetToken[];
 }
 
 export const EMPTY_STORE: DataStore = {
@@ -114,4 +129,5 @@ export const EMPTY_STORE: DataStore = {
   contactUnlocks: [],
   bids: [],
   proQuotes: [],
+  passwordResetTokens: [],
 };

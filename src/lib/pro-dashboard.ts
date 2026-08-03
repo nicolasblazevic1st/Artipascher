@@ -16,7 +16,8 @@ export async function getEnrichedAuctions(proId?: string): Promise<EnrichedAucti
     SAMPLE_AUCTIONS.filter((a) => a.status === "active").map(async (auction) => {
       const bids = await getBidsForAuction(auction.id);
       const amounts = bids.map((b) => b.amount);
-      const liveCurrentPrice = computeCurrentPrice(auction.startPrice, amounts);
+      const liveCurrentPrice =
+        computeCurrentPrice(auction.startPrice, amounts) ?? auction.startPrice;
       const myAuctionBids = myBids.filter((b) => b.auctionId === auction.id);
       const myBestBid =
         myAuctionBids.length > 0

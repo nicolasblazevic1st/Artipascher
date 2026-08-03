@@ -9,11 +9,15 @@ export interface ResolvedAuction {
   description: string;
   city: string;
   department: "59" | "62";
-  startPrice: number;
+  startPrice?: number;
   status: "active" | "ended";
   endsAt?: string;
   shareToken?: string;
   source: "sample" | "workRequest";
+}
+
+export function getWorkRequestStartPrice(request: WorkRequest): number | undefined {
+  return request.startPrice;
 }
 
 function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
@@ -26,7 +30,7 @@ function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
     description: request.description,
     city: request.city,
     department: request.department,
-    startPrice: request.budget,
+    startPrice: request.startPrice,
     status: active ? "active" : "ended",
     endsAt: request.auctionEndsAt,
     shareToken: request.shareToken,

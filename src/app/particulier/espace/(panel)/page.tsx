@@ -62,8 +62,10 @@ export default async function ClientDashboardPage() {
                         {request.category} · {request.city}
                       </p>
                       <p className="mt-1 text-slate-500">
-                        Budget {formatPrice(request.budget)} ·{" "}
-                        {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
+                        {request.startPrice != null
+                          ? `Prix de départ ${formatPrice(request.startPrice)}`
+                          : "Prix de départ : en attente du 1er devis"}{" "}
+                        · {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
                       </p>
                     </div>
                     <span

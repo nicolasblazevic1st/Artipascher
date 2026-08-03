@@ -47,12 +47,12 @@ const STEPS = [
   {
     title: "Créez votre demande",
     description:
-      "Formulaire simple : coordonnées, ville (Lille, Roubaix, Valenciennes…), description du projet, budget et photos.",
+      "Formulaire simple : coordonnées, ville (Lille, Roubaix, Valenciennes…), description du projet et photos.",
   },
   {
     title: "Enchère inversée",
     description:
-      "Votre budget devient le prix de départ. Vous fixez aussi la durée (jusqu'à 3 mois). Les pros proposent des prix de plus en plus bas par paliers de 100 €.",
+      "Le prix de départ est fixé au premier devis validé. Vous choisissez la durée (jusqu'à 3 mois). Les pros proposent ensuite des prix de plus en plus bas par paliers de 100 €.",
   },
   {
     title: "Vous choisissez votre artisan",
