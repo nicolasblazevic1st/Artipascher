@@ -1,10 +1,13 @@
-# /etc/nginx/sites-available/artipascher
-# sudo ln -s /etc/nginx/sites-available/artipascher /etc/nginx/sites-enabled/
-# sudo nginx -t && sudo systemctl reload nginx
+# Redirection www → domaine principal (HTTP, avant certbot)
+server {
+    listen 80;
+    server_name www.artipascher.fr;
+    return 301 http://artipascher.fr$request_uri;
+}
 
 server {
     listen 80;
-    server_name artipascher.fr www.artipascher.fr;
+    server_name artipascher.fr;
 
     client_max_body_size 20M;
 
@@ -19,3 +22,6 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+
+# Après certbot : HTTPS est ajouté automatiquement.
+# Voir deploy/DNS-OVH.md

@@ -57,7 +57,7 @@ sudo bash deploy/setup-vps.sh
 nano /var/www/artipascher/.env.local   # ADMIN_PASSWORD, NEXT_PUBLIC_SITE_URL, PAYMENT_MODE
 ```
 
-**Nginx + HTTPS :** copier `deploy/nginx.conf.example` vers `/etc/nginx/sites-available/artipascher`, puis `certbot --nginx`.
+**Nginx + HTTPS :** voir `deploy/DNS-OVH.md` et `deploy/nginx.conf.example`, puis `certbot --nginx -d artipascher.fr -d www.artipascher.fr`.
 
 **Mises à jour après un push GitHub :**
 
