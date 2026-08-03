@@ -8,6 +8,7 @@ export default function ClientLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/particulier/espace";
+  const resetSuccess = searchParams.get("reset") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,6 +51,11 @@ export default function ClientLoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {resetSuccess && (
+        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+          Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.
+        </p>
+      )}
       <div>
         <label htmlFor="client-email" className="mb-1 block text-sm font-medium text-slate-700">
           Email
@@ -68,9 +74,17 @@ export default function ClientLoginForm() {
         />
       </div>
       <div>
-        <label htmlFor="client-password" className="mb-1 block text-sm font-medium text-slate-700">
-          Mot de passe
-        </label>
+        <div className="mb-1 flex items-center justify-between">
+          <label htmlFor="client-password" className="text-sm font-medium text-slate-700">
+            Mot de passe
+          </label>
+          <Link
+            href="/particulier/espace/mot-de-passe-oublie"
+            className="text-xs font-medium text-client-600 hover:text-client-700"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </div>
         <input
           id="client-password"
           name="password"

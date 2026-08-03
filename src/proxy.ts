@@ -15,6 +15,17 @@ import {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const publicClientPaths = [
+    "/particulier/espace/login",
+    "/particulier/espace/mot-de-passe-oublie",
+    "/particulier/espace/reinitialiser-mot-de-passe",
+  ];
+  const publicProPaths = [
+    "/pro/login",
+    "/pro/mot-de-passe-oublie",
+    "/pro/reinitialiser-mot-de-passe",
+  ];
+
   if (pathname.startsWith("/admin/login")) {
     return NextResponse.next();
   }
@@ -28,7 +39,7 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/pro/login")) {
+  if (publicProPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
@@ -41,7 +52,7 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/particulier/espace/login")) {
+  if (publicClientPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 

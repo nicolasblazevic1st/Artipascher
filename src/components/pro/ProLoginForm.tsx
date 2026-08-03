@@ -8,6 +8,7 @@ export default function ProLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/pro";
+  const resetSuccess = searchParams.get("reset") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,6 +51,11 @@ export default function ProLoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {resetSuccess && (
+        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+          Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.
+        </p>
+      )}
       <div>
         <label htmlFor="email" className="mb-1 block text-sm font-medium text-slate-700">
           Email professionnel
@@ -68,9 +74,17 @@ export default function ProLoginForm() {
         />
       </div>
       <div>
-        <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
-          Mot de passe
-        </label>
+        <div className="mb-1 flex items-center justify-between">
+          <label htmlFor="password" className="text-sm font-medium text-slate-700">
+            Mot de passe
+          </label>
+          <Link
+            href="/pro/mot-de-passe-oublie"
+            className="text-xs font-medium text-brand-600 hover:text-brand-700"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </div>
         <input
           id="password"
           name="password"
