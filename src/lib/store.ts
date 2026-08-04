@@ -18,6 +18,7 @@ import {
   type PasswordResetUserType,
   type ProDocument,
   type ProRegistration,
+  type SmsCampaign,
   type WorkRequest,
 } from "./store-types";
 
@@ -60,6 +61,7 @@ export async function readStore(): Promise<DataStore> {
     bids: parsed.bids ?? [],
     proQuotes: parsed.proQuotes ?? [],
     passwordResetTokens: parsed.passwordResetTokens ?? [],
+    smsCampaigns: parsed.smsCampaigns ?? [],
   };
 }
 
@@ -858,4 +860,37 @@ export async function resetPasswordWithToken(
   store.passwordResetTokens[index].usedAt = new Date().toISOString();
   await writeStore(store);
   return { success: true };
+}
+
+export async function getSmsCampaigns(): Promise<SmsCampaign[]> {
+  const store = await readStore();
+  return store.smsCampaigns.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function getSmsCampaignsForWorkRequest(
+  workRequestId: string
+): Promise<SmsCampaign[]> {
+  const campaigns = await getSmsCampaigns();
+  return campaigns.filter((c) => c.workRequestId === workRequestId);
+}
+
+export async function addSmsCampaign(
+  data: Omit<SmsCampaign, "id" | "createdAt">
+): Promise<SmsCampaign> {
+  const store = await readStore();
+  const entry: SmsCampaign = {
+    ...data,
+    id: newId("sms"),
+    createdAt: new Date().toISOString(),
+  };
+  store.smsCampaigns.unshift(entry);
+  await writeStore(store);
+  return entry;
+}
+
+export async function getWorkRequestById(id: string): Promise<WorkRequest | null> {
+  const store = await readStore();
+  return store.workRequests.find((r) => r.id === id) ?? null;
 }

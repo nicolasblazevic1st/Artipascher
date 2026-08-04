@@ -235,6 +235,35 @@ export interface PasswordResetToken {
   usedAt?: string;
 }
 
+export type SmsCampaignStatus = "demo" | "sent" | "failed";
+
+export type SmsRecipientStatus = "sent" | "failed" | "skipped";
+
+export interface SmsCampaignRecipient {
+  proId?: string;
+  companyName: string;
+  phone: string;
+  status: SmsRecipientStatus;
+  error?: string;
+}
+
+/** Campagne SMS admin — alerte artisans proches d'une demande de travaux. */
+export interface SmsCampaign {
+  id: string;
+  workRequestId: string;
+  category: string;
+  city: string;
+  department: "59" | "62";
+  message: string;
+  status: SmsCampaignStatus;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  recipients: SmsCampaignRecipient[];
+  createdAt: string;
+  sentAt?: string;
+}
+
 export interface DataStore {
   clientAccounts: ClientAccount[];
   proRegistrations: ProRegistration[];
@@ -243,6 +272,7 @@ export interface DataStore {
   bids: Bid[];
   proQuotes: ProQuote[];
   passwordResetTokens: PasswordResetToken[];
+  smsCampaigns: SmsCampaign[];
 }
 
 export const EMPTY_STORE: DataStore = {
@@ -253,4 +283,5 @@ export const EMPTY_STORE: DataStore = {
   bids: [],
   proQuotes: [],
   passwordResetTokens: [],
+  smsCampaigns: [],
 };

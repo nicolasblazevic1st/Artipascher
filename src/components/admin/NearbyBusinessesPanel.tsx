@@ -62,6 +62,14 @@ export default function NearbyBusinessesPanel({ requestId }: Props) {
             {stats.smsEligible > 1 ? "s" : ""} par SMS
           </p>
           {note && <p className="mt-2 text-slate-500">{note}</p>}
+          {stats.smsEligible > 0 && (
+            <a
+              href={`/admin/campagnes-sms?request=${requestId}`}
+              className="mt-2 inline-block rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+            >
+              Lancer une campagne SMS →
+            </a>
+          )}
           {businesses.length > 0 && (
             <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto">
               {businesses.slice(0, 15).map((b) => (
