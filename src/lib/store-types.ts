@@ -131,6 +131,7 @@ export interface ClientAccount {
   passwordHash: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   /** Défaut individual pour les comptes existants. */
   kind?: ClientKind;
   companyName?: string;
@@ -145,6 +146,8 @@ export interface WorkRequest {
   firstName: string;
   lastName: string;
   email: string;
+  /** Téléphone du client (obligatoire à la création). */
+  phone?: string;
   clientId?: string;
   clientKind?: ClientKind;
   companyName?: string;

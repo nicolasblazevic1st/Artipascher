@@ -156,6 +156,7 @@ export default function AdminDemandesPage() {
                       {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}
                     </div>
                     <div>{r.email}</div>
+                    <div>Tél : {r.phone?.trim() || "Non renseigné"}</div>
                   </dl>
                   {r.auctionEndsAt && (
                     <p className="mt-2 text-xs text-emerald-600">

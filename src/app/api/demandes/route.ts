@@ -16,6 +16,7 @@ import {
 } from "@/lib/demandes-validation";
 import { validatePassword } from "@/lib/password";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
+import { formatFrenchPhoneDisplay, normalizeFrenchPhone } from "@/lib/sms";
 import {
   addWorkRequest,
   ensureClientAccount,
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
     const firstName = String(formData.get("firstName") ?? "").trim();
     const lastName = String(formData.get("lastName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
+    const phoneRaw = String(formData.get("phone") ?? "").trim();
     const clientKindRaw = String(formData.get("clientKind") ?? "individual").trim();
     const clientKind: ClientKind =
       clientKindRaw === "company" ? "company" : "individual";
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
       !firstName ||
       !lastName ||
       !email ||
+      !phoneRaw ||
       !addressLine ||
       !postalCode ||
       !city ||
@@ -79,6 +82,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const phoneNormalized = normalizeFrenchPhone(phoneRaw);
+    if (!phoneNormalized) {
+      return NextResponse.json(
+        {
+          error:
+            "Indiquez un numéro de téléphone français valide (10 chiffres, ex. 06 12 34 56 78).",
+        },
+        { status: 400 }
+      );
+    }
+    const phone = formatFrenchPhoneDisplay(phoneNormalized);
 
     let companyName: string | undefined;
     let clientSiret: string | undefined;
@@ -178,6 +193,7 @@ export async function POST(request: NextRequest) {
       password,
       firstName,
       lastName,
+      phone,
       kind: clientKind,
       companyName,
       siret: clientSiret,
@@ -193,6 +209,7 @@ export async function POST(request: NextRequest) {
       firstName,
       lastName,
       email,
+      phone,
       clientId: client.id,
       clientKind,
       companyName,

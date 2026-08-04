@@ -97,6 +97,12 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           {formatWorkRequestAddress(request)}
         </p>
 
+        {request.phone && (
+          <p className="mt-2 text-sm text-slate-600">
+            <span className="font-medium text-slate-800">Téléphone :</span> {request.phone}
+          </p>
+        )}
+
         <p className="mt-2 text-sm text-slate-600">
           <span className="font-medium text-slate-800">Début de travaux souhaité :</span>{" "}
           {formatRequestedWorkStartDate(request.requestedWorkStartDate)}

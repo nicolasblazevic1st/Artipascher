@@ -547,6 +547,7 @@ export async function ensureClientAccount(data: {
   password: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   kind?: ClientKind;
   companyName?: string;
   siret?: string;
@@ -564,6 +565,10 @@ export async function ensureClientAccount(data: {
           "Un compte existe déjà avec cet email. Connectez-vous à votre espace ou utilisez le bon mot de passe.",
       };
     }
+    if (data.phone && !existing.phone) {
+      existing.phone = data.phone;
+      await writeStore(store);
+    }
     return { client: existing };
   }
 
@@ -577,6 +582,7 @@ export async function ensureClientAccount(data: {
     passwordHash: hashPassword(data.password),
     firstName: data.firstName.trim(),
     lastName: data.lastName.trim(),
+    phone: data.phone?.trim() || undefined,
     kind,
     companyName: kind === "company" ? data.companyName?.trim() : undefined,
     siret: kind === "company" ? data.siret : undefined,

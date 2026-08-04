@@ -134,6 +134,15 @@ export default function WorkRequestForm() {
       return;
     }
 
+    const phoneValue = String(
+      (form.elements.namedItem("phone") as HTMLInputElement | null)?.value ?? ""
+    ).trim();
+    if (!phoneValue) {
+      setError("Le numéro de téléphone est obligatoire.");
+      setStatus("error");
+      return;
+    }
+
     if (isCompany) {
       if (!companyVerification?.valid) {
         setError("Vérifiez le SIRET de votre entreprise avant d'envoyer.");
@@ -252,6 +261,7 @@ export default function WorkRequestForm() {
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
+          <li>Téléphone obligatoire pour être joint par l&apos;artisan choisi</li>
           <li>Adresse du chantier vérifiée via la Base Adresse Nationale (État)</li>
           <li>Date souhaitée de début des travaux</li>
           <li>Prix de départ : devis précédent (si fourni) ou 1er devis Artipascher validé</li>
@@ -340,6 +350,19 @@ export default function WorkRequestForm() {
         />
       </div>
       <input name="email" type="email" placeholder="Email" className={inputClass} required />
+      <input
+        name="phone"
+        type="tel"
+        inputMode="tel"
+        placeholder="Téléphone (ex. 06 12 34 56 78)"
+        className={inputClass}
+        required
+        autoComplete="tel"
+      />
+      <p className="-mt-2 text-xs text-slate-500">
+        Numéro français obligatoire — communiqué aux artisans uniquement après acceptation et
+        déblocage.
+      </p>
 
       <BanAddressAutocomplete
         inputClass={inputClass}
