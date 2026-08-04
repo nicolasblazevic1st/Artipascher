@@ -39,7 +39,7 @@ const FEATURES = [
   {
     title: "100 % gratuit",
     description:
-      "Publication gratuite, sans frais cachés. Vous ne payez que l'artisan retenu. Les artisans, eux, paient 1 € pour accéder aux coordonnées du chantier.",
+      "Publication gratuite, sans frais cachés. Vous ne payez que l'artisan retenu. Les artisans, eux, paient 1 € pour accéder à votre contact et aux coordonnées du chantier, et 1 € pour enchérir.",
   },
 ];
 
