@@ -47,7 +47,7 @@ const STEPS = [
   {
     title: "Consultez et enchérissez",
     description:
-      "Parcourez les enchères actives 59/62. Proposez un prix inférieur par paliers de 100 €.",
+      "Parcourez les enchères actives 59/62. Proposez le prix que vous souhaitez, inférieur au prix actuel.",
   },
   {
     title: "Soyez retenu par le client",

@@ -132,7 +132,7 @@ function SlideEnchere({ price }: { price: number }) {
         <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-3">
           <p className="text-xs font-semibold text-slate-900">Enchère inversée</p>
           <p className="mt-1 text-[10px] text-slate-600">
-            Les artisans proposent des prix de plus en plus bas · paliers 100 €
+            Les artisans proposent des prix de plus en plus bas · montant libre
           </p>
         </div>
       </div>

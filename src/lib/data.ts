@@ -178,7 +178,7 @@ export const FAQ_ITEMS = [
   {
     question: "Combien coûte une enchère pour le professionnel ?",
     answer:
-      "Chaque enchère coûte 1 € au professionnel inscrit et approuvé. Le paiement est obligatoire avant l'enregistrement de l'offre. Les enchères se font par paliers de 100 €, strictement en dessous du prix actuel.",
+      "Chaque enchère coûte 1 € au professionnel inscrit et approuvé. Le paiement est obligatoire avant l'enregistrement de l'offre. Chaque offre doit être strictement inférieure au prix actuel, sans montant minimal imposé.",
   },
   {
     question: "Les coordonnées du client sont-elles visibles par tous ?",

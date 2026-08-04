@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { formatPrice } from "@/lib/data";
 import {
   BID_FEE_EUR,
-  BID_STEP_EUR,
   suggestNextBid,
 } from "@/lib/auctions";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
@@ -27,7 +26,6 @@ interface Eligibility {
     id: string;
     status: string;
     amount: number;
-    minBidAmount?: number;
     maxBidAmount?: number;
   };
 }
@@ -53,7 +51,7 @@ export default function BidPanel({
   const [proLoggedIn, setProLoggedIn] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [amount, setAmount] = useState(
-    initialCurrentPrice != null ? suggestNextBid(initialCurrentPrice) ?? BID_STEP_EUR : BID_STEP_EUR
+    initialCurrentPrice != null ? suggestNextBid(initialCurrentPrice) ?? 1 : 1
   );
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +66,7 @@ export default function BidPanel({
       const data = await res.json();
       if (data.currentPrice != null) {
         setCurrentPrice(data.currentPrice);
-        setAmount(suggestNextBid(data.currentPrice) ?? BID_STEP_EUR);
+        setAmount(suggestNextBid(data.currentPrice) ?? 1);
       }
       setBids(data.bids);
     }
@@ -114,7 +112,7 @@ export default function BidPanel({
 
   useEffect(() => {
     if (currentPrice > 0) {
-      setAmount(suggestNextBid(currentPrice) ?? BID_STEP_EUR);
+      setAmount(suggestNextBid(currentPrice) ?? 1);
     }
   }, [currentPrice]);
 
@@ -154,11 +152,10 @@ export default function BidPanel({
 
   const quoteBlocked = eligibility?.requiresQuote && !eligibility.canBid;
   const maxBidFromQuote = eligibility?.quote?.maxBidAmount;
-  const minBidFromQuote = eligibility?.quote?.minBidAmount;
   const effectiveMax =
     maxBidFromQuote !== undefined
-      ? Math.min(currentPrice - BID_STEP_EUR, maxBidFromQuote)
-      : currentPrice - BID_STEP_EUR;
+      ? Math.min(currentPrice - 1, maxBidFromQuote)
+      : currentPrice - 1;
 
   return (
     <section id="enchere" className="mt-8 rounded-xl border border-brand-200 bg-brand-50/50 p-6">
@@ -181,13 +178,13 @@ export default function BidPanel({
       )}
       <p className="mt-2 text-sm text-slate-600">
         Prix actuel : <strong className="text-brand-700">{formatPrice(currentPrice)}</strong>
-        {" · "}Palier {BID_STEP_EUR} € · Frais : <strong>{BID_FEE_EUR} €</strong> par enchère
+        {" · "}Frais : <strong>{BID_FEE_EUR} €</strong> par enchère
       </p>
 
       {eligibility?.quote && eligibility.canBid && (
         <p className="mt-2 text-sm text-emerald-700">
-          Devis validé : {formatPrice(eligibility.quote.amount)} · Enchère autorisée entre{" "}
-          {formatPrice(minBidFromQuote ?? 0)} et {formatPrice(maxBidFromQuote ?? 0)}
+          Devis validé : {formatPrice(eligibility.quote.amount)} · Enchère max. :{" "}
+          {formatPrice(maxBidFromQuote ?? eligibility.quote.amount)}
         </p>
       )}
 
@@ -242,16 +239,16 @@ export default function BidPanel({
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
-            step={BID_STEP_EUR}
-            min={BID_STEP_EUR}
-            max={effectiveMax}
+            step={1}
+            min={1}
+            max={Math.max(1, effectiveMax)}
             disabled={quoteBlocked}
             className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm disabled:bg-slate-100"
           />
           <p className="text-xs text-slate-500">
-            Doit être inférieur à {formatPrice(currentPrice)} par paliers de {BID_STEP_EUR} €
+            Montant libre, strictement inférieur à {formatPrice(currentPrice)}
             {maxBidFromQuote !== undefined &&
-              ` · Max. cohérent avec votre devis : ${formatPrice(maxBidFromQuote)}`}
+              ` · Max. selon votre devis : ${formatPrice(maxBidFromQuote)}`}
           </p>
           <button
             type="button"

@@ -52,7 +52,7 @@ const STEPS = [
   {
     title: "Enchère inversée",
     description:
-      "Le prix de départ est fixé au premier devis validé. Vous choisissez la durée (jusqu'à 3 mois). Les pros proposent ensuite des prix de plus en plus bas par paliers de 100 €.",
+      "Le prix de départ est fixé au premier devis validé. Vous choisissez la durée (jusqu'à 3 mois). Les pros proposent ensuite des prix de plus en plus bas, sans palier imposé.",
   },
   {
     title: "Vous choisissez votre artisan",

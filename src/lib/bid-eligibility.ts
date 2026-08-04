@@ -11,7 +11,6 @@ export interface BidEligibility {
     id: string;
     status: string;
     amount: number;
-    minBidAmount?: number;
     maxBidAmount?: number;
   };
 }
@@ -70,7 +69,6 @@ export async function checkBidEligibility(
     };
   }
 
-  const minBidAmount = Math.floor(quote.amount * 0.75);
   const maxBidAmount = quote.amount;
 
   const base: BidEligibility = {
@@ -80,7 +78,6 @@ export async function checkBidEligibility(
       id: quote.id,
       status: quote.status,
       amount: quote.amount,
-      minBidAmount,
       maxBidAmount,
     },
   };

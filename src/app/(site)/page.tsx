@@ -18,7 +18,7 @@ const STEPS = [
   {
     title: "Enchère inversée",
     description:
-      "Une enchère est créée. Les artisans du Nord proposent des prix de plus en plus bas, par paliers de 100 €.",
+      "Une enchère est créée. Les artisans du Nord proposent des prix de plus en plus bas, librement.",
   },
   {
     title: "Choisissez votre artisan",
