@@ -3,6 +3,8 @@ export interface ProRegistrationDocumentType {
   label: string;
   help: string;
   required: boolean;
+  /** Niveau de qualification Artipascher (1 = inscription rapide). */
+  qualificationLevel: 1 | 2 | 3;
 }
 
 export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
@@ -11,26 +13,82 @@ export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
     label: "KBIS / extrait RCS (< 3 mois)",
     help: "Optionnel : le SIRET est déjà vérifié en direct au registre (RNE). Joignez un KBIS récent pour accélérer la validation.",
     required: false,
+    qualificationLevel: 1,
   },
   {
     id: "rc",
     label: "Assurance responsabilité civile professionnelle",
     help: "Attestation ou contrat en cours de validité.",
     required: true,
+    qualificationLevel: 1,
   },
   {
     id: "rge",
     label: "Label RGE",
     help: "Pour la rénovation énergétique (isolation, chauffage, fenêtres…).",
     required: false,
+    qualificationLevel: 2,
   },
   {
     id: "qualibat",
     label: "Qualibat ou qualification métier",
     help: "Certification de compétence reconnue dans votre corps de métier.",
     required: false,
+    qualificationLevel: 2,
   },
 ];
+
+export interface ProRegistrationDocumentCompartment {
+  level: 1 | 2 | 3;
+  badge: string;
+  title: string;
+  summary: string;
+  /** Documents uploadables dans ce compartiment (hors décennale par métier). */
+  documentIds: string[];
+  /** Attestations décennale par corps de métier (niveau 1 uniquement). */
+  includesDecennale?: boolean;
+  /** Compartiment informatif sans upload à l'inscription. */
+  infoOnly?: boolean;
+  infoItems?: string[];
+}
+
+export const PRO_REGISTRATION_COMPARTMENTS: ProRegistrationDocumentCompartment[] = [
+  {
+    level: 1,
+    badge: "Certifié",
+    title: "Niveau 1 — Inscription rapide",
+    summary:
+      "Documents obligatoires pour une certification instantanée et accéder aux enchères.",
+    documentIds: ["rc", "kbis"],
+    includesDecennale: true,
+  },
+  {
+    level: 2,
+    badge: "Qualifié",
+    title: "Niveau 2 — Qualifié",
+    summary:
+      "Optionnel à l'inscription — recommandé pour la rénovation énergétique et les chantiers techniques.",
+    documentIds: ["rge", "qualibat"],
+  },
+  {
+    level: 3,
+    badge: "Premium",
+    title: "Niveau 3 — Premium",
+    summary:
+      "Réservé aux partenaires de confiance — complété après votre inscription avec notre équipe.",
+    documentIds: [],
+    infoOnly: true,
+    infoItems: [
+      "Charte qualité Artipascher signée",
+      "Références chantiers vérifiées dans le Nord",
+      "Entretien de validation avec notre équipe",
+    ],
+  },
+];
+
+export function proDocumentsForLevel(level: 1 | 2 | 3): ProRegistrationDocumentType[] {
+  return PRO_REGISTRATION_DOCUMENTS.filter((doc) => doc.qualificationLevel === level);
+}
 
 export const MAX_PRO_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 

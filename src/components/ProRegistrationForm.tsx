@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import HelpTooltip from "@/components/HelpTooltip";
 import {
+  PRO_REGISTRATION_COMPARTMENTS,
   PRO_REGISTRATION_DOCUMENTS,
   proDocumentFieldName,
   tradeDecennaleFieldName,
@@ -337,7 +338,7 @@ export default function ProRegistrationForm() {
       {!fieldsEnabled && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
           Vérifiez votre SIRET pour débloquer la suite : coordonnées, métiers,
-          attestations décennale, documents (KBIS, RC…) et mot de passe.
+          documents par niveau de qualification et mot de passe.
         </p>
       )}
 
@@ -461,106 +462,169 @@ export default function ProRegistrationForm() {
             })}
           </div>
         )}
-
-        {activeGroupIds.length > 0 && (
-          <div className="space-y-3 border-t border-slate-200 pt-4">
-            <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-xs leading-relaxed text-brand-900">
-              <p className="font-semibold">Pourquoi une décennale par métier ?</p>
-              <p className="mt-1 text-brand-800">
-                Votre assurance décennale est un contrat unique, mais il doit{" "}
-                <strong>nommer chaque activité</strong> que vous exercez. Si vous
-                êtes couvert pour la menuiserie mais pas pour le terrassement, vous
-                ne pouvez pas enchérir sur ce second métier — même avec une décennale
-                valide ailleurs. Artipascher vérifie chaque attestation pour protéger
-                le client et votre responsabilité.
-              </p>
-            </div>
-            <p className="text-sm font-medium text-slate-700">
-              3. Attestation décennale par corps de métier{" "}
-              <span className="text-red-500">*</span>
-            </p>
-            {activeGroupIds.map((groupId) => {
-              const group = GROUPED_QUALIBAT_JOBS.find((g) => g.group.id === groupId)?.group;
-              return (
-                <div key={`decennale-${groupId}`}>
-                  <label
-                    htmlFor={`decennale-${groupId}`}
-                    className="mb-1 block text-xs font-medium text-slate-600"
-                  >
-                    Attestation décennale couvrant « {group?.label} »
-                  </label>
-                  <input
-                    id={`decennale-${groupId}`}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    required
-                    disabled={!fieldsEnabled}
-                    onChange={(e) => {
-                      setDecennaleByGroup((prev) => ({
-                        ...prev,
-                        [groupId]: e.target.files?.[0] ?? null,
-                      }));
-                      setError(null);
-                    }}
-                    className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
-                  />
-                  {decennaleByGroup[groupId] && (
-                    <p className="mt-1 text-xs text-brand-700">
-                      Fichier sélectionné : {decennaleByGroup[groupId]!.name}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </section>
 
-      <section
-        className={`rounded-xl border border-slate-200 bg-slate-50 p-4 ${
-          !fieldsEnabled ? "opacity-60" : ""
-        }`}
-      >
-        <h3 className="text-sm font-semibold text-slate-900">Vos documents</h3>
-        <p className="mt-1 text-xs text-slate-500">
-          JPG, PNG, WebP ou PDF · max 10 Mo par fichier. RC professionnelle obligatoire
-          (KBIS optionnel — SIRET déjà vérifié au registre).
-          {!fieldsEnabled && (
-            <span className="mt-1 block font-medium text-slate-600">
-              Disponible après vérification RCS réussie.
-            </span>
-          )}
-        </p>
-        <ul className="mt-4 space-y-4">
-          {PRO_REGISTRATION_DOCUMENTS.map((doc) => (
-            <li key={doc.id}>
-              <label
-                htmlFor={proDocumentFieldName(doc.id)}
-                className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700"
-              >
-                {doc.label}
-                {doc.required && <span className="text-red-500">*</span>}
-                <HelpTooltip label={doc.label} content={doc.help} />
-              </label>
-              <input
-                id={proDocumentFieldName(doc.id)}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                required={doc.required && fieldsEnabled}
-                disabled={!fieldsEnabled}
-                onChange={(e) =>
-                  handleDocumentChange(doc.id, e.target.files?.[0] ?? null)
-                }
-                className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 disabled:cursor-not-allowed"
-              />
-              {documents[doc.id] && (
-                <p className="mt-1 text-xs text-brand-700">
-                  Fichier sélectionné : {documents[doc.id]!.name}
+      <section className={`space-y-4 ${!fieldsEnabled ? "opacity-60" : ""}`}>
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">
+            Documents par niveau de qualification
+          </h3>
+          <p className="mt-1 text-xs text-slate-500">
+            JPG, PNG, WebP ou PDF · max 10 Mo par fichier.
+            {!fieldsEnabled && (
+              <span className="mt-1 block font-medium text-slate-600">
+                Disponible après vérification RCS réussie.
+              </span>
+            )}
+          </p>
+        </div>
+
+        {PRO_REGISTRATION_COMPARTMENTS.map((compartment) => {
+          const docs = PRO_REGISTRATION_DOCUMENTS.filter((doc) =>
+            compartment.documentIds.includes(doc.id)
+          );
+          const isLevel1 = compartment.level === 1;
+
+          return (
+            <div
+              key={compartment.level}
+              className={`rounded-xl border p-4 ${
+                isLevel1
+                  ? "border-brand-200 bg-brand-50/40"
+                  : compartment.infoOnly
+                    ? "border-slate-200 bg-slate-50"
+                    : "border-dashed border-slate-300 bg-white"
+              }`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    isLevel1
+                      ? "bg-brand-600 text-white"
+                      : compartment.infoOnly
+                        ? "bg-slate-700 text-white"
+                        : "bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  {compartment.badge}
+                </span>
+                <h4 className="text-sm font-semibold text-slate-900">{compartment.title}</h4>
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                {compartment.summary}
+              </p>
+
+              {isLevel1 && verification?.valid && (
+                <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                  ✓ SIREN / RNE vérifié en direct · établissement actif en{" "}
+                  {verification.department}
                 </p>
               )}
-            </li>
-          ))}
-        </ul>
+
+              {compartment.infoOnly && compartment.infoItems && (
+                <ul className="mt-3 space-y-2">
+                  {compartment.infoItems.map((item) => (
+                    <li
+                      key={item}
+                      className="flex items-start gap-2 text-xs text-slate-600"
+                    >
+                      <span className="mt-0.5 text-slate-400">○</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {compartment.includesDecennale && activeGroupIds.length > 0 && (
+                <div className="mt-4 space-y-3 border-t border-brand-100 pt-4">
+                  <div className="rounded-lg border border-brand-200 bg-white p-3 text-xs leading-relaxed text-brand-900">
+                    <p className="font-semibold">Garantie décennale par métier</p>
+                    <p className="mt-1 text-brand-800">
+                      Votre assurance décennale doit <strong>nommer chaque activité</strong>{" "}
+                      que vous exercez. Artipascher vérifie chaque attestation pour protéger
+                      le client et votre responsabilité.
+                    </p>
+                  </div>
+                  {activeGroupIds.map((groupId) => {
+                    const group = GROUPED_QUALIBAT_JOBS.find(
+                      (g) => g.group.id === groupId
+                    )?.group;
+                    return (
+                      <div key={`decennale-${groupId}`}>
+                        <label
+                          htmlFor={`decennale-${groupId}`}
+                          className="mb-1 block text-xs font-medium text-slate-700"
+                        >
+                          Attestation décennale — « {group?.label} »{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          id={`decennale-${groupId}`}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          required={fieldsEnabled}
+                          disabled={!fieldsEnabled}
+                          onChange={(e) => {
+                            setDecennaleByGroup((prev) => ({
+                              ...prev,
+                              [groupId]: e.target.files?.[0] ?? null,
+                            }));
+                            setError(null);
+                          }}
+                          className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+                        />
+                        {decennaleByGroup[groupId] && (
+                          <p className="mt-1 text-xs text-brand-700">
+                            Fichier sélectionné : {decennaleByGroup[groupId]!.name}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {compartment.includesDecennale && activeGroupIds.length === 0 && fieldsEnabled && (
+                <p className="mt-3 text-xs text-amber-700">
+                  Cochez au moins un corps de métier pour joindre vos attestations décennale.
+                </p>
+              )}
+
+              {docs.length > 0 && (
+                <ul className={`space-y-4 ${compartment.includesDecennale ? "mt-4 border-t border-brand-100 pt-4" : "mt-4"}`}>
+                  {docs.map((doc) => (
+                    <li key={doc.id}>
+                      <label
+                        htmlFor={proDocumentFieldName(doc.id)}
+                        className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700"
+                      >
+                        {doc.label}
+                        {doc.required && <span className="text-red-500">*</span>}
+                        <HelpTooltip label={doc.label} content={doc.help} />
+                      </label>
+                      <input
+                        id={proDocumentFieldName(doc.id)}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        required={doc.required && fieldsEnabled}
+                        disabled={!fieldsEnabled}
+                        onChange={(e) =>
+                          handleDocumentChange(doc.id, e.target.files?.[0] ?? null)
+                        }
+                        className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 disabled:cursor-not-allowed"
+                      />
+                      {documents[doc.id] && (
+                        <p className="mt-1 text-xs text-brand-700">
+                          Fichier sélectionné : {documents[doc.id]!.name}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </section>
 
       <div>

@@ -56,7 +56,7 @@ const STEPS = [
   {
     title: "Inscription rapide",
     description:
-      "Inscription instantanée pour le premier niveau d'identification : vérification automatique de votre SIRET au registre du commerce et attestation décennale obligatoire par corps de métier. KBIS et assurance complémentaires. Validation sous 24-48 h si contrôle manuel nécessaire.",
+      "Niveau 1 instantané : SIRET contrôlé au registre du commerce, attestation décennale et RC pro obligatoires par métier.",
   },
   {
     title: "Consultez et enchérissez",
