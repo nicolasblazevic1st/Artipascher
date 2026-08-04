@@ -332,14 +332,22 @@ export default function ProRegistrationForm() {
         </div>
       )}
 
+      {!fieldsEnabled && (
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
+          Vérifiez votre SIRET pour débloquer la suite : coordonnées, métiers,
+          attestations décennale, documents (KBIS, RC…) et mot de passe.
+        </p>
+      )}
+
       <input
         type="text"
         placeholder="Nom de l'entreprise"
         value={companyName}
         onChange={(e) => setCompanyName(e.target.value)}
         className={inputClass}
-        required
+        required={fieldsEnabled}
         readOnly={!!verification?.companyName}
+        disabled={!fieldsEnabled}
       />
 
       <input
@@ -348,7 +356,7 @@ export default function ProRegistrationForm() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className={inputClass}
-        required
+        required={fieldsEnabled}
         disabled={!fieldsEnabled}
       />
 
@@ -358,7 +366,7 @@ export default function ProRegistrationForm() {
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         className={inputClass}
-        required
+        required={fieldsEnabled}
         disabled={!fieldsEnabled}
       />
 
@@ -368,11 +376,15 @@ export default function ProRegistrationForm() {
         value={zone}
         onChange={(e) => setZone(e.target.value)}
         className={inputClass}
-        required
+        required={fieldsEnabled}
         disabled={!fieldsEnabled}
       />
 
-      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+      <section
+        className={`rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4 ${
+          !fieldsEnabled ? "opacity-60" : ""
+        }`}
+      >
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Vos métiers</h3>
           <p className="mt-1 text-xs text-slate-500">
@@ -512,45 +524,52 @@ export default function ProRegistrationForm() {
         )}
       </section>
 
-      {fieldsEnabled && (
-        <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Vos documents</h3>
-          <p className="mt-1 text-xs text-slate-500">
-            JPG, PNG, WebP ou PDF · max 10 Mo par fichier. KBIS et assurance RC
-            obligatoires.
-          </p>
-          <ul className="mt-4 space-y-4">
-            {PRO_REGISTRATION_DOCUMENTS.map((doc) => (
-              <li key={doc.id}>
-                <label
-                  htmlFor={proDocumentFieldName(doc.id)}
-                  className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700"
-                >
-                  {doc.label}
-                  {doc.required && <span className="text-red-500">*</span>}
-                  <HelpTooltip label={doc.label} content={doc.help} />
-                </label>
-                <input
-                  id={proDocumentFieldName(doc.id)}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  required={doc.required}
-                  disabled={!fieldsEnabled}
-                  onChange={(e) =>
-                    handleDocumentChange(doc.id, e.target.files?.[0] ?? null)
-                  }
-                  className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
-                />
-                {documents[doc.id] && (
-                  <p className="mt-1 text-xs text-brand-700">
-                    Fichier sélectionné : {documents[doc.id]!.name}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section
+        className={`rounded-xl border border-slate-200 bg-slate-50 p-4 ${
+          !fieldsEnabled ? "opacity-60" : ""
+        }`}
+      >
+        <h3 className="text-sm font-semibold text-slate-900">Vos documents</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          JPG, PNG, WebP ou PDF · max 10 Mo par fichier. KBIS et assurance RC
+          professionnelle obligatoires.
+          {!fieldsEnabled && (
+            <span className="mt-1 block font-medium text-slate-600">
+              Disponible après vérification RCS réussie.
+            </span>
+          )}
+        </p>
+        <ul className="mt-4 space-y-4">
+          {PRO_REGISTRATION_DOCUMENTS.map((doc) => (
+            <li key={doc.id}>
+              <label
+                htmlFor={proDocumentFieldName(doc.id)}
+                className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-700"
+              >
+                {doc.label}
+                {doc.required && <span className="text-red-500">*</span>}
+                <HelpTooltip label={doc.label} content={doc.help} />
+              </label>
+              <input
+                id={proDocumentFieldName(doc.id)}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                required={doc.required && fieldsEnabled}
+                disabled={!fieldsEnabled}
+                onChange={(e) =>
+                  handleDocumentChange(doc.id, e.target.files?.[0] ?? null)
+                }
+                className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 disabled:cursor-not-allowed"
+              />
+              {documents[doc.id] && (
+                <p className="mt-1 text-xs text-brand-700">
+                  Fichier sélectionné : {documents[doc.id]!.name}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <div>
         <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
@@ -563,7 +582,7 @@ export default function ProRegistrationForm() {
           onChange={(e) => setPassword(e.target.value)}
           className={inputClass}
           placeholder="Min. 8 caractères, lettre et chiffre"
-          required
+          required={fieldsEnabled}
           minLength={8}
           disabled={!fieldsEnabled}
           autoComplete="new-password"
@@ -584,7 +603,7 @@ export default function ProRegistrationForm() {
           onChange={(e) => setPasswordConfirm(e.target.value)}
           className={inputClass}
           placeholder="Retapez le mot de passe"
-          required
+          required={fieldsEnabled}
           minLength={8}
           disabled={!fieldsEnabled}
           autoComplete="new-password"
@@ -610,12 +629,6 @@ export default function ProRegistrationForm() {
         <p className="text-center text-sm text-emerald-600">
           Inscription et documents reçus. Un administrateur validera votre dossier sous
           24-48 h.
-        </p>
-      )}
-
-      {!fieldsEnabled && (
-        <p className="text-center text-xs text-slate-500">
-          Les champs ci-dessous seront débloqués après vérification RCS réussie.
         </p>
       )}
     </form>
