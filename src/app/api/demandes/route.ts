@@ -15,7 +15,15 @@ import {
   validateRequestedWorkStartDate,
 } from "@/lib/demandes-validation";
 import { validatePassword } from "@/lib/password";
-import { addWorkRequest, ensureClientAccount, linkOrphanWorkRequests, setWorkRequestPhotos, setWorkRequestPreviousQuote } from "@/lib/store";
+import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
+import {
+  addWorkRequest,
+  ensureClientAccount,
+  linkOrphanWorkRequests,
+  setWorkRequestPhotos,
+  setWorkRequestPreviousQuote,
+} from "@/lib/store";
+import type { ClientKind } from "@/lib/store-types";
 import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
 
 export async function POST(request: NextRequest) {
@@ -25,6 +33,11 @@ export async function POST(request: NextRequest) {
     const firstName = String(formData.get("firstName") ?? "").trim();
     const lastName = String(formData.get("lastName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
+    const clientKindRaw = String(formData.get("clientKind") ?? "individual").trim();
+    const clientKind: ClientKind =
+      clientKindRaw === "company" ? "company" : "individual";
+    const clientSiretRaw = String(formData.get("clientSiret") ?? "").trim();
+    const companyNameRaw = String(formData.get("companyName") ?? "").trim();
     const addressLine = String(formData.get("addressLine") ?? "").trim();
     const addressLine2 = String(formData.get("addressLine2") ?? "").trim();
     const postalCode = String(formData.get("postalCode") ?? "").trim();
@@ -65,6 +78,33 @@ export async function POST(request: NextRequest) {
         { error: "Tous les champs obligatoires doivent être remplis." },
         { status: 400 }
       );
+    }
+
+    let companyName: string | undefined;
+    let clientSiret: string | undefined;
+    let clientSiren: string | undefined;
+
+    if (clientKind === "company") {
+      const registry = await verifyWithRegistry(normalizeSiret(clientSiretRaw));
+      if (!registry.valid) {
+        return NextResponse.json(
+          {
+            error:
+              registry.error ??
+              "SIRET invalide ou entreprise inactive. Vérification SIRENE requise.",
+          },
+          { status: 400 }
+        );
+      }
+      companyName = registry.companyName ?? companyNameRaw;
+      clientSiret = registry.siret;
+      clientSiren = registry.siren;
+      if (!companyName) {
+        return NextResponse.json(
+          { error: "Raison sociale introuvable pour ce SIRET." },
+          { status: 400 }
+        );
+      }
     }
 
     const addressError = validateClientAddress({
@@ -138,6 +178,11 @@ export async function POST(request: NextRequest) {
       password,
       firstName,
       lastName,
+      kind: clientKind,
+      companyName,
+      siret: clientSiret,
+      siren: clientSiren,
+      companyVerified: clientKind === "company",
     });
     if ("error" in clientResult) {
       return NextResponse.json({ error: clientResult.error }, { status: 400 });
@@ -149,6 +194,9 @@ export async function POST(request: NextRequest) {
       lastName,
       email,
       clientId: client.id,
+      clientKind,
+      companyName,
+      clientSiret,
       addressLine: verifiedAddress.addressLine,
       addressLine2: addressLine2 || undefined,
       postalCode: verifiedAddress.postalCode,
@@ -187,3 +235,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
   }
 }
+

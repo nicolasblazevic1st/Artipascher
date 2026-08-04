@@ -144,9 +144,9 @@ export default function BidPanel({
       await refreshFromServer();
       await refreshEligibility(amount);
       setSuccess(
-        demo
-          ? `Enchère à ${formatPrice(amount)} enregistrée (mode démo, 1 € simulé).`
-          : `Enchère à ${formatPrice(amount)} enregistrée.`
+        demo && data.demo
+          ? `Enchère à ${formatPrice(amount)} enregistrée (mode démo).`
+          : `Enchère à ${formatPrice(amount)} enregistrée (−1 crédit).`
       );
       return;
     }
@@ -186,7 +186,7 @@ export default function BidPanel({
       )}
       <p className="mt-2 text-sm text-slate-600">
         Prix actuel : <strong className="text-brand-700">{formatPrice(currentPrice)}</strong>
-        {" · "}Frais : <strong>{BID_FEE_EUR} €</strong> par enchère
+        {" · "}Frais : <strong>1 crédit ({BID_FEE_EUR} €)</strong> par enchère
       </p>
 
       {proLoggedIn && eligibility?.maxBidsPerAuction != null && (
@@ -293,12 +293,12 @@ export default function BidPanel({
             className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {paying
-              ? "Redirection paiement…"
+              ? "Traitement…"
               : bidLimitReached
                 ? "Limite de 3 enchères atteinte"
               : quoteBlocked
                 ? "Devis requis avant d'enchérir"
-                : `Payer ${BID_FEE_EUR} € et enchérir à ${formatPrice(amount)}`}
+                : `Enchérir à ${formatPrice(amount)} · 1 crédit`}
           </button>
           {process.env.NODE_ENV === "development" && !quoteBlocked && !bidLimitReached && (
             <button
@@ -307,9 +307,12 @@ export default function BidPanel({
               disabled={paying || amount >= currentPrice}
               className="text-xs text-slate-500 underline"
             >
-              Mode démo — simuler paiement 1 €
+              Mode démo — enchérir sans crédit
             </button>
           )}
+          <a href="/pro/compte#credits" className="block text-xs text-brand-700 underline">
+            Acheter des crédits
+          </a>
         </div>
       )}
 
@@ -335,7 +338,7 @@ export default function BidPanel({
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Départ : {formatPrice(startPrice!)} · Chaque enchère coûte {BID_FEE_EUR} € · Maximum 3
+        Départ : {formatPrice(startPrice!)} · 1 crédit ({BID_FEE_EUR} €) par enchère · Maximum 3
         enchères par artisan et par chantier
       </p>
         </>

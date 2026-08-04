@@ -6,19 +6,27 @@ import { createShareToken } from "./share";
 import { getSampleQuotesForAuction } from "./sample-quotes";
 import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
 import {
+  DEFAULT_SMS_SETTINGS,
   EMPTY_STORE,
+  type ArtisanProspect,
   type Bid,
   type ClientAccount,
+  type ClientKind,
+  type ContactRequest,
   type ContactUnlock,
+  type CreditTxnType,
   type DataStore,
   type DecennaleVerificationStatus,
   type DocumentVerificationStatus,
+  type ProCreditTransaction,
+  type ProCreditWallet,
   type ProQuote,
   type PasswordResetToken,
   type PasswordResetUserType,
   type ProDocument,
   type ProRegistration,
   type SmsCampaign,
+  type SmsCampaignSettings,
   type WorkRequest,
 } from "./store-types";
 
@@ -58,10 +66,18 @@ export async function readStore(): Promise<DataStore> {
       normalizeWorkRequest(r as LegacyWorkRequest)
     ),
     contactUnlocks: parsed.contactUnlocks ?? [],
+    contactRequests: parsed.contactRequests ?? [],
+    artisanProspects: parsed.artisanProspects ?? [],
     bids: parsed.bids ?? [],
     proQuotes: parsed.proQuotes ?? [],
     passwordResetTokens: parsed.passwordResetTokens ?? [],
     smsCampaigns: parsed.smsCampaigns ?? [],
+    smsSettings: {
+      ...DEFAULT_SMS_SETTINGS,
+      ...(parsed.smsSettings ?? {}),
+    },
+    creditWallets: parsed.creditWallets ?? [],
+    creditTransactions: parsed.creditTransactions ?? [],
   };
 }
 
@@ -531,6 +547,11 @@ export async function ensureClientAccount(data: {
   password: string;
   firstName: string;
   lastName: string;
+  kind?: ClientKind;
+  companyName?: string;
+  siret?: string;
+  siren?: string;
+  companyVerified?: boolean;
 }): Promise<{ client: ClientAccount } | { error: string }> {
   const store = await readStore();
   const emailLower = data.email.toLowerCase();
@@ -540,7 +561,7 @@ export async function ensureClientAccount(data: {
     if (!verifyPassword(data.password, existing.passwordHash)) {
       return {
         error:
-          "Un compte existe déjà avec cet email. Connectez-vous à votre espace particulier ou utilisez le bon mot de passe.",
+          "Un compte existe déjà avec cet email. Connectez-vous à votre espace ou utilisez le bon mot de passe.",
       };
     }
     return { client: existing };
@@ -549,12 +570,18 @@ export async function ensureClientAccount(data: {
   const passwordError = validatePassword(data.password);
   if (passwordError) return { error: passwordError };
 
+  const kind = data.kind ?? "individual";
   const client: ClientAccount = {
     id: newId("client"),
     email: data.email.trim(),
     passwordHash: hashPassword(data.password),
     firstName: data.firstName.trim(),
     lastName: data.lastName.trim(),
+    kind,
+    companyName: kind === "company" ? data.companyName?.trim() : undefined,
+    siret: kind === "company" ? data.siret : undefined,
+    siren: kind === "company" ? data.siren : undefined,
+    companyVerified: kind === "company" ? data.companyVerified === true : undefined,
     createdAt: new Date().toISOString(),
   };
   store.clientAccounts.push(client);
@@ -893,4 +920,291 @@ export async function addSmsCampaign(
 export async function getWorkRequestById(id: string): Promise<WorkRequest | null> {
   const store = await readStore();
   return store.workRequests.find((r) => r.id === id) ?? null;
+}
+
+const CONTACT_REQUEST_TTL_MS = 48 * 60 * 60 * 1000;
+
+function expireContactRequestsInStore(store: DataStore): boolean {
+  const now = Date.now();
+  let changed = false;
+  for (const req of store.contactRequests) {
+    if (req.status === "pending" && new Date(req.expiresAt).getTime() < now) {
+      req.status = "expired";
+      req.decidedAt = new Date().toISOString();
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+export async function getContactRequestByProAndAuction(
+  proId: string,
+  auctionId: string
+): Promise<ContactRequest | null> {
+  const store = await readStore();
+  if (expireContactRequestsInStore(store)) await writeStore(store);
+  return (
+    store.contactRequests.find((r) => r.proId === proId && r.auctionId === auctionId) ??
+    null
+  );
+}
+
+export async function getAcceptedContactRequest(
+  proId: string,
+  auctionId: string
+): Promise<ContactRequest | null> {
+  const req = await getContactRequestByProAndAuction(proId, auctionId);
+  return req?.status === "accepted" ? req : null;
+}
+
+export async function createContactRequest(data: {
+  auctionId: string;
+  workRequestId: string;
+  proId: string;
+}): Promise<{ request: ContactRequest } | { error: string }> {
+  const store = await readStore();
+  expireContactRequestsInStore(store);
+
+  const existing = store.contactRequests.find(
+    (r) => r.proId === data.proId && r.auctionId === data.auctionId
+  );
+  if (existing) {
+    return {
+      error:
+        "Vous avez déjà manifesté votre intérêt pour cette offre. Une seule demande est autorisée.",
+    };
+  }
+
+  const now = new Date();
+  const request: ContactRequest = {
+    id: newId("creq"),
+    auctionId: data.auctionId,
+    workRequestId: data.workRequestId,
+    proId: data.proId,
+    status: "pending",
+    createdAt: now.toISOString(),
+    expiresAt: new Date(now.getTime() + CONTACT_REQUEST_TTL_MS).toISOString(),
+  };
+  store.contactRequests.unshift(request);
+  await writeStore(store);
+  return { request };
+}
+
+export async function getContactRequestsForWorkRequest(
+  workRequestId: string
+): Promise<ContactRequest[]> {
+  const store = await readStore();
+  if (expireContactRequestsInStore(store)) await writeStore(store);
+  return store.contactRequests
+    .filter((r) => r.workRequestId === workRequestId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function getContactRequestsForPro(proId: string): Promise<ContactRequest[]> {
+  const store = await readStore();
+  if (expireContactRequestsInStore(store)) await writeStore(store);
+  return store.contactRequests.filter((r) => r.proId === proId);
+}
+
+export async function decideContactRequest(
+  requestId: string,
+  clientId: string,
+  decision: "accepted" | "refused"
+): Promise<{ request: ContactRequest } | { error: string }> {
+  const store = await readStore();
+  expireContactRequestsInStore(store);
+
+  const index = store.contactRequests.findIndex((r) => r.id === requestId);
+  if (index === -1) return { error: "Demande introuvable." };
+
+  const req = store.contactRequests[index];
+  const workRequest = store.workRequests.find((w) => w.id === req.workRequestId);
+  if (!workRequest || workRequest.clientId !== clientId) {
+    return { error: "Accès refusé." };
+  }
+  if (req.status !== "pending") {
+    return { error: "Cette demande a déjà été traitée." };
+  }
+  if (new Date(req.expiresAt).getTime() < Date.now()) {
+    store.contactRequests[index].status = "expired";
+    store.contactRequests[index].decidedAt = new Date().toISOString();
+    await writeStore(store);
+    return { error: "Cette demande a expiré." };
+  }
+
+  store.contactRequests[index].status = decision;
+  store.contactRequests[index].decidedAt = new Date().toISOString();
+  await writeStore(store);
+  return { request: store.contactRequests[index] };
+}
+
+export async function getSmsSettings(): Promise<SmsCampaignSettings> {
+  const store = await readStore();
+  return { ...DEFAULT_SMS_SETTINGS, ...(store.smsSettings ?? {}) };
+}
+
+export async function updateSmsSettings(
+  patch: Partial<SmsCampaignSettings>
+): Promise<SmsCampaignSettings> {
+  const store = await readStore();
+  store.smsSettings = {
+    ...DEFAULT_SMS_SETTINGS,
+    ...(store.smsSettings ?? {}),
+    ...patch,
+  };
+  await writeStore(store);
+  return store.smsSettings;
+}
+
+export async function getArtisanProspects(): Promise<ArtisanProspect[]> {
+  const store = await readStore();
+  return store.artisanProspects;
+}
+
+export async function upsertArtisanProspect(
+  data: Omit<ArtisanProspect, "createdAt" | "updatedAt"> & {
+    createdAt?: string;
+  }
+): Promise<ArtisanProspect> {
+  const store = await readStore();
+  const now = new Date().toISOString();
+  const index = store.artisanProspects.findIndex((p) => p.siret === data.siret);
+  if (index === -1) {
+    const entry: ArtisanProspect = {
+      ...data,
+      createdAt: data.createdAt ?? now,
+      updatedAt: now,
+    };
+    store.artisanProspects.push(entry);
+    await writeStore(store);
+    return entry;
+  }
+  store.artisanProspects[index] = {
+    ...store.artisanProspects[index],
+    ...data,
+    updatedAt: now,
+  };
+  await writeStore(store);
+  return store.artisanProspects[index];
+}
+
+export async function markProspectsContacted(sirets: string[]): Promise<void> {
+  if (sirets.length === 0) return;
+  const store = await readStore();
+  const now = new Date().toISOString();
+  const set = new Set(sirets);
+  let changed = false;
+  for (const p of store.artisanProspects) {
+    if (set.has(p.siret)) {
+      p.lastContactedAt = now;
+      p.updatedAt = now;
+      changed = true;
+    }
+  }
+  if (changed) await writeStore(store);
+}
+
+export async function getProCreditBalance(proId: string): Promise<number> {
+  const store = await readStore();
+  return store.creditWallets.find((w) => w.proId === proId)?.balance ?? 0;
+}
+
+export async function getProCreditTransactions(
+  proId: string
+): Promise<ProCreditTransaction[]> {
+  const store = await readStore();
+  return store.creditTransactions
+    .filter((t) => t.proId === proId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+async function applyCreditDelta(
+  store: DataStore,
+  data: {
+    proId: string;
+    type: CreditTxnType;
+    amount: number;
+    auctionId?: string;
+    workRequestId?: string;
+    stripeSessionId?: string;
+    note?: string;
+  }
+): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
+  if (data.amount === 0) return { error: "Montant invalide." };
+
+  let wallet = store.creditWallets.find((w) => w.proId === data.proId);
+  if (!wallet) {
+    wallet = {
+      proId: data.proId,
+      balance: 0,
+      updatedAt: new Date().toISOString(),
+    };
+    store.creditWallets.push(wallet);
+  }
+
+  const next = wallet.balance + data.amount;
+  if (next < 0) {
+    return { error: "Solde de crédits insuffisant." };
+  }
+
+  if (data.stripeSessionId) {
+    const dup = store.creditTransactions.find(
+      (t) => t.stripeSessionId === data.stripeSessionId
+    );
+    if (dup) {
+      return { balance: wallet.balance, transaction: dup };
+    }
+  }
+
+  wallet.balance = next;
+  wallet.updatedAt = new Date().toISOString();
+
+  const transaction: ProCreditTransaction = {
+    id: newId("ctx"),
+    proId: data.proId,
+    type: data.type,
+    amount: data.amount,
+    balanceAfter: next,
+    auctionId: data.auctionId,
+    workRequestId: data.workRequestId,
+    stripeSessionId: data.stripeSessionId,
+    note: data.note,
+    createdAt: new Date().toISOString(),
+  };
+  store.creditTransactions.unshift(transaction);
+  return { balance: next, transaction };
+}
+
+export async function creditProWallet(data: {
+  proId: string;
+  type: CreditTxnType;
+  amount: number;
+  auctionId?: string;
+  workRequestId?: string;
+  stripeSessionId?: string;
+  note?: string;
+}): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
+  if (data.amount <= 0) return { error: "Le crédit doit être positif." };
+  const store = await readStore();
+  const result = await applyCreditDelta(store, data);
+  if ("error" in result) return result;
+  await writeStore(store);
+  return result;
+}
+
+export async function spendProCredit(data: {
+  proId: string;
+  type: "spend_unlock" | "spend_bid";
+  auctionId?: string;
+  workRequestId?: string;
+  note?: string;
+}): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
+  const store = await readStore();
+  const result = await applyCreditDelta(store, {
+    ...data,
+    amount: -1,
+  });
+  if ("error" in result) return result;
+  await writeStore(store);
+  return result;
 }

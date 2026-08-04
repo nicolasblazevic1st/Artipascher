@@ -13,7 +13,12 @@ interface ClientContact {
   phone: string;
   address: string;
   postalCode: string;
+  companyName?: string;
+  clientSiret?: string;
+  clientKind?: "individual" | "company";
 }
+
+type InterestStatus = "none" | "pending" | "accepted" | "refused" | "expired";
 
 interface Props {
   auctionId: string;
@@ -32,8 +37,9 @@ export default function ClientContactPanel({
   const [contact, setContact] = useState<ClientContact | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const [interestLoading, setInterestLoading] = useState(false);
+  const [interestStatus, setInterestStatus] = useState<InterestStatus>("none");
   const [error, setError] = useState<string | null>(null);
-
   const [showLogin, setShowLogin] = useState(false);
 
   const fetchContact = useCallback(async () => {
@@ -45,6 +51,16 @@ export default function ClientContactPanel({
     }
   }, [auctionId]);
 
+  const fetchInterest = useCallback(async () => {
+    const res = await fetch("/api/pro/contact-requests");
+    if (!res.ok) return;
+    const data = await res.json();
+    const match = (data.requests ?? []).find(
+      (r: { auctionId: string; status: string }) => r.auctionId === auctionId
+    );
+    setInterestStatus(match ? (match.status as InterestStatus) : "none");
+  }, [auctionId]);
+
   useEffect(() => {
     async function init() {
       const sessionRes = await fetch("/api/pro/session");
@@ -53,7 +69,7 @@ export default function ClientContactPanel({
       if (session.companyName) setCompanyName(session.companyName);
 
       if (session.authenticated) {
-        await fetchContact();
+        await Promise.all([fetchContact(), fetchInterest()]);
       }
       setLoading(false);
 
@@ -64,7 +80,24 @@ export default function ClientContactPanel({
       }
     }
     init();
-  }, [auctionId, fetchContact]);
+  }, [auctionId, fetchContact, fetchInterest]);
+
+  async function handleInterest() {
+    setInterestLoading(true);
+    setError(null);
+    const res = await fetch("/api/pro/contact-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auctionId }),
+    });
+    const data = await res.json();
+    setInterestLoading(false);
+    if (!res.ok) {
+      setError(data.error ?? "Impossible d'envoyer la demande.");
+      return;
+    }
+    setInterestStatus("pending");
+  }
 
   async function handleUnlock(demo = false) {
     setPaying(true);
@@ -94,6 +127,7 @@ export default function ClientContactPanel({
     setUnlocked(false);
     setContact(null);
     setCompanyName("");
+    setInterestStatus("none");
   }
 
   if (loading) {
@@ -113,15 +147,24 @@ export default function ClientContactPanel({
               Coordonnées client débloquées
             </h2>
             <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
-              Accès payé · {UNLOCK_PRICE_EUR} €
+            Accès · 1 crédit
             </span>
           </div>
           <p className="mt-1 text-xs text-emerald-700">
             Connecté en tant que {companyName}
           </p>
           <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+            {contact.clientKind === "company" && contact.companyName && (
+              <div className="sm:col-span-2">
+                <dt className="text-emerald-600">Entreprise</dt>
+                <dd className="font-medium text-emerald-900">
+                  {contact.companyName}
+                  {contact.clientSiret ? ` · SIRET ${contact.clientSiret}` : ""}
+                </dd>
+              </div>
+            )}
             <div>
-              <dt className="text-emerald-600">Client</dt>
+              <dt className="text-emerald-600">Contact</dt>
               <dd className="font-medium text-emerald-900">
                 {contact.firstName} {contact.lastName}
               </dd>
@@ -158,9 +201,9 @@ export default function ClientContactPanel({
     <section id="contact" className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6">
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Les informations du particulier sont <strong>confidentielles</strong>.
-        Seuls les professionnels inscrits au RCS, validés par l&apos;admin, peuvent
-        les consulter après paiement de <strong>{UNLOCK_PRICE_EUR} €</strong>.
+        Manifestez d&apos;abord votre intérêt. Après acceptation du client dans son espace,
+        vous pourrez débloquer les coordonnées pour{" "}
+        <strong>1 crédit ({UNLOCK_PRICE_EUR}&nbsp;€)</strong>.
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -178,7 +221,7 @@ export default function ClientContactPanel({
         )}
         <div className="flex justify-between border-b border-slate-100 py-2">
           <dt className="text-slate-500">Client</dt>
-          <dd className="text-slate-400">M. D*** · masqué</dd>
+          <dd className="text-slate-400">Masqué</dd>
         </div>
         <div className="flex justify-between border-b border-slate-100 py-2">
           <dt className="text-slate-500">Téléphone</dt>
@@ -186,7 +229,7 @@ export default function ClientContactPanel({
         </div>
         <div className="flex justify-between py-2">
           <dt className="text-slate-500">Email</dt>
-          <dd className="text-slate-400">m•••@•••.fr</dd>
+          <dd className="text-slate-400">•••@•••.fr</dd>
         </div>
       </dl>
 
@@ -212,7 +255,7 @@ export default function ClientContactPanel({
                   setProLoggedIn(true);
                   setCompanyName(name);
                   setShowLogin(false);
-                  await fetchContact();
+                  await Promise.all([fetchContact(), fetchInterest()]);
                 }}
               />
               <button
@@ -230,24 +273,70 @@ export default function ClientContactPanel({
           <p className="text-sm text-slate-600">
             Connecté : <strong>{companyName}</strong>
           </p>
-          <button
-            type="button"
-            onClick={() => handleUnlock(false)}
-            disabled={paying}
-            className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
-          >
-            {paying ? "Redirection…" : `Débloquer les coordonnées · ${UNLOCK_PRICE_EUR} €`}
-          </button>
-          {process.env.NODE_ENV === "development" && (
+
+          {interestStatus === "none" && (
             <button
               type="button"
-              onClick={() => handleUnlock(true)}
-              disabled={paying}
-              className="block text-xs text-slate-500 underline"
+              onClick={handleInterest}
+              disabled={interestLoading}
+              className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
             >
-              Mode démo (dev) — simuler le paiement 1 €
+              {interestLoading ? "Envoi…" : "Je suis intéressé (gratuit)"}
             </button>
           )}
+
+          {interestStatus === "pending" && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Demande envoyée — en attente de la réponse du client (48&nbsp;h).
+            </p>
+          )}
+
+          {interestStatus === "refused" && (
+            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
+              Le client a décliné votre demande de contact.
+            </p>
+          )}
+
+          {interestStatus === "expired" && (
+            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
+              Votre demande a expiré sans réponse du client.
+            </p>
+          )}
+
+          {interestStatus === "accepted" && (
+            <>
+              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                Le client a accepté. Vous pouvez débloquer les coordonnées.
+              </p>
+              <button
+                type="button"
+                onClick={() => handleUnlock(false)}
+                disabled={paying}
+                className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
+              >
+                {paying
+                  ? "Traitement…"
+                  : `Débloquer · 1 crédit (${UNLOCK_PRICE_EUR} €)`}
+              </button>
+              {process.env.NODE_ENV === "development" && (
+                <button
+                  type="button"
+                  onClick={() => handleUnlock(true)}
+                  disabled={paying}
+                  className="block text-xs text-slate-500 underline"
+                >
+                  Mode démo (dev) — débloquer sans crédit
+                </button>
+              )}
+              <a
+                href="/pro/compte#credits"
+                className="block text-xs font-medium text-brand-700 underline"
+              >
+                Acheter des crédits
+              </a>
+            </>
+          )}
+
           <button
             type="button"
             onClick={handleLogout}

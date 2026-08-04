@@ -17,6 +17,8 @@ export interface NearbyBusiness {
   department: "59" | "62";
   nafCode: string;
   source: "gouv" | "platform";
+  /** Date de création SIRENE (YYYY-MM-DD) si disponible. */
+  companyCreatedAt?: string;
   /** Disponible uniquement pour les artisans inscrits sur Artipascher. */
   phone?: string;
   email?: string;
@@ -37,6 +39,7 @@ interface GouvCompany {
   siren: string;
   nom_complet?: string;
   etat_administratif?: string;
+  date_creation?: string;
   matching_etablissements?: GouvEstablishment[];
 }
 
@@ -109,6 +112,7 @@ async function fetchGouvNearby(params: {
             city: est.libelle_commune ?? "",
             department,
             nafCode: est.activite_principale ?? naf,
+            companyCreatedAt: company.date_creation,
             source: "gouv",
           });
         }

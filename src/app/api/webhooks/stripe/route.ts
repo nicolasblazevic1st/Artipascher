@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
-import { BID_FEE_EUR } from "@/lib/auctions";
+import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
 import { getStripe } from "@/lib/payments";
-import { addBid, addContactUnlock, countProBidsForAuction, getApprovedProById } from "@/lib/store";
-import { MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
+import {
+  addBid,
+  addContactUnlock,
+  countProBidsForAuction,
+  creditProWallet,
+  getApprovedProById,
+} from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
@@ -29,6 +34,24 @@ export async function POST(request: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
+    if (
+      session.metadata?.type === "credit_purchase" &&
+      session.metadata.proId &&
+      session.metadata.packSize
+    ) {
+      const packSize = Number(session.metadata.packSize);
+      if (Number.isFinite(packSize) && packSize > 0) {
+        await creditProWallet({
+          proId: session.metadata.proId,
+          type: "purchase",
+          amount: packSize,
+          stripeSessionId: session.id,
+          note: `Achat pack ${packSize} crédits`,
+        });
+      }
+    }
+
+    // Legacy: paiements à l'acte (avant crédits) — encore honorés si reçus.
     if (
       session.metadata?.type === "contact_unlock" &&
       session.metadata.proId &&

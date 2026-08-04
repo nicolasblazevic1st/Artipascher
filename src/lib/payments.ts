@@ -97,3 +97,44 @@ export async function createBidCheckout(params: {
   if (!session.url) return null;
   return { url: session.url, sessionId: session.id };
 }
+
+export async function createCreditPackCheckout(params: {
+  proId: string;
+  proEmail: string;
+  packSize: number;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<{ url: string; sessionId: string } | null> {
+  const stripe = getStripe();
+  if (!stripe) return null;
+
+  const amountEur = params.packSize * UNLOCK_PRICE_EUR;
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: params.proEmail,
+    line_items: [
+      {
+        price_data: {
+          currency: "eur",
+          unit_amount: amountEur * 100,
+          product_data: {
+            name: `${params.packSize} crédit${params.packSize > 1 ? "s" : ""} Artipascher`,
+            description: "1 crédit = 1 € — utilisable pour débloquer un contact ou enchérir",
+          },
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      type: "credit_purchase",
+      proId: params.proId,
+      packSize: String(params.packSize),
+    },
+    success_url: `${params.successUrl}?credits=1`,
+    cancel_url: params.cancelUrl,
+  });
+
+  if (!session.url) return null;
+  return { url: session.url, sessionId: session.id };
+}

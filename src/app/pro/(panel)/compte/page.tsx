@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import { getProSession } from "@/lib/pro-auth";
+import ProCreditsPanel from "@/components/pro/ProCreditsPanel";
 import ProDocumentsList from "@/components/ProDocumentsList";
 import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
-import { getApprovedProById, getContactUnlocksForPro, getProDashboardStats } from "@/lib/store";
+import {
+  getApprovedProById,
+  getContactUnlocksForPro,
+  getProCreditBalance,
+  getProDashboardStats,
+} from "@/lib/store";
 import { maskSiret } from "@/lib/professionals";
 
 export const metadata: Metadata = {
@@ -15,10 +21,11 @@ export default async function ProComptePage() {
   const session = await getProSession();
   if (!session) return null;
 
-  const [pro, stats, unlocks] = await Promise.all([
+  const [pro, stats, unlocks, creditBalance] = await Promise.all([
     getApprovedProById(session.proId),
     getProDashboardStats(session.proId),
     getContactUnlocksForPro(session.proId),
+    getProCreditBalance(session.proId),
   ]);
 
   if (!pro) return null;
@@ -27,10 +34,15 @@ export default async function ProComptePage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Mon compte</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Informations de votre entreprise vérifiée au RCS
+        Informations de votre entreprise vérifiée au RCS · {creditBalance} crédit
+        {creditBalance !== 1 ? "s" : ""} disponible{creditBalance !== 1 ? "s" : ""}
       </p>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="lg:col-span-2">
+          <ProCreditsPanel />
+        </div>
+
         <section className="rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-slate-900">Entreprise</h2>
           <dl className="mt-4 space-y-3 text-sm">

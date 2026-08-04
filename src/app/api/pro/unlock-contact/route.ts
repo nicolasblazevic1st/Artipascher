@@ -3,12 +3,16 @@ import { SAMPLE_AUCTIONS } from "@/lib/data";
 import { getClientContact, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { canUnlockContacts } from "@/lib/level1-certification";
 import { getProSession } from "@/lib/pro-auth";
+import { isDemoPaymentAllowed } from "@/lib/payments";
 import {
-  createContactUnlockCheckout,
-  isDemoPaymentAllowed,
-  isStripeConfigured,
-} from "@/lib/payments";
-import { addContactUnlock, getApprovedProById, hasContactUnlock } from "@/lib/store";
+  addContactUnlock,
+  getAcceptedContactRequest,
+  getApprovedProById,
+  getProCreditBalance,
+  hasContactUnlock,
+  spendProCredit,
+} from "@/lib/store";
+import { getWorkRequestByAuctionId } from "@/lib/work-request-auctions";
 
 export async function POST(request: NextRequest) {
   const session = await getProSession();
@@ -30,10 +34,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  const auction = SAMPLE_AUCTIONS.find((a) => a.id === auctionId);
-  const contact = getClientContact(auctionId);
+  const sampleAuction = SAMPLE_AUCTIONS.find((a) => a.id === auctionId);
+  const sampleContact = getClientContact(auctionId);
+  const workRequest = await getWorkRequestByAuctionId(auctionId);
 
-  if (!auction || !contact) {
+  if ((!sampleAuction || !sampleContact) && !workRequest) {
     return NextResponse.json({ error: "Enchère introuvable." }, { status: 404 });
   }
 
@@ -54,41 +59,74 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ alreadyUnlocked: true });
   }
 
-  const origin = request.nextUrl.origin;
-  const auctionUrl = `${origin}/encheres/${auctionId}`;
-
-  if (demo && isDemoPaymentAllowed()) {
-    await addContactUnlock({
-      proId: session.proId,
-      auctionId,
-      amountEur: UNLOCK_PRICE_EUR,
-    });
-    return NextResponse.json({ unlocked: true, demo: true });
+  if (workRequest && !sampleAuction) {
+    const accepted = await getAcceptedContactRequest(session.proId, auctionId);
+    if (!accepted) {
+      return NextResponse.json(
+        {
+          error:
+            "Le client doit d'abord accepter votre demande « Je suis intéressé » avant le déblocage des coordonnées.",
+          needsInterestAcceptance: true,
+        },
+        { status: 403 }
+      );
+    }
   }
 
-  if (!isStripeConfigured()) {
+  const balance = await getProCreditBalance(session.proId);
+  if (balance < 1) {
+    if (demo && isDemoPaymentAllowed()) {
+      // Mode démo : on laisse passer sans crédit pour faciliter les tests locaux
+      // uniquement si explicitement demandé — sinon demander d'acheter.
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            "Solde insuffisant. Achetez des crédits (1 crédit = 1 €) dans Mon compte.",
+          needsCredits: true,
+          balance,
+        },
+        { status: 402 }
+      );
+    }
+  }
+
+  if (balance >= 1) {
+    const spent = await spendProCredit({
+      proId: session.proId,
+      type: "spend_unlock",
+      auctionId,
+      workRequestId: workRequest?.id,
+      note: "Déblocage coordonnées client",
+    });
+    if ("error" in spent) {
+      return NextResponse.json(
+        { error: spent.error, needsCredits: true, balance },
+        { status: 402 }
+      );
+    }
+  } else if (!(demo && isDemoPaymentAllowed())) {
     return NextResponse.json(
       {
-        error:
-          "Paiement Stripe non configuré. En développement, utilisez le mode démo.",
-        stripeRequired: true,
+        error: "Solde insuffisant. Achetez des crédits dans Mon compte.",
+        needsCredits: true,
+        balance,
       },
-      { status: 503 }
+      { status: 402 }
     );
   }
 
-  const checkout = await createContactUnlockCheckout({
+  await addContactUnlock({
     proId: session.proId,
-    proEmail: session.email,
     auctionId,
-    auctionTitle: auction.title,
-    successUrl: auctionUrl,
-    cancelUrl: auctionUrl,
+    amountEur: UNLOCK_PRICE_EUR,
   });
 
-  if (!checkout) {
-    return NextResponse.json({ error: "Impossible de créer le paiement." }, { status: 500 });
-  }
-
-  return NextResponse.json({ checkoutUrl: checkout.url });
+  const newBalance = await getProCreditBalance(session.proId);
+  return NextResponse.json({
+    unlocked: true,
+    creditsSpent: balance >= 1 ? 1 : 0,
+    balance: newBalance,
+    demo: demo && balance < 1,
+  });
 }

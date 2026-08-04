@@ -123,12 +123,20 @@ export interface ProRegistration {
   adminNote?: string;
 }
 
+export type ClientKind = "individual" | "company";
+
 export interface ClientAccount {
   id: string;
   email: string;
   passwordHash: string;
   firstName: string;
   lastName: string;
+  /** Défaut individual pour les comptes existants. */
+  kind?: ClientKind;
+  companyName?: string;
+  siret?: string;
+  siren?: string;
+  companyVerified?: boolean;
   createdAt: string;
 }
 
@@ -138,6 +146,9 @@ export interface WorkRequest {
   lastName: string;
   email: string;
   clientId?: string;
+  clientKind?: ClientKind;
+  companyName?: string;
+  clientSiret?: string;
   /** Numéro et voie du chantier (ex. 12 rue de la Barre). */
   addressLine?: string;
   /** Complément d'adresse (appartement, bâtiment…). */
@@ -239,12 +250,18 @@ export type SmsCampaignStatus = "demo" | "sent" | "failed";
 
 export type SmsRecipientStatus = "sent" | "failed" | "skipped";
 
+export type SmsCohort = "returning" | "new_young" | "new_established";
+
+export type SmsCampaignTrigger = "manual" | "auto";
+
 export interface SmsCampaignRecipient {
   proId?: string;
+  siret?: string;
   companyName: string;
   phone: string;
   status: SmsRecipientStatus;
   error?: string;
+  cohort?: SmsCohort;
 }
 
 /** Campagne SMS admin — alerte artisans proches d'une demande de travaux. */
@@ -260,8 +277,87 @@ export interface SmsCampaign {
   sentCount: number;
   failedCount: number;
   recipients: SmsCampaignRecipient[];
+  trigger?: SmsCampaignTrigger;
   createdAt: string;
   sentAt?: string;
+}
+
+export type ContactRequestStatus = "pending" | "accepted" | "refused" | "expired";
+
+export interface ContactRequest {
+  id: string;
+  auctionId: string;
+  workRequestId: string;
+  proId: string;
+  status: ContactRequestStatus;
+  createdAt: string;
+  expiresAt: string;
+  decidedAt?: string;
+}
+
+/** Prospect SIRENE / carnet téléphone pour campagnes SMS. */
+export interface ArtisanProspect {
+  siret: string;
+  siren: string;
+  companyName: string;
+  city: string;
+  department: "59" | "62";
+  nafCode?: string;
+  companyCreatedAt?: string;
+  phone?: string;
+  source: "gouv" | "import" | "platform";
+  optedOut?: boolean;
+  lastContactedAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SmsCampaignSettings {
+  autoSendOnApprove: boolean;
+  defaultCampaignSize: number;
+  defaultMessageTemplate?: string;
+  throttleMs: number;
+}
+
+export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
+  autoSendOnApprove: false,
+  defaultCampaignSize: 30,
+  throttleMs: 150,
+};
+
+/** 1 crédit = 1 € — polyvalent (contact ou enchère). */
+export const CREDIT_PRICE_EUR = 1;
+
+export const CREDIT_PACKS = [1, 5, 10, 20] as const;
+export type CreditPackSize = (typeof CREDIT_PACKS)[number];
+
+export type CreditTxnType =
+  | "purchase"
+  | "spend_unlock"
+  | "spend_bid"
+  | "refund_unlock"
+  | "admin_adjust"
+  | "demo_grant";
+
+export interface ProCreditTransaction {
+  id: string;
+  proId: string;
+  type: CreditTxnType;
+  /** +N à l'achat, -1 à la dépense. */
+  amount: number;
+  balanceAfter: number;
+  auctionId?: string;
+  workRequestId?: string;
+  stripeSessionId?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface ProCreditWallet {
+  proId: string;
+  balance: number;
+  updatedAt: string;
 }
 
 export interface DataStore {
@@ -269,10 +365,15 @@ export interface DataStore {
   proRegistrations: ProRegistration[];
   workRequests: WorkRequest[];
   contactUnlocks: ContactUnlock[];
+  contactRequests: ContactRequest[];
+  artisanProspects: ArtisanProspect[];
   bids: Bid[];
   proQuotes: ProQuote[];
   passwordResetTokens: PasswordResetToken[];
   smsCampaigns: SmsCampaign[];
+  smsSettings?: SmsCampaignSettings;
+  creditWallets: ProCreditWallet[];
+  creditTransactions: ProCreditTransaction[];
 }
 
 export const EMPTY_STORE: DataStore = {
@@ -280,8 +381,13 @@ export const EMPTY_STORE: DataStore = {
   proRegistrations: [],
   workRequests: [],
   contactUnlocks: [],
+  contactRequests: [],
+  artisanProspects: [],
   bids: [],
   proQuotes: [],
   passwordResetTokens: [],
   smsCampaigns: [],
+  smsSettings: { ...DEFAULT_SMS_SETTINGS },
+  creditWallets: [],
+  creditTransactions: [],
 };

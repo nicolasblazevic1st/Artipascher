@@ -24,6 +24,9 @@ async function resolveClientContact(auctionId: string): Promise<ClientContact | 
     phone: "Contact par email",
     address,
     postalCode,
+    companyName: request.companyName,
+    clientSiret: request.clientSiret,
+    clientKind: request.clientKind ?? "individual",
   };
 }
 

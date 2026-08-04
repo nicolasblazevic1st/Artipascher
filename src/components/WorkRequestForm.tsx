@@ -20,6 +20,11 @@ import {
   DEFAULT_AUCTION_DURATION_DAYS,
 } from "@/lib/auction-duration";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
+import {
+  isValidSiretFormat,
+  normalizeSiret,
+  type RcsVerificationResult,
+} from "@/lib/rcs";
 
 export default function WorkRequestForm() {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -38,6 +43,11 @@ export default function WorkRequestForm() {
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
+  const [isCompany, setIsCompany] = useState(false);
+  const [clientSiret, setClientSiret] = useState("");
+  const [companyVerification, setCompanyVerification] =
+    useState<RcsVerificationResult | null>(null);
+  const [verifyingCompany, setVerifyingCompany] = useState(false);
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
@@ -124,6 +134,14 @@ export default function WorkRequestForm() {
       return;
     }
 
+    if (isCompany) {
+      if (!companyVerification?.valid) {
+        setError("Vérifiez le SIRET de votre entreprise avant d'envoyer.");
+        setStatus("error");
+        return;
+      }
+    }
+
     setStatus("submitting");
 
     const formData = new FormData(form);
@@ -133,6 +151,16 @@ export default function WorkRequestForm() {
     formData.set("city", selectedAddress.city);
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
+    formData.set("clientKind", isCompany ? "company" : "individual");
+    if (isCompany && companyVerification) {
+      formData.set("clientSiret", companyVerification.siret);
+      formData.set("clientSiren", companyVerification.siren);
+      formData.set("companyName", companyVerification.companyName ?? "");
+    } else {
+      formData.delete("clientSiret");
+      formData.delete("clientSiren");
+      formData.delete("companyName");
+    }
     formData.delete("photos");
     photoFiles.forEach((file) => formData.append("photos", file));
     if (hasPreviousQuote) {
@@ -177,7 +205,40 @@ export default function WorkRequestForm() {
     setProofPreview(null);
     setSelectedAddress(null);
     setRequestedWorkStartDate("");
+    setIsCompany(false);
+    setClientSiret("");
+    setCompanyVerification(null);
     form.reset();
+  }
+
+  async function handleVerifyCompany() {
+    setError(null);
+    const normalized = normalizeSiret(clientSiret);
+    if (!isValidSiretFormat(normalized)) {
+      setError("Numéro SIRET invalide (14 chiffres).");
+      setCompanyVerification(null);
+      return;
+    }
+    setVerifyingCompany(true);
+    try {
+      const response = await fetch("/api/verify-rcs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siret: normalized, requireNord: false }),
+      });
+      const data = (await response.json()) as RcsVerificationResult;
+      if (!response.ok || !data.valid) {
+        setCompanyVerification(null);
+        setError(data.error ?? "Entreprise introuvable ou inactive.");
+        return;
+      }
+      setCompanyVerification(data);
+    } catch {
+      setError("Impossible de vérifier le SIRET.");
+      setCompanyVerification(null);
+    } finally {
+      setVerifyingCompany(false);
+    }
   }
 
   const inputClass =
@@ -198,9 +259,85 @@ export default function WorkRequestForm() {
         </ul>
       </div>
 
+      <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={isCompany}
+          onChange={(e) => {
+            setIsCompany(e.target.checked);
+            setCompanyVerification(null);
+            setClientSiret("");
+            setError(null);
+          }}
+          className="mt-0.5"
+        />
+        <span>
+          <span className="font-medium text-slate-900">Je suis une entreprise</span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            Cochez uniquement si vous postez au nom d&apos;une société existante (SIRET
+            obligatoire).
+          </span>
+        </span>
+      </label>
+
+      {isCompany && (
+        <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+          <div>
+            <label htmlFor="clientSiret" className="mb-1 block text-sm font-medium text-slate-700">
+              SIRET de l&apos;entreprise <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <input
+                id="clientSiret"
+                type="text"
+                inputMode="numeric"
+                placeholder="14 chiffres"
+                value={clientSiret}
+                onChange={(e) => {
+                  setClientSiret(e.target.value);
+                  setCompanyVerification(null);
+                }}
+                className={`${inputClass} sm:max-w-xs`}
+              />
+              <button
+                type="button"
+                onClick={handleVerifyCompany}
+                disabled={verifyingCompany}
+                className="rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-50"
+              >
+                {verifyingCompany ? "Vérification…" : "Vérifier le SIRET"}
+              </button>
+            </div>
+          </div>
+          {companyVerification?.valid && (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              Entreprise vérifiée :{" "}
+              <strong>{companyVerification.companyName}</strong> · SIRET{" "}
+              {companyVerification.siret}
+            </p>
+          )}
+          <p className="text-xs text-slate-500">
+            Vérification via la base SIRENE (existence légale). Indiquez ensuite le contact
+            (prénom / nom).
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
-        <input name="firstName" type="text" placeholder="Prénom" className={inputClass} required />
-        <input name="lastName" type="text" placeholder="Nom" className={inputClass} required />
+        <input
+          name="firstName"
+          type="text"
+          placeholder={isCompany ? "Prénom du contact" : "Prénom"}
+          className={inputClass}
+          required
+        />
+        <input
+          name="lastName"
+          type="text"
+          placeholder={isCompany ? "Nom du contact" : "Nom"}
+          className={inputClass}
+          required
+        />
       </div>
       <input name="email" type="email" placeholder="Email" className={inputClass} required />
 

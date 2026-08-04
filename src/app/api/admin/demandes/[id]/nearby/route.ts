@@ -45,6 +45,6 @@ export async function GET(_request: Request, context: RouteContext) {
     },
     businesses: businesses.slice(0, 50),
     note:
-      "La base gouvernementale (INSEE / Annuaire des Entreprises) ne diffuse pas les numéros de mobile. Les SMS automatiques ciblent d'abord les artisans inscrits sur Artipascher.",
+      "La base SIRENE ne diffuse pas les mobiles. Enrichissez les téléphones dans Campagnes SMS, puis sélectionnez les destinataires.",
   });
 }

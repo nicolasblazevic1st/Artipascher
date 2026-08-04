@@ -7,12 +7,15 @@ import {
 import { checkBidEligibility } from "@/lib/bid-eligibility";
 import { resolveAuction } from "@/lib/work-request-auctions";
 import { getProSession } from "@/lib/pro-auth";
+import { isDemoPaymentAllowed } from "@/lib/payments";
 import {
-  createBidCheckout,
-  isDemoPaymentAllowed,
-  isStripeConfigured,
-} from "@/lib/payments";
-import { addBid, countProBidsForAuction, getApprovedProById, getBidsForAuction } from "@/lib/store";
+  addBid,
+  countProBidsForAuction,
+  getApprovedProById,
+  getBidsForAuction,
+  getProCreditBalance,
+  spendProCredit,
+} from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   const session = await getProSession();
@@ -85,73 +88,80 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  async function registerBid(stripeSessionId?: string) {
-    const bidsUsed = await countProBidsForAuction(session!.proId, auctionId);
-    if (bidsUsed >= eligibility.maxBidsPerAuction) {
-      throw new Error("BID_LIMIT_REACHED");
-    }
-    return addBid({
-      auctionId,
-      proId: session!.proId,
-      companyName: pro!.companyName,
-      amount,
-      feeEur: BID_FEE_EUR,
-      stripeSessionId,
-    });
-  }
+  const balance = await getProCreditBalance(session.proId);
+  const canSpend = balance >= 1;
+  const allowDemoWithoutCredit = demo && isDemoPaymentAllowed() && !canSpend;
 
-  const origin = request.nextUrl.origin;
-  const auctionUrl = `${origin}/encheres/${auctionId}`;
-
-  if (demo && isDemoPaymentAllowed()) {
-    try {
-      const bid = await registerBid();
-      return NextResponse.json({
-        success: true,
-        demo: true,
-        bid,
-        currentPrice: amount,
-        bidsUsed: eligibility.bidsUsed + 1,
-        bidsRemaining: Math.max(0, eligibility.bidsRemaining - 1),
-      });
-    } catch (err) {
-      if (err instanceof Error && err.message === "BID_LIMIT_REACHED") {
-        return NextResponse.json(
-          {
-            error: `Vous avez utilisé vos ${eligibility.maxBidsPerAuction} enchères sur ce chantier.`,
-            bidsUsed: eligibility.maxBidsPerAuction,
-            bidsRemaining: 0,
-          },
-          { status: 403 }
-        );
-      }
-      throw err;
-    }
-  }
-
-  if (!isStripeConfigured()) {
+  if (!canSpend && !allowDemoWithoutCredit) {
     return NextResponse.json(
       {
-        error: "Paiement Stripe non configuré. En développement, utilisez le mode démo.",
-        stripeRequired: true,
+        error:
+          "Solde insuffisant. Achetez des crédits (1 crédit = 1 €) dans Mon compte pour enchérir.",
+        needsCredits: true,
+        balance,
       },
-      { status: 503 }
+      { status: 402 }
     );
   }
 
-  const checkout = await createBidCheckout({
-    proId: session.proId,
-    proEmail: session.email,
-    auctionId,
-    auctionTitle: auction.title,
-    bidAmount: amount,
-    successUrl: auctionUrl,
-    cancelUrl: auctionUrl,
-  });
-
-  if (!checkout) {
-    return NextResponse.json({ error: "Impossible de créer le paiement." }, { status: 500 });
+  if (canSpend) {
+    const spent = await spendProCredit({
+      proId: session.proId,
+      type: "spend_bid",
+      auctionId,
+      note: `Enchère ${amount} €`,
+    });
+    if ("error" in spent) {
+      return NextResponse.json(
+        { error: spent.error, needsCredits: true, balance },
+        { status: 402 }
+      );
+    }
   }
 
-  return NextResponse.json({ checkoutUrl: checkout.url, feeEur: BID_FEE_EUR });
+  try {
+    const bidsUsed = await countProBidsForAuction(session.proId, auctionId);
+    if (bidsUsed >= eligibility.maxBidsPerAuction) {
+      return NextResponse.json(
+        {
+          error: `Vous avez utilisé vos ${eligibility.maxBidsPerAuction} enchères sur ce chantier.`,
+          bidsUsed: eligibility.maxBidsPerAuction,
+          bidsRemaining: 0,
+        },
+        { status: 403 }
+      );
+    }
+
+    const bid = await addBid({
+      auctionId,
+      proId: session.proId,
+      companyName: pro.companyName,
+      amount,
+      feeEur: BID_FEE_EUR,
+    });
+
+    const newBalance = await getProCreditBalance(session.proId);
+    return NextResponse.json({
+      success: true,
+      bid,
+      currentPrice: amount,
+      creditsSpent: canSpend ? 1 : 0,
+      balance: newBalance,
+      demo: allowDemoWithoutCredit,
+      bidsUsed: eligibility.bidsUsed + 1,
+      bidsRemaining: Math.max(0, eligibility.bidsRemaining - 1),
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message === "BID_LIMIT_REACHED") {
+      return NextResponse.json(
+        {
+          error: `Vous avez utilisé vos ${eligibility.maxBidsPerAuction} enchères sur ce chantier.`,
+          bidsUsed: eligibility.maxBidsPerAuction,
+          bidsRemaining: 0,
+        },
+        { status: 403 }
+      );
+    }
+    throw err;
+  }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeAuctionEndsAt } from "@/lib/auction-duration";
 import { createShareToken } from "@/lib/share";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { maybeAutoNotifyOnApprove } from "@/lib/sms-campaigns";
 import { readStore, updateWorkRequest } from "@/lib/store";
 
 export async function GET() {
@@ -63,6 +64,12 @@ export async function PATCH(request: NextRequest) {
   });
   if (!updated) {
     return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
+  }
+
+  if (status === "approved") {
+    void maybeAutoNotifyOnApprove(updated).catch((err) =>
+      console.error("[sms] auto notify", err)
+    );
   }
 
   return NextResponse.json({ request: updated });

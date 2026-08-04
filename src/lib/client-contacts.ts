@@ -6,6 +6,9 @@ export interface ClientContact {
   phone: string;
   address: string;
   postalCode: string;
+  companyName?: string;
+  clientSiret?: string;
+  clientKind?: "individual" | "company";
 }
 
 /** Données privées — jamais exposées sans paiement 1 € par un pro approuvé. */

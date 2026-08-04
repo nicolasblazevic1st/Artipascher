@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { previewSmsCampaign } from "@/lib/sms-campaigns";
+import { previewSmsCampaignDetailed } from "@/lib/sms-campaigns";
 import { getWorkRequestById } from "@/lib/store";
 
 export async function GET(request: NextRequest) {
@@ -13,11 +13,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "workRequestId requis." }, { status: 400 });
   }
 
+  const sizeRaw = request.nextUrl.searchParams.get("campaignSize");
+  const campaignSize = sizeRaw ? Number(sizeRaw) : undefined;
+
   const workRequest = await getWorkRequestById(workRequestId);
   if (!workRequest) {
     return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
   }
 
-  const preview = await previewSmsCampaign(workRequest);
+  const preview = await previewSmsCampaignDetailed(
+    workRequest,
+    Number.isFinite(campaignSize) ? campaignSize : undefined
+  );
   return NextResponse.json({ preview });
 }

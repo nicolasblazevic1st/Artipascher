@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ClientContactRequestsPanel from "@/components/client/ClientContactRequestsPanel";
 import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
@@ -63,6 +64,9 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </h1>
             <p className="mt-1 text-sm text-slate-500">
               {formatPublicLocation(request)} · {STATUS_LABELS[request.status]}
+              {request.clientKind === "company" && request.companyName
+                ? ` · ${request.companyName}`
+                : ""}
             </p>
           </div>
           {request.auctionId && request.status === "approved" && (
@@ -80,6 +84,10 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
               startPrice={request.startPrice}
             />
           </div>
+        )}
+
+        {request.status === "approved" && (
+          <ClientContactRequestsPanel workRequestId={request.id} />
         )}
 
         <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
