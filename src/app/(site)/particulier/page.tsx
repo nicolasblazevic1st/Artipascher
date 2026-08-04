@@ -114,8 +114,8 @@ export default function ParticulierPage() {
             <li>Artisan D : 4 100 €</li>
           </ul>
           <p className="mt-4 text-sm text-slate-700">
-            Vous comparez les quatre offres et <strong>choisissez vous-même</strong> l&apos;artisan
-            retenu — le moins cher n&apos;est pas imposé.
+            Vous comparez les quatre offres et choisissez{" "}
+            <strong>vous-même</strong> l&apos;artisan retenu — le moins cher n&apos;est pas imposé.
           </p>
           <p className="mt-2 text-sm text-brand-600 font-medium">
             Économie possible jusqu&apos;à 1 200 €, avec la liberté de choisir selon vos critères.
