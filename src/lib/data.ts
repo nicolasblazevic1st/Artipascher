@@ -161,7 +161,7 @@ export const FAQ_ITEMS = [
       "Remplissez le formulaire « Demander des travaux » avec une description d'au moins 100 caractères et au minimum 1 photo. Indiquez votre ville. Une fois validée par notre équipe, une enchère est créée ; le prix de départ sera fixé au premier devis validé.",
   },
   {
-    question: "Comment devenir professionnel ?",
+    question: "Comment s'inscrire comme artisan ?",
     answer:
       "Inscrivez-vous avec votre numéro SIRET. Nous vérifions obligatoirement votre inscription au registre du commerce (RCS) : entreprise active, établissement en 59 ou 62. KBIS et assurance complémentaires. Validation sous 24 à 48 h.",
   },

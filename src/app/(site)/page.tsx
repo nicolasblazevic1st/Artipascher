@@ -58,7 +58,7 @@ export default function HomePage() {
               href="/professionnel"
               className="rounded-xl border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              Devenir professionnel
+              Je suis artisan
             </Link>
           </div>
         </div>
