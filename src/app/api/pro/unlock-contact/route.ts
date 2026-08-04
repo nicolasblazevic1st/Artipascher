@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SAMPLE_AUCTIONS } from "@/lib/data";
 import { getClientContact, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import { canUnlockContacts } from "@/lib/level1-certification";
 import { getProSession } from "@/lib/pro-auth";
 import {
   createContactUnlockCheckout,
   isDemoPaymentAllowed,
   isStripeConfigured,
 } from "@/lib/payments";
-import { addContactUnlock, hasContactUnlock } from "@/lib/store";
+import { addContactUnlock, getApprovedProById, hasContactUnlock } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   const session = await getProSession();
@@ -34,6 +35,19 @@ export async function POST(request: NextRequest) {
 
   if (!auction || !contact) {
     return NextResponse.json({ error: "Enchère introuvable." }, { status: 404 });
+  }
+
+  const pro = await getApprovedProById(session.proId);
+  if (!pro) {
+    return NextResponse.json(
+      { error: "Compte pro introuvable ou non approuvé." },
+      { status: 403 }
+    );
+  }
+
+  const level1 = canUnlockContacts(pro);
+  if (!level1.ok) {
+    return NextResponse.json({ error: level1.reason }, { status: 403 });
   }
 
   if (await hasContactUnlock(session.proId, auctionId)) {

@@ -7,14 +7,22 @@ import {
   validateProDocumentFile,
   validateProRegistrationDocuments,
 } from "@/lib/pro-documents";
+import {
+  buildLevel1AuditFromEnrichment,
+  enrichProDocumentsWithOcr,
+  enrichTradeSelectionsWithOcr,
+} from "@/lib/process-level1-documents";
 import { hashPassword, validatePassword } from "@/lib/password";
 import { primaryTradeCategory } from "@/lib/pro-trades";
 import { resolveMultipleTradeSelections } from "@/lib/qualibat-job-groups";
+import { defaultDecennaleStatus } from "@/lib/decennale-verification";
+import { isAllowedDepartment, verifyWithRegistry } from "@/lib/rcs";
 import type { ProTradeSelection } from "@/lib/store-types";
 import {
   addProRegistration,
   setProRegistrationDocuments,
   setProTradeSelections,
+  updateProRegistration,
 } from "@/lib/store";
 import { saveProRegistrationDocuments, saveTradeDecennaleDocuments } from "@/lib/uploads";
 
@@ -51,14 +59,10 @@ export async function POST(request: NextRequest) {
 
     const companyName = String(formData.get("companyName") ?? "").trim();
     const siret = String(formData.get("siret") ?? "").trim();
-    const siren = String(formData.get("siren") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").trim();
-    const city = String(formData.get("city") ?? "").trim();
-    const department = String(formData.get("department") ?? "59");
     const categoryRaw = String(formData.get("category") ?? "").trim();
     const tradeSelectionsRaw = String(formData.get("tradeSelections") ?? "").trim();
-    const rcsVerified = String(formData.get("rcsVerified") ?? "") === "true";
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
 
@@ -69,9 +73,27 @@ export async function POST(request: NextRequest) {
         entry instanceof File && entry.size > 0 ? entry : null;
     }
 
-    if (!rcsVerified || !siret || !email || !password || !companyName) {
+    if (!siret || !email || !password || !companyName) {
       return NextResponse.json(
         { error: "SIRET RCS vérifié, email et mot de passe obligatoires." },
+        { status: 400 }
+      );
+    }
+
+    const registry = await verifyWithRegistry(siret);
+    if (!registry.valid) {
+      return NextResponse.json(
+        { error: registry.error ?? "SIRET non vérifié au registre du commerce." },
+        { status: 400 }
+      );
+    }
+
+    if (!isAllowedDepartment(registry.department)) {
+      return NextResponse.json(
+        {
+          error:
+            "Établissement hors zone Artipascher : siège en 59 (Nord) ou 62 (Pas-de-Calais) requis.",
+        },
         { status: 400 }
       );
     }
@@ -123,16 +145,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: documentsError }, { status: 400 });
     }
 
+    const rcFile = documentFiles.rc;
+    if (!rcFile) {
+      return NextResponse.json(
+        { error: "Assurance responsabilité civile professionnelle obligatoire." },
+        { status: 400 }
+      );
+    }
+
     const primary = tradeSelections[0];
+    const department = registry.department === "62" ? "62" : "59";
 
     const entry = await addProRegistration({
-      companyName,
-      siret,
-      siren: siren || siret.slice(0, 9),
+      companyName: registry.companyName ?? companyName,
+      siret: registry.siret,
+      siren: registry.siren,
       email,
       phone,
-      city,
-      department: department === "62" ? "62" : "59",
+      city: registry.city ?? "",
+      department,
       category,
       tradeSelections,
       tradeGroupId: primary.tradeGroupId,
@@ -140,6 +171,11 @@ export async function POST(request: NextRequest) {
       qualibatJobId: primary.qualibatJobId,
       qualibatJobLabel: primary.qualibatJobLabel,
       rcsVerified: true,
+      level1Audit: {
+        rcsVerifiedAt: new Date().toISOString(),
+        geoVerified: true,
+        geoDepartment: department,
+      },
       passwordHash: hashPassword(password),
       documents: [],
     });
@@ -167,12 +203,47 @@ export async function POST(request: NextRequest) {
     const decennaleByGroup = await saveTradeDecennaleDocuments(entry.id, decennaleFiles);
     const enrichedSelections = tradeSelections.map((selection) => ({
       ...selection,
+      decennaleStatus: defaultDecennaleStatus(),
       decennaleDocument: decennaleByGroup[selection.tradeGroupId],
     }));
     await setProTradeSelections(entry.id, enrichedSelections);
 
+    const proForOcr = {
+      siren: registry.siren,
+      siret: registry.siret,
+      companyName: registry.companyName ?? companyName,
+    };
+    const documentsWithOcr = await enrichProDocumentsWithOcr(proForOcr, savedDocuments);
+    const selectionsWithOcr = await enrichTradeSelectionsWithOcr(
+      proForOcr,
+      enrichedSelections
+    );
+
+    await updateProRegistration(entry.id, {
+      documents: documentsWithOcr,
+      tradeSelections: selectionsWithOcr,
+      level1Audit: buildLevel1AuditFromEnrichment(
+        {
+          ...entry,
+          department,
+          level1Audit: {
+            rcsVerifiedAt: new Date().toISOString(),
+            geoVerified: true,
+            geoDepartment: department,
+          },
+        },
+        documentsWithOcr,
+        selectionsWithOcr
+      ),
+    });
+
     return NextResponse.json(
-      { success: true, id: entry.id, documentCount: savedDocuments.length },
+      {
+        success: true,
+        id: entry.id,
+        documentCount: savedDocuments.length,
+        level1PendingReview: true,
+      },
       { status: 201 }
     );
   } catch (error) {

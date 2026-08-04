@@ -53,6 +53,16 @@ export default function AdminTradeDecennalePanel({ selections, onUpdateStatus }:
                   </a>
                 )}
               </div>
+              {selection.decennaleOcrHints?.rawSnippet && (
+                <p className="mt-2 rounded bg-slate-50 p-2 text-xs text-slate-600">
+                  OCR : {selection.decennaleOcrHints.rawSnippet}
+                </p>
+              )}
+              {selection.decennaleConsistencyIssues?.map((issue, index) => (
+                <p key={index} className="mt-1 text-xs text-amber-800">
+                  {issue.field} — {issue.message}
+                </p>
+              ))}
               {status === "en_attente_verification" && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button

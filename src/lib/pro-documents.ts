@@ -9,8 +9,8 @@ export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
   {
     id: "kbis",
     label: "KBIS / extrait RCS (< 3 mois)",
-    help: "Document officiel prouvant l'immatriculation de votre entreprise.",
-    required: true,
+    help: "Optionnel : le SIRET est déjà vérifié en direct au registre (RNE). Joignez un KBIS récent pour accélérer la validation.",
+    required: false,
   },
   {
     id: "rc",

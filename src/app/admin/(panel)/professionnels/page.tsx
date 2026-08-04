@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import AdminLevel1Panel from "@/components/AdminLevel1Panel";
 import AdminTradeDecennalePanel from "@/components/AdminTradeDecennalePanel";
 import QualificationBadge from "@/components/QualificationBadge";
 import ProDocumentsList from "@/components/ProDocumentsList";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
-import type { DecennaleVerificationStatus, ProRegistration } from "@/lib/store-types";
+import type {
+  DecennaleVerificationStatus,
+  DocumentVerificationStatus,
+  ProRegistration,
+} from "@/lib/store-types";
 
 const STATUS_LABELS = {
   pending: { text: "En attente", className: "bg-amber-100 text-amber-800" },
@@ -67,6 +72,28 @@ export default function AdminProfessionnelsPage() {
     load();
   }
 
+  async function handleDocumentStatus(
+    id: string,
+    documentId: string,
+    documentStatus: Extract<DocumentVerificationStatus, "validé" | "rejeté">
+  ) {
+    await fetch("/api/admin/professionnels", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, documentId, documentStatus }),
+    });
+    load();
+  }
+
+  async function handleCertifyLevel1(id: string) {
+    await fetch("/api/admin/professionnels", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, certifyLevel1: true }),
+    });
+    load();
+  }
+
   const filtered = registrations.filter((r) =>
     filter === "all" ? true : r.status === filter
   );
@@ -75,9 +102,8 @@ export default function AdminProfessionnelsPage() {
     <div>
       <h1 className="text-2xl font-bold">Artisans — inscriptions RCS</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Validez les entreprises inscrites au registre du commerce. Vérifiez aussi,
-        pour chaque corps de métier, que l&apos;attestation décennale couvre bien
-        l&apos;activité avant que l&apos;artisan puisse enchérir sur ce type de chantier.
+        Certification niveau 1 : RCS et zone automatiques, OCR sur RC et décennale,
+        validation rapide puis déblocage des contacts client.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -152,6 +178,13 @@ export default function AdminProfessionnelsPage() {
                       <ProDocumentsList documents={r.documents!} />
                     </div>
                   )}
+                  <AdminLevel1Panel
+                    registration={r}
+                    onValidateDocument={(documentId, documentStatus) =>
+                      handleDocumentStatus(r.id, documentId, documentStatus)
+                    }
+                    onCertifyLevel1={() => handleCertifyLevel1(r.id)}
+                  />
                   <AdminTradeDecennalePanel
                     selections={getProTradeSelections(r)}
                     onUpdateStatus={(tradeGroupId, decennaleStatus) =>

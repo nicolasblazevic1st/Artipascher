@@ -23,8 +23,8 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
     documents: [
       {
         id: "rcs",
-        label: "KBIS / Registre du commerce (RCS)",
-        help: "Prouve que l'entreprise est légalement immatriculée. Vous évitez les auto-entrepreneurs non déclarés ou les arnaques sans structure juridique.",
+        label: "SIREN / RNE vérifié en direct",
+        help: "Contrôle automatique au registre national des entreprises lors de l'inscription (SIRET actif, entreprise immatriculée).",
       },
       {
         id: "rc",

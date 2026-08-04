@@ -12,6 +12,7 @@ import {
   type ContactUnlock,
   type DataStore,
   type DecennaleVerificationStatus,
+  type DocumentVerificationStatus,
   type ProQuote,
   type PasswordResetToken,
   type PasswordResetUserType,
@@ -145,6 +146,43 @@ export async function updateProTradeDecennaleStatus(
   return store.proRegistrations[index];
 }
 
+export async function updateProDocumentVerificationStatus(
+  proId: string,
+  documentId: string,
+  verificationStatus: Extract<DocumentVerificationStatus, "validé" | "rejeté">
+): Promise<ProRegistration | null> {
+  const store = await readStore();
+  const index = store.proRegistrations.findIndex((p) => p.id === proId);
+  if (index === -1) return null;
+
+  const pro = store.proRegistrations[index];
+  const documents = pro.documents ?? [];
+  const docIndex = documents.findIndex((d) => d.id === documentId);
+  if (docIndex === -1) return null;
+
+  documents[docIndex] = { ...documents[docIndex], verificationStatus };
+  store.proRegistrations[index].documents = documents;
+  await writeStore(store);
+  return store.proRegistrations[index];
+}
+
+export async function updateProLevel1Audit(
+  proId: string,
+  patch: Partial<NonNullable<ProRegistration["level1Audit"]>>
+): Promise<ProRegistration | null> {
+  const store = await readStore();
+  const index = store.proRegistrations.findIndex((p) => p.id === proId);
+  if (index === -1) return null;
+
+  store.proRegistrations[index].level1Audit = {
+    geoVerified: false,
+    ...store.proRegistrations[index].level1Audit,
+    ...patch,
+  };
+  await writeStore(store);
+  return store.proRegistrations[index];
+}
+
 export async function addWorkRequest(
   data: Omit<WorkRequest, "id" | "status" | "createdAt">
 ): Promise<WorkRequest> {
@@ -191,7 +229,17 @@ export async function setWorkRequestPreviousQuote(
 export async function updateProRegistration(
   id: string,
   patch: Partial<
-    Pick<ProRegistration, "status" | "adminNote" | "reviewedAt" | "qualificationLevel">
+    Pick<
+      ProRegistration,
+      | "status"
+      | "adminNote"
+      | "reviewedAt"
+      | "qualificationLevel"
+      | "level1CertifiedAt"
+      | "documents"
+      | "tradeSelections"
+      | "level1Audit"
+    >
   >
 ): Promise<ProRegistration | null> {
   const store = await readStore();

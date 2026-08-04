@@ -519,8 +519,8 @@ export default function ProRegistrationForm() {
       >
         <h3 className="text-sm font-semibold text-slate-900">Vos documents</h3>
         <p className="mt-1 text-xs text-slate-500">
-          JPG, PNG, WebP ou PDF · max 10 Mo par fichier. KBIS et assurance RC
-          professionnelle obligatoires.
+          JPG, PNG, WebP ou PDF · max 10 Mo par fichier. RC professionnelle obligatoire
+          (KBIS optionnel — SIRET déjà vérifié au registre).
           {!fieldsEnabled && (
             <span className="mt-1 block font-medium text-slate-600">
               Disponible après vérification RCS réussie.
@@ -615,8 +615,8 @@ export default function ProRegistrationForm() {
 
       {status === "success" && (
         <p className="text-center text-sm text-emerald-600">
-          Inscription et documents reçus. Un administrateur validera votre dossier sous
-          24-48 h.
+          Inscription reçue. Vérification automatique RCS et analyse OCR en cours —
+          validation niveau 1 par notre équipe sous quelques minutes en journée.
         </p>
       )}
     </form>

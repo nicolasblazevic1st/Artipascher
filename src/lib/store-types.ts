@@ -9,6 +9,49 @@ export type DecennaleVerificationStatus =
   | "validé"
   | "non_couvert";
 
+/** Vérification KBIS / RC pro (niveau 1). */
+export type DocumentVerificationStatus =
+  | "en_attente_verification"
+  | "validé"
+  | "rejeté";
+
+export interface Level1OcrHints {
+  siren?: string;
+  siret?: string;
+  companyName?: string;
+  insurer?: string;
+  validUntil?: string;
+  rawSnippet?: string;
+}
+
+export interface Level1ConsistencyIssue {
+  field: string;
+  message: string;
+  severity: "warning" | "error";
+}
+
+export interface ProLevel1Audit {
+  rcsVerifiedAt?: string;
+  geoVerified: boolean;
+  geoDepartment?: string;
+  consistencyCheckedAt?: string;
+  globalIssues?: Level1ConsistencyIssue[];
+}
+
+export type Level1CheckStatus =
+  | "ok"
+  | "pending"
+  | "missing"
+  | "rejected";
+
+export interface Level1CheckItem {
+  id: string;
+  label: string;
+  status: Level1CheckStatus;
+  detail: string;
+  automatic: boolean;
+}
+
 export interface ProTradeDocument {
   fileUrl: string;
   fileName: string;
@@ -25,6 +68,9 @@ export interface ProTradeSelection {
   decennaleStatus?: DecennaleVerificationStatus;
   /** Attestation décennale couvrant ce corps de métier. */
   decennaleDocument?: ProTradeDocument;
+  /** Indices OCR sur l'attestation décennale. */
+  decennaleOcrHints?: Level1OcrHints;
+  decennaleConsistencyIssues?: Level1ConsistencyIssue[];
 }
 
 export interface ProDocument {
@@ -33,6 +79,9 @@ export interface ProDocument {
   fileUrl: string;
   fileName: string;
   uploadedAt: string;
+  verificationStatus?: DocumentVerificationStatus;
+  ocrHints?: Level1OcrHints;
+  consistencyIssues?: Level1ConsistencyIssue[];
 }
 
 export interface ProRegistration {
@@ -58,6 +107,10 @@ export interface ProRegistration {
   /** @deprecated */
   qualibatJobLabel?: string;
   rcsVerified: boolean;
+  /** Audit automatique niveau 1 (RCS, géo, cohérence OCR). */
+  level1Audit?: ProLevel1Audit;
+  /** Date de certification niveau 1 par l'admin. */
+  level1CertifiedAt?: string;
   /** Niveau affiché sur les enchères (1 = Certifié, 2 = Qualifié, 3 = Premium). */
   qualificationLevel?: QualificationLevel;
   /** Documents transmis à l'inscription (KBIS, assurances…). */
