@@ -54,14 +54,14 @@ const PRICING = [
 
 const STEPS = [
   {
-    title: "Inscription et validation RCS",
+    title: "Inscription rapide",
     description:
-      "Vérification obligatoire de votre SIRET au registre du commerce. KBIS et assurance complémentaires. Validation sous 24-48 h.",
+      "Inscription instantanée pour le premier niveau d'identification : vérification automatique de votre SIRET au registre du commerce et attestation décennale obligatoire par corps de métier. KBIS et assurance complémentaires. Validation sous 24-48 h si contrôle manuel nécessaire.",
   },
   {
     title: "Consultez et enchérissez",
     description:
-      "Parcourez les enchères actives 59/62. Proposez le prix que vous souhaitez, inférieur au prix actuel.",
+      "Parcourez les enchères actives, contactez un client et faites-lui un devis, de préférence inférieur au prix actuel.",
   },
   {
     title: "Soyez retenu par le client",

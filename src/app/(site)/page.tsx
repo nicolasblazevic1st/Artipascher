@@ -2,12 +2,9 @@ import Link from "next/link";
 import AuctionCard from "@/components/AuctionCard";
 import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
-import {
-  CATEGORY_LABELS,
-  FAQ_ITEMS,
-  SAMPLE_AUCTIONS,
-  type TradeCategory,
-} from "@/lib/data";
+import { FAQ_ITEMS, SAMPLE_AUCTIONS } from "@/lib/data";
+import { getActiveWorkCategories } from "@/lib/work-request-auctions";
+import { WORK_CATEGORIES } from "@/lib/work-categories";
 
 const STEPS = [
   {
@@ -27,9 +24,8 @@ const STEPS = [
   },
 ];
 
-export default function HomePage() {
-  const categories = Object.entries(CATEGORY_LABELS) as [TradeCategory, string][];
-  const activeCategories = new Set(SAMPLE_AUCTIONS.map((a) => a.category));
+export default async function HomePage() {
+  const activeCategories = await getActiveWorkCategories();
 
   return (
     <>
@@ -129,15 +125,15 @@ export default function HomePage() {
         <p className="mt-2 text-center text-slate-600">
           Tous corps de métier du bâtiment, artisans du Nord
         </p>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          {categories.map(([key, label]) => (
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {WORK_CATEGORIES.map((category) => (
             <div
-              key={key}
+              key={category}
               className="rounded-xl border border-slate-200 bg-white p-4 text-center"
             >
-              <p className="font-medium text-slate-900">{label}</p>
+              <p className="font-medium text-slate-900">{category}</p>
               <p className="mt-1 text-xs text-slate-500">
-                {activeCategories.has(key)
+                {activeCategories.has(category)
                   ? "Enchères actives"
                   : "Aucune enchère"}
               </p>

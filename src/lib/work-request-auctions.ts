@@ -2,6 +2,7 @@ import { SAMPLE_AUCTIONS, type Auction } from "./data";
 import { isAuctionStillActive } from "./share";
 import { readStore } from "./store";
 import type { WorkRequest } from "./store-types";
+import { TRADE_CATEGORY_TO_WORK } from "./work-categories";
 
 export interface ResolvedAuction {
   id: string;
@@ -78,4 +79,28 @@ export async function getWorkRequestByAuctionId(
 ): Promise<WorkRequest | null> {
   const store = await readStore();
   return store.workRequests.find((r) => r.auctionId === auctionId) ?? null;
+}
+
+/** Catégories de travaux avec au moins une enchère active (réelles ou démo). */
+export async function getActiveWorkCategories(): Promise<Set<string>> {
+  const active = new Set<string>();
+  const store = await readStore();
+
+  for (const request of store.workRequests) {
+    if (
+      request.status === "approved" &&
+      request.auctionId &&
+      isAuctionStillActive(request.auctionEndsAt)
+    ) {
+      active.add(request.category);
+    }
+  }
+
+  for (const auction of SAMPLE_AUCTIONS) {
+    if (auction.status !== "active") continue;
+    const mapped = TRADE_CATEGORY_TO_WORK[auction.category];
+    if (mapped) active.add(mapped);
+  }
+
+  return active;
 }
