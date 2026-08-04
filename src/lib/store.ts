@@ -4,12 +4,14 @@ import { hashPassword, verifyPassword, validatePassword } from "./password";
 import { randomBytes } from "crypto";
 import { createShareToken } from "./share";
 import { getSampleQuotesForAuction } from "./sample-quotes";
+import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
 import {
   EMPTY_STORE,
   type Bid,
   type ClientAccount,
   type ContactUnlock,
   type DataStore,
+  type DecennaleVerificationStatus,
   type ProQuote,
   type PasswordResetToken,
   type PasswordResetUserType,
@@ -99,6 +101,46 @@ export async function setProRegistrationDocuments(
   const index = store.proRegistrations.findIndex((p) => p.id === id);
   if (index === -1) return null;
   store.proRegistrations[index].documents = documents;
+  await writeStore(store);
+  return store.proRegistrations[index];
+}
+
+export async function setProTradeSelections(
+  id: string,
+  tradeSelections: ProRegistration["tradeSelections"]
+): Promise<ProRegistration | null> {
+  const store = await readStore();
+  const index = store.proRegistrations.findIndex((p) => p.id === id);
+  if (index === -1) return null;
+  store.proRegistrations[index].tradeSelections = tradeSelections;
+  if (tradeSelections?.[0]) {
+    const primary = tradeSelections[0];
+    store.proRegistrations[index].tradeGroupId = primary.tradeGroupId;
+    store.proRegistrations[index].tradeGroupLabel = primary.tradeGroupLabel;
+    store.proRegistrations[index].qualibatJobId = primary.qualibatJobId;
+    store.proRegistrations[index].qualibatJobLabel = primary.qualibatJobLabel;
+    store.proRegistrations[index].category = primary.category;
+  }
+  await writeStore(store);
+  return store.proRegistrations[index];
+}
+
+export async function updateProTradeDecennaleStatus(
+  proId: string,
+  tradeGroupId: string,
+  decennaleStatus: DecennaleVerificationStatus
+): Promise<ProRegistration | null> {
+  const store = await readStore();
+  const index = store.proRegistrations.findIndex((p) => p.id === proId);
+  if (index === -1) return null;
+
+  const pro = store.proRegistrations[index];
+  const selections = pro.tradeSelections ?? [];
+  const selIndex = selections.findIndex((s) => s.tradeGroupId === tradeGroupId);
+  if (selIndex === -1) return null;
+
+  selections[selIndex] = { ...selections[selIndex], decennaleStatus };
+  store.proRegistrations[index].tradeSelections = selections;
   await writeStore(store);
   return store.proRegistrations[index];
 }
@@ -304,23 +346,55 @@ export async function getQualificationLevelForPro(proId: string): Promise<1 | 2 
 
 export async function mapBidsWithQualification<
   T extends { proId: string },
->(bids: T[]): Promise<Array<T & { qualificationLevel: 1 | 2 | 3 }>> {
+>(
+  bids: T[],
+  workCategoryLabel?: string
+): Promise<
+  Array<T & { qualificationLevel: 1 | 2 | 3; decennaleVerifiedLabels?: string[] }>
+> {
   return Promise.all(
-    bids.map(async (bid) => ({
-      ...bid,
-      qualificationLevel: await getQualificationLevelForPro(bid.proId),
-    }))
+    bids.map(async (bid) => {
+      const pro = await getApprovedProById(bid.proId);
+      return {
+        ...bid,
+        qualificationLevel: pro?.qualificationLevel ?? 1,
+        ...(workCategoryLabel && pro
+          ? {
+              decennaleVerifiedLabels: getValidatedDecennaleLabelsForWorkCategory(
+                pro,
+                workCategoryLabel
+              ),
+            }
+          : {}),
+      };
+    })
   );
 }
 
 export async function mapQuotesWithQualification<
   T extends { proId: string },
->(quotes: T[]): Promise<Array<T & { qualificationLevel: 1 | 2 | 3 }>> {
+>(
+  quotes: T[],
+  workCategoryLabel?: string
+): Promise<
+  Array<T & { qualificationLevel: 1 | 2 | 3; decennaleVerifiedLabels?: string[] }>
+> {
   return Promise.all(
-    quotes.map(async (quote) => ({
-      ...quote,
-      qualificationLevel: await getQualificationLevelForPro(quote.proId),
-    }))
+    quotes.map(async (quote) => {
+      const pro = await getApprovedProById(quote.proId);
+      return {
+        ...quote,
+        qualificationLevel: pro?.qualificationLevel ?? 1,
+        ...(workCategoryLabel && pro
+          ? {
+              decennaleVerifiedLabels: getValidatedDecennaleLabelsForWorkCategory(
+                pro,
+                workCategoryLabel
+              ),
+            }
+          : {}),
+      };
+    })
   );
 }
 

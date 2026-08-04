@@ -1,5 +1,6 @@
 import { validateBidCoherenceWithQuote } from "@/lib/bid-coherence";
-import { getProQuoteByProAndAuction } from "@/lib/store";
+import { checkDecennaleForWorkCategory } from "@/lib/decennale-verification";
+import { getApprovedProById, getProQuoteByProAndAuction } from "@/lib/store";
 import { getWorkRequestByAuctionId } from "@/lib/work-request-auctions";
 
 export interface BidEligibility {
@@ -24,6 +25,18 @@ export async function checkBidEligibility(
 
   if (!workRequest) {
     return { requiresQuote: false, canBid: true };
+  }
+
+  const pro = await getApprovedProById(proId);
+  if (pro) {
+    const decennaleCheck = checkDecennaleForWorkCategory(pro, workRequest.category);
+    if (!decennaleCheck.ok) {
+      return {
+        requiresQuote: true,
+        canBid: false,
+        reason: decennaleCheck.reason,
+      };
+    }
   }
 
   const quote = await getProQuoteByProAndAuction(proId, auctionId);

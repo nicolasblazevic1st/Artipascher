@@ -3,14 +3,20 @@ import type { TradeCategory } from "@/lib/data";
 import {
   PRO_REGISTRATION_DOCUMENTS,
   proDocumentFieldName,
+  tradeDecennaleFieldName,
+  validateProDocumentFile,
   validateProRegistrationDocuments,
 } from "@/lib/pro-documents";
 import { hashPassword, validatePassword } from "@/lib/password";
 import { primaryTradeCategory } from "@/lib/pro-trades";
 import { resolveMultipleTradeSelections } from "@/lib/qualibat-job-groups";
 import type { ProTradeSelection } from "@/lib/store-types";
-import { addProRegistration, setProRegistrationDocuments } from "@/lib/store";
-import { saveProRegistrationDocuments } from "@/lib/uploads";
+import {
+  addProRegistration,
+  setProRegistrationDocuments,
+  setProTradeSelections,
+} from "@/lib/store";
+import { saveProRegistrationDocuments, saveTradeDecennaleDocuments } from "@/lib/uploads";
 
 const VALID_CATEGORIES = new Set<TradeCategory>([
   "maconnerie",
@@ -91,6 +97,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    for (const selection of tradeSelections) {
+      const entry = formData.get(tradeDecennaleFieldName(selection.tradeGroupId));
+      const file = entry instanceof File && entry.size > 0 ? entry : null;
+      const error = validateProDocumentFile(file!);
+      if (error) {
+        return NextResponse.json(
+          {
+            error: `${selection.tradeGroupLabel} : ${
+              error === "Fichier manquant."
+                ? "attestation décennale couvrant ce métier obligatoire."
+                : error
+            }`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const category = VALID_CATEGORIES.has(categoryRaw as TradeCategory)
       ? (categoryRaw as TradeCategory)
       : primaryTradeCategory(tradeSelections);
@@ -132,6 +156,22 @@ export async function POST(request: NextRequest) {
 
     const savedDocuments = await saveProRegistrationDocuments(entry.id, filesToSave);
     await setProRegistrationDocuments(entry.id, savedDocuments);
+
+    const decennaleFiles = tradeSelections.map((selection) => {
+      const file = formData.get(tradeDecennaleFieldName(selection.tradeGroupId)) as File;
+      return {
+        tradeGroupId: selection.tradeGroupId,
+        tradeGroupLabel: selection.tradeGroupLabel,
+        file,
+      };
+    });
+
+    const decennaleByGroup = await saveTradeDecennaleDocuments(entry.id, decennaleFiles);
+    const enrichedSelections = tradeSelections.map((selection) => ({
+      ...selection,
+      decennaleDocument: decennaleByGroup[selection.tradeGroupId],
+    }));
+    await setProTradeSelections(entry.id, enrichedSelections);
 
     return NextResponse.json(
       { success: true, id: entry.id, documentCount: savedDocuments.length },

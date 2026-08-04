@@ -19,12 +19,6 @@ export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
     required: true,
   },
   {
-    id: "decennale",
-    label: "Assurance décennale",
-    help: "Obligatoire pour les travaux structurels. Recommandé pour tous les corps de métier.",
-    required: false,
-  },
-  {
     id: "rge",
     label: "Label RGE",
     help: "Pour la rénovation énergétique (isolation, chauffage, fenêtres…).",
@@ -49,6 +43,29 @@ export const ALLOWED_PRO_DOCUMENT_TYPES = [
 
 export function proDocumentFieldName(id: string) {
   return `doc_${id}`;
+}
+
+/** Champ upload attestation décennale par corps de métier (ex. doc_decennale_peinture). */
+export function tradeDecennaleFieldName(tradeGroupId: string) {
+  return `doc_decennale_${tradeGroupId}`;
+}
+
+export function validateTradeDecennaleDocuments(
+  tradeGroupIds: string[],
+  files: Record<string, File | null | undefined>
+): string | null {
+  for (const groupId of tradeGroupIds) {
+    const file = files[groupId];
+    const error = validateProDocumentFile(file!);
+    if (error) {
+      const label =
+        error === "Fichier manquant."
+          ? "attestation décennale obligatoire pour chaque corps de métier coché."
+          : error;
+      return `Corps de métier « ${groupId} » : ${label}`;
+    }
+  }
+  return null;
 }
 
 export function validateProDocumentFile(file: File): string | null {

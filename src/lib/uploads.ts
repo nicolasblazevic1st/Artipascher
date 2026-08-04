@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-import type { ProDocument } from "./store-types";
+import type { ProDocument, ProTradeDocument } from "./store-types";
 
 const UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads", "demandes");
 const PRO_UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads", "pros");
@@ -74,4 +74,29 @@ export async function saveProRegistrationDocuments(
   }
 
   return documents;
+}
+
+export async function saveTradeDecennaleDocuments(
+  proId: string,
+  files: Array<{ tradeGroupId: string; tradeGroupLabel: string; file: File }>
+): Promise<Record<string, ProTradeDocument>> {
+  const dir = getProUploadDir(proId);
+  await fs.mkdir(dir, { recursive: true });
+
+  const uploadedAt = new Date().toISOString();
+  const byGroup: Record<string, ProTradeDocument> = {};
+
+  for (const { tradeGroupId, tradeGroupLabel, file } of files) {
+    const ext = path.extname(file.name) || (file.type === "application/pdf" ? ".pdf" : ".jpg");
+    const safeName = `decennale-${tradeGroupId}-${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, "")}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await fs.writeFile(path.join(dir, safeName), buffer);
+    byGroup[tradeGroupId] = {
+      fileUrl: `/uploads/pros/${proId}/${safeName}`,
+      fileName: file.name,
+      uploadedAt,
+    };
+  }
+
+  return byGroup;
 }

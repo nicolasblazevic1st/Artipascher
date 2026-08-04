@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getProSession } from "@/lib/pro-auth";
 import ProDocumentsList from "@/components/ProDocumentsList";
+import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import { getApprovedProById, getContactUnlocksForPro, getProDashboardStats } from "@/lib/store";
@@ -85,6 +86,38 @@ export default async function ProComptePage() {
             <div className="mt-4">
               <ProDocumentsList documents={pro.documents!} />
             </div>
+          </section>
+        )}
+
+        {getProTradeSelections(pro).length > 0 && (
+          <section className="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
+            <h2 className="font-semibold text-slate-900">Décennale par corps de métier</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Vous ne pouvez enchérir sur un chantier que si la décennale correspondante
+              a été validée pour ce métier.
+            </p>
+            <ul className="mt-4 space-y-3">
+              {getProTradeSelections(pro).map((selection) => {
+                const status = selection.decennaleStatus ?? "en_attente_verification";
+                const meta = DECENNALE_STATUS_LABELS[status];
+                return (
+                  <li
+                    key={selection.tradeGroupId}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900">{selection.tradeGroupLabel}</p>
+                      <p className="text-xs text-slate-500">{selection.qualibatJobLabel}</p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.className}`}
+                    >
+                      {status === "validé" ? "Décennale vérifiée ✓" : meta.text}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
       </div>

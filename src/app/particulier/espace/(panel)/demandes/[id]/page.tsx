@@ -36,8 +36,8 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
   const quotes = request.auctionId
     ? await getApprovedProQuotesForAuction(request.auctionId)
     : [];
-  const bidsWithLevel = await mapBidsWithQualification(bids);
-  const quotesWithLevel = await mapQuotesWithQualification(quotes);
+  const bidsWithLevel = await mapBidsWithQualification(bids, request.category);
+  const quotesWithLevel = await mapQuotesWithQualification(quotes, request.category);
   const canSelect =
     request.status === "approved" && !request.selectedQuoteId && !request.selectedBidId;
   const shareToken =
@@ -154,12 +154,14 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
                 description: q.description,
                 visitDate: q.visitDate,
                 qualificationLevel: q.qualificationLevel,
+                decennaleVerifiedLabels: q.decennaleVerifiedLabels,
               }))}
               bids={bidsWithLevel.map((b) => ({
                 id: b.id,
                 companyName: b.companyName,
                 amount: b.amount,
                 qualificationLevel: b.qualificationLevel,
+                decennaleVerifiedLabels: b.decennaleVerifiedLabels,
               }))}
               selectedQuoteId={request.selectedQuoteId}
               selectedBidId={request.selectedBidId}

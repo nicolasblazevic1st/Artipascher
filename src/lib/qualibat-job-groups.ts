@@ -1,5 +1,6 @@
 import type { TradeCategory } from "./data";
 import { QUALIBAT_JOBS, type QualibatJob } from "./qualibat-jobs";
+import { defaultDecennaleStatus } from "./decennale-verification";
 import type { ProTradeSelection } from "./store-types";
 
 export interface TradeGroup {
@@ -164,6 +165,7 @@ export function resolveMultipleTradeSelections(
       qualibatJobId: resolved.job.id,
       qualibatJobLabel: resolved.job.label,
       category: resolved.category,
+      decennaleStatus: defaultDecennaleStatus(),
     });
   }
 

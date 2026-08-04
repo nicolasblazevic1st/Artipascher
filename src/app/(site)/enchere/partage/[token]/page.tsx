@@ -62,8 +62,8 @@ export default async function SharedAuctionPage({ params }: Props) {
 
   const bids = await getBidsForAuction(request.auctionId);
   const quotes = await getApprovedProQuotesForAuction(request.auctionId);
-  const bidsWithLevel = await mapBidsWithQualification(bids);
-  const quotesWithLevel = await mapQuotesWithQualification(quotes);
+  const bidsWithLevel = await mapBidsWithQualification(bids, request.category);
+  const quotesWithLevel = await mapQuotesWithQualification(quotes, request.category);
   const currentPrice = computeCurrentPrice(
     request.startPrice,
     bids.map((b) => b.amount)
@@ -199,6 +199,7 @@ export default async function SharedAuctionPage({ params }: Props) {
               description: q.description,
               visitDate: q.visitDate,
               qualificationLevel: q.qualificationLevel,
+              decennaleVerifiedLabels: q.decennaleVerifiedLabels,
             }))}
           />
         </section>
@@ -218,6 +219,7 @@ export default async function SharedAuctionPage({ params }: Props) {
                   companyName: b.companyName,
                   amount: b.amount,
                   qualificationLevel: b.qualificationLevel,
+                  decennaleVerifiedLabels: b.decennaleVerifiedLabels,
                 }))}
               />
             </div>

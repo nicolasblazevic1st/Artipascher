@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/data";
+import DecennaleVerifiedBadge from "@/components/DecennaleVerifiedBadge";
 import QualificationBadge from "@/components/QualificationBadge";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
 
@@ -9,6 +10,7 @@ export interface DisplayQuote {
   description: string;
   visitDate: string;
   qualificationLevel?: QualificationLevel;
+  decennaleVerifiedLabels?: string[];
 }
 
 interface Props {
@@ -44,6 +46,9 @@ export default function ApprovedQuotesList({
                   <p className="font-semibold text-slate-900">{quote.companyName}</p>
                   {quote.qualificationLevel != null && (
                     <QualificationBadge level={quote.qualificationLevel} compact />
+                  )}
+                  {quote.decennaleVerifiedLabels && (
+                    <DecennaleVerifiedBadge labels={quote.decennaleVerifiedLabels} compact />
                   )}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">

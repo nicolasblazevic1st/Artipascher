@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/data";
+import DecennaleVerifiedBadge from "@/components/DecennaleVerifiedBadge";
 import QualificationBadge from "@/components/QualificationBadge";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
 
@@ -13,6 +14,7 @@ interface QuoteOption {
   description: string;
   visitDate: string;
   qualificationLevel?: QualificationLevel;
+  decennaleVerifiedLabels?: string[];
 }
 
 interface BidOption {
@@ -20,6 +22,7 @@ interface BidOption {
   companyName: string;
   amount: number;
   qualificationLevel?: QualificationLevel;
+  decennaleVerifiedLabels?: string[];
 }
 
 interface Props {
@@ -123,6 +126,12 @@ export default function SelectArtisanPanel({
                         {quote.qualificationLevel != null && (
                           <QualificationBadge level={quote.qualificationLevel} compact />
                         )}
+                        {quote.decennaleVerifiedLabels && (
+                          <DecennaleVerifiedBadge
+                            labels={quote.decennaleVerifiedLabels}
+                            compact
+                          />
+                        )}
                       </div>
                       <p className="text-lg font-bold text-brand-700">
                         {formatPrice(quote.amount)}
@@ -199,6 +208,9 @@ export default function SelectArtisanPanel({
                     <p className="font-medium text-slate-900">{bid.companyName}</p>
                     {bid.qualificationLevel != null && (
                       <QualificationBadge level={bid.qualificationLevel} compact />
+                    )}
+                    {bid.decennaleVerifiedLabels && (
+                      <DecennaleVerifiedBadge labels={bid.decennaleVerifiedLabels} compact />
                     )}
                   </div>
                   <p className="text-lg font-bold text-brand-700">{formatPrice(bid.amount)}</p>

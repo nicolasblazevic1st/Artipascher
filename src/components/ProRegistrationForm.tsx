@@ -5,6 +5,8 @@ import HelpTooltip from "@/components/HelpTooltip";
 import {
   PRO_REGISTRATION_DOCUMENTS,
   proDocumentFieldName,
+  tradeDecennaleFieldName,
+  validateProDocumentFile,
   validateProRegistrationDocuments,
 } from "@/lib/pro-documents";
 import {
@@ -30,6 +32,7 @@ export default function ProRegistrationForm() {
   const [jobByGroup, setJobByGroup] = useState<Record<string, string>>({});
   const [rcsGroupIds, setRcsGroupIds] = useState<Set<string>>(new Set());
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
+  const [decennaleByGroup, setDecennaleByGroup] = useState<Record<string, File | null>>({});
   const [verification, setVerification] = useState<RcsVerificationResult | null>(null);
   const [status, setStatus] = useState<FormStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,7 @@ export default function ProRegistrationForm() {
     setSelectedGroups({});
     setJobByGroup({});
     setRcsGroupIds(new Set());
+    setDecennaleByGroup({});
   }
 
   function applyRegisteredActivities(data: RcsVerificationResult) {
@@ -71,6 +75,11 @@ export default function ProRegistrationForm() {
       setRcsGroupIds((prev) => {
         const next = new Set(prev);
         next.delete(groupId);
+        return next;
+      });
+      setDecennaleByGroup((prev) => {
+        const next = { ...prev };
+        delete next[groupId];
         return next;
       });
     }
@@ -166,6 +175,22 @@ export default function ProRegistrationForm() {
       return;
     }
 
+    for (const groupId of activeGroupIds) {
+      const decennaleError = validateProDocumentFile(decennaleByGroup[groupId]!);
+      if (decennaleError) {
+        const group = GROUPED_QUALIBAT_JOBS.find((g) => g.group.id === groupId)?.group;
+        setError(
+          `${group?.label ?? "Corps de métier"} : ${
+            decennaleError === "Fichier manquant."
+              ? "attestation décennale couvrant ce métier obligatoire."
+              : decennaleError
+          }`
+        );
+        setStatus("error");
+        return;
+      }
+    }
+
     const documentsError = validateProRegistrationDocuments(documents);
     if (documentsError) {
       setError(documentsError);
@@ -194,6 +219,13 @@ export default function ProRegistrationForm() {
       const file = documents[doc.id];
       if (file) {
         formData.append(proDocumentFieldName(doc.id), file);
+      }
+    }
+
+    for (const groupId of activeGroupIds) {
+      const file = decennaleByGroup[groupId];
+      if (file) {
+        formData.append(tradeDecennaleFieldName(groupId), file);
       }
     }
 
@@ -420,6 +452,59 @@ export default function ProRegistrationForm() {
                       </option>
                     ))}
                   </select>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {activeGroupIds.length > 0 && (
+          <div className="space-y-3 border-t border-slate-200 pt-4">
+            <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-xs leading-relaxed text-brand-900">
+              <p className="font-semibold">Pourquoi une décennale par métier ?</p>
+              <p className="mt-1 text-brand-800">
+                Votre assurance décennale est un contrat unique, mais il doit{" "}
+                <strong>nommer chaque activité</strong> que vous exercez. Si vous
+                êtes couvert pour la menuiserie mais pas pour le terrassement, vous
+                ne pouvez pas enchérir sur ce second métier — même avec une décennale
+                valide ailleurs. Artipascher vérifie chaque attestation pour protéger
+                le client et votre responsabilité.
+              </p>
+            </div>
+            <p className="text-sm font-medium text-slate-700">
+              3. Attestation décennale par corps de métier{" "}
+              <span className="text-red-500">*</span>
+            </p>
+            {activeGroupIds.map((groupId) => {
+              const group = GROUPED_QUALIBAT_JOBS.find((g) => g.group.id === groupId)?.group;
+              return (
+                <div key={`decennale-${groupId}`}>
+                  <label
+                    htmlFor={`decennale-${groupId}`}
+                    className="mb-1 block text-xs font-medium text-slate-600"
+                  >
+                    Attestation décennale couvrant « {group?.label} »
+                  </label>
+                  <input
+                    id={`decennale-${groupId}`}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    required
+                    disabled={!fieldsEnabled}
+                    onChange={(e) => {
+                      setDecennaleByGroup((prev) => ({
+                        ...prev,
+                        [groupId]: e.target.files?.[0] ?? null,
+                      }));
+                      setError(null);
+                    }}
+                    className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+                  />
+                  {decennaleByGroup[groupId] && (
+                    <p className="mt-1 text-xs text-brand-700">
+                      Fichier sélectionné : {decennaleByGroup[groupId]!.name}
+                    </p>
+                  )}
                 </div>
               );
             })}

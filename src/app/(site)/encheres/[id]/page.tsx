@@ -36,9 +36,13 @@ export default async function EnchereDetailPage({ params }: Props) {
 
   const bids = await getBidsForAuction(id);
   const quotes = await getApprovedProQuotesForAuction(id);
-  const bidsWithLevel = await mapBidsWithQualification(bids);
-  const quotesWithLevel = await mapQuotesWithQualification(quotes);
   const workRequest = await getWorkRequestByAuctionId(id);
+  const sample = SAMPLE_AUCTIONS.find((a) => a.id === id);
+  const workCategory =
+    workRequest?.category ??
+    (sample ? CATEGORY_LABELS[sample.category] : resolved.title);
+  const bidsWithLevel = await mapBidsWithQualification(bids, workCategory);
+  const quotesWithLevel = await mapQuotesWithQualification(quotes, workCategory);
   const currentPrice = computeCurrentPrice(
     resolved.startPrice,
     bids.map((b) => b.amount)
@@ -66,10 +70,7 @@ export default async function EnchereDetailPage({ params }: Props) {
     qualificationLevel: b.qualificationLevel,
   }));
 
-  const sample = SAMPLE_AUCTIONS.find((a) => a.id === id);
-  const categoryLabel = sample
-    ? CATEGORY_LABELS[sample.category]
-    : (workRequest?.category ?? "Travaux");
+  const categoryLabel = workCategory;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
@@ -166,6 +167,7 @@ export default async function EnchereDetailPage({ params }: Props) {
               description: q.description,
               visitDate: q.visitDate,
               qualificationLevel: q.qualificationLevel,
+              decennaleVerifiedLabels: q.decennaleVerifiedLabels,
             }))} />
           </section>
         )}
@@ -184,6 +186,7 @@ export default async function EnchereDetailPage({ params }: Props) {
                 companyName: b.companyName,
                 amount: b.amount,
                 qualificationLevel: b.qualificationLevel,
+                decennaleVerifiedLabels: b.decennaleVerifiedLabels,
               }))}
             />
           </div>

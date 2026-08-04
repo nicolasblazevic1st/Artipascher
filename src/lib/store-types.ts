@@ -3,12 +3,28 @@ import type { QualificationLevel } from "./qualification-tiers";
 
 export type AdminReviewStatus = "pending" | "approved" | "rejected";
 
+/** Vérification de l'attestation décennale par corps de métier. */
+export type DecennaleVerificationStatus =
+  | "en_attente_verification"
+  | "validé"
+  | "non_couvert";
+
+export interface ProTradeDocument {
+  fileUrl: string;
+  fileName: string;
+  uploadedAt: string;
+}
+
 export interface ProTradeSelection {
   tradeGroupId: string;
   tradeGroupLabel: string;
   qualibatJobId: number;
   qualibatJobLabel: string;
   category: TradeCategory;
+  /** Statut de vérification de l'attestation décennale pour CE corps de métier. */
+  decennaleStatus?: DecennaleVerificationStatus;
+  /** Attestation décennale couvrant ce corps de métier. */
+  decennaleDocument?: ProTradeDocument;
 }
 
 export interface ProDocument {

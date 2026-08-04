@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/data";
+import DecennaleVerifiedBadge from "@/components/DecennaleVerifiedBadge";
 import QualificationBadge from "@/components/QualificationBadge";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
 
@@ -10,6 +11,7 @@ export interface BidDisplay {
   department?: string;
   siretMasked?: string;
   qualificationLevel?: QualificationLevel;
+  decennaleVerifiedLabels?: string[];
 }
 
 export default function VerifiedBidsList({ bids }: { bids: BidDisplay[] }) {
@@ -37,6 +39,9 @@ export default function VerifiedBidsList({ bids }: { bids: BidDisplay[] }) {
                 <p className="font-medium text-slate-900">{bid.companyName}</p>
                 {bid.qualificationLevel != null && (
                   <QualificationBadge level={bid.qualificationLevel} compact />
+                )}
+                {bid.decennaleVerifiedLabels && (
+                  <DecennaleVerifiedBadge labels={bid.decennaleVerifiedLabels} compact />
                 )}
               </div>
               {bid.city && (

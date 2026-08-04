@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
-import { readStore, updateProRegistration } from "@/lib/store";
+import type { DecennaleVerificationStatus } from "@/lib/store-types";
+import { readStore, updateProRegistration, updateProTradeDecennaleStatus } from "@/lib/store";
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -17,20 +18,31 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { id, status, adminNote, qualificationLevel } = body as {
-    id?: string;
-    status?: "approved" | "rejected";
-    adminNote?: string;
-    qualificationLevel?: QualificationLevel;
-  };
+  const { id, status, adminNote, qualificationLevel, tradeGroupId, decennaleStatus } =
+    body as {
+      id?: string;
+      status?: "approved" | "rejected";
+      adminNote?: string;
+      qualificationLevel?: QualificationLevel;
+      tradeGroupId?: string;
+      decennaleStatus?: Extract<DecennaleVerificationStatus, "validé" | "non_couvert">;
+    };
 
   if (!id) {
     return NextResponse.json({ error: "id requis." }, { status: 400 });
   }
 
+  if (tradeGroupId && decennaleStatus) {
+    const updated = await updateProTradeDecennaleStatus(id, tradeGroupId, decennaleStatus);
+    if (!updated) {
+      return NextResponse.json({ error: "Inscription ou métier introuvable." }, { status: 404 });
+    }
+    return NextResponse.json({ registration: updated });
+  }
+
   if (!status && qualificationLevel === undefined) {
     return NextResponse.json(
-      { error: "status ou qualificationLevel requis." },
+      { error: "status, qualificationLevel ou decennaleStatus requis." },
       { status: 400 }
     );
   }

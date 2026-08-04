@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import AdminTradeDecennalePanel from "@/components/AdminTradeDecennalePanel";
 import QualificationBadge from "@/components/QualificationBadge";
 import ProDocumentsList from "@/components/ProDocumentsList";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
-import type { ProRegistration } from "@/lib/store-types";
+import type { DecennaleVerificationStatus, ProRegistration } from "@/lib/store-types";
 
 const STATUS_LABELS = {
   pending: { text: "En attente", className: "bg-amber-100 text-amber-800" },
@@ -53,6 +54,19 @@ export default function AdminProfessionnelsPage() {
     load();
   }
 
+  async function handleDecennaleStatus(
+    id: string,
+    tradeGroupId: string,
+    decennaleStatus: Extract<DecennaleVerificationStatus, "validé" | "non_couvert">
+  ) {
+    await fetch("/api/admin/professionnels", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, tradeGroupId, decennaleStatus }),
+    });
+    load();
+  }
+
   const filtered = registrations.filter((r) =>
     filter === "all" ? true : r.status === filter
   );
@@ -61,8 +75,9 @@ export default function AdminProfessionnelsPage() {
     <div>
       <h1 className="text-2xl font-bold">Artisans — inscriptions RCS</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Validez les entreprises inscrites au registre du commerce. Le niveau de qualification
-        est affiché sur les enchères — il ne bloque jamais l&apos;accès.
+        Validez les entreprises inscrites au registre du commerce. Vérifiez aussi,
+        pour chaque corps de métier, que l&apos;attestation décennale couvre bien
+        l&apos;activité avant que l&apos;artisan puisse enchérir sur ce type de chantier.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -137,6 +152,12 @@ export default function AdminProfessionnelsPage() {
                       <ProDocumentsList documents={r.documents!} />
                     </div>
                   )}
+                  <AdminTradeDecennalePanel
+                    selections={getProTradeSelections(r)}
+                    onUpdateStatus={(tradeGroupId, decennaleStatus) =>
+                      handleDecennaleStatus(r.id, tradeGroupId, decennaleStatus)
+                    }
+                  />
                   <p className="mt-2 text-xs text-slate-400">
                     Inscrit le {new Date(r.createdAt).toLocaleString("fr-FR")}
                   </p>

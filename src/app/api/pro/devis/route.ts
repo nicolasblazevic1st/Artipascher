@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkDecennaleForWorkCategory } from "@/lib/decennale-verification";
 import { validateProQuote } from "@/lib/devis-validation";
 import { getProSession } from "@/lib/pro-auth";
 import {
   addProQuote,
+  getApprovedProById,
   getProQuoteByProAndAuction,
   getProQuotesForPro,
   hasContactUnlock,
@@ -70,6 +72,14 @@ export async function POST(request: NextRequest) {
       },
       { status: 403 }
     );
+  }
+
+  const pro = await getApprovedProById(session.proId);
+  if (pro) {
+    const decennaleCheck = checkDecennaleForWorkCategory(pro, workRequest.category);
+    if (!decennaleCheck.ok) {
+      return NextResponse.json({ error: decennaleCheck.reason }, { status: 403 });
+    }
   }
 
   const validationError = validateProQuote({ visitDate, amount, description });
