@@ -14,12 +14,12 @@ const FEATURES = [
   {
     title: "Économies garanties",
     description:
-      "Les artisans se disputent votre projet. Le prix ne peut que baisser jusqu'au meilleur tarif du marché local.",
+      "Les artisans se disputent votre projet. Le prix ne peut que baisser jusqu'au meilleur tarif du marché local. Aucune commission pour les particuliers.",
   },
   {
     title: "Artisans RCS vérifiés",
     description:
-      "Seules les entreprises inscrites au registre du commerce (SIRET vérifié) peuvent enchérir. Artisans du 59 et 62 uniquement.",
+      "Seules les entreprises inscrites au registre du commerce (SIRET vérifié) peuvent enchérir, avec attestation décennale et assurance vérifiées. Artisans du 59 et 62 uniquement.",
   },
   {
     title: "Gain de temps",
@@ -34,12 +34,12 @@ const FEATURES = [
   {
     title: "Sécurité",
     description:
-      "Vos données sont protégées et hébergées chez OVH, dans un datacenter du Nord de la France. Les artisans ne voient que les infos nécessaires à leur proposition.",
+      "Vos données sont protégées et hébergées chez OVH, dans un datacenter du Nord de la France. Les artisans ne voient que les infos nécessaires à leur proposition. C'est à eux de vous contacter et de prendre rendez-vous pour établir un devis gratuit sur place.",
   },
   {
     title: "100 % gratuit",
     description:
-      "Publication gratuite, sans frais cachés. Vous ne payez que l'artisan retenu.",
+      "Publication gratuite, sans frais cachés. Vous ne payez que l'artisan retenu. Les artisans, eux, paient 1 € pour accéder aux coordonnées du chantier.",
   },
 ];
 

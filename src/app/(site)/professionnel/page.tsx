@@ -3,6 +3,8 @@ import Link from "next/link";
 import ProRegistrationForm from "@/components/ProRegistrationForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
+import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
@@ -38,6 +40,18 @@ const FEATURES = [
   },
 ];
 
+const PRICING = [
+  {
+    title: `Consulter le chantier · ${UNLOCK_PRICE_EUR} €`,
+    description:
+      "Débloquez les coordonnées du particulier pour visiter le chantier et établir votre devis gratuit sur place.",
+  },
+  {
+    title: `Enchérir · ${BID_FEE_EUR} € par enchère`,
+    description: `Placez une offre sur un projet. Maximum ${MAX_BIDS_PER_AUCTION} enchères par chantier. Paiement avant validation de l'offre.`,
+  },
+];
+
 const STEPS = [
   {
     title: "Inscription et validation RCS",
@@ -54,18 +68,6 @@ const STEPS = [
     description:
       "Le particulier compare les offres et choisit l'artisan qui lui convient. Devis conforme à votre enchère.",
   },
-];
-
-const RULES = [
-  "Entreprise inscrite au registre du commerce (SIRET vérifié) — obligatoire",
-  "Siège ou établissement actif en Nord (59) ou Pas-de-Calais (62)",
-  "Prix strictement inférieur au prix actuel",
-  "Palier de 100 € entre chaque enchère",
-  "Enchères multiples autorisées sur un même projet",
-  "Enchère non modifiable une fois validée",
-  "Commission plateforme : 10 % après achèvement de la prestation",
-  "1 € par enchère placée (paiement obligatoire avant validation de l'offre)",
-  "Coordonnées client masquées — déblocage 1 € par enchère (pro approuvé uniquement)",
 ];
 
 export default function ProfessionnelPage() {
@@ -125,15 +127,21 @@ export default function ProfessionnelPage() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <h2 className="text-2xl font-bold">Règles des enchères</h2>
-        <ul className="mt-6 space-y-3">
-          {RULES.map((rule) => (
+        <h2 className="text-center text-2xl font-bold">Tarifs plateforme</h2>
+        <p className="mt-2 text-center text-sm text-slate-600">
+          Seules facturations Artipascher — aucune commission sur vos prestations, pas
+          d&apos;abonnement.
+        </p>
+        <ul className="mt-8 space-y-4">
+          {PRICING.map((item) => (
             <li
-              key={rule}
-              className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm"
+              key={item.title}
+              className="rounded-xl border border-brand-100 bg-brand-50/50 p-5"
             >
-              <span className="mt-0.5 text-brand-600">✓</span>
-              {rule}
+              <p className="font-semibold text-brand-900">{item.title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                {item.description}
+              </p>
             </li>
           ))}
         </ul>
