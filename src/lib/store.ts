@@ -2,12 +2,19 @@ import { promises as fs } from "fs";
 import path from "path";
 import { hashPassword, verifyPassword, validatePassword } from "./password";
 import { randomBytes } from "crypto";
+import {
+  generateReferralCode,
+  isValidReferralCodeFormat,
+  normalizeReferralCode,
+} from "./referral";
 import { createShareToken } from "./share";
 import { getSampleQuotesForAuction } from "./sample-quotes";
 import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
 import {
   DEFAULT_SMS_SETTINGS,
   EMPTY_STORE,
+  REFERRAL_REWARD_CREDITS,
+  REFERRAL_SPEND_THRESHOLD,
   type ArtisanProspect,
   type Bid,
   type ClientAccount,
@@ -1211,6 +1218,213 @@ export async function spendProCredit(data: {
     amount: -1,
   });
   if ("error" in result) return result;
+  await maybeGrantReferralRewardInStore(store, data.proId);
   await writeStore(store);
   return result;
+}
+
+function isEligibleReferrer(pro: ProRegistration | undefined): pro is ProRegistration {
+  return Boolean(pro && pro.status === "approved" && pro.rcsVerified);
+}
+
+function allocateUniqueReferralCode(store: DataStore): string {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const code = generateReferralCode();
+    const taken = store.proRegistrations.some(
+      (p) => p.referralCode && normalizeReferralCode(p.referralCode) === code
+    );
+    if (!taken) return code;
+  }
+  throw new Error("REFERRAL_CODE_GENERATION_FAILED");
+}
+
+function ensureReferralCodeInStore(store: DataStore, proId: string): string | null {
+  const pro = store.proRegistrations.find((p) => p.id === proId);
+  if (!isEligibleReferrer(pro)) return null;
+  if (pro.referralCode) return normalizeReferralCode(pro.referralCode);
+  const code = allocateUniqueReferralCode(store);
+  pro.referralCode = code;
+  return code;
+}
+
+export async function ensureProReferralCode(proId: string): Promise<string | null> {
+  const store = await readStore();
+  const code = ensureReferralCodeInStore(store, proId);
+  if (!code) return null;
+  await writeStore(store);
+  return code;
+}
+
+export async function findProByReferralCode(
+  rawCode: string
+): Promise<ProRegistration | null> {
+  const code = normalizeReferralCode(rawCode);
+  if (!isValidReferralCodeFormat(code)) return null;
+  const store = await readStore();
+  const pro = store.proRegistrations.find(
+    (p) => p.referralCode && normalizeReferralCode(p.referralCode) === code
+  );
+  return isEligibleReferrer(pro) ? pro : null;
+}
+
+export type ApplyReferralResult =
+  | {
+      ok: true;
+      referrer: Pick<ProRegistration, "id" | "companyName" | "referralCode">;
+    }
+  | { ok: false; error: string };
+
+export async function applyReferralCodeToPro(
+  filleulProId: string,
+  rawCode: string
+): Promise<ApplyReferralResult> {
+  const code = normalizeReferralCode(rawCode);
+  if (!code) return { ok: false, error: "Saisissez un code de parrainage." };
+  if (!isValidReferralCodeFormat(code)) {
+    return { ok: false, error: "Format de code invalide." };
+  }
+
+  const store = await readStore();
+  const filleul = store.proRegistrations.find((p) => p.id === filleulProId);
+  if (!filleul || filleul.status !== "approved") {
+    return { ok: false, error: "Compte professionnel introuvable ou non approuvé." };
+  }
+  if (filleul.referredByProId) {
+    return { ok: false, error: "Un code de parrainage a déjà été validé sur ce compte." };
+  }
+  if (filleul.referralRewardGrantedAt) {
+    return { ok: false, error: "Ce compte a déjà déclenché une récompense de parrainage." };
+  }
+
+  const referrer = store.proRegistrations.find(
+    (p) => p.referralCode && normalizeReferralCode(p.referralCode) === code
+  );
+  if (!isEligibleReferrer(referrer)) {
+    return { ok: false, error: "Code de parrainage inconnu ou parrain non vérifié." };
+  }
+  if (referrer.id === filleulProId) {
+    return { ok: false, error: "Vous ne pouvez pas utiliser votre propre code." };
+  }
+
+  filleul.referredByProId = referrer.id;
+  filleul.referralCodeAppliedAt = new Date().toISOString();
+  await maybeGrantReferralRewardInStore(store, filleulProId);
+  await writeStore(store);
+
+  return {
+    ok: true,
+    referrer: {
+      id: referrer.id,
+      companyName: referrer.companyName,
+      referralCode: referrer.referralCode,
+    },
+  };
+}
+
+async function maybeGrantReferralRewardInStore(
+  store: DataStore,
+  spenderProId: string
+): Promise<void> {
+  const spender = store.proRegistrations.find((p) => p.id === spenderProId);
+  if (!spender?.referredByProId || spender.referralRewardGrantedAt) return;
+
+  const referrer = store.proRegistrations.find((p) => p.id === spender.referredByProId);
+  if (!isEligibleReferrer(referrer)) return;
+
+  const spentCredits = store.creditTransactions
+    .filter(
+      (t) =>
+        t.proId === spenderProId &&
+        (t.type === "spend_unlock" || t.type === "spend_bid")
+    )
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+  if (spentCredits < REFERRAL_SPEND_THRESHOLD) return;
+
+  const credited = await applyCreditDelta(store, {
+    proId: referrer.id,
+    type: "referral_reward",
+    amount: REFERRAL_REWARD_CREDITS,
+    note: `Parrainage — ${spender.companyName} a dépensé ${REFERRAL_SPEND_THRESHOLD} crédits`,
+  });
+  if ("error" in credited) return;
+
+  spender.referralRewardGrantedAt = new Date().toISOString();
+}
+
+export interface ProReferralStats {
+  referralCode: string | null;
+  referredBy: {
+    proId: string;
+    companyName: string;
+    referralCode?: string;
+    appliedAt?: string;
+  } | null;
+  rewardGrantedAt?: string;
+  spendProgress: number;
+  spendThreshold: number;
+  rewardCredits: number;
+  referrals: Array<{
+    proId: string;
+    companyName: string;
+    appliedAt?: string;
+    rewardGrantedAt?: string;
+    spendProgress: number;
+  }>;
+  rewardsEarned: number;
+}
+
+export async function getProReferralStats(proId: string): Promise<ProReferralStats> {
+  const store = await readStore();
+  const existing = store.proRegistrations.find((p) => p.id === proId);
+  const hadCode = Boolean(existing?.referralCode);
+  const code = ensureReferralCodeInStore(store, proId);
+  if (code && !hadCode) await writeStore(store);
+
+  const pro = store.proRegistrations.find((p) => p.id === proId);
+  const referrer = pro?.referredByProId
+    ? store.proRegistrations.find((p) => p.id === pro.referredByProId)
+    : undefined;
+
+  const spendFor = (targetProId: string) =>
+    store.creditTransactions
+      .filter(
+        (t) =>
+          t.proId === targetProId &&
+          (t.type === "spend_unlock" || t.type === "spend_bid")
+      )
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+  const referrals = store.proRegistrations
+    .filter((p) => p.referredByProId === proId)
+    .map((p) => ({
+      proId: p.id,
+      companyName: p.companyName,
+      appliedAt: p.referralCodeAppliedAt,
+      rewardGrantedAt: p.referralRewardGrantedAt,
+      spendProgress: Math.min(spendFor(p.id), REFERRAL_SPEND_THRESHOLD),
+    }))
+    .sort((a, b) => {
+      const aTime = a.appliedAt ? new Date(a.appliedAt).getTime() : 0;
+      const bTime = b.appliedAt ? new Date(b.appliedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+  return {
+    referralCode: code,
+    referredBy: referrer
+      ? {
+          proId: referrer.id,
+          companyName: referrer.companyName,
+          referralCode: referrer.referralCode,
+          appliedAt: pro?.referralCodeAppliedAt,
+        }
+      : null,
+    rewardGrantedAt: pro?.referralRewardGrantedAt,
+    spendProgress: Math.min(spendFor(proId), REFERRAL_SPEND_THRESHOLD),
+    spendThreshold: REFERRAL_SPEND_THRESHOLD,
+    rewardCredits: REFERRAL_REWARD_CREDITS,
+    referrals,
+    rewardsEarned: referrals.filter((r) => r.rewardGrantedAt).length * REFERRAL_REWARD_CREDITS,
+  };
 }

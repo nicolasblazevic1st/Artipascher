@@ -121,6 +121,14 @@ export interface ProRegistration {
   createdAt: string;
   reviewedAt?: string;
   adminNote?: string;
+  /** Code de parrainage unique (entreprises vérifiées). */
+  referralCode?: string;
+  /** Pro qui a parrainé ce compte (via code unique). */
+  referredByProId?: string;
+  /** Horodatage d'application du code de parrainage. */
+  referralCodeAppliedAt?: string;
+  /** Horodatage du crédit versé au parrain (après 5 dépenses du filleul). */
+  referralRewardGrantedAt?: string;
 }
 
 export type ClientKind = "individual" | "company";
@@ -335,13 +343,19 @@ export const CREDIT_PRICE_EUR = 1;
 export const CREDIT_PACKS = [1, 5, 10, 20] as const;
 export type CreditPackSize = (typeof CREDIT_PACKS)[number];
 
+/** Crédits dépensés par le filleul avant récompense du parrain. */
+export const REFERRAL_SPEND_THRESHOLD = 5;
+/** Crédits offerts au parrain une fois le seuil atteint. */
+export const REFERRAL_REWARD_CREDITS = 5;
+
 export type CreditTxnType =
   | "purchase"
   | "spend_unlock"
   | "spend_bid"
   | "refund_unlock"
   | "admin_adjust"
-  | "demo_grant";
+  | "demo_grant"
+  | "referral_reward";
 
 export interface ProCreditTransaction {
   id: string;

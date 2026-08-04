@@ -19,6 +19,7 @@ const TXN_LABELS: Record<string, string> = {
   refund_unlock: "Recrédit contact",
   admin_adjust: "Ajustement",
   demo_grant: "Crédit démo",
+  referral_reward: "Parrainage",
 };
 
 export default function ProCreditsPanel() {

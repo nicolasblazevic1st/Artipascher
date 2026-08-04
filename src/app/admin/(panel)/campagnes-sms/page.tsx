@@ -42,6 +42,8 @@ interface Preview {
   campaignSize: number;
   geoFound: boolean;
   totalNearby: number;
+  gouvCount: number;
+  platformCount: number;
   cohortCounts: Record<SmsCohort, number>;
   suggestedCounts: Record<SmsCohort, number>;
   candidates: Candidate[];
@@ -96,7 +98,8 @@ export default function AdminSmsCampaignsPage() {
   const [settings, setSettings] = useState<SmsCampaignSettings | null>(null);
   const [smsConfigured, setSmsConfigured] = useState(false);
   const [demoAllowed, setDemoAllowed] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // false au 1er rendu (SSR = client) pour éviter mismatch hydration sur disabled
+  const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [campaignSize, setCampaignSize] = useState(30);
@@ -109,6 +112,35 @@ export default function AdminSmsCampaignsPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
   const [savingPhone, setSavingPhone] = useState<string | null>(null);
+  const [artisanStats, setArtisanStats] = useState<{
+    total: number;
+    active: number;
+    withPhone: number;
+    pendingEnrichment: number;
+    invalidPhone: number;
+    remaining: number;
+    placesEnabled: boolean;
+    quota: {
+      requestsProduction: number;
+      requestsEnrichment: number;
+      monthlyLimit: number;
+      enrichmentPaused: boolean;
+      enrichmentCarryover: number;
+    };
+    dailyBudget: { budget: number; paused: boolean; prodToday: number };
+  } | null>(null);
+  const [artisanBusy, setArtisanBusy] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  const loadArtisanStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/artisans/stats");
+      const data = await res.json();
+      if (res.ok) setArtisanStats(data);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -134,11 +166,69 @@ export default function AdminSmsCampaignsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    setMounted(true);
+    void load();
+    void loadArtisanStats();
     const params = new URLSearchParams(window.location.search);
     const requestId = params.get("request");
     if (requestId) setSelectedId(requestId);
-  }, [load]);
+  }, [load, loadArtisanStats]);
+
+  /** Évite mismatch SSR/client sur l'attribut HTML disabled. */
+  function disableWhen(condition: boolean): boolean | undefined {
+    if (!mounted) return undefined;
+    return condition || undefined;
+  }
+
+  async function runSireneExtract() {
+    setArtisanBusy("sirene");
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/artisans/extract-sirene", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxPagesPerNaf: 2 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Extraction SIRENE impossible.");
+        return;
+      }
+      setSuccess(
+        `SIRENE : ${data.result.upserted} fiches, ${data.result.geocoded} géocodées (${data.result.pages} pages).`
+      );
+      await loadArtisanStats();
+    } catch {
+      setError("Erreur réseau extraction SIRENE.");
+    } finally {
+      setArtisanBusy(null);
+    }
+  }
+
+  async function runPlacesEnrich() {
+    setArtisanBusy("places");
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/artisans/enrich-places", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Enrichissement Places impossible.");
+        return;
+      }
+      setSuccess(
+        data.result.paused
+          ? "Enrichissement en pause (quota mensuel)."
+          : `Places : ${data.result.processed} fiches, ${data.result.spent}/${data.result.budget} req.`
+      );
+      await loadArtisanStats();
+    } catch {
+      setError("Erreur réseau enrichissement Places.");
+    } finally {
+      setArtisanBusy(null);
+    }
+  }
 
   async function handlePreview() {
     if (!selectedId) return;
@@ -361,6 +451,95 @@ export default function AdminSmsCampaignsPage() {
       </div>
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <h2 className="font-semibold text-slate-900">
+          Base artisans (SIRENE + Google Places)
+        </h2>
+        <p className="mt-1 text-xs text-slate-500">
+          {artisanStats?.placesEnabled
+            ? "Places activé. Prévisualise une campagne pour enregistrer les SIRENE dans la base, puis lance l’enrichissement (consomme le quota)."
+            : <>
+                Places désactivé tant que{" "}
+                <code className="rounded bg-slate-100 px-1">GOOGLE_PLACES_ENABLED=true</code>{" "}
+                n&apos;est pas posé.
+              </>}
+          {" "}Les 67 « sans téléphone » de la preview ne sont enrichis qu&apos;après
+          enregistrement en base (preview ou Extraire SIRENE).
+        </p>
+        {artisanStats ? (
+          <div className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              Actifs : <strong>{artisanStats.active}</strong> / {artisanStats.total}
+            </div>
+            <div>
+              Avec tél : <strong>{artisanStats.withPhone}</strong>
+            </div>
+            <div>
+              Pending : <strong>{artisanStats.pendingEnrichment}</strong> · Invalid :{" "}
+              <strong>{artisanStats.invalidPhone}</strong>
+            </div>
+            <div>
+              Quota :{" "}
+              <strong>
+                {artisanStats.quota.requestsProduction +
+                  artisanStats.quota.requestsEnrichment}
+                /{artisanStats.quota.monthlyLimit}
+              </strong>{" "}
+              (reste {artisanStats.remaining})
+            </div>
+            <div>
+              Prod ce mois : {artisanStats.quota.requestsProduction} · Enrich :{" "}
+              {artisanStats.quota.requestsEnrichment}
+            </div>
+            <div>
+              Budget nuit : {artisanStats.dailyBudget.budget}
+              {artisanStats.dailyBudget.paused ? " (pause)" : ""} · prod jour{" "}
+              {artisanStats.dailyBudget.prodToday}
+            </div>
+            <div>
+              Places :{" "}
+              {artisanStats.placesEnabled ? "clé OK" : "non configuré"}
+              {artisanStats.quota.enrichmentPaused ? " · pause enrichissement" : ""}
+            </div>
+            <div>Report : {artisanStats.quota.enrichmentCarryover}</div>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-slate-500">Chargement stats artisans…</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={runSireneExtract}
+            disabled={disableWhen(Boolean(artisanBusy))}
+            className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          >
+            {artisanBusy === "sirene" ? "Extraction…" : "Extraire SIRENE (batch)"}
+          </button>
+          <button
+            type="button"
+            onClick={runPlacesEnrich}
+            disabled={disableWhen(
+              Boolean(artisanBusy) || artisanStats?.placesEnabled === false
+            )}
+            title={
+              artisanStats?.placesEnabled === false
+                ? "Active GOOGLE_PLACES_ENABLED=true + clé API en prod pour tester"
+                : undefined
+            }
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 disabled:opacity-50"
+          >
+            {artisanBusy === "places" ? "Enrichissement…" : "Lancer enrichissement Places"}
+          </button>
+          <button
+            type="button"
+            onClick={loadArtisanStats}
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-600"
+          >
+            Rafraîchir stats
+          </button>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm">
         <h2 className="font-semibold text-slate-900">Réglages</h2>
         {!settings && loading && (
           <p className="mt-3 text-slate-500">Chargement des réglages…</p>
@@ -433,7 +612,7 @@ export default function AdminSmsCampaignsPage() {
             <select
               id="workRequest"
               value={selectedId}
-              disabled={loading}
+              disabled={disableWhen(loading)}
               onChange={(e) => {
                 setSelectedId(e.target.value);
                 setPreview(null);
@@ -477,7 +656,7 @@ export default function AdminSmsCampaignsPage() {
             <button
               type="button"
               onClick={handlePreview}
-              disabled={!selectedId || previewLoading || loading}
+              disabled={disableWhen(!selectedId || previewLoading || loading)}
               className="mt-3 block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
               {previewLoading ? "Calcul SIRENE en cours…" : "Prévisualiser le mix & la liste"}
@@ -508,7 +687,8 @@ export default function AdminSmsCampaignsPage() {
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   {preview.candidates.length} joignables · {preview.withoutPhone.length}{" "}
-                  sans téléphone · {preview.totalNearby} proches SIRENE
+                  sans téléphone · {preview.gouvCount} SIRENE · {preview.platformCount}{" "}
+                  plateforme · {preview.totalNearby} au total
                   {preview.geoFound ? "" : " (géo approximative / introuvable)"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -697,9 +877,9 @@ export default function AdminSmsCampaignsPage() {
                 <button
                   type="button"
                   onClick={() => handleSend(false)}
-                  disabled={
+                  disabled={disableWhen(
                     sending || selectedCount === 0 || !smsConfigured || !message.trim()
-                  }
+                  )}
                   title={
                     !smsConfigured
                       ? "OVH SMS non configuré"
@@ -714,12 +894,12 @@ export default function AdminSmsCampaignsPage() {
                 <button
                   type="button"
                   onClick={() => handleSend(true)}
-                  disabled={
+                  disabled={disableWhen(
                     sending ||
-                    !demoAllowed ||
-                    selectedCount === 0 ||
-                    !message.trim()
-                  }
+                      !demoAllowed ||
+                      selectedCount === 0 ||
+                      !message.trim()
+                  )}
                   title={
                     !demoAllowed
                       ? "Mode démo désactivé quand OVH SMS est actif en production"

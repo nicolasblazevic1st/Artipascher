@@ -29,10 +29,25 @@ interface GouvEstablishment {
   siret?: string;
   etat_administratif?: string;
   libelle_commune?: string;
+  /** Parfois absent sur matching_etablissements — utiliser code_postal. */
   departement?: string;
+  code_postal?: string;
   activite_principale?: string;
   latitude?: string;
   longitude?: string;
+}
+
+function departmentFromEstablishment(
+  est: GouvEstablishment
+): string | null {
+  if (est.departement && /^\d{2,3}$/.test(est.departement)) {
+    return est.departement;
+  }
+  const postal = est.code_postal?.replace(/\D/g, "");
+  if (postal && postal.length >= 2) {
+    return postal.slice(0, 2);
+  }
+  return null;
 }
 
 interface GouvCompany {
@@ -101,7 +116,7 @@ async function fetchGouvNearby(params: {
         const establishments = company.matching_etablissements ?? [];
         for (const est of establishments) {
           if (est.etat_administratif !== "A") continue;
-          if (est.departement !== department) continue;
+          if (departmentFromEstablishment(est) !== department) continue;
           if (!est.siret || seen.has(est.siret)) continue;
 
           seen.add(est.siret);

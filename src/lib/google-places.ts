@@ -1,0 +1,151 @@
+import { normalizeFrenchMobile } from "./sms";
+
+export interface PlacesLookupResult {
+  ok: boolean;
+  phone?: string;
+  website?: string;
+  matched: boolean;
+  /** Nombre d'appels HTTP Google facturés (Search + Details). */
+  requestsUsed: number;
+  error?: string;
+  placeId?: string;
+}
+
+function placesApiKey(): string | undefined {
+  return process.env.GOOGLE_PLACES_API_KEY?.trim() || undefined;
+}
+
+export function isGooglePlacesEnabled(): boolean {
+  // Opt-in strict : jamais d'appel sans GOOGLE_PLACES_ENABLED=true
+  // (les requêtes Places sont précieuses — à activer seulement en prod pour tester).
+  return (
+    process.env.GOOGLE_PLACES_ENABLED === "true" && Boolean(placesApiKey())
+  );
+}
+
+/**
+ * Text Search + Place Details avec FieldMask minimal (téléphone + site).
+ * Places API (New).
+ */
+export async function lookupPlacePhone(query: {
+  companyName: string;
+  addressLine?: string;
+  postalCode?: string;
+  city?: string;
+}): Promise<PlacesLookupResult> {
+  const key = placesApiKey();
+  if (!key) {
+    return {
+      ok: false,
+      matched: false,
+      requestsUsed: 0,
+      error: "GOOGLE_PLACES_API_KEY manquant.",
+    };
+  }
+
+  const textQuery = [query.companyName, query.addressLine, query.postalCode, query.city]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  if (!textQuery) {
+    return {
+      ok: false,
+      matched: false,
+      requestsUsed: 0,
+      error: "Requête Places vide.",
+    };
+  }
+
+  let requestsUsed = 0;
+
+  try {
+    const searchRes = await fetch(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask": "places.id,places.displayName",
+        },
+        body: JSON.stringify({
+          textQuery,
+          languageCode: "fr",
+          regionCode: "FR",
+          maxResultCount: 1,
+        }),
+      }
+    );
+    requestsUsed += 1;
+
+    if (!searchRes.ok) {
+      const text = await searchRes.text();
+      return {
+        ok: false,
+        matched: false,
+        requestsUsed,
+        error: `Places Text Search HTTP ${searchRes.status}: ${text.slice(0, 200)}`,
+      };
+    }
+
+    const searchData = (await searchRes.json()) as {
+      places?: Array<{ id?: string }>;
+    };
+    const placeId = searchData.places?.[0]?.id;
+    if (!placeId) {
+      return { ok: true, matched: false, requestsUsed };
+    }
+
+    const detailsRes = await fetch(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        method: "GET",
+        headers: {
+          "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask": "id,nationalPhoneNumber,internationalPhoneNumber,websiteUri",
+        },
+      }
+    );
+    requestsUsed += 1;
+
+    if (!detailsRes.ok) {
+      const text = await detailsRes.text();
+      return {
+        ok: false,
+        matched: true,
+        requestsUsed,
+        placeId,
+        error: `Places Details HTTP ${detailsRes.status}: ${text.slice(0, 200)}`,
+      };
+    }
+
+    const details = (await detailsRes.json()) as {
+      nationalPhoneNumber?: string;
+      internationalPhoneNumber?: string;
+      websiteUri?: string;
+    };
+
+    const rawPhone =
+      details.nationalPhoneNumber ?? details.internationalPhoneNumber ?? "";
+    const phone =
+      (rawPhone && normalizeFrenchMobile(rawPhone) ? rawPhone.trim() : undefined) ??
+      (rawPhone.trim() || undefined);
+
+    return {
+      ok: true,
+      matched: true,
+      requestsUsed,
+      placeId,
+      phone,
+      website: details.websiteUri?.trim() || undefined,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      matched: false,
+      requestsUsed,
+      error: e instanceof Error ? e.message : "Erreur Places inconnue.",
+    };
+  }
+}

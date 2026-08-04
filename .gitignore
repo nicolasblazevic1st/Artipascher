@@ -37,6 +37,7 @@ yarn-error.log*
 
 # local data store (inscriptions / demandes)
 data/store.json
+data/artisans-enrichment.json
 
 # uploads particuliers
 public/uploads/

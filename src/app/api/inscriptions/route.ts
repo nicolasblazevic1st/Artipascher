@@ -16,6 +16,8 @@ import { isAllowedDepartment, verifyWithRegistry } from "@/lib/rcs";
 import type { ProTradeSelection } from "@/lib/store-types";
 import {
   addProRegistration,
+  applyReferralCodeToPro,
+  ensureProReferralCode,
   setProRegistrationDocuments,
   setProTradeSelections,
   updateProRegistration,
@@ -61,6 +63,7 @@ export async function POST(request: NextRequest) {
     const tradeSelectionsRaw = String(formData.get("tradeSelections") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+    const referralCode = String(formData.get("referralCode") ?? "").trim();
 
     const documentFiles: Record<string, File | null> = {};
     for (const doc of PRO_REGISTRATION_DOCUMENTS) {
@@ -250,11 +253,26 @@ export async function POST(request: NextRequest) {
       reviewedAt: new Date().toISOString(),
     });
 
+    await ensureProReferralCode(entry.id);
+
+    let referralApplied = false;
+    let referralError: string | undefined;
+    if (referralCode) {
+      const referral = await applyReferralCodeToPro(entry.id, referralCode);
+      if (referral.ok) {
+        referralApplied = true;
+      } else {
+        referralError = referral.error;
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
         id: entry.id,
         level1Certified: true,
+        referralApplied,
+        referralError,
         message:
           "Certification niveau 1 obtenue. Vous pouvez vous connecter et débloquer les contacts client.",
       },

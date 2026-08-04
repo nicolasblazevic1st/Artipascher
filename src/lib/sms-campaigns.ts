@@ -1,7 +1,11 @@
+import { getArtisansNearWorkRequest } from "./artisans-nearby";
+import { upsertArtisan } from "./artisans-db";
 import {
   findNearbyBusinesses,
   type NearbyBusiness,
 } from "./nearby-businesses";
+import { isGooglePlacesEnabled } from "./google-places";
+import { markArtisanPhoneInvalid } from "./places-quota";
 import { normalizeFrenchMobile, sendSms } from "./sms";
 import { absoluteUrl } from "./share";
 import {
@@ -48,6 +52,8 @@ export interface SmsCampaignPreviewDetailed {
   campaignSize: number;
   geoFound: boolean;
   totalNearby: number;
+  gouvCount: number;
+  platformCount: number;
   cohortCounts: Record<SmsCohort, number>;
   suggestedCounts: Record<SmsCohort, number>;
   candidates: SmsCandidate[];
@@ -107,17 +113,30 @@ async function mergeProspectPool(
   withoutPhone: SmsCampaignPreviewDetailed["withoutPhone"];
   geoFound: boolean;
   totalNearby: number;
+  gouvCount: number;
+  platformCount: number;
 }> {
+  // Base locale enrichie (rayon). Places production : seulement si activé explicitement.
+  const nearbyDb = await getArtisansNearWorkRequest(request, {
+    enrichProduction: isGooglePlacesEnabled(),
+    maxEnrich: 20,
+  });
+
   const { businesses, geoFound } = await findNearbyBusinesses({
     city: request.city,
     department: request.department,
     category: request.category,
   });
 
+  const gouvCount =
+    businesses.filter((b) => b.source === "gouv").length +
+    nearbyDb.artisans.filter((a) => a.source === "gouv").length;
+  const platformCount = businesses.filter((b) => b.source === "platform").length;
+
   const prospects = await getArtisanProspects();
   const prospectBySiret = new Map(prospects.map((p) => [p.siret, p]));
 
-  // Sync SIRENE discoveries into prospect carnet (without overwriting phone).
+  // Sync SIRENE discoveries into prospect carnet + base enrichissement Places.
   for (const b of businesses) {
     if (b.source !== "gouv") continue;
     const existing = prospectBySiret.get(b.siret);
@@ -141,6 +160,25 @@ async function mergeProspectPool(
       });
       prospectBySiret.set(b.siret, updated);
     }
+
+    await upsertArtisan(
+      {
+        siret: b.siret,
+        siren: b.siren,
+        companyName: b.name,
+        addressLine: b.city,
+        postalCode: "",
+        city: b.city,
+        department: b.department,
+        nafCode: b.nafCode,
+        companyCreatedAt: b.companyCreatedAt,
+        status: "active",
+        enrichmentStatus: "pending",
+        lastSeenAt: new Date().toISOString(),
+        source: "gouv",
+      },
+      { preserveContact: true }
+    );
   }
 
   const withPhone: SmsCandidate[] = [];
@@ -204,6 +242,21 @@ async function mergeProspectPool(
     });
   }
 
+  // Priorité : artisans géolocalisés + enrichis en base locale.
+  for (const a of nearbyDb.artisans) {
+    pushBusiness({
+      siret: a.siret,
+      siren: a.siren,
+      name: a.companyName,
+      city: a.city,
+      department: a.department,
+      nafCode: a.nafCode,
+      source: a.source === "platform" ? "platform" : "gouv",
+      companyCreatedAt: a.companyCreatedAt,
+      phone: a.phone,
+    });
+  }
+
   for (const b of businesses) pushBusiness(b);
 
   // Prospects already enriched for this dept even if not in this near_point page.
@@ -213,7 +266,14 @@ async function mergeProspectPool(
     pushBusiness(p);
   }
 
-  return { withPhone, withoutPhone, geoFound, totalNearby: businesses.length };
+  return {
+    withPhone,
+    withoutPhone,
+    geoFound: geoFound || nearbyDb.origin != null,
+    totalNearby: Math.max(businesses.length, nearbyDb.artisans.length),
+    gouvCount,
+    platformCount,
+  };
 }
 
 function applyMixSelection(
@@ -277,7 +337,7 @@ export async function previewSmsCampaignDetailed(
 ): Promise<SmsCampaignPreviewDetailed> {
   const settings = await getSmsSettings();
   const campaignSize = campaignSizeOverride ?? settings.defaultCampaignSize;
-  const { withPhone, withoutPhone, geoFound, totalNearby } =
+  const { withPhone, withoutPhone, geoFound, totalNearby, gouvCount, platformCount } =
     await mergeProspectPool(request);
 
   const candidates = applyMixSelection(withPhone, campaignSize);
@@ -310,6 +370,8 @@ export async function previewSmsCampaignDetailed(
     campaignSize,
     geoFound,
     totalNearby,
+    gouvCount,
+    platformCount,
     cohortCounts,
     suggestedCounts,
     candidates,
@@ -390,6 +452,9 @@ export async function executeSmsCampaignToRecipients(
       recipient.error = result.error;
       failedCount += 1;
       status = "failed";
+      if (candidate.siret) {
+        await markArtisanPhoneInvalid(candidate.siret);
+      }
     }
 
     recipients.push(recipient);

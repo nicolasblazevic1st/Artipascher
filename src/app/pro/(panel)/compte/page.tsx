@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getProSession } from "@/lib/pro-auth";
 import ProCreditsPanel from "@/components/pro/ProCreditsPanel";
+import ProReferralPanel from "@/components/pro/ProReferralPanel";
 import ProDocumentsList from "@/components/ProDocumentsList";
 import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
 import { CATEGORY_LABELS } from "@/lib/data";
@@ -41,6 +42,10 @@ export default async function ProComptePage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <div className="lg:col-span-2">
           <ProCreditsPanel />
+        </div>
+
+        <div className="lg:col-span-2">
+          <ProReferralPanel />
         </div>
 
         <section className="rounded-xl border border-slate-200 bg-white p-6">

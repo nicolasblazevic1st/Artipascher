@@ -5,6 +5,10 @@ import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import {
+  REFERRAL_REWARD_CREDITS,
+  REFERRAL_SPEND_THRESHOLD,
+} from "@/lib/store-types";
 
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
@@ -37,6 +41,10 @@ const FEATURES = [
   {
     title: "Notifications",
     description: "Alertes pour nouvelles enchères et surenchères sur vos projets.",
+  },
+  {
+    title: "Parrainage",
+    description: `Invitez une entreprise vérifiée avec votre lien. Dès qu'elle dépense ${REFERRAL_SPEND_THRESHOLD} crédits, vous en recevez ${REFERRAL_REWARD_CREDITS}.`,
   },
 ];
 
@@ -147,11 +155,49 @@ export default function ProfessionnelPage() {
         </ul>
       </section>
 
+      <section id="parrainage" className="bg-brand-900 py-16 text-white">
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+          <h2 className="text-3xl font-bold">Parrainez une entreprise vérifiée</h2>
+          <p className="mt-4 text-lg text-brand-100">
+            Depuis votre espace pro, récupérez votre code ou votre lien de parrainage.
+            Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD} crédits sur
+            Artipascher, vous recevez {REFERRAL_REWARD_CREDITS} crédits.
+          </p>
+          <ul className="mx-auto mt-8 max-w-xl space-y-3 text-left text-sm text-brand-50">
+            <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">
+              1. Partagez votre code unique ou le lien d&apos;inscription prérempli
+            </li>
+            <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">
+              2. Le filleul valide le code à l&apos;inscription ou dans Mon compte
+            </li>
+            <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">
+              3. Après {REFERRAL_SPEND_THRESHOLD} crédits dépensés, vous êtes crédité
+              automatiquement
+            </li>
+          </ul>
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <Link
+              href="#inscription"
+              className="rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
+            >
+              S&apos;inscrire avec un code
+            </Link>
+            <Link
+              href="/pro/compte#parrainage"
+              className="rounded-xl border border-brand-500 px-8 py-3 font-semibold hover:bg-brand-800"
+            >
+              Accéder à mon parrainage
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section id="inscription" className="bg-slate-100 py-16">
         <div className="mx-auto max-w-xl px-4 sm:px-6">
           <h2 className="text-2xl font-bold text-center">Inscription professionnelle</h2>
           <p className="mt-2 text-center text-sm text-slate-600">
-            Vérification RCS obligatoire · Nord 59 / Pas-de-Calais 62
+            Vérification RCS obligatoire · Nord 59 / Pas-de-Calais 62 · code de
+            parrainage optionnel
           </p>
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
             <ProRegistrationForm />

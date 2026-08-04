@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HelpTooltip from "@/components/HelpTooltip";
 import {
   PRO_REGISTRATION_COMPARTMENTS,
@@ -36,6 +36,13 @@ export default function ProRegistrationForm() {
   const [verification, setVerification] = useState<RcsVerificationResult | null>(null);
   const [status, setStatus] = useState<FormStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) setReferralCode(ref.trim().toUpperCase());
+  }, []);
 
   const activeGroupIds = useMemo(
     () =>
@@ -213,6 +220,9 @@ export default function ProRegistrationForm() {
     formData.set("rcsVerified", "true");
     formData.set("password", password);
     formData.set("passwordConfirm", passwordConfirm);
+    if (referralCode.trim()) {
+      formData.set("referralCode", referralCode.trim());
+    }
 
     for (const doc of PRO_REGISTRATION_DOCUMENTS) {
       const file = documents[doc.id];
@@ -626,6 +636,31 @@ export default function ProRegistrationForm() {
           );
         })}
       </section>
+
+      <div>
+        <label
+          htmlFor="referralCode"
+          className="mb-1 block text-sm font-medium text-slate-700"
+        >
+          Code de parrainage{" "}
+          <span className="font-normal text-slate-400">(optionnel)</span>
+        </label>
+        <input
+          id="referralCode"
+          type="text"
+          value={referralCode}
+          onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+          className={`${inputClass} font-mono uppercase tracking-wider`}
+          placeholder="Ex. APXXXXXX"
+          disabled={!fieldsEnabled}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Si une entreprise vérifiée vous a invité, saisissez son code. Après{" "}
+          5 crédits dépensés, votre parrain reçoit 5 crédits.
+        </p>
+      </div>
 
       <div>
         <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
