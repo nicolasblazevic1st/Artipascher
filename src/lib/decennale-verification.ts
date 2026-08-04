@@ -47,7 +47,6 @@ function tradeSelectionCoversWorkCategory(
     city: "",
     department: "59",
     category: selection.category,
-    zone: "",
     tradeSelections: [selection],
     rcsVerified: true,
     passwordHash: "",

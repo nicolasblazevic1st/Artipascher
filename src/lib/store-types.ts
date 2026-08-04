@@ -45,7 +45,8 @@ export interface ProRegistration {
   city: string;
   department: "59" | "62";
   category: TradeCategory;
-  zone: string;
+  /** @deprecated Ancien champ libre — le siège RCS (city/department) suffit. */
+  zone?: string;
   /** Corps de métier et métiers Qualibat (plusieurs possibles). */
   tradeSelections?: ProTradeSelection[];
   /** @deprecated Premier corps de métier — préférer tradeSelections. */

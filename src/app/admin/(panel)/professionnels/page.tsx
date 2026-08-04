@@ -134,7 +134,7 @@ export default function AdminProfessionnelsPage() {
                     <div>Email : {r.email}</div>
                     <div>Tél : {r.phone}</div>
                     <div>
-                      Zone : {r.zone || `${r.city} (${r.department})`}
+                      Siège : {r.city} ({r.department})
                     </div>
                     <div>
                       Corps de métier :{" "}

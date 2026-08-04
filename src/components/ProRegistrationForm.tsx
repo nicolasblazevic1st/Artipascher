@@ -27,7 +27,6 @@ export default function ProRegistrationForm() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-  const [zone, setZone] = useState("");
   const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({});
   const [jobByGroup, setJobByGroup] = useState<Record<string, string>>({});
   const [rcsGroupIds, setRcsGroupIds] = useState<Set<string>>(new Set());
@@ -210,7 +209,6 @@ export default function ProRegistrationForm() {
     formData.set("department", verification.department ?? "59");
     formData.set("category", primaryTradeCategory(tradeSelections));
     formData.set("tradeSelections", JSON.stringify(tradeSelections));
-    formData.set("zone", zone);
     formData.set("rcsVerified", "true");
     formData.set("password", password);
     formData.set("passwordConfirm", passwordConfirm);
@@ -365,16 +363,6 @@ export default function ProRegistrationForm() {
         placeholder="Téléphone"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
-        className={inputClass}
-        required={fieldsEnabled}
-        disabled={!fieldsEnabled}
-      />
-
-      <input
-        type="text"
-        placeholder="Zone d'intervention (ex. Lille et 30 km)"
-        value={zone}
-        onChange={(e) => setZone(e.target.value)}
         className={inputClass}
         required={fieldsEnabled}
         disabled={!fieldsEnabled}

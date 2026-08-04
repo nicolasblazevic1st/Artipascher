@@ -51,7 +51,6 @@ export default async function ProComptePage() {
               label="Catégorie enchères (principale)"
               value={CATEGORY_LABELS[pro.category] ?? pro.category}
             />
-            <Row label="Zone d'intervention" value={pro.zone} />
             <Row label="Email" value={pro.email} />
             <Row label="Téléphone" value={pro.phone} />
           </dl>

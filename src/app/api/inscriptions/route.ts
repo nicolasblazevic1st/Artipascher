@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
     const department = String(formData.get("department") ?? "59");
     const categoryRaw = String(formData.get("category") ?? "").trim();
     const tradeSelectionsRaw = String(formData.get("tradeSelections") ?? "").trim();
-    const zone = String(formData.get("zone") ?? "").trim();
     const rcsVerified = String(formData.get("rcsVerified") ?? "") === "true";
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
@@ -140,7 +139,6 @@ export async function POST(request: NextRequest) {
       tradeGroupLabel: primary.tradeGroupLabel,
       qualibatJobId: primary.qualibatJobId,
       qualibatJobLabel: primary.qualibatJobLabel,
-      zone,
       rcsVerified: true,
       passwordHash: hashPassword(password),
       documents: [],
