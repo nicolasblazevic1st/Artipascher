@@ -5,6 +5,7 @@ import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatPrice } from "@/lib/data";
 import type { WorkRequest } from "@/lib/store-types";
 
@@ -126,6 +127,15 @@ export default function AdminDemandesPage() {
                   )}
                   <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
                     <div>Adresse : {formatWorkRequestAddress(r)}</div>
+                    {r.addressVerifiedAt && (
+                      <div className="text-emerald-700">
+                        Adresse vérifiée BAN · {new Date(r.addressVerifiedAt).toLocaleDateString("fr-FR")}
+                      </div>
+                    )}
+                    <div>
+                      Début travaux souhaité :{" "}
+                      {formatRequestedWorkStartDate(r.requestedWorkStartDate)}
+                    </div>
                     <div>{r.category}</div>
                     <div>
                       Prix de départ :{" "}

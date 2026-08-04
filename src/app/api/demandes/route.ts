@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  departmentFromPostalCode,
-  validateClientAddress,
-} from "@/lib/client-address";
+  verifyBanAddress,
+  banFeatureToStoredAddress,
+} from "@/lib/ban-address";
+import { validateClientAddress } from "@/lib/client-address";
 import {
   DEFAULT_AUCTION_DURATION_DAYS,
   validateAuctionDurationDays,
@@ -11,6 +12,7 @@ import {
   validateDescription,
   validatePhotoFiles,
   validatePreviousQuotePair,
+  validateRequestedWorkStartDate,
 } from "@/lib/demandes-validation";
 import { validatePassword } from "@/lib/password";
 import { addWorkRequest, ensureClientAccount, linkOrphanWorkRequests, setWorkRequestPhotos, setWorkRequestPreviousQuote } from "@/lib/store";
@@ -27,6 +29,10 @@ export async function POST(request: NextRequest) {
     const addressLine2 = String(formData.get("addressLine2") ?? "").trim();
     const postalCode = String(formData.get("postalCode") ?? "").trim();
     const city = String(formData.get("city") ?? "").trim();
+    const banAddressId = String(formData.get("banAddressId") ?? "").trim();
+    const requestedWorkStartDate = String(
+      formData.get("requestedWorkStartDate") ?? ""
+    ).trim();
     const category = String(formData.get("category") ?? "Autre").trim();
     const description = String(formData.get("description") ?? "");
     const durationRaw = String(
@@ -45,7 +51,16 @@ export async function POST(request: NextRequest) {
     const previousQuoteProof =
       proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
 
-    if (!firstName || !lastName || !email || !addressLine || !postalCode || !city) {
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !addressLine ||
+      !postalCode ||
+      !city ||
+      !banAddressId ||
+      !requestedWorkStartDate
+    ) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis." },
         { status: 400 }
@@ -62,13 +77,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: addressError }, { status: 400 });
     }
 
-    const department = departmentFromPostalCode(postalCode);
-    if (!department) {
+    const startDateError = validateRequestedWorkStartDate(requestedWorkStartDate);
+    if (startDateError) {
+      return NextResponse.json({ error: startDateError }, { status: 400 });
+    }
+
+    const banVerification = await verifyBanAddress({
+      addressLine,
+      postalCode,
+      city,
+      banAddressId,
+    });
+    if (!banVerification.valid || !banVerification.feature) {
       return NextResponse.json(
-        { error: "Code postal hors zone Artipascher (59 ou 62 uniquement)." },
+        { error: banVerification.error ?? "Adresse non confirmée par la BAN." },
         { status: 400 }
       );
     }
+
+    const verifiedAddress = banFeatureToStoredAddress(banVerification.feature);
+    const department = verifiedAddress.department;
 
     const descriptionError = validateDescription(description);
     if (descriptionError) {
@@ -121,11 +149,16 @@ export async function POST(request: NextRequest) {
       lastName,
       email,
       clientId: client.id,
-      addressLine,
+      addressLine: verifiedAddress.addressLine,
       addressLine2: addressLine2 || undefined,
-      postalCode,
-      city,
+      postalCode: verifiedAddress.postalCode,
+      city: verifiedAddress.city,
       department,
+      banAddressId: verifiedAddress.banAddressId,
+      latitude: verifiedAddress.latitude,
+      longitude: verifiedAddress.longitude,
+      addressVerifiedAt: new Date().toISOString(),
+      requestedWorkStartDate,
       category,
       description: description.trim(),
       auctionDurationDays,

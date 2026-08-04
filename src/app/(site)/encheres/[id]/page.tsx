@@ -8,6 +8,7 @@ import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
+import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import {
   CATEGORY_LABELS,
   SAMPLE_AUCTIONS,
@@ -110,7 +111,7 @@ export default async function EnchereDetailPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-4">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
@@ -133,6 +134,14 @@ export default async function EnchereDetailPage({ params }: Props) {
             <dt className="text-xs text-slate-500">Fin</dt>
             <dd className="mt-1 text-sm font-semibold">{endsAt}</dd>
           </div>
+          {workRequest?.requestedWorkStartDate && (
+            <div className="rounded-xl bg-amber-50 p-4 text-center sm:col-span-2 lg:col-span-1">
+              <dt className="text-xs text-amber-700">Début travaux souhaité</dt>
+              <dd className="mt-1 text-sm font-semibold text-amber-900">
+                {formatRequestedWorkStartDate(workRequest.requestedWorkStartDate)}
+              </dd>
+            </div>
+          )}
         </dl>
 
         {savings > 0 && (
@@ -148,6 +157,7 @@ export default async function EnchereDetailPage({ params }: Props) {
               ? formatPublicLocation(workRequest)
               : formatLocation(resolved.city, resolved.department)
           }
+          requestedWorkStartDate={workRequest?.requestedWorkStartDate}
         />
 
         <BidPanel

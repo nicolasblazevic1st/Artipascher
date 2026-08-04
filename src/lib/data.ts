@@ -144,6 +144,10 @@ export const SAMPLE_AUCTIONS: Auction[] = [
   },
 ];
 
+/** Mention affichée sur la présentation et les pages de confiance. */
+export const DATA_HOSTING_NOTICE =
+  "Vos données personnelles sont hébergées chez OVH, dans un datacenter du Nord de la France.";
+
 export const FAQ_ITEMS = [
   {
     question: "Comment fonctionnent les enchères inversées ?",
@@ -194,6 +198,11 @@ export const FAQ_ITEMS = [
     question: "Le service est-il gratuit pour les particuliers ?",
     answer:
       "Oui, la publication de votre projet est gratuite et sans engagement. Vous ne payez que l'artisan retenu à la fin des travaux.",
+  },
+  {
+    question: "Où sont hébergées mes données personnelles ?",
+    answer:
+      "Vos données personnelles (coordonnées, demandes, photos) sont hébergées chez OVH, dans un datacenter situé dans le Nord de la France. Elles ne quittent pas le territoire national.",
   },
 ];
 

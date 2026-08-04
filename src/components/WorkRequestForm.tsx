@@ -6,11 +6,15 @@ import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
   MIN_DESCRIPTION_LENGTH,
   MAX_PHOTOS,
+  minRequestedWorkStartDate,
   validateDescription,
   validatePhotoFiles,
   validatePreviousQuotePair,
+  validateRequestedWorkStartDate,
 } from "@/lib/demandes-validation";
-import { validateClientAddress } from "@/lib/client-address";
+import BanAddressAutocomplete, {
+  type SelectedBanAddress,
+} from "@/components/BanAddressAutocomplete";
 import {
   AUCTION_DURATION_OPTIONS,
   DEFAULT_AUCTION_DURATION_DAYS,
@@ -32,6 +36,8 @@ export default function WorkRequestForm() {
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
   const [previousQuoteNote, setPreviousQuoteNote] = useState("");
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
+  const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
@@ -96,14 +102,18 @@ export default function WorkRequestForm() {
     }
 
     const form = e.currentTarget;
-    const addressError = validateClientAddress({
-      addressLine: (form.elements.namedItem("addressLine") as HTMLInputElement)?.value,
-      addressLine2: (form.elements.namedItem("addressLine2") as HTMLInputElement)?.value,
-      postalCode: (form.elements.namedItem("postalCode") as HTMLInputElement)?.value,
-      city: (form.elements.namedItem("city") as HTMLInputElement)?.value,
-    });
-    if (addressError) {
-      setError(addressError);
+
+    if (!selectedAddress?.banAddressId) {
+      setError(
+        "Sélectionnez votre adresse dans la liste officielle (Base Adresse Nationale)."
+      );
+      setStatus("error");
+      return;
+    }
+
+    const startDateError = validateRequestedWorkStartDate(requestedWorkStartDate);
+    if (startDateError) {
+      setError(startDateError);
       setStatus("error");
       return;
     }
@@ -118,6 +128,11 @@ export default function WorkRequestForm() {
 
     const formData = new FormData(form);
     formData.set("description", getDescriptionValue().trim());
+    formData.set("addressLine", selectedAddress.addressLine);
+    formData.set("postalCode", selectedAddress.postalCode);
+    formData.set("city", selectedAddress.city);
+    formData.set("banAddressId", selectedAddress.banAddressId);
+    formData.set("requestedWorkStartDate", requestedWorkStartDate);
     formData.delete("photos");
     photoFiles.forEach((file) => formData.append("photos", file));
     if (hasPreviousQuote) {
@@ -160,6 +175,8 @@ export default function WorkRequestForm() {
     setPreviousQuoteNote("");
     if (proofPreview) URL.revokeObjectURL(proofPreview);
     setProofPreview(null);
+    setSelectedAddress(null);
+    setRequestedWorkStartDate("");
     form.reset();
   }
 
@@ -174,7 +191,8 @@ export default function WorkRequestForm() {
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
-          <li>Adresse complète du chantier (rue, code postal, ville)</li>
+          <li>Adresse du chantier vérifiée via la Base Adresse Nationale (État)</li>
+          <li>Date souhaitée de début des travaux</li>
           <li>Prix de départ : devis précédent (si fourni) ou 1er devis Artipascher validé</li>
           <li>Option : joindre un devis déjà reçu (montant + justificatif)</li>
         </ul>
@@ -186,20 +204,15 @@ export default function WorkRequestForm() {
       </div>
       <input name="email" type="email" placeholder="Email" className={inputClass} required />
 
-      <div>
-        <label htmlFor="addressLine" className="mb-1 block text-sm font-medium text-slate-700">
-          Adresse du chantier <span className="text-red-500">*</span>
-        </label>
-        <input
-          id="addressLine"
-          name="addressLine"
-          type="text"
-          placeholder="12 rue de la Barre"
-          className={inputClass}
-          required
-          autoComplete="street-address"
-        />
-      </div>
+      <BanAddressAutocomplete
+        inputClass={inputClass}
+        onSelect={setSelectedAddress}
+      />
+
+      <input type="hidden" name="addressLine" value={selectedAddress?.addressLine ?? ""} />
+      <input type="hidden" name="postalCode" value={selectedAddress?.postalCode ?? ""} />
+      <input type="hidden" name="city" value={selectedAddress?.city ?? ""} />
+      <input type="hidden" name="banAddressId" value={selectedAddress?.banAddressId ?? ""} />
 
       <div>
         <label htmlFor="addressLine2" className="mb-1 block text-sm font-medium text-slate-700">
@@ -215,42 +228,33 @@ export default function WorkRequestForm() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="postalCode" className="mb-1 block text-sm font-medium text-slate-700">
-            Code postal <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="postalCode"
-            name="postalCode"
-            type="text"
-            inputMode="numeric"
-            pattern="(59|62)\d{3}"
-            placeholder="59000"
-            className={inputClass}
-            required
-            autoComplete="postal-code"
-          />
-        </div>
-        <div>
-          <label htmlFor="city" className="mb-1 block text-sm font-medium text-slate-700">
-            Ville <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="city"
-            name="city"
-            type="text"
-            placeholder="Lille, Roubaix, Lens…"
-            className={inputClass}
-            required
-            autoComplete="address-level2"
-          />
-        </div>
-      </div>
       <p className="-mt-2 text-xs text-slate-500">
         Nord (59) et Pas-de-Calais (62) uniquement. L&apos;adresse exacte n&apos;est
-        communiquée aux artisans qu&apos;après déblocage des coordonnées.
+        communiquée aux artisans qu&apos;après déblocage des coordonnées. Vérification
+        automatique via data.gouv.fr à l&apos;envoi.
       </p>
+
+      <div>
+        <label
+          htmlFor="requestedWorkStartDate"
+          className="mb-1 block text-sm font-medium text-slate-700"
+        >
+          Date de début de travaux souhaitée <span className="text-red-500">*</span>
+        </label>
+        <input
+          id="requestedWorkStartDate"
+          name="requestedWorkStartDate"
+          type="date"
+          value={requestedWorkStartDate}
+          onChange={(e) => setRequestedWorkStartDate(e.target.value)}
+          min={minRequestedWorkStartDate()}
+          className={inputClass}
+          required
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Visible par les artisans pour planifier leur intervention (visite, devis, planning).
+        </p>
+      </div>
 
       <select
         name="category"

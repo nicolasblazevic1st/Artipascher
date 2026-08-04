@@ -364,6 +364,16 @@ export async function getBidsForAuction(auctionId: string): Promise<Bid[]> {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+export async function countProBidsForAuction(
+  proId: string,
+  auctionId: string
+): Promise<number> {
+  const store = await readStore();
+  return store.bids.filter(
+    (b) => b.proId === proId && b.auctionId === auctionId
+  ).length;
+}
+
 export async function addBid(data: {
   auctionId: string;
   proId: string;

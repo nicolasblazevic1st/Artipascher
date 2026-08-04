@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatPrice } from "@/lib/data";
+import { DATA_HOSTING_NOTICE, formatPrice } from "@/lib/data";
 
 const SLIDE_MS = 9000;
 const TOTAL_SLIDES = 7;
@@ -66,6 +66,7 @@ function SlideIntro() {
         <p className="mt-2 text-sm text-brand-100 sm:text-base">
           Artisans RCS vérifiés · Devis après visite · Vous choisissez
         </p>
+        <p className="mt-3 text-xs text-brand-200/90">{DATA_HOSTING_NOTICE}</p>
         <span className="mt-5 inline-block rounded-xl bg-accent-500 px-4 py-2 text-sm font-semibold">
           Demander des travaux
         </span>
@@ -396,6 +397,7 @@ export default function SiteExplainer({ compact = false, autoPlay = true }: Prop
           </Link>
         </p>
       )}
+      <p className="mt-3 text-center text-xs text-slate-500">{DATA_HOSTING_NOTICE}</p>
     </div>
   );
 }

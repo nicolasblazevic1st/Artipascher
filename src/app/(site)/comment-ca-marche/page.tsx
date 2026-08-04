@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import SiteExplainer from "@/components/SiteExplainer";
+import { DATA_HOSTING_NOTICE } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Comment ça marche — Présentation",
@@ -27,6 +28,11 @@ export default function CommentCaMarchePage() {
 
       <div className="mt-10">
         <SiteExplainer />
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-brand-100 bg-brand-50 p-5 text-center sm:p-6">
+        <p className="text-sm font-semibold text-brand-900">Protection de vos données</p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">{DATA_HOSTING_NOTICE}</p>
       </div>
 
       <div className="mt-12 grid gap-4 sm:grid-cols-2">

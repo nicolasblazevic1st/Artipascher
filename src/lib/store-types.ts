@@ -146,6 +146,14 @@ export interface WorkRequest {
   postalCode?: string;
   city: string;
   department: "59" | "62";
+  /** Identifiant Base Adresse Nationale (data.gouv.fr). */
+  banAddressId?: string;
+  latitude?: number;
+  longitude?: number;
+  /** Horodatage de la double vérification serveur BAN. */
+  addressVerifiedAt?: string;
+  /** Date souhaitée par le particulier pour le début des travaux (YYYY-MM-DD). */
+  requestedWorkStartDate?: string;
   category: string;
   description: string;
   /** Prix de départ de l'enchère. Peut venir du devis précédent client (à l'approbation)

@@ -22,6 +22,9 @@ interface Eligibility {
   requiresQuote: boolean;
   canBid: boolean;
   reason?: string;
+  maxBidsPerAuction?: number;
+  bidsUsed?: number;
+  bidsRemaining?: number;
   quote?: {
     id: string;
     status: string;
@@ -95,12 +98,15 @@ export default function BidPanel({
       const params = new URLSearchParams(window.location.search);
       if (params.get("bid") === "success") {
         await refreshFromServer();
+        if (session.authenticated) {
+          await refreshEligibility();
+        }
         setSuccess("Enchère enregistrée après paiement de 1 €.");
         window.history.replaceState({}, "", window.location.pathname);
       }
     }
     init();
-  }, [refreshFromServer]);
+  }, [refreshFromServer, refreshEligibility]);
 
   useEffect(() => {
     if (proLoggedIn) {
@@ -136,6 +142,7 @@ export default function BidPanel({
 
     if (data.success) {
       await refreshFromServer();
+      await refreshEligibility(amount);
       setSuccess(
         demo
           ? `Enchère à ${formatPrice(amount)} enregistrée (mode démo, 1 € simulé).`
@@ -151,6 +158,7 @@ export default function BidPanel({
   }
 
   const quoteBlocked = eligibility?.requiresQuote && !eligibility.canBid;
+  const bidLimitReached = (eligibility?.bidsRemaining ?? 1) <= 0;
   const maxBidFromQuote = eligibility?.quote?.maxBidAmount;
   const effectiveMax =
     maxBidFromQuote !== undefined
@@ -181,6 +189,28 @@ export default function BidPanel({
         {" · "}Frais : <strong>{BID_FEE_EUR} €</strong> par enchère
       </p>
 
+      {proLoggedIn && eligibility?.maxBidsPerAuction != null && (
+        <div
+          className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+            bidLimitReached
+              ? "bg-red-50 text-red-800 ring-1 ring-red-100"
+              : "bg-white text-slate-700 ring-1 ring-brand-100"
+          }`}
+        >
+          <p className="font-medium">
+            Enchères sur ce chantier : {eligibility.bidsUsed ?? 0} /{" "}
+            {eligibility.maxBidsPerAuction}
+          </p>
+          <p className="mt-0.5 text-xs">
+            {bidLimitReached
+              ? "Limite atteinte — vous ne pouvez plus enchérir sur ce projet."
+              : `Il vous reste ${eligibility.bidsRemaining} enchère${
+                  eligibility.bidsRemaining === 1 ? "" : "s"
+                } sur ce chantier.`}
+          </p>
+        </div>
+      )}
+
       {eligibility?.quote && eligibility.canBid && (
         <p className="mt-2 text-sm text-emerald-700">
           Devis validé : {formatPrice(eligibility.quote.amount)} · Enchère max. :{" "}
@@ -188,12 +218,18 @@ export default function BidPanel({
         </p>
       )}
 
-      {quoteBlocked && eligibility?.reason && (
+      {quoteBlocked && eligibility?.reason && !bidLimitReached && (
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {eligibility.reason}{" "}
           <a href="#contact" className="font-medium underline">
             Déposer mon devis
           </a>
+        </p>
+      )}
+
+      {bidLimitReached && eligibility?.reason && (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
+          {eligibility.reason}
         </p>
       )}
 
@@ -242,7 +278,7 @@ export default function BidPanel({
             step={1}
             min={1}
             max={Math.max(1, effectiveMax)}
-            disabled={quoteBlocked}
+            disabled={quoteBlocked || bidLimitReached}
             className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm disabled:bg-slate-100"
           />
           <p className="text-xs text-slate-500">
@@ -253,16 +289,18 @@ export default function BidPanel({
           <button
             type="button"
             onClick={() => handlePlaceBid(false)}
-            disabled={paying || amount >= currentPrice || quoteBlocked}
+            disabled={paying || amount >= currentPrice || quoteBlocked || bidLimitReached}
             className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {paying
               ? "Redirection paiement…"
+              : bidLimitReached
+                ? "Limite de 3 enchères atteinte"
               : quoteBlocked
                 ? "Devis requis avant d'enchérir"
                 : `Payer ${BID_FEE_EUR} € et enchérir à ${formatPrice(amount)}`}
           </button>
-          {process.env.NODE_ENV === "development" && !quoteBlocked && (
+          {process.env.NODE_ENV === "development" && !quoteBlocked && !bidLimitReached && (
             <button
               type="button"
               onClick={() => handlePlaceBid(true)}
@@ -297,7 +335,8 @@ export default function BidPanel({
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Départ : {formatPrice(startPrice!)} · Chaque enchère coûte {BID_FEE_EUR} € au professionnel
+        Départ : {formatPrice(startPrice!)} · Chaque enchère coûte {BID_FEE_EUR} € · Maximum 3
+        enchères par artisan et par chantier
       </p>
         </>
       )}

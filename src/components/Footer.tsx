@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DATA_HOSTING_NOTICE } from "@/lib/data";
 
 export default function Footer() {
   return (
@@ -43,6 +44,7 @@ export default function Footer() {
             Lens · Arras · Cambrai · Maubeuge
           </p>
           <p className="mt-2 text-xs text-brand-300">Départements 59 et 62</p>
+          <p className="mt-4 text-xs leading-relaxed text-brand-300">{DATA_HOSTING_NOTICE}</p>
         </div>
       </div>
       <div className="border-t border-brand-900 py-4 text-center text-xs text-brand-300">

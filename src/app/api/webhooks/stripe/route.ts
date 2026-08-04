@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { BID_FEE_EUR } from "@/lib/auctions";
 import { getStripe } from "@/lib/payments";
-import { addBid, addContactUnlock, getApprovedProById } from "@/lib/store";
+import { addBid, addContactUnlock, countProBidsForAuction, getApprovedProById } from "@/lib/store";
+import { MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe();
@@ -49,14 +50,20 @@ export async function POST(request: NextRequest) {
     ) {
       const pro = await getApprovedProById(session.metadata.proId);
       if (pro) {
-        await addBid({
-          auctionId: session.metadata.auctionId,
-          proId: session.metadata.proId,
-          companyName: pro.companyName,
-          amount: Number(session.metadata.bidAmount),
-          feeEur: BID_FEE_EUR,
-          stripeSessionId: session.id,
-        });
+        const bidsUsed = await countProBidsForAuction(
+          session.metadata.proId,
+          session.metadata.auctionId
+        );
+        if (bidsUsed < MAX_BIDS_PER_AUCTION) {
+          await addBid({
+            auctionId: session.metadata.auctionId,
+            proId: session.metadata.proId,
+            companyName: pro.companyName,
+            amount: Number(session.metadata.bidAmount),
+            feeEur: BID_FEE_EUR,
+            stripeSessionId: session.id,
+          });
+        }
       }
     }
   }

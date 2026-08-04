@@ -73,6 +73,60 @@ export function validateProofFile(file: File | null | undefined): string | null 
   return null;
 }
 
+const MAX_WORK_START_MONTHS_AHEAD = 24;
+
+export function validateRequestedWorkStartDate(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) {
+    return "Indiquez la date de début de travaux souhaitée.";
+  }
+  const trimmed = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return "Date de début de travaux invalide.";
+  }
+
+  const date = new Date(`${trimmed}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return "Date de début de travaux invalide.";
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDay = new Date(date);
+  startDay.setHours(0, 0, 0, 0);
+
+  if (startDay < today) {
+    return "La date de début de travaux doit être aujourd'hui ou ultérieure.";
+  }
+
+  const maxDate = new Date(today);
+  maxDate.setMonth(maxDate.getMonth() + MAX_WORK_START_MONTHS_AHEAD);
+  if (startDay > maxDate) {
+    return `La date de début ne peut pas dépasser ${MAX_WORK_START_MONTHS_AHEAD} mois.`;
+  }
+
+  return null;
+}
+
+export function formatRequestedWorkStartDate(isoDate: string | undefined): string {
+  if (!isoDate) return "Non renseignée";
+  const date = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return isoDate;
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export function minRequestedWorkStartDate(): string {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function validatePreviousQuotePair(
   amountRaw: unknown,
   proofFile: File | null | undefined

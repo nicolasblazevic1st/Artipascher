@@ -12,7 +12,7 @@ import {
   isDemoPaymentAllowed,
   isStripeConfigured,
 } from "@/lib/payments";
-import { addBid, getApprovedProById, getBidsForAuction } from "@/lib/store";
+import { addBid, countProBidsForAuction, getApprovedProById, getBidsForAuction } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   const session = await getProSession();
@@ -77,15 +77,19 @@ export async function POST(request: NextRequest) {
         error: eligibility.reason ?? "Devis requis avant d'enchérir.",
         requiresQuote: eligibility.requiresQuote,
         quote: eligibility.quote,
+        maxBidsPerAuction: eligibility.maxBidsPerAuction,
+        bidsUsed: eligibility.bidsUsed,
+        bidsRemaining: eligibility.bidsRemaining,
       },
       { status: 403 }
     );
   }
 
-  const origin = request.nextUrl.origin;
-  const auctionUrl = `${origin}/encheres/${auctionId}`;
-
   async function registerBid(stripeSessionId?: string) {
+    const bidsUsed = await countProBidsForAuction(session!.proId, auctionId);
+    if (bidsUsed >= eligibility.maxBidsPerAuction) {
+      throw new Error("BID_LIMIT_REACHED");
+    }
     return addBid({
       auctionId,
       proId: session!.proId,
@@ -96,14 +100,33 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  const origin = request.nextUrl.origin;
+  const auctionUrl = `${origin}/encheres/${auctionId}`;
+
   if (demo && isDemoPaymentAllowed()) {
-    const bid = await registerBid();
-    return NextResponse.json({
-      success: true,
-      demo: true,
-      bid,
-      currentPrice: amount,
-    });
+    try {
+      const bid = await registerBid();
+      return NextResponse.json({
+        success: true,
+        demo: true,
+        bid,
+        currentPrice: amount,
+        bidsUsed: eligibility.bidsUsed + 1,
+        bidsRemaining: Math.max(0, eligibility.bidsRemaining - 1),
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === "BID_LIMIT_REACHED") {
+        return NextResponse.json(
+          {
+            error: `Vous avez utilisé vos ${eligibility.maxBidsPerAuction} enchères sur ce chantier.`,
+            bidsUsed: eligibility.maxBidsPerAuction,
+            bidsRemaining: 0,
+          },
+          { status: 403 }
+        );
+      }
+      throw err;
+    }
   }
 
   if (!isStripeConfigured()) {

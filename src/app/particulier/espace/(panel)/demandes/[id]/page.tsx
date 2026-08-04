@@ -5,6 +5,7 @@ import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatPublicLocation, formatWorkRequestAddress } from "@/lib/client-address";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatPrice } from "@/lib/data";
 import { getClientSession } from "@/lib/client-auth";
 import {
@@ -86,6 +87,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
         <p className="mt-4 text-sm text-slate-600">
           <span className="font-medium text-slate-800">Adresse du chantier :</span>{" "}
           {formatWorkRequestAddress(request)}
+        </p>
+
+        <p className="mt-2 text-sm text-slate-600">
+          <span className="font-medium text-slate-800">Début de travaux souhaité :</span>{" "}
+          {formatRequestedWorkStartDate(request.requestedWorkStartDate)}
         </p>
 
         {(request.photos?.length ?? 0) > 0 && (

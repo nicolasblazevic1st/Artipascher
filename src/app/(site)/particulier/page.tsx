@@ -34,7 +34,7 @@ const FEATURES = [
   {
     title: "Sécurité",
     description:
-      "Vos données sont protégées. Les artisans ne voient que les infos nécessaires à leur proposition.",
+      "Vos données sont protégées et hébergées chez OVH, dans un datacenter du Nord de la France. Les artisans ne voient que les infos nécessaires à leur proposition.",
   },
   {
     title: "100 % gratuit",

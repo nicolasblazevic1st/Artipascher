@@ -1,5 +1,19 @@
 export const BID_FEE_EUR = 1;
 
+/** Nombre maximum d'enchères qu'un artisan peut placer sur un même chantier. */
+export const MAX_BIDS_PER_AUCTION = 3;
+
+export function getProBidLimitStatus(bidsUsed: number) {
+  const used = Math.max(0, bidsUsed);
+  const remaining = Math.max(0, MAX_BIDS_PER_AUCTION - used);
+  return {
+    maxBidsPerAuction: MAX_BIDS_PER_AUCTION,
+    bidsUsed: used,
+    bidsRemaining: remaining,
+    limitReached: used >= MAX_BIDS_PER_AUCTION,
+  };
+}
+
 /** @deprecated Palier indicatif — les enchères acceptent tout montant entier inférieur au prix actuel. */
 export const BID_STEP_EUR = 100;
 

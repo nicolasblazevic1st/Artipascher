@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
 import ProSubmitQuoteForm from "@/components/pro/ProSubmitQuoteForm";
+import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 interface ClientContact {
@@ -17,9 +18,14 @@ interface ClientContact {
 interface Props {
   auctionId: string;
   publicLocation: string;
+  requestedWorkStartDate?: string;
 }
 
-export default function ClientContactPanel({ auctionId, publicLocation }: Props) {
+export default function ClientContactPanel({
+  auctionId,
+  publicLocation,
+  requestedWorkStartDate,
+}: Props) {
   const [proLoggedIn, setProLoggedIn] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -162,6 +168,14 @@ export default function ClientContactPanel({ auctionId, publicLocation }: Props)
           <dt className="text-slate-500">Localisation</dt>
           <dd className="font-medium">{publicLocation}</dd>
         </div>
+        {requestedWorkStartDate && (
+          <div className="flex justify-between border-b border-slate-100 py-2">
+            <dt className="text-slate-500">Début travaux souhaité</dt>
+            <dd className="font-medium text-amber-800">
+              {formatRequestedWorkStartDate(requestedWorkStartDate)}
+            </dd>
+          </div>
+        )}
         <div className="flex justify-between border-b border-slate-100 py-2">
           <dt className="text-slate-500">Client</dt>
           <dd className="text-slate-400">M. D*** · masqué</dd>
