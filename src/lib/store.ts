@@ -77,7 +77,9 @@ export async function addProRegistration(
 ): Promise<ProRegistration> {
   const store = await readStore();
   const emailTaken = store.proRegistrations.some(
-    (p) => p.email.toLowerCase() === data.email.toLowerCase()
+    (p) =>
+      p.email.toLowerCase() === data.email.toLowerCase() &&
+      p.status !== "rejected"
   );
   if (emailTaken) {
     throw new Error("EMAIL_ALREADY_USED");

@@ -1,27 +1,19 @@
 "use client";
 
 import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
-import type { DecennaleVerificationStatus, ProTradeSelection } from "@/lib/store-types";
+import type { ProTradeSelection } from "@/lib/store-types";
 
 interface Props {
   selections: ProTradeSelection[];
-  onUpdateStatus: (
-    tradeGroupId: string,
-    status: Extract<DecennaleVerificationStatus, "validé" | "non_couvert">
-  ) => void;
 }
 
-export default function AdminTradeDecennalePanel({ selections, onUpdateStatus }: Props) {
+export default function AdminTradeDecennalePanel({ selections }: Props) {
   if (selections.length === 0) return null;
 
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Décennale par corps de métier
-      </p>
-      <p className="mt-1 text-xs text-slate-600">
-        Vérifiez que l&apos;attestation couvre nommément chaque activité avant
-        d&apos;autoriser l&apos;enchère sur ce métier.
+        Décennale par corps de métier (OCR)
       </p>
       <ul className="mt-3 space-y-3">
         {selections.map((selection) => {
@@ -57,45 +49,6 @@ export default function AdminTradeDecennalePanel({ selections, onUpdateStatus }:
                 <p className="mt-2 rounded bg-slate-50 p-2 text-xs text-slate-600">
                   OCR : {selection.decennaleOcrHints.rawSnippet}
                 </p>
-              )}
-              {selection.decennaleConsistencyIssues?.map((issue, index) => (
-                <p key={index} className="mt-1 text-xs text-amber-800">
-                  {issue.field} — {issue.message}
-                </p>
-              ))}
-              {status === "en_attente_verification" && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onUpdateStatus(selection.tradeGroupId, "validé")}
-                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
-                  >
-                    Valider pour ce métier
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateStatus(selection.tradeGroupId, "non_couvert")}
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                  >
-                    Non couvert
-                  </button>
-                </div>
-              )}
-              {status !== "en_attente_verification" && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onUpdateStatus(
-                        selection.tradeGroupId,
-                        status === "validé" ? "non_couvert" : "validé"
-                      )
-                    }
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                  >
-                    {status === "validé" ? "Marquer non couvert" : "Marquer validée"}
-                  </button>
-                </div>
               )}
             </li>
           );

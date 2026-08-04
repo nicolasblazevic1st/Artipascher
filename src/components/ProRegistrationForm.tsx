@@ -233,8 +233,12 @@ export default function ProRegistrationForm() {
     });
 
     if (!res.ok) {
-      const body = await res.json();
-      setError(body.error ?? "Erreur lors de l'inscription.");
+      const body = (await res.json()) as { error?: string; details?: string[] };
+      const detailText =
+        body.details && body.details.length > 1
+          ? `${body.error ?? "Erreur"} ${body.details.slice(1).join(" · ")}`
+          : body.error ?? "Erreur lors de l'inscription.";
+      setError(detailText);
       setStatus("error");
       return;
     }
@@ -615,8 +619,8 @@ export default function ProRegistrationForm() {
 
       {status === "success" && (
         <p className="text-center text-sm text-emerald-600">
-          Inscription reçue. Vérification automatique RCS et analyse OCR en cours —
-          validation niveau 1 par notre équipe sous quelques minutes en journée.
+          Certification niveau 1 obtenue. Connectez-vous à votre espace pro pour consulter
+          les enchères et débloquer les contacts client.
         </p>
       )}
     </form>

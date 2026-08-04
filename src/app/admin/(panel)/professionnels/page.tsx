@@ -8,21 +8,17 @@ import ProDocumentsList from "@/components/ProDocumentsList";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
-import type {
-  DecennaleVerificationStatus,
-  DocumentVerificationStatus,
-  ProRegistration,
-} from "@/lib/store-types";
+import type { ProRegistration } from "@/lib/store-types";
 
 const STATUS_LABELS = {
   pending: { text: "En attente", className: "bg-amber-100 text-amber-800" },
-  approved: { text: "Approuvé", className: "bg-emerald-100 text-emerald-800" },
+  approved: { text: "Certifié", className: "bg-emerald-100 text-emerald-800" },
   rejected: { text: "Refusé", className: "bg-red-100 text-red-800" },
 };
 
 export default function AdminProfessionnelsPage() {
   const [registrations, setRegistrations] = useState<ProRegistration[]>([]);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("approved");
   const [loading, setLoading] = useState(true);
   const [pendingLevels, setPendingLevels] = useState<Record<string, QualificationLevel>>({});
 
@@ -59,55 +55,20 @@ export default function AdminProfessionnelsPage() {
     load();
   }
 
-  async function handleDecennaleStatus(
-    id: string,
-    tradeGroupId: string,
-    decennaleStatus: Extract<DecennaleVerificationStatus, "validé" | "non_couvert">
-  ) {
-    await fetch("/api/admin/professionnels", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, tradeGroupId, decennaleStatus }),
-    });
-    load();
-  }
-
-  async function handleDocumentStatus(
-    id: string,
-    documentId: string,
-    documentStatus: Extract<DocumentVerificationStatus, "validé" | "rejeté">
-  ) {
-    await fetch("/api/admin/professionnels", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, documentId, documentStatus }),
-    });
-    load();
-  }
-
-  async function handleCertifyLevel1(id: string) {
-    await fetch("/api/admin/professionnels", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, certifyLevel1: true }),
-    });
-    load();
-  }
-
   const filtered = registrations.filter((r) =>
     filter === "all" ? true : r.status === filter
   );
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Artisans — inscriptions RCS</h1>
+      <h1 className="text-2xl font-bold">Artisans — certification niveau 1</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Certification niveau 1 : RCS et zone automatiques, OCR sur RC et décennale,
-        validation rapide puis déblocage des contacts client.
+        Inscriptions certifiées automatiquement (RCS, zone, OCR RC + décennale).
+        Consultation et ajustement du niveau affiché uniquement.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        {(["pending", "approved", "rejected", "all"] as const).map((f) => (
+        {(["approved", "rejected", "pending", "all"] as const).map((f) => (
           <button
             key={f}
             type="button"
@@ -137,8 +98,8 @@ export default function AdminProfessionnelsPage() {
               className="rounded-xl border border-slate-200 bg-white p-5"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-semibold text-slate-900">{r.companyName}</h2>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_LABELS[r.status].className}`}
@@ -178,27 +139,17 @@ export default function AdminProfessionnelsPage() {
                       <ProDocumentsList documents={r.documents!} />
                     </div>
                   )}
-                  <AdminLevel1Panel
-                    registration={r}
-                    onValidateDocument={(documentId, documentStatus) =>
-                      handleDocumentStatus(r.id, documentId, documentStatus)
-                    }
-                    onCertifyLevel1={() => handleCertifyLevel1(r.id)}
-                  />
-                  <AdminTradeDecennalePanel
-                    selections={getProTradeSelections(r)}
-                    onUpdateStatus={(tradeGroupId, decennaleStatus) =>
-                      handleDecennaleStatus(r.id, tradeGroupId, decennaleStatus)
-                    }
-                  />
+                  <AdminLevel1Panel registration={r} />
+                  <AdminTradeDecennalePanel selections={getProTradeSelections(r)} />
                   <p className="mt-2 text-xs text-slate-400">
                     Inscrit le {new Date(r.createdAt).toLocaleString("fr-FR")}
                   </p>
                 </div>
                 {r.status === "pending" && (
                   <div className="flex flex-col items-end gap-2">
+                    <p className="text-xs text-amber-700">Dossier legacy en attente</p>
                     <label className="text-xs text-slate-500">
-                      Niveau affiché sur les enchères
+                      Niveau affiché
                       <select
                         value={pendingLevels[r.id] ?? 1}
                         onChange={(e) =>
@@ -215,22 +166,22 @@ export default function AdminProfessionnelsPage() {
                       </select>
                     </label>
                     <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleReview(r.id, "approved", pendingLevels[r.id] ?? 1)
-                      }
-                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                    >
-                      Approuver
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleReview(r.id, "rejected")}
-                      className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                    >
-                      Refuser
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleReview(r.id, "approved", pendingLevels[r.id] ?? 1)
+                        }
+                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                      >
+                        Approuver
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReview(r.id, "rejected")}
+                        className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                      >
+                        Refuser
+                      </button>
                     </div>
                   </div>
                 )}

@@ -7,11 +7,7 @@ import {
   validateProDocumentFile,
   validateProRegistrationDocuments,
 } from "@/lib/pro-documents";
-import {
-  buildLevel1AuditFromEnrichment,
-  enrichProDocumentsWithOcr,
-  enrichTradeSelectionsWithOcr,
-} from "@/lib/process-level1-documents";
+import { processLevel1Documents } from "@/lib/process-level1-documents";
 import { hashPassword, validatePassword } from "@/lib/password";
 import { primaryTradeCategory } from "@/lib/pro-trades";
 import { resolveMultipleTradeSelections } from "@/lib/qualibat-job-groups";
@@ -145,8 +141,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: documentsError }, { status: 400 });
     }
 
-    const rcFile = documentFiles.rc;
-    if (!rcFile) {
+    if (!documentFiles.rc) {
       return NextResponse.json(
         { error: "Assurance responsabilité civile professionnelle obligatoire." },
         { status: 400 }
@@ -154,7 +149,12 @@ export async function POST(request: NextRequest) {
     }
 
     const primary = tradeSelections[0];
-    const department = registry.department === "62" ? "62" : "59";
+    const department: "59" | "62" = registry.department === "62" ? "62" : "59";
+    const level1Audit = {
+      rcsVerifiedAt: new Date().toISOString(),
+      geoVerified: true,
+      geoDepartment: department,
+    };
 
     const entry = await addProRegistration({
       companyName: registry.companyName ?? companyName,
@@ -171,11 +171,7 @@ export async function POST(request: NextRequest) {
       qualibatJobId: primary.qualibatJobId,
       qualibatJobLabel: primary.qualibatJobLabel,
       rcsVerified: true,
-      level1Audit: {
-        rcsVerifiedAt: new Date().toISOString(),
-        geoVerified: true,
-        geoDepartment: department,
-      },
+      level1Audit,
       passwordHash: hashPassword(password),
       documents: [],
     });
@@ -212,37 +208,55 @@ export async function POST(request: NextRequest) {
       siren: registry.siren,
       siret: registry.siret,
       companyName: registry.companyName ?? companyName,
+      rcsVerified: true as const,
+      department,
+      level1Audit,
     };
-    const documentsWithOcr = await enrichProDocumentsWithOcr(proForOcr, savedDocuments);
-    const selectionsWithOcr = await enrichTradeSelectionsWithOcr(
+
+    const processed = await processLevel1Documents(
       proForOcr,
+      savedDocuments,
       enrichedSelections
     );
 
-    await updateProRegistration(entry.id, {
-      documents: documentsWithOcr,
-      tradeSelections: selectionsWithOcr,
-      level1Audit: buildLevel1AuditFromEnrichment(
+    if (!processed.certified) {
+      await updateProRegistration(entry.id, {
+        status: "rejected",
+        documents: processed.documents,
+        tradeSelections: processed.tradeSelections,
+        level1Audit: processed.level1Audit,
+        adminNote: processed.rejectionReasons.join(" · "),
+        reviewedAt: new Date().toISOString(),
+      });
+
+      return NextResponse.json(
         {
-          ...entry,
-          department,
-          level1Audit: {
-            rcsVerifiedAt: new Date().toISOString(),
-            geoVerified: true,
-            geoDepartment: department,
-          },
+          error:
+            processed.rejectionReasons[0] ??
+            "Certification niveau 1 refusée : documents non conformes ou illisibles.",
+          details: processed.rejectionReasons,
         },
-        documentsWithOcr,
-        selectionsWithOcr
-      ),
+        { status: 422 }
+      );
+    }
+
+    await updateProRegistration(entry.id, {
+      status: "approved",
+      qualificationLevel: 1,
+      level1CertifiedAt: new Date().toISOString(),
+      documents: processed.documents,
+      tradeSelections: processed.tradeSelections,
+      level1Audit: processed.level1Audit,
+      reviewedAt: new Date().toISOString(),
     });
 
     return NextResponse.json(
       {
         success: true,
         id: entry.id,
-        documentCount: savedDocuments.length,
-        level1PendingReview: true,
+        level1Certified: true,
+        message:
+          "Certification niveau 1 obtenue. Vous pouvez vous connecter et débloquer les contacts client.",
       },
       { status: 201 }
     );

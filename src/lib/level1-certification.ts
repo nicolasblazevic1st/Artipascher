@@ -78,7 +78,7 @@ export function getLevel1Checks(pro: ProRegistration): Level1CheckItem[] {
             ? "pending"
             : "missing",
     detail: rcDoc ? rcDoc.fileName : "Document manquant",
-    automatic: false,
+    automatic: true,
   });
 
   for (const selection of getProTradeSelections(pro)) {
@@ -95,7 +95,7 @@ export function getLevel1Checks(pro: ProRegistration): Level1CheckItem[] {
               ? "pending"
               : "missing",
       detail: selection.decennaleDocument?.fileName ?? "Attestation manquante",
-      automatic: false,
+      automatic: true,
     });
   }
 
@@ -129,14 +129,12 @@ export function isLevel1DocumentsValidated(pro: ProRegistration): boolean {
   return trades.every((s) => s.decennaleStatus === "validé");
 }
 
+export function isLevel1Certified(pro: ProRegistration): boolean {
+  return Boolean(pro.level1CertifiedAt) && pro.status === "approved" && isLevel1DocumentsValidated(pro);
+}
+
 export function isLevel1ReadyForAdminReview(pro: ProRegistration): boolean {
-  if (!pro.rcsVerified) return false;
-  if (!isAllowedDepartment(pro.department) && !pro.level1Audit?.geoVerified) return false;
-
-  const rcDoc = pro.documents?.find(isRcDocument);
-  if (!rcDoc) return false;
-
-  return getProTradeSelections(pro).every((s) => s.decennaleDocument);
+  return isLevel1Certified(pro);
 }
 
 export function canUnlockContacts(pro: ProRegistration): {
@@ -147,7 +145,7 @@ export function canUnlockContacts(pro: ProRegistration): {
     return {
       ok: false,
       reason:
-        "Votre dossier est en cours de validation. Vous pourrez débloquer les contacts dès certification niveau 1.",
+        "Certification niveau 1 non obtenue. Vérifiez vos documents (RC pro et décennale) et réinscrivez-vous si besoin.",
     };
   }
 
@@ -155,29 +153,11 @@ export function canUnlockContacts(pro: ProRegistration): {
     return { ok: false, reason: "Vérification RCS requise." };
   }
 
-  if (!isLevel1DocumentsValidated(pro)) {
+  if (!isLevel1Certified(pro) && !isLevel1DocumentsValidated(pro)) {
     return {
       ok: false,
       reason:
-        "Certification niveau 1 en cours : RC pro et décennale(s) doivent être validées par notre équipe.",
-    };
-  }
-
-  return { ok: true };
-}
-
-export function canApproveLevel1(pro: ProRegistration): {
-  ok: boolean;
-  reason?: string;
-} {
-  if (!isLevel1ReadyForAdminReview(pro)) {
-    return { ok: false, reason: "Dossier incomplet (RCS, RC ou décennale manquante)." };
-  }
-
-  if (!isLevel1DocumentsValidated(pro)) {
-    return {
-      ok: false,
-      reason: "Validez la RC pro et chaque attestation décennale avant certification.",
+        "Certification niveau 1 incomplète : RC pro et décennale(s) doivent être validées automatiquement.",
     };
   }
 

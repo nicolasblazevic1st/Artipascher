@@ -3,6 +3,7 @@ import {
   checkDocumentConsistency,
 } from "./document-ocr";
 import { defaultDocumentVerificationStatus } from "./level1-certification";
+import { applyLevel1AutoValidation } from "./level1-auto-validation";
 import { defaultDecennaleStatus } from "./decennale-verification";
 import type { ProDocument, ProRegistration, ProTradeSelection } from "./store-types";
 
@@ -69,6 +70,36 @@ export async function enrichTradeSelectionsWithOcr(
   );
 }
 
+export async function processLevel1Documents(
+  pro: Pick<ProRegistration, "siren" | "siret" | "companyName" | "rcsVerified" | "department" | "level1Audit">,
+  documents: ProDocument[],
+  tradeSelections: ProTradeSelection[]
+) {
+  const documentsWithOcr = await enrichProDocumentsWithOcr(pro, documents);
+  const selectionsWithOcr = await enrichTradeSelectionsWithOcr(pro, tradeSelections);
+  const validation = applyLevel1AutoValidation(pro, documentsWithOcr, selectionsWithOcr);
+
+  return {
+    documents: validation.documents,
+    tradeSelections: validation.tradeSelections,
+    certified: validation.certified,
+    rejectionReasons: validation.rejectionReasons,
+    level1Audit: buildLevel1AuditFromEnrichment(
+      {
+        ...pro,
+        companyName: pro.companyName,
+        siret: pro.siret,
+        siren: pro.siren,
+        rcsVerified: pro.rcsVerified,
+        department: pro.department as "59" | "62",
+        level1Audit: pro.level1Audit,
+      } as ProRegistration,
+      validation.documents,
+      validation.tradeSelections
+    ),
+  };
+}
+
 export function buildLevel1AuditFromEnrichment(
   pro: ProRegistration,
   documents: ProDocument[],
@@ -84,6 +115,7 @@ export function buildLevel1AuditFromEnrichment(
     geoVerified: pro.level1Audit?.geoVerified ?? false,
     geoDepartment: pro.level1Audit?.geoDepartment ?? pro.department,
     consistencyCheckedAt: new Date().toISOString(),
+    autoValidatedAt: new Date().toISOString(),
     globalIssues,
   };
 }

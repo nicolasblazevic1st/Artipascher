@@ -125,7 +125,7 @@ export function checkDocumentConsistency(
     return [
       {
         field: documentLabel,
-        message: "Texte non extrait (image ou PDF scanné) — vérification visuelle requise.",
+        message: "Texte non extrait (image ou PDF scanné) — document non validé automatiquement.",
         severity: "warning",
       },
     ];

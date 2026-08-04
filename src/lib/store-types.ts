@@ -35,6 +35,7 @@ export interface ProLevel1Audit {
   geoVerified: boolean;
   geoDepartment?: string;
   consistencyCheckedAt?: string;
+  autoValidatedAt?: string;
   globalIssues?: Level1ConsistencyIssue[];
 }
 
