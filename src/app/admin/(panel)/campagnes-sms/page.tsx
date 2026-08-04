@@ -54,6 +54,13 @@ interface Preview {
   }>;
 }
 
+type ListRow =
+  | { kind: "ready"; candidate: Candidate }
+  | {
+      kind: "no_phone";
+      row: Preview["withoutPhone"][number];
+    };
+
 const COHORT_LABELS: Record<SmsCohort, string> = {
   returning: "Déjà contactés",
   new_young: "< 2 ans",
@@ -66,13 +73,31 @@ const STATUS_LABELS: Record<SmsCampaign["status"], string> = {
   failed: "Échec partiel",
 };
 
+function LoadingBar({ label }: { label: string }) {
+  return (
+    <div className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900">
+      <div className="flex items-center gap-3">
+        <span
+          className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-brand-600 border-t-transparent"
+          aria-hidden
+        />
+        <span className="font-medium">{label}</span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-brand-100">
+        <div className="h-full w-1/3 animate-pulse rounded-full bg-brand-500" />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSmsCampaignsPage() {
   const [campaigns, setCampaigns] = useState<SmsCampaign[]>([]);
   const [requests, setRequests] = useState<WorkRequestOption[]>([]);
   const [settings, setSettings] = useState<SmsCampaignSettings | null>(null);
   const [smsConfigured, setSmsConfigured] = useState(false);
-  const [demoAllowed, setDemoAllowed] = useState(true);
+  const [demoAllowed, setDemoAllowed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [campaignSize, setCampaignSize] = useState(30);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -86,17 +111,26 @@ export default function AdminSmsCampaignsPage() {
   const [savingPhone, setSavingPhone] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/admin/sms-campaigns");
-    const data = await res.json();
-    if (res.ok) {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch("/api/admin/sms-campaigns");
+      const data = await res.json();
+      if (!res.ok) {
+        setLoadError(data.error ?? `Chargement impossible (${res.status}).`);
+        return;
+      }
       setCampaigns(data.campaigns ?? []);
       setRequests(data.requests ?? []);
       setSettings(data.settings ?? null);
       setCampaignSize(data.settings?.defaultCampaignSize ?? 30);
       setSmsConfigured(data.smsConfigured === true);
       setDemoAllowed(data.demoAllowed === true);
+    } catch {
+      setLoadError("Impossible de joindre l’API admin SMS.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -111,25 +145,30 @@ export default function AdminSmsCampaignsPage() {
     setPreviewLoading(true);
     setError(null);
     setSuccess(null);
+    setPreview(null);
 
-    const res = await fetch(
-      `/api/admin/sms-campaigns/preview?workRequestId=${encodeURIComponent(selectedId)}&campaignSize=${campaignSize}`
-    );
-    const data = await res.json();
-    setPreviewLoading(false);
+    try {
+      const res = await fetch(
+        `/api/admin/sms-campaigns/preview?workRequestId=${encodeURIComponent(selectedId)}&campaignSize=${campaignSize}`
+      );
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error ?? "Aperçu impossible.");
-      setPreview(null);
-      return;
+      if (!res.ok) {
+        setError(data.error ?? "Aperçu impossible.");
+        return;
+      }
+
+      const p = data.preview as Preview;
+      setPreview(p);
+      setMessage(p.defaultMessage);
+      setSelectedSirets(
+        new Set(p.candidates.filter((c) => c.selectedByDefault).map((c) => c.siret))
+      );
+    } catch {
+      setError("Erreur réseau pendant la prévisualisation (SIRENE / géocodage).");
+    } finally {
+      setPreviewLoading(false);
     }
-
-    const p = data.preview as Preview;
-    setPreview(p);
-    setMessage(p.defaultMessage);
-    setSelectedSirets(
-      new Set(p.candidates.filter((c) => c.selectedByDefault).map((c) => c.siret))
-    );
   }
 
   function toggleSiret(siret: string) {
@@ -163,31 +202,36 @@ export default function AdminSmsCampaignsPage() {
     setError(null);
     setSuccess(null);
 
-    const res = await fetch("/api/admin/sms-campaigns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        workRequestId: selectedId,
-        message,
-        demo,
-        recipientSirets: Array.from(selectedSirets),
-      }),
-    });
-    const data = await res.json();
-    setSending(false);
+    try {
+      const res = await fetch("/api/admin/sms-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workRequestId: selectedId,
+          message,
+          demo,
+          recipientSirets: Array.from(selectedSirets),
+        }),
+      });
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error ?? "Envoi impossible.");
-      return;
+      if (!res.ok) {
+        setError(data.error ?? "Envoi impossible.");
+        return;
+      }
+
+      const c = data.campaign as SmsCampaign;
+      setSuccess(
+        demo
+          ? `Campagne simulée : ${c.sentCount}/${c.recipientCount} SMS (mode démo).`
+          : `Campagne envoyée : ${c.sentCount}/${c.recipientCount} SMS.`
+      );
+      await load();
+    } catch {
+      setError("Erreur réseau pendant l’envoi.");
+    } finally {
+      setSending(false);
     }
-
-    const c = data.campaign as SmsCampaign;
-    setSuccess(
-      demo
-        ? `Campagne simulée : ${c.sentCount}/${c.recipientCount} SMS (mode démo).`
-        : `Campagne envoyée : ${c.sentCount}/${c.recipientCount} SMS.`
-    );
-    await load();
   }
 
   async function saveSettings(patch: Partial<SmsCampaignSettings>) {
@@ -198,30 +242,37 @@ export default function AdminSmsCampaignsPage() {
     });
     const data = await res.json();
     if (res.ok) setSettings(data.settings);
+    else setError(data.error ?? "Enregistrement réglages impossible.");
   }
 
   async function savePhone(row: Preview["withoutPhone"][number]) {
     const phone = phoneDrafts[row.siret]?.trim();
     if (!phone) return;
     setSavingPhone(row.siret);
-    const res = await fetch("/api/admin/prospects", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        siret: row.siret,
-        companyName: row.companyName,
-        city: row.city,
-        phone,
-        companyCreatedAt: row.companyCreatedAt,
-      }),
-    });
-    setSavingPhone(null);
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? "Enregistrement téléphone impossible.");
-      return;
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/prospects", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          siret: row.siret,
+          companyName: row.companyName,
+          city: row.city,
+          phone,
+          companyCreatedAt: row.companyCreatedAt,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? "Enregistrement téléphone impossible.");
+        return;
+      }
+      await handlePreview();
+    } catch {
+      setError("Erreur réseau pendant l’enregistrement du téléphone.");
+    } finally {
+      setSavingPhone(null);
     }
-    await handlePreview();
   }
 
   const selectedCount = selectedSirets.size;
@@ -234,84 +285,142 @@ export default function AdminSmsCampaignsPage() {
     return counts;
   }, [preview, selectedSirets]);
 
+  const allRows: ListRow[] = useMemo(() => {
+    if (!preview) return [];
+    return [
+      ...preview.candidates.map((candidate) => ({ kind: "ready" as const, candidate })),
+      ...preview.withoutPhone.map((row) => ({ kind: "no_phone" as const, row })),
+    ];
+  }, [preview]);
+
   return (
     <div>
       <h1 className="text-2xl font-bold">Campagnes SMS</h1>
       <p className="mt-1 text-sm text-slate-600">
         Contrôle total : choisissez l&apos;offre, le nombre de SMS, les entreprises à
-        garder ou écarter, puis envoyez.
+        garder ou écarter, puis envoyez. SIRENE n&apos;envoie pas les téléphones —
+        enrichissez-les ici pour les rendre sélectionnables.
       </p>
+
+      {loading && (
+        <div className="mt-4">
+          <LoadingBar label="Chargement des demandes, réglages et historique…" />
+        </div>
+      )}
+
+      {loadError && (
+        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {loadError}{" "}
+          <button type="button" onClick={load} className="font-medium underline">
+            Réessayer
+          </button>
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <span
           className={`rounded-full px-3 py-1 font-medium ${
-            smsConfigured
-              ? "bg-emerald-100 text-emerald-800"
-              : "bg-amber-100 text-amber-800"
+            loading
+              ? "bg-slate-100 text-slate-500"
+              : smsConfigured
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-amber-100 text-amber-800"
           }`}
         >
-          {smsConfigured ? "OVH SMS configuré" : "OVH SMS non configuré"}
+          {loading
+            ? "OVH SMS : chargement…"
+            : smsConfigured
+              ? "OVH SMS configuré"
+              : "OVH SMS non configuré"}
         </span>
-        {demoAllowed && (
-          <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
-            Mode démo disponible
-          </span>
-        )}
+        <span
+          className={`rounded-full px-3 py-1 font-medium ${
+            loading
+              ? "bg-slate-100 text-slate-500"
+              : demoAllowed
+                ? "bg-slate-100 text-slate-700"
+                : "bg-orange-100 text-orange-800"
+          }`}
+        >
+          {loading
+            ? "Mode démo : chargement…"
+            : demoAllowed
+              ? "Mode démo disponible"
+              : "Mode démo indisponible (OVH_SMS_ENABLED=true en prod)"}
+        </span>
+        <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
+          {loading
+            ? "Demandes : …"
+            : `${requests.length} demande${requests.length !== 1 ? "s" : ""} éligible${requests.length !== 1 ? "s" : ""}`}
+        </span>
+        <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
+          {loading
+            ? "Campagnes : …"
+            : `${campaigns.length} campagne${campaigns.length !== 1 ? "s" : ""} en historique`}
+        </span>
       </div>
 
-      {settings && (
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm">
-          <h2 className="font-semibold text-slate-900">Réglages</h2>
-          <label className="mt-3 flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={settings.autoSendOnApprove}
-              onChange={(e) =>
-                saveSettings({ autoSendOnApprove: e.target.checked })
-              }
-            />
-            Envoi auto à l&apos;approbation d&apos;une offre (déconseillé au démarrage)
-          </label>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2">
-              N par défaut
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <h2 className="font-semibold text-slate-900">Réglages</h2>
+        {!settings && loading && (
+          <p className="mt-3 text-slate-500">Chargement des réglages…</p>
+        )}
+        {!settings && !loading && (
+          <p className="mt-3 text-amber-700">Réglages indisponibles.</p>
+        )}
+        {settings && (
+          <>
+            <label className="mt-3 flex items-center gap-2">
               <input
-                type="number"
-                min={1}
-                max={200}
-                value={settings.defaultCampaignSize}
+                type="checkbox"
+                checked={settings.autoSendOnApprove}
                 onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    defaultCampaignSize: Number(e.target.value) || 30,
-                  })
+                  saveSettings({ autoSendOnApprove: e.target.checked })
                 }
-                onBlur={() =>
-                  saveSettings({ defaultCampaignSize: settings.defaultCampaignSize })
-                }
-                className="w-20 rounded border border-slate-300 px-2 py-1"
               />
+              Envoi auto à l&apos;approbation d&apos;une offre (déconseillé au démarrage)
             </label>
-            <label className="flex items-center gap-2">
-              Throttle (ms)
-              <input
-                type="number"
-                min={0}
-                max={5000}
-                value={settings.throttleMs}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    throttleMs: Number(e.target.value) || 0,
-                  })
-                }
-                onBlur={() => saveSettings({ throttleMs: settings.throttleMs })}
-                className="w-24 rounded border border-slate-300 px-2 py-1"
-              />
-            </label>
-          </div>
-        </section>
-      )}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2">
+                N par défaut
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={settings.defaultCampaignSize}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      defaultCampaignSize: Number(e.target.value) || 30,
+                    })
+                  }
+                  onBlur={() =>
+                    saveSettings({ defaultCampaignSize: settings.defaultCampaignSize })
+                  }
+                  className="w-20 rounded border border-slate-300 px-2 py-1"
+                />
+              </label>
+              <label className="flex items-center gap-2">
+                Throttle (ms)
+                <input
+                  type="number"
+                  min={0}
+                  max={5000}
+                  value={settings.throttleMs}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      throttleMs: Number(e.target.value) || 0,
+                    })
+                  }
+                  onBlur={() => saveSettings({ throttleMs: settings.throttleMs })}
+                  className="w-24 rounded border border-slate-300 px-2 py-1"
+                />
+              </label>
+            </div>
+          </>
+        )}
+      </section>
 
       <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold">Nouvelle campagne</h2>
@@ -324,6 +433,7 @@ export default function AdminSmsCampaignsPage() {
             <select
               id="workRequest"
               value={selectedId}
+              disabled={loading}
               onChange={(e) => {
                 setSelectedId(e.target.value);
                 setPreview(null);
@@ -332,9 +442,11 @@ export default function AdminSmsCampaignsPage() {
                 setError(null);
                 setSuccess(null);
               }}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
             >
-              <option value="">— Choisir une demande —</option>
+              <option value="">
+                {loading ? "— Chargement des demandes… —" : "— Choisir une demande —"}
+              </option>
               {requests.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.category} · {r.city} ({r.department}) · {r.status}
@@ -343,6 +455,12 @@ export default function AdminSmsCampaignsPage() {
                 </option>
               ))}
             </select>
+            {!loading && requests.length === 0 && (
+              <p className="mt-2 text-xs text-amber-700">
+                Aucune demande pending/approved dans le store. Créez ou approuvez une
+                demande pour lancer une campagne.
+              </p>
+            )}
 
             <label className="mt-3 mb-1 block text-sm font-medium text-slate-700">
               Nombre max suggéré (N)
@@ -359,131 +477,188 @@ export default function AdminSmsCampaignsPage() {
             <button
               type="button"
               onClick={handlePreview}
-              disabled={!selectedId || previewLoading}
+              disabled={!selectedId || previewLoading || loading}
               className="mt-3 block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
-              {previewLoading ? "Calcul…" : "Prévisualiser le mix & la liste"}
+              {previewLoading ? "Calcul SIRENE en cours…" : "Prévisualiser le mix & la liste"}
             </button>
           </div>
 
-          {preview && selectedByCohort && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
-              <p className="font-medium text-slate-900">
-                {selectedCount} SMS sélectionné{selectedCount > 1 ? "s" : ""}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+            {previewLoading && (
+              <LoadingBar label="Recherche SIRENE + artisans plateforme + carnet prospects…" />
+            )}
+            {!previewLoading && !preview && (
+              <p className="text-slate-500">
+                Sélectionnez une demande puis lancez la prévisualisation. La liste
+                complète (avec et sans téléphone) s&apos;affichera ici.
               </p>
-              <p className="mt-1 text-xs text-slate-500">
-                Proposition mix : {preview.suggestedCounts.returning} déjà /{" "}
-                {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
-                {preview.suggestedCounts.new_established} ≥2 ans · sélection actuelle :{" "}
-                {selectedByCohort.returning} / {selectedByCohort.new_young} /{" "}
-                {selectedByCohort.new_established}
-              </p>
-              <p className="mt-1 text-xs text-slate-500">
-                {preview.candidates.length} joignables · {preview.withoutPhone.length} sans
-                téléphone · {preview.totalNearby} proches SIRENE
-                {preview.geoFound ? "" : " (géo approximative)"}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={selectSuggested}
-                  className="rounded border border-slate-300 px-2 py-1 text-xs"
-                >
-                  Proposition mix
-                </button>
-                <button
-                  type="button"
-                  onClick={selectAll}
-                  className="rounded border border-slate-300 px-2 py-1 text-xs"
-                >
-                  Tout garder
-                </button>
-                <button
-                  type="button"
-                  onClick={clearSelection}
-                  className="rounded border border-slate-300 px-2 py-1 text-xs"
-                >
-                  Tout écarter
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+            {preview && selectedByCohort && !previewLoading && (
+              <>
+                <p className="font-medium text-slate-900">
+                  {selectedCount} SMS sélectionné{selectedCount > 1 ? "s" : ""}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Proposition mix : {preview.suggestedCounts.returning} déjà /{" "}
+                  {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
+                  {preview.suggestedCounts.new_established} ≥2 ans · sélection actuelle :{" "}
+                  {selectedByCohort.returning} / {selectedByCohort.new_young} /{" "}
+                  {selectedByCohort.new_established}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {preview.candidates.length} joignables · {preview.withoutPhone.length}{" "}
+                  sans téléphone · {preview.totalNearby} proches SIRENE
+                  {preview.geoFound ? "" : " (géo approximative / introuvable)"}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={selectSuggested}
+                    className="rounded border border-slate-300 px-2 py-1 text-xs"
+                  >
+                    Proposition mix
+                  </button>
+                  <button
+                    type="button"
+                    onClick={selectAll}
+                    className="rounded border border-slate-300 px-2 py-1 text-xs"
+                  >
+                    Tout garder (avec tél)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    className="rounded border border-slate-300 px-2 py-1 text-xs"
+                  >
+                    Tout écarter
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {preview && (
+        {previewLoading && (
+          <div className="mt-6">
+            <LoadingBar label="Chargement de la liste entreprises (peut prendre plusieurs secondes)…" />
+            <div className="mt-3 overflow-hidden rounded-lg border border-slate-200">
+              <div className="animate-pulse space-y-2 bg-white p-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-8 rounded bg-slate-100" />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {preview && !previewLoading && (
           <>
             <div className="mt-6 overflow-x-auto">
-              <table className="min-w-full text-left text-xs">
-                <thead className="border-b border-slate-200 text-slate-500">
-                  <tr>
-                    <th className="py-2 pr-2">OK</th>
-                    <th className="py-2 pr-2">Entreprise</th>
-                    <th className="py-2 pr-2">SIRET</th>
-                    <th className="py-2 pr-2">Ville</th>
-                    <th className="py-2 pr-2">Cohorte</th>
-                    <th className="py-2 pr-2">Tél</th>
-                    <th className="py-2">Source</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.candidates.map((c) => (
-                    <tr key={c.siret} className="border-b border-slate-100">
-                      <td className="py-2 pr-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedSirets.has(c.siret)}
-                          onChange={() => toggleSiret(c.siret)}
-                        />
-                      </td>
-                      <td className="py-2 pr-2 font-medium text-slate-800">
-                        {c.companyName}
-                      </td>
-                      <td className="py-2 pr-2 font-mono text-slate-600">{c.siret}</td>
-                      <td className="py-2 pr-2">{c.city}</td>
-                      <td className="py-2 pr-2">{COHORT_LABELS[c.cohort]}</td>
-                      <td className="py-2 pr-2">{c.phone}</td>
-                      <td className="py-2">{c.source}</td>
+              <h3 className="mb-2 text-sm font-semibold text-slate-800">
+                Toutes les entreprises trouvées ({allRows.length})
+              </h3>
+              {allRows.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                  Aucune entreprise proche pour cette catégorie / ville. Vérifiez la
+                  catégorie NAF ou élargissez le rayon.
+                </p>
+              ) : (
+                <table className="min-w-full text-left text-xs">
+                  <thead className="border-b border-slate-200 text-slate-500">
+                    <tr>
+                      <th className="py-2 pr-2">OK</th>
+                      <th className="py-2 pr-2">Statut</th>
+                      <th className="py-2 pr-2">Entreprise</th>
+                      <th className="py-2 pr-2">SIRET</th>
+                      <th className="py-2 pr-2">Ville</th>
+                      <th className="py-2 pr-2">Cohorte</th>
+                      <th className="py-2 pr-2">Téléphone</th>
+                      <th className="py-2">Source</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {allRows.map((item) => {
+                      if (item.kind === "ready") {
+                        const c = item.candidate;
+                        return (
+                          <tr key={c.siret} className="border-b border-slate-100">
+                            <td className="py-2 pr-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedSirets.has(c.siret)}
+                                onChange={() => toggleSiret(c.siret)}
+                              />
+                            </td>
+                            <td className="py-2 pr-2">
+                              <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800">
+                                Joignable
+                              </span>
+                            </td>
+                            <td className="py-2 pr-2 font-medium text-slate-800">
+                              {c.companyName}
+                            </td>
+                            <td className="py-2 pr-2 font-mono text-slate-600">
+                              {c.siret}
+                            </td>
+                            <td className="py-2 pr-2">{c.city}</td>
+                            <td className="py-2 pr-2">{COHORT_LABELS[c.cohort]}</td>
+                            <td className="py-2 pr-2">{c.phone}</td>
+                            <td className="py-2">{c.source}</td>
+                          </tr>
+                        );
+                      }
 
-            {preview.withoutPhone.length > 0 && (
-              <div className="mt-6">
-                <h3 className="text-sm font-semibold text-slate-800">
-                  Sans téléphone (hors envoi) — enrichir le carnet
-                </h3>
-                <ul className="mt-2 space-y-2">
-                  {preview.withoutPhone.slice(0, 20).map((row) => (
-                    <li
-                      key={row.siret}
-                      className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs"
-                    >
-                      <span className="font-medium">{row.companyName}</span>
-                      <span className="text-slate-500">{row.siret}</span>
-                      <input
-                        type="tel"
-                        placeholder="06…"
-                        value={phoneDrafts[row.siret] ?? ""}
-                        onChange={(e) =>
-                          setPhoneDrafts((d) => ({ ...d, [row.siret]: e.target.value }))
-                        }
-                        className="w-32 rounded border border-slate-300 px-2 py-1"
-                      />
-                      <button
-                        type="button"
-                        disabled={savingPhone === row.siret}
-                        onClick={() => savePhone(row)}
-                        className="rounded bg-slate-800 px-2 py-1 text-white disabled:opacity-50"
-                      >
-                        Enregistrer
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                      const row = item.row;
+                      const saving = savingPhone === row.siret;
+                      return (
+                        <tr key={row.siret} className="border-b border-slate-100 bg-amber-50/40">
+                          <td className="py-2 pr-2 text-slate-300">—</td>
+                          <td className="py-2 pr-2">
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-900">
+                              {saving ? "Enregistrement…" : "Sans téléphone"}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-2 font-medium text-slate-800">
+                            {row.companyName}
+                          </td>
+                          <td className="py-2 pr-2 font-mono text-slate-600">
+                            {row.siret}
+                          </td>
+                          <td className="py-2 pr-2">{row.city}</td>
+                          <td className="py-2 pr-2 text-slate-400">—</td>
+                          <td className="py-2 pr-2">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <input
+                                type="tel"
+                                placeholder="06…"
+                                value={phoneDrafts[row.siret] ?? ""}
+                                onChange={(e) =>
+                                  setPhoneDrafts((d) => ({
+                                    ...d,
+                                    [row.siret]: e.target.value,
+                                  }))
+                                }
+                                className="w-28 rounded border border-slate-300 px-2 py-1"
+                              />
+                              <button
+                                type="button"
+                                disabled={saving || !(phoneDrafts[row.siret] ?? "").trim()}
+                                onClick={() => savePhone(row)}
+                                className="rounded bg-slate-800 px-2 py-1 text-white disabled:opacity-50"
+                              >
+                                {saving ? "…" : "OK"}
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-2">{row.source}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
 
             <div className="mt-4">
               <label htmlFor="smsMessage" className="mb-1 block text-sm font-medium text-slate-700">
@@ -510,6 +685,14 @@ export default function AdminSmsCampaignsPage() {
                 </a>
               </p>
 
+              {sending && (
+                <div className="mt-3">
+                  <LoadingBar
+                    label={`Envoi en cours (${selectedCount} destinataire${selectedCount > 1 ? "s" : ""})…`}
+                  />
+                </div>
+              )}
+
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -517,20 +700,35 @@ export default function AdminSmsCampaignsPage() {
                   disabled={
                     sending || selectedCount === 0 || !smsConfigured || !message.trim()
                   }
+                  title={
+                    !smsConfigured
+                      ? "OVH SMS non configuré"
+                      : selectedCount === 0
+                        ? "Sélectionnez au moins une entreprise joignable"
+                        : undefined
+                  }
                   className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
                 >
                   {sending ? "Envoi…" : `Envoyer ${selectedCount} SMS`}
                 </button>
-                {demoAllowed && (
-                  <button
-                    type="button"
-                    onClick={() => handleSend(true)}
-                    disabled={sending || selectedCount === 0 || !message.trim()}
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    Simuler (démo)
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => handleSend(true)}
+                  disabled={
+                    sending ||
+                    !demoAllowed ||
+                    selectedCount === 0 ||
+                    !message.trim()
+                  }
+                  title={
+                    !demoAllowed
+                      ? "Mode démo désactivé quand OVH SMS est actif en production"
+                      : undefined
+                  }
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {demoAllowed ? "Simuler (démo)" : "Simuler (démo indisponible)"}
+                </button>
               </div>
             </div>
           </>
@@ -549,10 +747,12 @@ export default function AdminSmsCampaignsPage() {
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Historique</h2>
         {loading ? (
-          <p className="mt-4 text-sm text-slate-500">Chargement…</p>
+          <div className="mt-4">
+            <LoadingBar label="Chargement de l’historique des campagnes…" />
+          </div>
         ) : campaigns.length === 0 ? (
           <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-500">
-            Aucune campagne envoyée.
+            Aucune campagne envoyée pour l’instant.
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
