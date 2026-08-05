@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import WorkRequestForm from "@/components/WorkRequestForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 
@@ -9,6 +8,11 @@ export const metadata: Metadata = {
   description:
     "Demandez des travaux dans le Nord via enchères inversées. Budget fixé, artisans locaux font baisser le prix.",
 };
+
+const SIGNUP_HREF =
+  "/particulier/espace/inscription?from=/particulier/espace/demandes/nouvelle";
+const LOGIN_HREF =
+  "/particulier/espace/login?from=/particulier/espace/demandes/nouvelle";
 
 const FEATURES = [
   {
@@ -45,19 +49,19 @@ const FEATURES = [
 
 const STEPS = [
   {
-    title: "Créez votre demande",
+    title: "Créez votre compte",
     description:
-      "Formulaire simple : coordonnées, ville (Lille, Roubaix, Valenciennes…), description du projet et photos.",
+      "Inscription gratuite en quelques minutes. Une fois connecté, vous accédez à votre espace particulier.",
   },
   {
-    title: "Enchère inversée",
+    title: "Publiez votre demande",
     description:
-      "Le prix de départ est fixé au premier devis validé. Vous choisissez la durée (jusqu'à 3 mois). Les pros proposent ensuite des prix de plus en plus bas, sans palier imposé.",
+      "Décrivez votre projet (ville 59/62, photos, détails). Après validation, une enchère est créée.",
   },
   {
     title: "Vous choisissez votre artisan",
     description:
-      "À la fin de l'enchère, comparez les offres (prix, profil, qualifications) et sélectionnez l'artisan qui vous convient.",
+      "Comparez les offres (prix, profil, qualifications) et sélectionnez l'artisan qui vous convient.",
   },
 ];
 
@@ -71,12 +75,20 @@ export default function ParticulierPage() {
             Enchères inversées dans les Hauts-de-France. Les professionnels
             disputent votre projet en proposant des prix toujours plus bas.
           </p>
-          <Link
-            href="#demande"
-            className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
-          >
-            Demander des travaux
-          </Link>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={SIGNUP_HREF}
+              className="inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
+            >
+              Créer mon compte
+            </Link>
+            <Link
+              href={LOGIN_HREF}
+              className="inline-block rounded-xl border border-white/40 px-8 py-3 font-semibold text-white hover:bg-white/10"
+            >
+              J&apos;ai déjà un compte
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -117,19 +129,36 @@ export default function ParticulierPage() {
             Vous comparez les quatre offres et choisissez{" "}
             <strong>vous-même</strong> l&apos;artisan retenu — le moins cher n&apos;est pas imposé.
           </p>
-          <p className="mt-2 text-sm text-brand-600 font-medium">
+          <p className="mt-2 text-sm font-medium text-brand-600">
             Économie possible jusqu&apos;à 1 200 €, avec la liberté de choisir selon vos critères.
           </p>
         </div>
       </section>
 
       <section id="demande" className="bg-slate-100 py-16">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6">
-          <h2 className="text-2xl font-bold text-center">Demander des travaux</h2>
-          <p className="mt-2 text-center text-sm text-slate-600">
-            Gratuit et sans engagement · Nord 59 / Pas-de-Calais 62
+        <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
+          <h2 className="text-2xl font-bold">Demander des travaux</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Réservé aux particuliers inscrits · Gratuit · Nord 59 / Pas-de-Calais 62
           </p>
-          <WorkRequestForm />
+          <p className="mt-4 text-sm text-slate-700">
+            Créez votre compte, confirmez votre email, puis publiez votre demande depuis votre
+            espace personnel.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={SIGNUP_HREF}
+              className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white hover:bg-accent-600"
+            >
+              Créer mon compte
+            </Link>
+            <Link
+              href={LOGIN_HREF}
+              className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+            >
+              Se connecter
+            </Link>
+          </div>
         </div>
       </section>
     </>

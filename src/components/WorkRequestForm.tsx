@@ -34,29 +34,23 @@ export interface WorkRequestFormDefaults {
 }
 
 interface Props {
-  /** Formulaire depuis l'espace connecté (pas de création de compte). */
-  authenticated?: boolean;
   defaults?: WorkRequestFormDefaults;
-  /** Redirection / lien après succès (espace client). */
+  /** Lien après succès (espace client). */
   successHref?: string;
 }
 
 export default function WorkRequestForm({
-  authenticated = false,
   defaults,
-  successHref = "/particulier/espace/login",
+  successHref = "/particulier/espace/demandes",
 }: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [category, setCategory] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [hasPreviousQuote, setHasPreviousQuote] = useState(false);
   const [previousQuoteAmount, setPreviousQuoteAmount] = useState("");
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
@@ -149,12 +143,6 @@ export default function WorkRequestForm({
       return;
     }
 
-    if (!authenticated && password !== passwordConfirm) {
-      setError("Les mots de passe ne correspondent pas.");
-      setStatus("error");
-      return;
-    }
-
     const phoneValue = String(
       (form.elements.namedItem("phone") as HTMLInputElement | null)?.value ?? ""
     ).trim();
@@ -216,11 +204,7 @@ export default function WorkRequestForm({
       return;
     }
 
-    const body = (await res.json()) as {
-      emailVerificationSent?: boolean;
-      id?: string;
-    };
-    setEmailVerificationSent(body.emailVerificationSent === true);
+    const body = (await res.json()) as { id?: string };
     setCreatedRequestId(body.id ?? null);
     setStatus("success");
     if (descriptionRef.current) {
@@ -368,7 +352,7 @@ export default function WorkRequestForm({
           className={inputClass}
           required
           defaultValue={defaults?.firstName ?? ""}
-          readOnly={authenticated}
+          readOnly
         />
         <input
           name="lastName"
@@ -377,7 +361,7 @@ export default function WorkRequestForm({
           className={inputClass}
           required
           defaultValue={defaults?.lastName ?? ""}
-          readOnly={authenticated}
+          readOnly
         />
       </div>
       <input
@@ -387,7 +371,7 @@ export default function WorkRequestForm({
         className={inputClass}
         required
         defaultValue={defaults?.email ?? ""}
-        readOnly={authenticated}
+        readOnly
       />
       <input
         name="phone"
@@ -648,53 +632,6 @@ export default function WorkRequestForm({
         </p>
       </div>
 
-      {!authenticated && (
-        <>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
-            Mot de passe <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
-            placeholder="Min. 8 caractères, lettre + chiffre"
-            required
-            minLength={8}
-            autoComplete="new-password"
-          />
-        </div>
-        <div>
-          <label htmlFor="passwordConfirm" className="mb-1 block text-sm font-medium text-slate-700">
-            Confirmer le mot de passe <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="passwordConfirm"
-            name="passwordConfirm"
-            type="password"
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            className={inputClass}
-            placeholder="Retapez le mot de passe"
-            required
-            autoComplete="new-password"
-          />
-        </div>
-      </div>
-      <p className="-mt-2 text-xs text-slate-500">
-        Ce mot de passe vous permet d&apos;accéder à votre{" "}
-        <Link href="/particulier/espace/login" className="font-medium text-client-700">
-          espace particulier
-        </Link>{" "}
-        pour suivre votre enchère et choisir votre artisan.
-      </p>
-        </>
-      )}
-
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
@@ -714,34 +651,22 @@ export default function WorkRequestForm({
       {status === "success" && (
         <div className="space-y-2 text-center text-sm text-brand-700">
           <p className="font-semibold">Demande envoyée.</p>
-          {authenticated ? (
-            <p>
-              <Link
-                href={
-                  createdRequestId
-                    ? `/particulier/espace/demandes/${createdRequestId}`
-                    : successHref
-                }
-                className="font-semibold underline"
-              >
-                Voir ma demande
-              </Link>
-              {" · "}
-              <Link href="/particulier/espace/demandes" className="underline">
-                Mes demandes
-              </Link>
-            </p>
-          ) : (
-            <p>
-              {emailVerificationSent
-                ? "Un email de confirmation vient de vous être envoyé. Validez votre adresse puis "
-                : ""}
-              <Link href={successHref} className="font-semibold underline">
-                connectez-vous à votre espace
-              </Link>{" "}
-              pour suivre votre enchère.
-            </p>
-          )}
+          <p>
+            <Link
+              href={
+                createdRequestId
+                  ? `/particulier/espace/demandes/${createdRequestId}`
+                  : successHref
+              }
+              className="font-semibold underline"
+            >
+              Voir ma demande
+            </Link>
+            {" · "}
+            <Link href="/particulier/espace/demandes" className="underline">
+              Mes demandes
+            </Link>
+          </p>
         </div>
       )}
       </form>

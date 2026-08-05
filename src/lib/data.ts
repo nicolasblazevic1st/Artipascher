@@ -166,7 +166,7 @@ export const FAQ_ITEMS = [
   {
     question: "Comment demander des travaux ?",
     answer:
-      "Remplissez le formulaire « Demander des travaux » avec une description d'au moins 100 caractères et au minimum 1 photo. Indiquez votre ville. Une fois validée par notre équipe, une enchère est créée ; le prix de départ sera fixé au premier devis validé.",
+      "Créez d'abord un compte particulier (gratuit), confirmez votre email, puis publiez votre demande depuis votre espace : description d'au moins 100 caractères, au minimum 1 photo, et votre ville (59/62). Une fois validée par notre équipe, une enchère est créée ; le prix de départ sera fixé au premier devis validé.",
   },
   {
     question: "Comment s'inscrire comme artisan ?",

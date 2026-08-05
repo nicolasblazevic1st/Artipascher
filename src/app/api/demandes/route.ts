@@ -14,25 +14,32 @@ import {
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
 } from "@/lib/demandes-validation";
-import { validatePassword } from "@/lib/password";
 import { getClientSession } from "@/lib/client-auth";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
 import { formatFrenchPhoneDisplay, normalizeFrenchPhone } from "@/lib/sms";
-import { requestEmailVerification } from "@/lib/email-verification";
 import {
   addWorkRequest,
-  ensureClientAccount,
   getClientById,
   linkOrphanWorkRequests,
   setWorkRequestPhotos,
   setWorkRequestPreviousQuote,
 } from "@/lib/store";
-import type { ClientAccount, ClientKind } from "@/lib/store-types";
+import type { ClientKind } from "@/lib/store-types";
 import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getClientSession();
+    if (!session) {
+      return NextResponse.json(
+        {
+          error:
+            "Connectez-vous à votre espace particulier pour créer une demande de travaux.",
+        },
+        { status: 401 }
+      );
+    }
+
     const formData = await request.formData();
 
     const firstName = String(formData.get("firstName") ?? "").trim();
@@ -57,8 +64,6 @@ export async function POST(request: NextRequest) {
     const durationRaw = String(
       formData.get("auctionDurationDays") ?? DEFAULT_AUCTION_DURATION_DAYS
     );
-    const password = String(formData.get("password") ?? "");
-    const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
     const previousQuoteAmountRaw = String(formData.get("previousQuoteAmount") ?? "").trim();
     const previousQuoteNote = String(formData.get("previousQuoteNote") ?? "").trim();
 
@@ -181,63 +186,23 @@ export async function POST(request: NextRequest) {
     }
     const auctionDurationDays = Number(durationRaw);
 
-    let client: ClientAccount;
-    let clientCreated = false;
-    let emailVerificationSent = false;
-
-    if (session) {
-      const existing = await getClientById(session.clientId);
-      if (!existing) {
-        return NextResponse.json(
-          { error: "Session invalide. Reconnectez-vous." },
-          { status: 401 }
-        );
-      }
-      if (existing.email.toLowerCase() !== email.toLowerCase()) {
-        return NextResponse.json(
-          {
-            error:
-              "Utilisez l'email de votre compte connecté pour créer une demande.",
-          },
-          { status: 400 }
-        );
-      }
-      client = existing;
-    } else {
-      const passwordError = validatePassword(password);
-      if (passwordError) {
-        return NextResponse.json({ error: passwordError }, { status: 400 });
-      }
-      if (password !== passwordConfirm) {
-        return NextResponse.json(
-          { error: "Les mots de passe ne correspondent pas." },
-          { status: 400 }
-        );
-      }
-
-      const clientResult = await ensureClientAccount({
-        email,
-        password,
-        firstName,
-        lastName,
-        phone,
-        kind: clientKind,
-        companyName,
-        siret: clientSiret,
-        siren: clientSiren,
-        companyVerified: clientKind === "company",
-      });
-      if ("error" in clientResult) {
-        return NextResponse.json({ error: clientResult.error }, { status: 400 });
-      }
-      client = clientResult.client;
-      clientCreated = clientResult.created;
-
-      if (clientCreated) {
-        await requestEmailVerification(client.email, "client");
-        emailVerificationSent = true;
-      }
+    const existing = await getClientById(session.clientId);
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Session invalide. Reconnectez-vous." },
+        { status: 401 }
+      );
     }
+    if (existing.email.toLowerCase() !== email.toLowerCase()) {
+      return NextResponse.json(
+        {
+          error:
+            "Utilisez l'email de votre compte connecté pour créer une demande.",
+        },
+        { status: 400 }
+      );
+    }
+    const client = existing;
 
     const entry = await addWorkRequest({
       firstName,
@@ -283,7 +248,6 @@ export async function POST(request: NextRequest) {
         success: true,
         id: entry.id,
         photoCount: photoPaths.length,
-        emailVerificationSent,
       },
       { status: 201 }
     );

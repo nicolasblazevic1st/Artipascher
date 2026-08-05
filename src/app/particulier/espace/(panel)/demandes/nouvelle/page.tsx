@@ -23,7 +23,6 @@ export default async function NouvelleDemandePage() {
       </p>
 
       <WorkRequestForm
-        authenticated
         successHref="/particulier/espace/demandes"
         defaults={{
           firstName: client?.firstName ?? session.firstName,

@@ -159,10 +159,12 @@ export default function ClientLoginForm() {
       <p className="text-center text-sm text-slate-500">
         Pas encore de compte ?{" "}
         <Link
-          href="/particulier#demande"
+          href={`/particulier/espace/inscription?from=${encodeURIComponent(
+            from.startsWith("/particulier/espace") ? from : "/particulier/espace/demandes/nouvelle"
+          )}`}
           className="font-medium text-client-600 hover:text-client-700"
         >
-          Créer une demande de travaux
+          Créer un compte
         </Link>
       </p>
     </form>

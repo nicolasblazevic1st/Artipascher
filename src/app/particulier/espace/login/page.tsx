@@ -20,8 +20,8 @@ export default function ClientLoginPage() {
           </div>
         </div>
         <p className="mb-6 text-sm text-slate-600">
-          Connectez-vous avec l&apos;email et le mot de passe définis lors de votre demande de
-          travaux.
+          Connectez-vous avec l&apos;email et le mot de passe de votre compte particulier pour
+          créer ou suivre vos demandes de travaux.
         </p>
         <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
           <ClientLoginForm />
