@@ -129,6 +129,12 @@ export interface ProRegistration {
   referralCodeAppliedAt?: string;
   /** Horodatage du crédit versé au parrain (après 5 dépenses du filleul). */
   referralRewardGrantedAt?: string;
+  /**
+   * false = email non confirmé (nouveaux comptes).
+   * undefined = comptes historiques (considérés vérifiés).
+   */
+  emailVerified?: boolean;
+  emailVerifiedAt?: string;
 }
 
 export type ClientKind = "individual" | "company";
@@ -146,6 +152,12 @@ export interface ClientAccount {
   siret?: string;
   siren?: string;
   companyVerified?: boolean;
+  /**
+   * false = email non confirmé (nouveaux comptes).
+   * undefined = comptes historiques (considérés vérifiés).
+   */
+  emailVerified?: boolean;
+  emailVerifiedAt?: string;
   createdAt: string;
 }
 
@@ -248,6 +260,16 @@ export interface ContactUnlock {
 export type PasswordResetUserType = "client" | "pro";
 
 export interface PasswordResetToken {
+  token: string;
+  email: string;
+  userType: PasswordResetUserType;
+  userId: string;
+  expiresAt: string;
+  createdAt: string;
+  usedAt?: string;
+}
+
+export interface EmailVerificationToken {
   token: string;
   email: string;
   userType: PasswordResetUserType;
@@ -387,6 +409,7 @@ export interface DataStore {
   bids: Bid[];
   proQuotes: ProQuote[];
   passwordResetTokens: PasswordResetToken[];
+  emailVerificationTokens: EmailVerificationToken[];
   smsCampaigns: SmsCampaign[];
   smsSettings?: SmsCampaignSettings;
   creditWallets: ProCreditWallet[];
@@ -403,6 +426,7 @@ export const EMPTY_STORE: DataStore = {
   bids: [],
   proQuotes: [],
   passwordResetTokens: [],
+  emailVerificationTokens: [],
   smsCampaigns: [],
   smsSettings: { ...DEFAULT_SMS_SETTINGS },
   creditWallets: [],

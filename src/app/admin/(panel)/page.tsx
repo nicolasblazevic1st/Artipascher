@@ -35,7 +35,16 @@ export default async function AdminDashboardPage() {
           href="/admin/devis"
           urgent={stats.pendingQuotes > 0}
         />
-        <StatCard label="Artisans approuvés" value={stats.approvedPros} />
+        <StatCard
+          label="Artisans approuvés"
+          value={stats.approvedPros}
+          href="/admin/comptes-artisans"
+        />
+        <StatCard
+          label="Comptes particuliers"
+          value={stats.totalClients}
+          href="/admin/comptes-particuliers"
+        />
         <StatCard label="Enchères actives" value={SAMPLE_AUCTIONS.length} href="/admin/encheres" />
       </div>
 

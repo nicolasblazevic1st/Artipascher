@@ -3,7 +3,11 @@ import {
   CLIENT_SESSION_COOKIE,
   encodeClientSession,
 } from "@/lib/client-auth";
-import { authenticateClient, linkOrphanWorkRequests } from "@/lib/store";
+import {
+  authenticateClient,
+  isEmailVerified,
+  linkOrphanWorkRequests,
+} from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   let email: string;
@@ -29,6 +33,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Email ou mot de passe incorrect." },
       { status: 401 }
+    );
+  }
+
+  if (!isEmailVerified(client)) {
+    return NextResponse.json(
+      {
+        error:
+          "Confirmez votre adresse email avant de vous connecter. Consultez votre boîte de réception.",
+        code: "EMAIL_NOT_VERIFIED",
+        email: client.email,
+      },
+      { status: 403 }
     );
   }
 

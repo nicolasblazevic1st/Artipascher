@@ -34,6 +34,7 @@ const EMPTY = {
   bids: [],
   proQuotes: [],
   passwordResetTokens: [],
+  emailVerificationTokens: [],
   smsCampaigns: [],
   smsSettings: {},
   creditWallets: [],
@@ -76,10 +77,14 @@ async function main() {
       lastName: "Test",
       phone: "0612345678",
       kind: "individual",
+      emailVerified: true,
+      emailVerifiedAt: now,
       createdAt: now,
     };
     store.clientAccounts.push(client);
   }
+  client.emailVerified = true;
+  client.emailVerifiedAt = client.emailVerifiedAt || now;
 
   let pro = store.proRegistrations.find(
     (p) => p.email.toLowerCase() === PRO_EMAIL
@@ -130,9 +135,13 @@ async function main() {
       createdAt: now,
       reviewedAt: now,
       referralCode: "APTEST01",
+      emailVerified: true,
+      emailVerifiedAt: now,
     };
     store.proRegistrations.unshift(pro);
   }
+  pro.emailVerified = true;
+  pro.emailVerifiedAt = pro.emailVerifiedAt || now;
 
   let wallet = store.creditWallets.find((w) => w.proId === pro.id);
   if (!wallet) {

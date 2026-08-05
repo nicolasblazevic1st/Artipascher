@@ -25,6 +25,7 @@ import {
   type DataStore,
   type DecennaleVerificationStatus,
   type DocumentVerificationStatus,
+  type EmailVerificationToken,
   type ProCreditTransaction,
   type ProCreditWallet,
   type ProQuote,
@@ -78,6 +79,7 @@ export async function readStore(): Promise<DataStore> {
     bids: parsed.bids ?? [],
     proQuotes: parsed.proQuotes ?? [],
     passwordResetTokens: parsed.passwordResetTokens ?? [],
+    emailVerificationTokens: parsed.emailVerificationTokens ?? [],
     smsCampaigns: parsed.smsCampaigns ?? [],
     smsSettings: {
       ...DEFAULT_SMS_SETTINGS,
@@ -114,6 +116,7 @@ export async function addProRegistration(
     ...data,
     id: newId("pro"),
     status: "pending",
+    emailVerified: data.emailVerified ?? false,
     createdAt: new Date().toISOString(),
   };
   store.proRegistrations.unshift(entry);
@@ -323,6 +326,7 @@ export async function getAdminStats() {
     pendingQuotes,
     approvedPros,
     totalPros: store.proRegistrations.length,
+    totalClients: store.clientAccounts.length,
     totalRequests: store.workRequests.length,
   };
 }
@@ -560,7 +564,7 @@ export async function ensureClientAccount(data: {
   siret?: string;
   siren?: string;
   companyVerified?: boolean;
-}): Promise<{ client: ClientAccount } | { error: string }> {
+}): Promise<{ client: ClientAccount; created: boolean } | { error: string }> {
   const store = await readStore();
   const emailLower = data.email.toLowerCase();
   const existing = store.clientAccounts.find((c) => c.email.toLowerCase() === emailLower);
@@ -576,7 +580,7 @@ export async function ensureClientAccount(data: {
       existing.phone = data.phone;
       await writeStore(store);
     }
-    return { client: existing };
+    return { client: existing, created: false };
   }
 
   const passwordError = validatePassword(data.password);
@@ -595,11 +599,19 @@ export async function ensureClientAccount(data: {
     siret: kind === "company" ? data.siret : undefined,
     siren: kind === "company" ? data.siren : undefined,
     companyVerified: kind === "company" ? data.companyVerified === true : undefined,
+    emailVerified: false,
     createdAt: new Date().toISOString(),
   };
   store.clientAccounts.push(client);
   await writeStore(store);
-  return { client };
+  return { client, created: true };
+}
+
+/** Comptes historiques sans champ = déjà considérés vérifiés. */
+export function isEmailVerified(
+  account: Pick<ClientAccount, "emailVerified"> | Pick<ProRegistration, "emailVerified">
+): boolean {
+  return account.emailVerified !== false;
 }
 
 export async function getWorkRequestsByClientId(clientId: string): Promise<WorkRequest[]> {
@@ -811,8 +823,9 @@ export async function ensureWorkRequestShareToken(
 }
 
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const EMAIL_VERIFICATION_TTL_MS = 48 * 60 * 60 * 1000;
 
-function createPasswordResetTokenValue(): string {
+function createSecureTokenValue(): string {
   return randomBytes(32).toString("base64url");
 }
 
@@ -845,7 +858,7 @@ export async function createPasswordResetToken(
   );
 
   const token: PasswordResetToken = {
-    token: createPasswordResetTokenValue(),
+    token: createSecureTokenValue(),
     email: email.trim(),
     userType,
     userId,
@@ -856,6 +869,88 @@ export async function createPasswordResetToken(
   store.passwordResetTokens.push(token);
   await writeStore(store);
   return token;
+}
+
+export async function createEmailVerificationToken(
+  email: string,
+  userType: PasswordResetUserType
+): Promise<EmailVerificationToken | null> {
+  const store = await readStore();
+  const emailLower = email.trim().toLowerCase();
+
+  if (userType === "client") {
+    const client = store.clientAccounts.find((c) => c.email.toLowerCase() === emailLower);
+    if (!client) return null;
+    if (isEmailVerified(client)) return null;
+
+    store.emailVerificationTokens = store.emailVerificationTokens.filter(
+      (t) => !(t.userId === client.id && t.userType === "client" && !t.usedAt)
+    );
+
+    const token: EmailVerificationToken = {
+      token: createSecureTokenValue(),
+      email: client.email,
+      userType: "client",
+      userId: client.id,
+      expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS).toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    store.emailVerificationTokens.push(token);
+    await writeStore(store);
+    return token;
+  }
+
+  const pro = store.proRegistrations.find((p) => p.email.toLowerCase() === emailLower);
+  if (!pro) return null;
+  if (isEmailVerified(pro)) return null;
+
+  store.emailVerificationTokens = store.emailVerificationTokens.filter(
+    (t) => !(t.userId === pro.id && t.userType === "pro" && !t.usedAt)
+  );
+
+  const token: EmailVerificationToken = {
+    token: createSecureTokenValue(),
+    email: pro.email,
+    userType: "pro",
+    userId: pro.id,
+    expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS).toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+  store.emailVerificationTokens.push(token);
+  await writeStore(store);
+  return token;
+}
+
+export async function verifyEmailWithToken(
+  token: string
+): Promise<{ success: true; userType: PasswordResetUserType } | { error: string }> {
+  const store = await readStore();
+  const index = store.emailVerificationTokens.findIndex((t) => t.token === token);
+  if (index === -1) return { error: "Lien de vérification invalide ou expiré." };
+
+  const entry = store.emailVerificationTokens[index];
+  if (entry.usedAt) return { error: "Ce lien a déjà été utilisé." };
+  if (new Date(entry.expiresAt).getTime() <= Date.now()) {
+    return { error: "Lien de vérification invalide ou expiré." };
+  }
+
+  const verifiedAt = new Date().toISOString();
+
+  if (entry.userType === "client") {
+    const clientIndex = store.clientAccounts.findIndex((c) => c.id === entry.userId);
+    if (clientIndex === -1) return { error: "Compte introuvable." };
+    store.clientAccounts[clientIndex].emailVerified = true;
+    store.clientAccounts[clientIndex].emailVerifiedAt = verifiedAt;
+  } else {
+    const proIndex = store.proRegistrations.findIndex((p) => p.id === entry.userId);
+    if (proIndex === -1) return { error: "Compte introuvable." };
+    store.proRegistrations[proIndex].emailVerified = true;
+    store.proRegistrations[proIndex].emailVerifiedAt = verifiedAt;
+  }
+
+  store.emailVerificationTokens[index].usedAt = verifiedAt;
+  await writeStore(store);
+  return { success: true, userType: entry.userType };
 }
 
 export async function getValidPasswordResetToken(

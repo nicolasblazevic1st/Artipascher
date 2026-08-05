@@ -17,6 +17,7 @@ import {
 import { validatePassword } from "@/lib/password";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
 import { formatFrenchPhoneDisplay, normalizeFrenchPhone } from "@/lib/sms";
+import { requestEmailVerification } from "@/lib/email-verification";
 import {
   addWorkRequest,
   ensureClientAccount,
@@ -203,7 +204,11 @@ export async function POST(request: NextRequest) {
     if ("error" in clientResult) {
       return NextResponse.json({ error: clientResult.error }, { status: 400 });
     }
-    const { client } = clientResult;
+    const { client, created: clientCreated } = clientResult;
+
+    if (clientCreated) {
+      await requestEmailVerification(client.email, "client");
+    }
 
     const entry = await addWorkRequest({
       firstName,
@@ -245,7 +250,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, id: entry.id, photoCount: photoPaths.length },
+      {
+        success: true,
+        id: entry.id,
+        photoCount: photoPaths.length,
+        emailVerificationSent: clientCreated,
+      },
       { status: 201 }
     );
   } catch {

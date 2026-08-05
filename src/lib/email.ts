@@ -2,6 +2,22 @@ import nodemailer from "nodemailer";
 import { absoluteUrl } from "./share";
 import type { PasswordResetUserType } from "./store-types";
 
+/** Couleurs du site (globals.css) pour les emails HTML. */
+const BRAND = {
+  teal: "#0d9488",
+  tealDark: "#0f766e",
+  tealDeep: "#042f2e",
+  amber: "#f59e0b",
+  amberHover: "#d97706",
+  violet: "#7c3aed",
+  violetDark: "#6d28d9",
+  slate: "#334155",
+  muted: "#64748b",
+  border: "#e2e8f0",
+  bg: "#fafaf9",
+  white: "#ffffff",
+} as const;
+
 function getSmtpConfig() {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
@@ -27,8 +43,99 @@ function getResetPath(userType: PasswordResetUserType): string {
     : "/pro/reinitialiser-mot-de-passe";
 }
 
+function getVerifyPath(userType: PasswordResetUserType): string {
+  return userType === "client"
+    ? "/particulier/espace/verifier-email"
+    : "/pro/verifier-email";
+}
+
 function getAccountLabel(userType: PasswordResetUserType): string {
   return userType === "client" ? "particulier" : "professionnel";
+}
+
+function getPalette(userType: PasswordResetUserType) {
+  if (userType === "client") {
+    return {
+      header: BRAND.violet,
+      headerText: BRAND.white,
+      cta: BRAND.amber,
+      ctaText: BRAND.white,
+      accent: BRAND.violet,
+      badge: "Espace particulier",
+    };
+  }
+  return {
+    header: BRAND.teal,
+    headerText: BRAND.white,
+    cta: BRAND.amber,
+    ctaText: BRAND.white,
+    accent: BRAND.tealDark,
+    badge: "Espace professionnel",
+  };
+}
+
+function brandedEmailHtml(params: {
+  userType: PasswordResetUserType;
+  title: string;
+  intro: string;
+  bodyLines: string[];
+  ctaLabel: string;
+  ctaUrl: string;
+  footnote: string;
+}): string {
+  const palette = getPalette(params.userType);
+  const bodyHtml = params.bodyLines
+    .map(
+      (line) =>
+        `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:${BRAND.slate};">${line}</p>`
+    )
+    .join("");
+
+  return `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:${BRAND.bg};font-family:'Segoe UI',system-ui,-apple-system,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND.bg};padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${BRAND.white};border-radius:16px;overflow:hidden;border:1px solid ${BRAND.border};">
+          <tr>
+            <td style="background:${palette.header};padding:28px 32px;text-align:left;">
+              <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:rgba(255,255,255,0.85);">${palette.badge}</p>
+              <p style="margin:0;font-size:22px;font-weight:700;color:${palette.headerText};">Artipascher</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;color:${BRAND.tealDeep};">${params.title}</h1>
+              <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:${BRAND.slate};">${params.intro}</p>
+              ${bodyHtml}
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 8px;">
+                <tr>
+                  <td style="border-radius:10px;background:${palette.cta};">
+                    <a href="${params.ctaUrl}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:${palette.ctaText};text-decoration:none;">${params.ctaLabel}</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:20px 0 0;font-size:12px;line-height:1.5;color:${BRAND.muted};">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
+                <a href="${params.ctaUrl}" style="color:${palette.accent};word-break:break-all;">${params.ctaUrl}</a>
+              </p>
+              <p style="margin:24px 0 0;font-size:13px;line-height:1.5;color:${BRAND.muted};">${params.footnote}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 24px;border-top:1px solid ${BRAND.border};">
+              <p style="margin:0;font-size:12px;color:${BRAND.muted};">Artipascher · Nord 59 · Pas-de-Calais 62</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
 }
 
 export async function sendPasswordResetEmail(
@@ -106,6 +213,46 @@ async function sendMail(options: {
     text: options.text,
     html: options.html,
   });
+}
+
+export async function sendEmailVerificationEmail(
+  email: string,
+  token: string,
+  userType: PasswordResetUserType
+): Promise<void> {
+  const verifyUrl = absoluteUrl(
+    `${getVerifyPath(userType)}?token=${encodeURIComponent(token)}`
+  );
+  const accountLabel = getAccountLabel(userType);
+  const subject = "Confirmez votre adresse email — Artipascher";
+  const text = [
+    "Bonjour,",
+    "",
+    `Bienvenue sur Artipascher. Confirmez votre adresse email pour activer votre espace ${accountLabel}.`,
+    "",
+    "Cliquez sur le lien ci-dessous (valable 48 heures) :",
+    verifyUrl,
+    "",
+    "Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email.",
+    "",
+    "L'équipe Artipascher",
+  ].join("\n");
+
+  const html = brandedEmailHtml({
+    userType,
+    title: "Confirmez votre adresse email",
+    intro: `Bienvenue sur Artipascher. Pour activer votre espace ${accountLabel}, validez votre adresse en un clic.`,
+    bodyLines: [
+      "Ce lien est valable <strong>48 heures</strong>.",
+      "Sans confirmation, vous ne pourrez pas vous connecter à votre espace.",
+    ],
+    ctaLabel: "Vérifier mon email",
+    ctaUrl: verifyUrl,
+    footnote:
+      "Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement cet email.",
+  });
+
+  await sendMail({ to: email, subject, text, html });
 }
 
 export async function sendContactInterestEmailToClient(params: {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import HelpTooltip from "@/components/HelpTooltip";
 import {
   PRO_REGISTRATION_COMPARTMENTS,
@@ -717,10 +718,17 @@ export default function ProRegistrationForm() {
       </button>
 
       {status === "success" && (
-        <p className="text-center text-sm text-emerald-600">
-          Certification niveau 1 obtenue. Connectez-vous à votre espace pro pour consulter
-          les enchères et débloquer les contacts client.
-        </p>
+        <div className="space-y-2 text-center text-sm text-emerald-700">
+          <p className="font-semibold">Certification niveau 1 obtenue.</p>
+          <p>
+            Un email de confirmation vient de vous être envoyé. Validez votre adresse
+            puis{" "}
+            <Link href="/pro/login" className="font-semibold underline">
+              connectez-vous à votre espace pro
+            </Link>
+            .
+          </p>
+        </div>
       )}
     </form>
   );

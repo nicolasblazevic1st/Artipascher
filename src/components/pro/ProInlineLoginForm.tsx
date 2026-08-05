@@ -26,7 +26,11 @@ export default function ProInlineLoginForm({ onSuccess, compact = false }: Props
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error ?? "Connexion impossible.");
+      setError(
+        data.code === "EMAIL_NOT_VERIFIED"
+          ? `${data.error ?? "Email non vérifié."} Renvoyez le lien depuis /pro/login.`
+          : (data.error ?? "Connexion impossible.")
+      );
       setLoading(false);
       return;
     }

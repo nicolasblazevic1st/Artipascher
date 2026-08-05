@@ -29,6 +29,7 @@ import {
 export default function WorkRequestForm() {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -195,6 +196,8 @@ export default function WorkRequestForm() {
       return;
     }
 
+    const body = (await res.json()) as { emailVerificationSent?: boolean };
+    setEmailVerificationSent(body.emailVerificationSent === true);
     setStatus("success");
     if (descriptionRef.current) {
       descriptionRef.current.value = "";
@@ -668,13 +671,18 @@ export default function WorkRequestForm() {
       </button>
 
       {status === "success" && (
-        <p className="text-center text-sm text-brand-600">
-          Demande envoyée.{" "}
-          <Link href="/particulier/espace/login" className="font-semibold underline">
-            Connectez-vous à votre espace particulier
-          </Link>{" "}
-          pour suivre votre enchère.
-        </p>
+        <div className="space-y-2 text-center text-sm text-brand-700">
+          <p className="font-semibold">Demande envoyée.</p>
+          <p>
+            {emailVerificationSent
+              ? "Un email de confirmation vient de vous être envoyé. Validez votre adresse puis "
+              : ""}
+            <Link href="/particulier/espace/login" className="font-semibold underline">
+              connectez-vous à votre espace
+            </Link>{" "}
+            pour suivre votre enchère.
+          </p>
+        </div>
       )}
       </form>
     </div>

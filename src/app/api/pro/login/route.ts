@@ -3,7 +3,7 @@ import {
   PRO_SESSION_COOKIE,
   encodeProSession,
 } from "@/lib/pro-auth";
-import { authenticatePro } from "@/lib/store";
+import { authenticatePro, isEmailVerified } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   let email: string;
@@ -32,6 +32,18 @@ export async function POST(request: NextRequest) {
           "Email ou mot de passe incorrect, ou compte non encore approuvé par l'administrateur.",
       },
       { status: 401 }
+    );
+  }
+
+  if (!isEmailVerified(pro)) {
+    return NextResponse.json(
+      {
+        error:
+          "Confirmez votre adresse email avant de vous connecter. Consultez votre boîte de réception.",
+        code: "EMAIL_NOT_VERIFIED",
+        email: pro.email,
+      },
+      { status: 403 }
     );
   }
 

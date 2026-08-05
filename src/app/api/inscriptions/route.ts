@@ -14,6 +14,7 @@ import { resolveMultipleTradeSelections } from "@/lib/qualibat-job-groups";
 import { defaultDecennaleStatus } from "@/lib/decennale-verification";
 import { isAllowedDepartment, verifyWithRegistry } from "@/lib/rcs";
 import type { ProTradeSelection } from "@/lib/store-types";
+import { requestEmailVerification } from "@/lib/email-verification";
 import {
   addProRegistration,
   applyReferralCodeToPro,
@@ -254,6 +255,7 @@ export async function POST(request: NextRequest) {
     });
 
     await ensureProReferralCode(entry.id);
+    await requestEmailVerification(email, "pro");
 
     let referralApplied = false;
     let referralError: string | undefined;
@@ -274,7 +276,7 @@ export async function POST(request: NextRequest) {
         referralApplied,
         referralError,
         message:
-          "Certification niveau 1 obtenue. Vous pouvez vous connecter et débloquer les contacts client.",
+          "Certification niveau 1 obtenue. Vérifiez votre email pour activer la connexion à votre espace pro.",
       },
       { status: 201 }
     );

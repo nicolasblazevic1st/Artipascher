@@ -9,16 +9,22 @@ export default function ClientLoginForm() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/particulier/espace";
   const resetSuccess = searchParams.get("reset") === "1";
+  const verifiedSuccess = searchParams.get("verified") === "1";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setNeedsVerification(false);
+    setResendMessage(null);
 
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -41,6 +47,10 @@ export default function ClientLoginForm() {
 
     if (!res.ok) {
       setError(data.error ?? "Connexion impossible.");
+      if (data.code === "EMAIL_NOT_VERIFIED") {
+        setNeedsVerification(true);
+        if (data.email) setEmail(data.email);
+      }
       setLoading(false);
       return;
     }
@@ -49,11 +59,30 @@ export default function ClientLoginForm() {
     router.refresh();
   }
 
+  async function handleResend() {
+    if (!email.trim()) return;
+    setResending(true);
+    setResendMessage(null);
+    const res = await fetch("/api/client/resend-verification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    setResending(false);
+    setResendMessage(data.message ?? data.error ?? "Email renvoyé.");
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {resetSuccess && (
         <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
           Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.
+        </p>
+      )}
+      {verifiedSuccess && (
+        <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+          Email confirmé. Vous pouvez vous connecter.
         </p>
       )}
       <div>
@@ -99,7 +128,24 @@ export default function ClientLoginForm() {
       </div>
 
       {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <div className="space-y-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p>{error}</p>
+          {needsVerification && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resending}
+              className="font-semibold text-client-700 underline hover:text-client-800 disabled:opacity-50"
+            >
+              {resending ? "Envoi…" : "Renvoyer l'email de confirmation"}
+            </button>
+          )}
+        </div>
+      )}
+      {resendMessage && (
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {resendMessage}
+        </p>
       )}
 
       <button

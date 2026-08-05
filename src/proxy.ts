@@ -19,11 +19,13 @@ export function proxy(request: NextRequest) {
     "/particulier/espace/login",
     "/particulier/espace/mot-de-passe-oublie",
     "/particulier/espace/reinitialiser-mot-de-passe",
+    "/particulier/espace/verifier-email",
   ];
   const publicProPaths = [
     "/pro/login",
     "/pro/mot-de-passe-oublie",
     "/pro/reinitialiser-mot-de-passe",
+    "/pro/verifier-email",
   ];
 
   if (pathname.startsWith("/admin/login")) {
