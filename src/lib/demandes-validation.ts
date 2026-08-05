@@ -85,7 +85,52 @@ export function validateProofFile(file: File | null | undefined): string | null 
 
 const MAX_WORK_START_MONTHS_AHEAD = 24;
 
-export function validateRequestedWorkStartDate(value: unknown): string | null {
+function startOfLocalDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function toIsoDateLocal(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Date minimale de début de travaux : aujourd'hui, ou fin d'enchère
+ * (aujourd'hui + durée) si une durée est fournie.
+ */
+export function minRequestedWorkStartDate(auctionDurationDays?: number): string {
+  const today = startOfLocalDay(new Date());
+  const days =
+    typeof auctionDurationDays === "number" &&
+    Number.isInteger(auctionDurationDays) &&
+    auctionDurationDays > 0
+      ? auctionDurationDays
+      : 0;
+  return toIsoDateLocal(addDays(today, days));
+}
+
+/** Date maximale de début de travaux (aujourd'hui + 24 mois). */
+export function maxRequestedWorkStartDate(): string {
+  const today = startOfLocalDay(new Date());
+  const maxDate = new Date(today);
+  maxDate.setMonth(maxDate.getMonth() + MAX_WORK_START_MONTHS_AHEAD);
+  return toIsoDateLocal(maxDate);
+}
+
+export function validateRequestedWorkStartDate(
+  value: unknown,
+  auctionDurationDays?: number
+): string | null {
   if (typeof value !== "string" || !value.trim()) {
     return "Indiquez la date de début de travaux souhaitée.";
   }
@@ -99,13 +144,25 @@ export function validateRequestedWorkStartDate(value: unknown): string | null {
     return "Date de début de travaux invalide.";
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startDay = new Date(date);
-  startDay.setHours(0, 0, 0, 0);
+  const today = startOfLocalDay(new Date());
+  const startDay = startOfLocalDay(date);
 
   if (startDay < today) {
     return "La date de début de travaux doit être aujourd'hui ou ultérieure.";
+  }
+
+  const duration =
+    typeof auctionDurationDays === "number" &&
+    Number.isInteger(auctionDurationDays) &&
+    auctionDurationDays > 0
+      ? auctionDurationDays
+      : null;
+
+  if (duration != null) {
+    const minAfterAuction = addDays(today, duration);
+    if (startDay < minAfterAuction) {
+      return `La date de début doit être au plus tôt à la fin de l'enchère (${duration} jour${duration > 1 ? "s" : ""}), soit le ${minAfterAuction.toLocaleDateString("fr-FR")}.`;
+    }
   }
 
   const maxDate = new Date(today);
@@ -127,14 +184,6 @@ export function formatRequestedWorkStartDate(isoDate: string | undefined): strin
     month: "long",
     year: "numeric",
   });
-}
-
-export function minRequestedWorkStartDate(): string {
-  const today = new Date();
-  const y = today.getFullYear();
-  const m = String(today.getMonth() + 1).padStart(2, "0");
-  const d = String(today.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
 }
 
 export function validatePreviousQuotePair(

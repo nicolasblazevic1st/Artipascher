@@ -141,7 +141,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: addressError }, { status: 400 });
     }
 
-    const startDateError = validateRequestedWorkStartDate(requestedWorkStartDate);
+    const durationError = validateAuctionDurationDays(durationRaw);
+    if (durationError) {
+      return NextResponse.json({ error: durationError }, { status: 400 });
+    }
+    const auctionDurationDays = Number(durationRaw);
+
+    const startDateError = validateRequestedWorkStartDate(
+      requestedWorkStartDate,
+      auctionDurationDays
+    );
     if (startDateError) {
       return NextResponse.json({ error: startDateError }, { status: 400 });
     }
@@ -179,12 +188,6 @@ export async function POST(request: NextRequest) {
     if (previousQuoteError) {
       return NextResponse.json({ error: previousQuoteError }, { status: 400 });
     }
-
-    const durationError = validateAuctionDurationDays(durationRaw);
-    if (durationError) {
-      return NextResponse.json({ error: durationError }, { status: 400 });
-    }
-    const auctionDurationDays = Number(durationRaw);
 
     const existing = await getClientById(session.clientId);
     if (!existing) {

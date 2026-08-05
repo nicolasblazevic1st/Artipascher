@@ -7,6 +7,7 @@ import {
   MIN_DESCRIPTION_LENGTH,
   MAX_PHOTOS,
   minRequestedWorkStartDate,
+  maxRequestedWorkStartDate,
   validateDescription,
   validatePhotoFiles,
   validatePreviousQuotePair,
@@ -58,6 +59,7 @@ export default function WorkRequestForm({
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
+  const [auctionDurationDays, setAuctionDurationDays] = useState(DEFAULT_AUCTION_DURATION_DAYS);
   const [isCompany, setIsCompany] = useState(false);
   const [clientSiret, setClientSiret] = useState("");
   const [companyVerification, setCompanyVerification] =
@@ -66,6 +68,8 @@ export default function WorkRequestForm({
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
+  const minStartDate = minRequestedWorkStartDate(auctionDurationDays);
+  const maxStartDate = maxRequestedWorkStartDate();
 
   function syncDescriptionLength(value: string) {
     setDescriptionLength(value.trim().length);
@@ -136,7 +140,10 @@ export default function WorkRequestForm({
       return;
     }
 
-    const startDateError = validateRequestedWorkStartDate(requestedWorkStartDate);
+    const startDateError = validateRequestedWorkStartDate(
+      requestedWorkStartDate,
+      auctionDurationDays
+    );
     if (startDateError) {
       setError(startDateError);
       setStatus("error");
@@ -169,6 +176,7 @@ export default function WorkRequestForm({
     formData.set("city", selectedAddress.city);
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
+    formData.set("auctionDurationDays", String(auctionDurationDays));
     formData.set("clientKind", isCompany ? "company" : "individual");
     if (isCompany && companyVerification) {
       formData.set("clientSiret", companyVerification.siret);
@@ -416,26 +424,81 @@ export default function WorkRequestForm({
         automatique via data.gouv.fr à l&apos;envoi.
       </p>
 
-      <div>
-        <label
-          htmlFor="requestedWorkStartDate"
-          className="mb-1 block text-sm font-medium text-slate-700"
-        >
-          Date de début de travaux souhaitée <span className="text-red-500">*</span>
-        </label>
-        <input
-          id="requestedWorkStartDate"
-          name="requestedWorkStartDate"
-          type="date"
-          value={requestedWorkStartDate}
-          onChange={(e) => setRequestedWorkStartDate(e.target.value)}
-          min={minRequestedWorkStartDate()}
-          className={inputClass}
-          required
-        />
-        <p className="mt-1 text-xs text-slate-500">
-          Visible par les artisans pour planifier leur intervention (visite, devis, planning).
-        </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label
+            htmlFor="auctionDurationDays"
+            className="mb-1 block text-sm font-medium text-slate-700"
+          >
+            Durée de l&apos;enchère <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="auctionDurationDays"
+            name="auctionDurationDays"
+            className={`${inputClass} text-slate-700`}
+            value={auctionDurationDays}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              setAuctionDurationDays(next);
+              const minDate = minRequestedWorkStartDate(next);
+              if (requestedWorkStartDate && requestedWorkStartDate < minDate) {
+                setRequestedWorkStartDate("");
+              }
+            }}
+            required
+          >
+            {AUCTION_DURATION_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-slate-500">
+            Période pendant laquelle les artisans peuvent enchérir (max. 3 mois).
+          </p>
+        </div>
+        <div>
+          <label
+            htmlFor="requestedWorkStartDate"
+            className="mb-1 block text-sm font-medium text-slate-700"
+          >
+            Date de début de travaux souhaitée <span className="text-red-500">*</span>
+          </label>
+          <input
+            key={`start-date-${minStartDate}`}
+            id="requestedWorkStartDate"
+            name="requestedWorkStartDate"
+            type="date"
+            value={requestedWorkStartDate}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (!next) {
+                setRequestedWorkStartDate("");
+                return;
+              }
+              // Bloque toute date avant J + durée (calendrier natif + saisie clavier).
+              if (next < minStartDate || next > maxStartDate) {
+                setRequestedWorkStartDate("");
+                setError(
+                  `Choisissez une date à partir du ${new Date(
+                    `${minStartDate}T12:00:00`
+                  ).toLocaleDateString("fr-FR")} (fin d'enchère).`
+                );
+                return;
+              }
+              setError(null);
+              setRequestedWorkStartDate(next);
+            }}
+            min={minStartDate}
+            max={maxStartDate}
+            className={inputClass}
+            required
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Le calendrier bloque les dates avant la fin de l&apos;enchère (
+            {new Date(`${minStartDate}T12:00:00`).toLocaleDateString("fr-FR")}).
+          </p>
+        </div>
       </div>
 
       <select
@@ -606,28 +669,6 @@ export default function WorkRequestForm({
             </div>
           </div>
         )}
-      </div>
-
-      <div>
-        <label htmlFor="auctionDurationDays" className="mb-1 block text-sm font-medium text-slate-700">
-          Durée de l&apos;enchère <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="auctionDurationDays"
-          name="auctionDurationDays"
-          className={`${inputClass} text-slate-700`}
-          defaultValue={DEFAULT_AUCTION_DURATION_DAYS}
-          required
-        >
-          {AUCTION_DURATION_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <p className="mt-1 text-xs text-slate-500">
-          Vous choisissez la durée pendant laquelle les artisans peuvent enchérir (maximum 3 mois).
-        </p>
       </div>
 
       {error && (
