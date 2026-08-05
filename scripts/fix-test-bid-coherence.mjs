@@ -1,6 +1,6 @@
 /**
- * Aligne les enchères TEST existantes avec le parcours réel :
- * intérêt accepté → déblocage contact → devis validé → enchères.
+ * Aligne les enchères TEST : 1 devis validé = 1 enchère au même montant
+ * (+ intérêt accepté + contact débloqué).
  *
  * Usage : node scripts/fix-test-bid-coherence.mjs
  */
@@ -11,6 +11,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STORE_PATH = path.join(__dirname, "..", "data", "store.json");
 const AUCTION_PREFIX = "auction-wr-test-";
+const BID_PREFIX = "bid-wr-test-";
 const PRO_EMAIL = "pro@test.artipascher.fr";
 
 function hoursAgo(hours) {
@@ -37,23 +38,33 @@ async function main() {
   }
 
   const testRequests = store.workRequests.filter(
-    (r) =>
-      r.auctionId?.startsWith(AUCTION_PREFIX) &&
-      r.status === "approved"
+    (r) => r.auctionId?.startsWith(AUCTION_PREFIX) && r.status === "approved"
   );
 
   let fixed = 0;
 
   for (const request of testRequests) {
     const auctionId = request.auctionId;
-    const bids = store.bids.filter(
-      (b) => b.auctionId === auctionId && b.proId === pro.id
-    );
+    const slug = auctionId.replace(AUCTION_PREFIX, "");
+    const bids = store.bids
+      .filter((b) => b.auctionId === auctionId && b.proId === pro.id)
+      .sort((a, b) => a.amount - b.amount);
+
     if (bids.length === 0) continue;
 
-    const slug = auctionId.replace(AUCTION_PREFIX, "");
-    const maxBid = Math.max(...bids.map((b) => b.amount));
-    const quoteAmount = Math.max(request.startPrice ?? 0, maxBid);
+    // Garde uniquement la meilleure (plus basse) enchère = l'offre réelle
+    const keep = bids[0];
+    const offerAmount = keep.amount;
+    const removeIds = new Set(bids.slice(1).map((b) => b.id));
+    if (removeIds.size > 0) {
+      store.bids = store.bids.filter((b) => !removeIds.has(b.id));
+    }
+
+    // Normalise l'id de l'enchère conservée
+    keep.id = `${BID_PREFIX}${slug}-1`;
+    keep.fromQuoteId = `quote-test-${slug}`;
+    keep.ocrAmount = offerAmount;
+    keep.ocrMatchedLabel = "Total TTC (seed)";
 
     const hasRequest = store.contactRequests.some(
       (r) => r.proId === pro.id && r.auctionId === auctionId && r.status === "accepted"
@@ -85,10 +96,7 @@ async function main() {
     }
 
     let quote = store.proQuotes.find(
-      (q) =>
-        q.proId === pro.id &&
-        q.auctionId === auctionId &&
-        q.status === "approved"
+      (q) => q.proId === pro.id && q.auctionId === auctionId && q.status === "approved"
     );
     if (!quote) {
       quote = {
@@ -100,28 +108,32 @@ async function main() {
         visitDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10),
-        amount: quoteAmount,
-        description: `[TEST] Devis après visite — parcours cohérent pour ${request.city}.`,
+        amount: offerAmount,
+        description: `[TEST] Devis après visite — ${request.city}. Montant = enchère (${offerAmount} €).`,
         status: "approved",
         createdAt: hoursAgo(12),
         reviewedAt: hoursAgo(11),
-        adminNote: "Devis TEST validé pour parcours démo cohérent.",
+        adminNote: "Devis TEST aligné sur l'unique enchère.",
       };
       store.proQuotes.unshift(quote);
+    } else {
+      quote.id = `quote-test-${slug}`;
+      quote.amount = offerAmount;
+      quote.description = `[TEST] Devis après visite — ${request.city}. Montant = enchère (${offerAmount} €).`;
+      quote.adminNote = "Devis TEST aligné sur l'unique enchère.";
     }
 
-    for (const bid of bids) {
-      if (!bid.fromQuoteId) bid.fromQuoteId = quote.id;
-    }
+    keep.fromQuoteId = quote.id;
 
     fixed += 1;
     console.log(
-      `OK ${auctionId} — ${bids.length} enchère(s), contact débloqué, devis ${quoteAmount} €`
+      `OK ${auctionId} — 1 devis + 1 enchère à ${offerAmount} €` +
+        (removeIds.size ? ` (supprimé ${removeIds.size} enchère(s) en trop)` : "")
     );
   }
 
   await fs.writeFile(STORE_PATH, JSON.stringify(store, null, 2), "utf-8");
-  console.log(`\n${fixed} chantier(s) TEST aligné(s).`);
+  console.log(`\n${fixed} chantier(s) TEST aligné(s) : 1 devis = 1 enchère.`);
 }
 
 main().catch((err) => {

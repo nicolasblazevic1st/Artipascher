@@ -65,7 +65,8 @@ const DEMO_REQUESTS = [
     endsInDays: 10,
     previousQuoteAmount: 3200,
     photos: ["/demo/projets/demo-peinture.jpg"],
-    bids: [2650, 2480],
+    /** Une seule enchère = le devis validé (même montant). */
+    bids: [2480],
   },
   {
     slug: "plomberie-roubaix",
@@ -114,7 +115,8 @@ const DEMO_REQUESTS = [
     auctionDurationDays: 14,
     endsInDays: 12,
     photos: ["/demo/projets/demo-toiture.jpg"],
-    bids: [3700, 3550, 3420],
+    /** Une seule enchère alignée sur le devis après visite. */
+    bids: [3420],
   },
   {
     slug: "carrelage-valenciennes",
@@ -294,7 +296,8 @@ async function main() {
         const visitDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
           .toISOString()
           .slice(0, 10);
-        const quoteAmount = Math.max(demo.startPrice ?? 0, ...demo.bids);
+        // 1 devis = 1 enchère au même montant (parcours réaliste)
+        const offerAmount = demo.bids[demo.bids.length - 1];
 
         store.contactRequests.unshift({
           id: `cr-test-${demo.slug}`,
@@ -322,27 +325,27 @@ async function main() {
           proId: pro.id,
           companyName: pro.companyName || "Artisan test",
           visitDate,
-          amount: quoteAmount,
-          description: `[TEST] Devis après visite — ${demo.category} à ${demo.city}. Parcours cohérent : intérêt accepté → contact débloqué → visite → devis validé.`,
+          amount: offerAmount,
+          description: `[TEST] Devis après visite — ${demo.category} à ${demo.city}. Montant = enchère déposée (${offerAmount} €).`,
           status: "approved",
           createdAt: hoursAgo(12),
           reviewedAt: hoursAgo(11),
-          adminNote: "Devis TEST validé pour parcours démo cohérent.",
+          adminNote: "Devis TEST validé — aligné sur l'unique enchère démo.",
         });
 
-        demo.bids.forEach((amount, index) => {
-          store.bids.unshift({
-            id: `${BID_PREFIX}${demo.slug}-${index + 1}`,
-            auctionId,
-            proId: pro.id,
-            companyName: pro.companyName || "Artisan test",
-            amount,
-            feeEur: 1,
-            createdAt: hoursAgo(10 - index),
-            fromQuoteId: `quote-test-${demo.slug}`,
-          });
-          createdBids += 1;
+        store.bids.unshift({
+          id: `${BID_PREFIX}${demo.slug}-1`,
+          auctionId,
+          proId: pro.id,
+          companyName: pro.companyName || "Artisan test",
+          amount: offerAmount,
+          feeEur: 1,
+          createdAt: hoursAgo(10),
+          fromQuoteId: `quote-test-${demo.slug}`,
+          ocrAmount: offerAmount,
+          ocrMatchedLabel: "Total TTC (seed)",
         });
+        createdBids += 1;
       }
     } else {
       createdPending += 1;
