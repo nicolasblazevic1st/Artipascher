@@ -168,13 +168,12 @@ export default async function SharedAuctionPage({ params }: Props) {
               auctionId={request.auctionId}
               startPrice={request.startPrice}
               initialCurrentPrice={currentPrice}
-              initialBids={bidsWithLevel.map((b) => ({
+              initialBids={bidsWithLevel.map((b, index) => ({
                 id: b.id,
-                companyName: b.companyName,
+                label: `Artisan ${index + 1}`,
                 amount: b.amount,
                 createdAt: b.createdAt,
                 qualificationLevel: b.qualificationLevel,
-                devisProofUrl: b.devisProofUrl,
               }))}
               requiresQuote
             />
@@ -185,7 +184,6 @@ export default async function SharedAuctionPage({ params }: Props) {
           <ApprovedQuotesList
             quotes={quotesWithLevel.map((q) => ({
               id: q.id,
-              companyName: q.companyName,
               amount: q.amount,
               description: q.description,
               visitDate: q.visitDate,
@@ -207,11 +205,9 @@ export default async function SharedAuctionPage({ params }: Props) {
               <VerifiedBidsList
                 bids={bidsWithLevel.map((b) => ({
                   id: b.id,
-                  companyName: b.companyName,
                   amount: b.amount,
                   qualificationLevel: b.qualificationLevel,
                   decennaleVerifiedLabels: b.decennaleVerifiedLabels,
-                  devisProofUrl: b.devisProofUrl,
                 }))}
               />
             </div>

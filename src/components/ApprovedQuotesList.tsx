@@ -1,3 +1,4 @@
+import { anonymousArtisanLabel } from "@/lib/anonymize-artisan";
 import { formatPrice } from "@/lib/data";
 import DecennaleVerifiedBadge from "@/components/DecennaleVerifiedBadge";
 import QualificationBadge from "@/components/QualificationBadge";
@@ -5,7 +6,7 @@ import type { QualificationLevel } from "@/lib/qualification-tiers";
 
 export interface DisplayQuote {
   id: string;
-  companyName: string;
+  companyName?: string;
   amount: number;
   description: string;
   visitDate: string;
@@ -16,11 +17,14 @@ export interface DisplayQuote {
 interface Props {
   quotes: DisplayQuote[];
   title?: string;
+  /** Si true, affiche les raisons sociales. Sinon anonymisé sur les pages publiques. */
+  revealCompanyNames?: boolean;
 }
 
 export default function ApprovedQuotesList({
   quotes,
   title = "Devis après visite (validés)",
+  revealCompanyNames = false,
 }: Props) {
   if (quotes.length === 0) {
     return (
@@ -34,8 +38,13 @@ export default function ApprovedQuotesList({
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+      {!revealCompanyNames && (
+        <p className="text-xs text-slate-500">
+          Les noms des artisans concurrents sont masqués sur cette page publique.
+        </p>
+      )}
       <ul className="space-y-4">
-        {quotes.map((quote) => (
+        {quotes.map((quote, index) => (
           <li
             key={quote.id}
             className="rounded-xl border border-slate-200 bg-white p-5"
@@ -43,7 +52,11 @@ export default function ApprovedQuotesList({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-slate-900">{quote.companyName}</p>
+                  <p className="font-semibold text-slate-900">
+                    {revealCompanyNames && quote.companyName
+                      ? quote.companyName
+                      : anonymousArtisanLabel(index)}
+                  </p>
                   {quote.qualificationLevel != null && (
                     <QualificationBadge level={quote.qualificationLevel} compact />
                   )}

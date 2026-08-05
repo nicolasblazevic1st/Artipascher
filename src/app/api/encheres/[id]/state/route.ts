@@ -21,13 +21,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     startPrice: auction.startPrice ?? null,
     currentPrice: currentPrice ?? null,
     bidCount: bids.length,
-    bids: bidsWithLevel.map((b) => ({
+    bids: bidsWithLevel.map((b, index) => ({
       id: b.id,
-      companyName: b.companyName,
+      label: `Artisan ${index + 1}`,
       amount: b.amount,
       createdAt: b.createdAt,
       qualificationLevel: b.qualificationLevel,
-      devisProofUrl: b.devisProofUrl,
     })),
   });
 }

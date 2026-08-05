@@ -12,7 +12,8 @@ import type { QualificationLevel } from "@/lib/qualification-tiers";
 
 interface BidRow {
   id: string;
-  companyName: string;
+  companyName?: string;
+  label?: string;
   amount: number;
   createdAt: string;
   qualificationLevel?: QualificationLevel;
@@ -367,22 +368,12 @@ export default function BidPanel({
         <div className="mt-6 border-t border-brand-100 pt-4">
           <p className="text-sm font-medium text-slate-700">Historique ({bids.length})</p>
           <ul className="mt-2 space-y-1 text-sm text-slate-600">
-            {bids.slice(0, 5).map((b) => (
+            {bids.slice(0, 5).map((b, index) => (
               <li key={b.id} className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate">{b.companyName}</span>
+                  <span className="truncate">{b.label ?? `Artisan ${index + 1}`}</span>
                   {b.qualificationLevel != null && (
                     <QualificationBadge level={b.qualificationLevel} compact />
-                  )}
-                  {b.devisProofUrl && (
-                    <a
-                      href={b.devisProofUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 text-xs text-brand-700 underline"
-                    >
-                      Devis
-                    </a>
                   )}
                 </span>
                 <span className="shrink-0 font-semibold text-brand-700">

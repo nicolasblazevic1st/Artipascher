@@ -65,13 +65,12 @@ export default async function EnchereDetailPage({ params }: Props) {
       })
     : "—";
 
-  const bidRows = bidsWithLevel.map((b) => ({
+  const bidRows = bidsWithLevel.map((b, index) => ({
     id: b.id,
-    companyName: b.companyName,
+    label: `Artisan ${index + 1}`,
     amount: b.amount,
     createdAt: b.createdAt,
     qualificationLevel: b.qualificationLevel,
-    devisProofUrl: b.devisProofUrl,
   }));
 
   const categoryLabel = workCategory;
@@ -187,7 +186,6 @@ export default async function EnchereDetailPage({ params }: Props) {
           <section className="mt-8">
             <ApprovedQuotesList quotes={quotesWithLevel.map((q) => ({
               id: q.id,
-              companyName: q.companyName,
               amount: q.amount,
               description: q.description,
               visitDate: q.visitDate,
@@ -208,11 +206,9 @@ export default async function EnchereDetailPage({ params }: Props) {
             <VerifiedBidsList
               bids={bidsWithLevel.map((b) => ({
                 id: b.id,
-                companyName: b.companyName,
                 amount: b.amount,
                 qualificationLevel: b.qualificationLevel,
                 decennaleVerifiedLabels: b.decennaleVerifiedLabels,
-                devisProofUrl: b.devisProofUrl,
               }))}
             />
           </div>
