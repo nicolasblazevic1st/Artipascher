@@ -108,7 +108,7 @@ export async function workRequestToAuctionCard(
   };
 }
 
-/** Liste publique : demandes store actives + catalogue démo. */
+/** Liste publique : demandes store actives avec photo (ou TEST). */
 export async function listPublicAuctions(): Promise<Auction[]> {
   const store = await readStore();
   const fromStore = (
@@ -119,21 +119,13 @@ export async function listPublicAuctions(): Promise<Auction[]> {
     )
   ).filter((a): a is Auction => a != null);
 
-  const sampleIds = new Set(SAMPLE_AUCTIONS.map((a) => a.id));
-  const uniqueStore = fromStore.filter((a) => !sampleIds.has(a.id));
-
-  const samples = SAMPLE_AUCTIONS.filter((a) => a.status === "active").map((a) => {
-    if (a.latitude != null && a.longitude != null) return a;
-    const coords = coordinatesForCity(a.city);
-    return coords
-      ? { ...a, latitude: coords.lat, longitude: coords.lon }
-      : a;
-  });
-
-  return [...uniqueStore, ...samples];
+  // Exclut les fausses enchères sans photo et hors TEST.
+  return fromStore.filter(
+    (auction) => auction.isTest === true || Boolean(auction.coverPhotoUrl)
+  );
 }
 
-/** Admin : toutes les enchères store (y compris terminées) + catalogue démo. */
+/** Admin : toutes les enchères store (y compris terminées). */
 export async function listAdminAuctions(): Promise<Auction[]> {
   const store = await readStore();
   const fromStore = (
@@ -144,9 +136,7 @@ export async function listAdminAuctions(): Promise<Auction[]> {
     )
   ).filter((a): a is Auction => a != null);
 
-  const storeIds = new Set(fromStore.map((a) => a.id));
-  const samples = SAMPLE_AUCTIONS.filter((a) => !storeIds.has(a.id));
-  return [...fromStore, ...samples];
+  return fromStore;
 }
 
 export interface AdminAuctionView {
@@ -297,12 +287,6 @@ export async function getActiveWorkCategories(): Promise<Set<string>> {
     ) {
       active.add(request.category);
     }
-  }
-
-  for (const auction of SAMPLE_AUCTIONS) {
-    if (auction.status !== "active") continue;
-    const mapped = TRADE_CATEGORY_TO_WORK[auction.category];
-    if (mapped) active.add(mapped);
   }
 
   return active;
