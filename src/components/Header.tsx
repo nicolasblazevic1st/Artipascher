@@ -106,17 +106,17 @@ export default function Header() {
 
             <Link
               href="/particulier/espace/login"
-              className="flex items-center gap-1.5 rounded-lg border-2 border-client-700 px-2.5 py-1 text-sm font-medium whitespace-nowrap text-client-800 transition-colors hover:bg-client-700 hover:text-white xl:px-3 xl:py-1.5 xl:text-base"
+              className="inline-flex h-9 items-center justify-center rounded-lg border-2 border-client-700 px-3 text-sm font-medium leading-none whitespace-nowrap text-client-800 transition-colors hover:bg-client-700 hover:text-white xl:h-10 xl:px-4 xl:text-base"
             >
-              <span>Mon espace</span>
+              Mon espace
             </Link>
 
             <Link
               href="/pro/login"
-              className="flex items-center gap-1.5 rounded-lg border-2 border-gray-800 px-2.5 py-1 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-800 hover:text-white xl:px-3 xl:py-1.5 xl:text-base"
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border-2 border-gray-800 px-3 text-sm font-medium leading-none whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-800 hover:text-white xl:h-10 xl:px-4 xl:text-base"
             >
               <BriefcaseIcon className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
-              <span>Espace Pro</span>
+              Espace Pro
             </Link>
 
             <Link
@@ -148,19 +148,19 @@ export default function Header() {
 
               <Link
                 href="/particulier/espace/login"
-                className="flex items-center gap-2 rounded-lg border-2 border-client-700 px-3 py-1.5 text-sm font-medium text-client-800 transition-colors hover:bg-client-700 hover:text-white"
+                className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-client-700 px-3 text-sm font-medium leading-none text-client-800 transition-colors hover:bg-client-700 hover:text-white"
                 onClick={() => setMobileOpen(false)}
               >
-                <span>Mon espace</span>
+                Mon espace
               </Link>
 
               <Link
                 href="/pro/login"
-                className="flex items-center gap-2 rounded-lg border-2 border-gray-800 px-3 py-1.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-800 hover:text-white"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border-2 border-gray-800 px-3 text-sm font-medium leading-none text-gray-800 transition-colors hover:bg-gray-800 hover:text-white"
                 onClick={() => setMobileOpen(false)}
               >
                 <BriefcaseIcon className="h-4 w-4" />
-                <span>Espace Pro</span>
+                Espace Pro
               </Link>
 
               <Link

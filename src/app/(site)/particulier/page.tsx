@@ -120,7 +120,7 @@ export default function ParticulierPage() {
           </p>
           <ul className="mt-4 space-y-2 text-sm">
             <li>Prix de départ : 5 000 €</li>
-            <li>Artisan A : 4 500 €</li>
+            <li>Artisan A : 5 200 €</li>
             <li>Artisan B : 4 200 €</li>
             <li>Artisan C : 3 800 €</li>
             <li>Artisan D : 4 100 €</li>
