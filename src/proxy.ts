@@ -17,6 +17,7 @@ export function proxy(request: NextRequest) {
 
   const publicClientPaths = [
     "/particulier/espace/login",
+    "/particulier/espace/inscription",
     "/particulier/espace/mot-de-passe-oublie",
     "/particulier/espace/reinitialiser-mot-de-passe",
     "/particulier/espace/verifier-email",

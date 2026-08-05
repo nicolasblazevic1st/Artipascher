@@ -2,6 +2,7 @@ import Link from "next/link";
 import AuctionCard from "@/components/AuctionCard";
 import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
+import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
 import { FAQ_ITEMS } from "@/lib/data";
 import {
   getActiveWorkCategories,
@@ -137,7 +138,10 @@ export default async function HomePage() {
               key={category}
               className="rounded-xl border border-slate-200 bg-white p-4 text-center"
             >
-              <p className="font-medium text-slate-900">{category}</p>
+              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                <WorkCategoryIcon category={category} className="h-5 w-5" />
+              </span>
+              <p className="mt-3 font-medium text-slate-900">{category}</p>
               <p className="mt-1 text-xs text-slate-500">
                 {activeCategories.has(category)
                   ? "Enchères actives"

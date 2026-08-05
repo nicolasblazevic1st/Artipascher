@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import SiteExplainer from "@/components/SiteExplainer";
+import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -20,10 +21,10 @@ export default function CommentCaMarchePage() {
           Comment fonctionne Artipascher ?
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          Cette présentation utilise les mêmes couleurs et composants que le site
-          (teal, ambre, violet). Vous pouvez l&apos;intégrer sur votre site ou
-          l&apos;enregistrer à l&apos;écran pour en faire une vidéo.
+          Du particulier à l&apos;artisan vérifié : demande, visite, devis, puis
+          enchères inversées dans le Nord-Pas-de-Calais.
         </p>
+        <WorkTradesIconRow className="mt-6" />
       </div>
 
       <div className="mt-10">

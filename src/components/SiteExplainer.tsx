@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
 import { DATA_HOSTING_NOTICE, formatPrice } from "@/lib/data";
 
 const SLIDE_MS = 9000;
@@ -66,6 +67,7 @@ function SlideIntro() {
         <p className="mt-2 text-sm text-brand-100 sm:text-base">
           Artisans RCS vérifiés · Devis après visite · Vous choisissez
         </p>
+        <WorkTradesIconRow className="mt-4 justify-start" tone="onDark" maxItems={5} />
         <p className="mt-3 text-xs text-brand-200/90">{DATA_HOSTING_NOTICE}</p>
         <span className="mt-5 inline-block rounded-xl bg-accent-500 px-4 py-2 text-sm font-semibold">
           Demander des travaux

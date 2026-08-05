@@ -7,7 +7,14 @@ import Link from "next/link";
 export default function ClientLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "/particulier/espace";
+  const fromParam = searchParams.get("from");
+  const from =
+    fromParam &&
+    fromParam.startsWith("/particulier/espace") &&
+    !fromParam.startsWith("/particulier/espace/inscription") &&
+    !fromParam.startsWith("/particulier/espace/login")
+      ? fromParam
+      : "/particulier/espace";
   const resetSuccess = searchParams.get("reset") === "1";
   const verifiedSuccess = searchParams.get("verified") === "1";
 
@@ -160,7 +167,7 @@ export default function ClientLoginForm() {
         Pas encore de compte ?{" "}
         <Link
           href={`/particulier/espace/inscription?from=${encodeURIComponent(
-            from.startsWith("/particulier/espace") ? from : "/particulier/espace/demandes/nouvelle"
+            "/particulier/espace/demandes/nouvelle"
           )}`}
           className="font-medium text-client-600 hover:text-client-700"
         >
