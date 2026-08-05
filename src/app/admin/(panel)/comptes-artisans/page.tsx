@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import AdminImpersonateProButton from "@/components/admin/AdminImpersonateProButton";
 
 type StatusFilter = "all" | "approved" | "pending" | "rejected" | "email_unverified";
 
@@ -190,9 +191,15 @@ export default function AdminComptesArtisansPage() {
                     {a.email} · {a.phone}
                   </p>
                 </div>
-                <p className="text-xs text-slate-400">
-                  Inscrit le {new Date(a.createdAt).toLocaleDateString("fr-FR")}
-                </p>
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-xs text-slate-400">
+                    Inscrit le {new Date(a.createdAt).toLocaleDateString("fr-FR")}
+                  </p>
+                  <AdminImpersonateProButton
+                    proId={a.id}
+                    companyName={a.companyName}
+                  />
+                </div>
               </div>
 
               <dl className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-3">

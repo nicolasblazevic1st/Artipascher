@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
 import { CATEGORY_LABELS, formatLocation, formatPrice } from "@/lib/data";
-import { getApprovedProById, getProDashboardStats } from "@/lib/store";
+import { getProDashboardStats, getProForSession } from "@/lib/store";
 import { BID_FEE_EUR } from "@/lib/auctions";
 
 export default async function ProDashboardPage() {
@@ -10,7 +10,7 @@ export default async function ProDashboardPage() {
   if (!session) return null;
 
   const [pro, stats, auctions] = await Promise.all([
-    getApprovedProById(session.proId),
+    getProForSession(session),
     getProDashboardStats(session.proId),
     getEnrichedAuctions(session.proId),
   ]);

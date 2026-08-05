@@ -7,6 +7,8 @@ export interface ClientSession {
   email: string;
   firstName: string;
   lastName: string;
+  /** Session ouverte par un admin (impersonation). */
+  impersonatedByAdmin?: boolean;
 }
 
 export function encodeClientSession(session: ClientSession): string {

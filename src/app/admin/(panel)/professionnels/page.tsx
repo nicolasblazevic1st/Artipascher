@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import AdminImpersonateProButton from "@/components/admin/AdminImpersonateProButton";
 import AdminLevel1Panel from "@/components/AdminLevel1Panel";
 import AdminTradeDecennalePanel from "@/components/AdminTradeDecennalePanel";
 import QualificationBadge from "@/components/QualificationBadge";
@@ -144,6 +145,12 @@ export default function AdminProfessionnelsPage() {
                   <p className="mt-2 text-xs text-slate-400">
                     Inscrit le {new Date(r.createdAt).toLocaleString("fr-FR")}
                   </p>
+                  <div className="mt-3">
+                    <AdminImpersonateProButton
+                      proId={r.id}
+                      companyName={r.companyName}
+                    />
+                  </div>
                 </div>
                 {r.status === "pending" && (
                   <div className="flex flex-col items-end gap-2">

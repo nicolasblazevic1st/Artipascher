@@ -7,6 +7,8 @@ export interface ProSession {
   companyName: string;
   email: string;
   siret: string;
+  /** Session ouverte par un admin (impersonation). */
+  impersonatedByAdmin?: boolean;
 }
 
 export function encodeProSession(session: ProSession): string {

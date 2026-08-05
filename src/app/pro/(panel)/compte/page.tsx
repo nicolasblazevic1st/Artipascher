@@ -7,10 +7,10 @@ import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import {
-  getApprovedProById,
   getContactUnlocksForPro,
   getProCreditBalance,
   getProDashboardStats,
+  getProForSession,
 } from "@/lib/store";
 import { maskSiret } from "@/lib/professionals";
 
@@ -23,7 +23,7 @@ export default async function ProComptePage() {
   if (!session) return null;
 
   const [pro, stats, unlocks, creditBalance] = await Promise.all([
-    getApprovedProById(session.proId),
+    getProForSession(session),
     getProDashboardStats(session.proId),
     getContactUnlocksForPro(session.proId),
     getProCreditBalance(session.proId),

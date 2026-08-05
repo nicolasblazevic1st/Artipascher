@@ -284,6 +284,59 @@ export async function updateProRegistration(
   return store.proRegistrations[index];
 }
 
+/**
+ * Fraude / non-conformité : retire la certification (niveau 0).
+ * Conserve les documents sur disque comme preuves, bloque la connexion.
+ */
+export async function demoteProToLevelZero(
+  proId: string,
+  adminNote?: string
+): Promise<ProRegistration | null> {
+  const store = await readStore();
+  const index = store.proRegistrations.findIndex((p) => p.id === proId);
+  if (index === -1) return null;
+
+  const pro = store.proRegistrations[index];
+  const now = new Date().toISOString();
+  const note =
+    adminNote?.trim() ||
+    "Fraude ou documents non conformes — renvoyé au niveau 0.";
+
+  pro.status = "rejected";
+  pro.adminNote = note;
+  pro.reviewedAt = now;
+  delete pro.level1CertifiedAt;
+  pro.qualificationLevel = 1;
+
+  pro.documents = (pro.documents ?? []).map((doc) => ({
+    ...doc,
+    verificationStatus: "rejeté" as const,
+  }));
+
+  pro.tradeSelections = (pro.tradeSelections ?? []).map((selection) => ({
+    ...selection,
+    decennaleStatus: "non_couvert" as const,
+  }));
+
+  if (pro.level1Audit) {
+    pro.level1Audit = {
+      ...pro.level1Audit,
+      globalIssues: [
+        ...(pro.level1Audit.globalIssues ?? []),
+        {
+          field: "admin",
+          message: note,
+          severity: "error",
+        },
+      ],
+    };
+  }
+
+  store.proRegistrations[index] = pro;
+  await writeStore(store);
+  return pro;
+}
+
 export async function updateWorkRequest(
   id: string,
   patch: Partial<
@@ -422,10 +475,28 @@ export async function addBid(data: {
   return entry;
 }
 
-export async function getApprovedProById(proId: string): Promise<ProRegistration | null> {
+export async function getProRegistrationById(
+  proId: string
+): Promise<ProRegistration | null> {
   const store = await readStore();
-  const pro = store.proRegistrations.find((p) => p.id === proId && p.status === "approved");
-  return pro ?? null;
+  return store.proRegistrations.find((p) => p.id === proId) ?? null;
+}
+
+export async function getApprovedProById(proId: string): Promise<ProRegistration | null> {
+  const pro = await getProRegistrationById(proId);
+  if (!pro || pro.status !== "approved") return null;
+  return pro;
+}
+
+/** Compte accessible via session pro (ou impersonation admin, tout statut). */
+export async function getProForSession(session: {
+  proId: string;
+  impersonatedByAdmin?: boolean;
+}): Promise<ProRegistration | null> {
+  if (session.impersonatedByAdmin) {
+    return getProRegistrationById(session.proId);
+  }
+  return getApprovedProById(session.proId);
 }
 
 export async function getQualificationLevelForPro(proId: string): Promise<1 | 2 | 3> {

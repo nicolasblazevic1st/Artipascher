@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AdminImpersonateClientButton from "@/components/admin/AdminImpersonateClientButton";
 
 type KindFilter = "all" | "individual" | "company" | "email_unverified" | "with_requests";
 
@@ -168,9 +169,15 @@ export default function AdminComptesParticuliersPage() {
                     {a.phone ? ` · ${a.phone}` : ""}
                   </p>
                 </div>
-                <p className="text-xs text-slate-400">
-                  Inscrit le {new Date(a.createdAt).toLocaleDateString("fr-FR")}
-                </p>
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-xs text-slate-400">
+                    Inscrit le {new Date(a.createdAt).toLocaleDateString("fr-FR")}
+                  </p>
+                  <AdminImpersonateClientButton
+                    clientId={a.id}
+                    label={`${a.firstName} ${a.lastName}`}
+                  />
+                </div>
               </div>
 
               <dl className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-3">
