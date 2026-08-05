@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import AuctionCard from "@/components/AuctionCard";
+import PublicAuctionsBoard from "@/components/PublicAuctionsBoard";
 import { listPublicAuctions } from "@/lib/work-request-auctions";
 
 export const metadata: Metadata = {
@@ -17,11 +17,7 @@ export default async function EncheresPage() {
         Projets en cours dans le Nord (59) et Pas-de-Calais (62)
       </p>
 
-      <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {auctions.map((auction) => (
-          <AuctionCard key={auction.id} auction={auction} />
-        ))}
-      </div>
+      <PublicAuctionsBoard auctions={auctions} />
     </div>
   );
 }

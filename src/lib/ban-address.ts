@@ -74,7 +74,8 @@ function mapFeature(feature: BanApiFeature): BanAddressFeature | null {
 
 export async function searchBanAddresses(
   query: string,
-  limit = 6
+  limit = 6,
+  options?: { type?: "housenumber" | "street" | "locality" | "municipality" }
 ): Promise<BanAddressFeature[]> {
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
@@ -84,6 +85,9 @@ export async function searchBanAddresses(
     limit: String(limit),
     autocomplete: "1",
   });
+  if (options?.type) {
+    params.set("type", options.type);
+  }
 
   try {
     const response = await fetch(`${BAN_SEARCH_URL}?${params}`, {
@@ -99,6 +103,14 @@ export async function searchBanAddresses(
   } catch {
     return [];
   }
+}
+
+/** Recherche de communes 59/62 (pour filtre géographique). */
+export async function searchBanMunicipalities(
+  query: string,
+  limit = 8
+): Promise<BanAddressFeature[]> {
+  return searchBanAddresses(query, limit, { type: "municipality" });
 }
 
 export interface BanAddressVerificationInput {

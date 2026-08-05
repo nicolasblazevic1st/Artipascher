@@ -1,5 +1,10 @@
 import { computeCurrentPrice } from "./auctions";
-import { SAMPLE_AUCTIONS, type Auction, type TradeCategory } from "./data";
+import {
+  SAMPLE_AUCTIONS,
+  coordinatesForCity,
+  type Auction,
+  type TradeCategory,
+} from "./data";
 import { isAuctionStillActive } from "./share";
 import { getBidsForAuction, readStore } from "./store";
 import type { WorkRequest } from "./store-types";
@@ -80,6 +85,10 @@ export async function workRequestToAuctionCard(
       bids.map((b) => b.amount)
     ) ?? startPrice;
 
+  const cityCoords = coordinatesForCity(request.city);
+  const latitude = request.latitude ?? cityCoords?.lat;
+  const longitude = request.longitude ?? cityCoords?.lon;
+
   return {
     id: request.auctionId,
     title: `${request.category} · ${request.city}`,
@@ -94,6 +103,8 @@ export async function workRequestToAuctionCard(
     endsAt: request.auctionEndsAt ?? new Date().toISOString(),
     isTest: request.isTest === true,
     coverPhotoUrl: request.photos?.[0],
+    latitude,
+    longitude,
   };
 }
 
@@ -111,7 +122,15 @@ export async function listPublicAuctions(): Promise<Auction[]> {
   const sampleIds = new Set(SAMPLE_AUCTIONS.map((a) => a.id));
   const uniqueStore = fromStore.filter((a) => !sampleIds.has(a.id));
 
-  return [...uniqueStore, ...SAMPLE_AUCTIONS.filter((a) => a.status === "active")];
+  const samples = SAMPLE_AUCTIONS.filter((a) => a.status === "active").map((a) => {
+    if (a.latitude != null && a.longitude != null) return a;
+    const coords = coordinatesForCity(a.city);
+    return coords
+      ? { ...a, latitude: coords.lat, longitude: coords.lon }
+      : a;
+  });
+
+  return [...uniqueStore, ...samples];
 }
 
 /** Admin : toutes les enchères store (y compris terminées) + catalogue démo. */

@@ -28,6 +28,9 @@ export interface Auction {
   isTest?: boolean;
   /** Première photo projet (visible sans crédit). */
   coverPhotoUrl?: string;
+  /** Coordonnées chantier (filtrable par distance). */
+  latitude?: number;
+  longitude?: number;
 }
 
 export const CATEGORY_LABELS: Record<TradeCategory, string> = {
@@ -60,6 +63,43 @@ export const NORD_CITIES = [
   "Lambersart",
   "Béthune",
 ] as const;
+
+/** Centroïdes approximatifs des villes du catalogue (filtre distance). */
+export const CITY_COORDINATES: Record<string, { lat: number; lon: number }> = {
+  Lille: { lat: 50.6292, lon: 3.0573 },
+  Roubaix: { lat: 50.6927, lon: 3.1746 },
+  Tourcoing: { lat: 50.7239, lon: 3.1612 },
+  Valenciennes: { lat: 50.3571, lon: 3.5181 },
+  Dunkerque: { lat: 51.0343, lon: 2.3768 },
+  Douai: { lat: 50.3708, lon: 3.0793 },
+  Lens: { lat: 50.4289, lon: 2.8318 },
+  Arras: { lat: 50.291, lon: 2.7772 },
+  Cambrai: { lat: 50.1767, lon: 3.2356 },
+  Maubeuge: { lat: 50.2775, lon: 3.9726 },
+  Wattrelos: { lat: 50.7042, lon: 3.214 },
+  Croix: { lat: 50.6785, lon: 3.1503 },
+  "Marcq-en-Barœul": { lat: 50.671, lon: 3.0927 },
+  Lambersart: { lat: 50.65, lon: 3.025 },
+  Béthune: { lat: 50.5297, lon: 2.64 },
+  Calais: { lat: 50.9513, lon: 1.8587 },
+};
+
+export function coordinatesForCity(city: string): { lat: number; lon: number } | null {
+  const direct = CITY_COORDINATES[city];
+  if (direct) return direct;
+  const normalized = city
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  for (const [name, coords] of Object.entries(CITY_COORDINATES)) {
+    const key = name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    if (key === normalized) return coords;
+  }
+  return null;
+}
 
 export const SAMPLE_AUCTIONS: Auction[] = [
   {
