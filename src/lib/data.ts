@@ -110,6 +110,11 @@ export const DATA_HOSTING_NOTICE =
 
 export const FAQ_ITEMS = [
   {
+    question: "Le service est-il gratuit pour les particuliers ?",
+    answer:
+      "Oui, la publication de votre projet est gratuite et sans engagement. Vous ne payez que l'artisan retenu à la fin des travaux.",
+  },
+  {
     question: "Comment fonctionnent les enchères inversées ?",
     answer:
       "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Le prix de départ est fixé au premier devis validé, puis les professionnels du Nord-Pas-de-Calais proposent des prix de plus en plus bas. À la clôture, vous comparez les offres et choisissez vous-même l'artisan retenu.",
@@ -153,11 +158,6 @@ export const FAQ_ITEMS = [
     question: "Comment choisir mon artisan à la fin de l'enchère ?",
     answer:
       "Une fois l'enchère terminée, vous recevez la liste des offres des artisans vérifiés. Vous comparez les prix, les profils et les qualifications, puis vous sélectionnez librement l'artisan avec lequel vous souhaitez travailler. Le moins-disant n'est jamais imposé.",
-  },
-  {
-    question: "Le service est-il gratuit pour les particuliers ?",
-    answer:
-      "Oui, la publication de votre projet est gratuite et sans engagement. Vous ne payez que l'artisan retenu à la fin des travaux.",
   },
   {
     question: "Où sont hébergées mes données personnelles ?",

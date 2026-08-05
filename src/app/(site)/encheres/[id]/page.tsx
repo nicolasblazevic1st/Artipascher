@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanelPublicCta from "@/components/BidPanelPublicCta";
-import ClientContactPanel from "@/components/ClientContactPanel";
+import ClientContactPublicCta from "@/components/ClientContactPublicCta";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
@@ -158,7 +158,7 @@ export default async function EnchereDetailPage({ params }: Props) {
           </p>
         )}
 
-        <ClientContactPanel
+        <ClientContactPublicCta
           auctionId={id}
           publicLocation={
             workRequest

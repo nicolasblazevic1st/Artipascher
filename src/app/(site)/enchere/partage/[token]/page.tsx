@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanelPublicCta from "@/components/BidPanelPublicCta";
-import ClientContactPanel from "@/components/ClientContactPanel";
+import ClientContactPublicCta from "@/components/ClientContactPublicCta";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
@@ -162,9 +162,10 @@ export default async function SharedAuctionPage({ params }: Props) {
 
         {active && (
           <>
-            <ClientContactPanel
+            <ClientContactPublicCta
               auctionId={request.auctionId}
               publicLocation={formatPublicLocation(request)}
+              requestedWorkStartDate={request.requestedWorkStartDate}
             />
             <BidPanelPublicCta
               auctionId={request.auctionId}
