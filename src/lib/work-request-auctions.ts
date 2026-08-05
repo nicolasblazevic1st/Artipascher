@@ -129,6 +129,113 @@ export async function listAdminAuctions(): Promise<Auction[]> {
   return [...fromStore, ...samples];
 }
 
+export interface AdminAuctionView {
+  id: string;
+  title: string;
+  description: string;
+  categoryLabel: string;
+  city: string;
+  department: "59" | "62";
+  startPrice?: number;
+  currentPrice?: number;
+  status: "active" | "ended";
+  endsAt?: string;
+  createdAt?: string;
+  bidCount: number;
+  feesCollected: number;
+  source: "workRequest" | "sample";
+  isTest: boolean;
+  workRequestId?: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  shareToken?: string;
+}
+
+/** Vue admin enrichie : enchères issues des demandes publiques en premier. */
+export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
+  const store = await readStore();
+  const views: AdminAuctionView[] = [];
+
+  for (const request of store.workRequests) {
+    if (request.status !== "approved" || !request.auctionId) continue;
+
+    const active = isAuctionStillActive(request.auctionEndsAt);
+    const bids = await getBidsForAuction(request.auctionId);
+    const startPrice = request.startPrice ?? request.previousQuoteAmount;
+    const currentPrice =
+      startPrice != null
+        ? computeCurrentPrice(
+            startPrice,
+            bids.map((b) => b.amount)
+          ) ?? startPrice
+        : undefined;
+
+    views.push({
+      id: request.auctionId,
+      title: `${request.category} · ${request.city}`,
+      description: request.description,
+      categoryLabel: request.category,
+      city: request.city,
+      department: request.department,
+      startPrice,
+      currentPrice,
+      status: active ? "active" : "ended",
+      endsAt: request.auctionEndsAt,
+      createdAt: request.createdAt,
+      bidCount: bids.length,
+      feesCollected: bids.reduce((sum, b) => sum + b.feeEur, 0),
+      source: "workRequest",
+      isTest: request.isTest === true,
+      workRequestId: request.id,
+      clientName: `${request.firstName} ${request.lastName}`.trim(),
+      clientEmail: request.email,
+      clientPhone: request.phone,
+      shareToken: request.shareToken,
+    });
+  }
+
+  views.sort((a, b) => {
+    if (a.status !== b.status) return a.status === "active" ? -1 : 1;
+    return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
+  });
+
+  const storeIds = new Set(views.map((v) => v.id));
+  for (const auction of SAMPLE_AUCTIONS) {
+    if (storeIds.has(auction.id)) continue;
+    const bids = await getBidsForAuction(auction.id);
+    views.push({
+      id: auction.id,
+      title: auction.title,
+      description: auction.description,
+      categoryLabel: TRADE_CATEGORY_TO_WORK[auction.category] ?? auction.category,
+      city: auction.city,
+      department: auction.department,
+      startPrice: auction.startPrice,
+      currentPrice:
+        computeCurrentPrice(
+          auction.startPrice,
+          bids.map((b) => b.amount)
+        ) ?? auction.startPrice,
+      status: auction.status,
+      endsAt: auction.endsAt,
+      bidCount: bids.length,
+      feesCollected: bids.reduce((sum, b) => sum + b.feeEur, 0),
+      source: "sample",
+      isTest: auction.isTest === true,
+    });
+  }
+
+  return views;
+}
+
+export async function getAdminAuctionView(
+  auctionId: string
+): Promise<AdminAuctionView | null> {
+  const views = await listAdminAuctionViews();
+  return views.find((v) => v.id === auctionId) ?? null;
+}
+
 export async function resolveAuction(auctionId: string): Promise<ResolvedAuction | null> {
   const sample = SAMPLE_AUCTIONS.find((a) => a.id === auctionId);
   if (sample) return fromSample(sample);

@@ -169,7 +169,13 @@ export default function AdminDemandesPage() {
                   )}
                   {r.auctionId && (
                     <p className="mt-2 text-xs text-emerald-600">
-                      Enchère : {r.auctionId}
+                      Enchère :{" "}
+                      <a
+                        href={`/admin/particuliers/encheres/${r.auctionId}`}
+                        className="font-medium underline"
+                      >
+                        Consulter {r.auctionId}
+                      </a>
                     </p>
                   )}
                   <p className="mt-2 text-xs text-slate-400">

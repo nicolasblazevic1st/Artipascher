@@ -1,69 +1,161 @@
 import Link from "next/link";
 import TestBanner from "@/components/TestBanner";
-import { computeCurrentPrice } from "@/lib/auctions";
-import { CATEGORY_LABELS, formatLocation, formatPrice } from "@/lib/data";
-import { getBidsForAuction } from "@/lib/store";
-import { listAdminAuctions } from "@/lib/work-request-auctions";
+import { formatLocation, formatPrice } from "@/lib/data";
+import { listAdminAuctionViews } from "@/lib/work-request-auctions";
 
 export default async function AdminEncheresPage() {
-  const auctions = await listAdminAuctions();
-  const auctionsWithBids = await Promise.all(
-    auctions.map(async (auction) => {
-      const bids = await getBidsForAuction(auction.id);
-      const currentPrice = computeCurrentPrice(
-        auction.startPrice,
-        bids.map((b) => b.amount)
-      );
-      const feesCollected = bids.reduce((sum, b) => sum + b.feeEur, 0);
-      return { auction, bids, currentPrice, feesCollected };
-    })
-  );
+  const auctions = await listAdminAuctionViews();
+  const fromSite = auctions.filter((a) => a.source === "workRequest");
+  const samples = auctions.filter((a) => a.source === "sample");
+  const activeCount = fromSite.filter((a) => a.status === "active").length;
 
   return (
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Enchères</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Suivi des enchères issues des demandes validées — 1 € par offre · artisans RCS vérifiés
+        Enchères créées depuis les demandes du site public (après validation admin) —{" "}
+        {activeCount} active{activeCount > 1 ? "s" : ""} · {fromSite.length} au total
       </p>
 
-      <ul className="mt-8 space-y-4">
-        {auctionsWithBids.map(({ auction, bids, currentPrice, feesCollected }) => (
-          <li
-            key={auction.id}
-            className="rounded-xl border border-slate-200 bg-white p-5"
-          >
-            {auction.isTest && <TestBanner className="mb-3" />}
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <span className="text-xs font-medium text-brand-600">
-                  {CATEGORY_LABELS[auction.category]}
-                </span>
-                <h2 className="mt-1 font-semibold text-slate-900">{auction.title}</h2>
-                <p className="text-sm text-slate-500">
-                  {formatLocation(auction.city, auction.department)}
-                </p>
-              </div>
-              <div className="text-right text-sm">
-                <p>
-                  {formatPrice(auction.startPrice)} →{" "}
-                  <strong className="text-brand-700">
-                    {formatPrice(currentPrice ?? auction.startPrice)}
-                  </strong>
-                </p>
-                <p className="text-slate-500">
-                  {bids.length} offre{bids.length > 1 ? "s" : ""} · {feesCollected} € de frais
-                </p>
-              </div>
-            </div>
-            <Link
-              href={`/encheres/${auction.id}`}
-              className="mt-3 inline-block text-sm text-brand-600 hover:underline"
+      {fromSite.length === 0 ? (
+        <p className="mt-8 rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-slate-500">
+          Aucune enchère issue du site pour le moment. Validez une demande dans{" "}
+          <Link href="/admin/particuliers/demandes" className="text-brand-700 underline">
+            Demandes travaux
+          </Link>{" "}
+          pour en créer une.
+        </p>
+      ) : (
+        <ul className="mt-8 space-y-4">
+          {fromSite.map((auction) => (
+            <li
+              key={auction.id}
+              className="rounded-xl border border-slate-200 bg-white p-5"
             >
-              Voir sur le site public →
-            </Link>
-          </li>
-        ))}
-      </ul>
+              {auction.isTest && <TestBanner className="mb-3" />}
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0 max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-brand-600">
+                      {auction.categoryLabel}
+                    </span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        auction.status === "active"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {auction.status === "active" ? "Active" : "Terminée"}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                      Site public
+                    </span>
+                  </div>
+                  <h3 className="mt-1 font-semibold text-slate-900">{auction.title}</h3>
+                  <p className="text-sm text-slate-500">
+                    {formatLocation(auction.city, auction.department)}
+                    {auction.clientName ? ` · ${auction.clientName}` : ""}
+                  </p>
+                  {auction.clientEmail && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      {auction.clientEmail}
+                      {auction.clientPhone ? ` · ${auction.clientPhone}` : ""}
+                    </p>
+                  )}
+                  <p className="mt-2 line-clamp-2 text-sm text-slate-600">
+                    {auction.description}
+                  </p>
+                </div>
+                <div className="text-right text-sm">
+                  <p>
+                    {auction.startPrice != null ? (
+                      <>
+                        {formatPrice(auction.startPrice)} →{" "}
+                        <strong className="text-brand-700">
+                          {formatPrice(auction.currentPrice ?? auction.startPrice)}
+                        </strong>
+                      </>
+                    ) : (
+                      <span className="text-amber-700">Prix de départ en attente</span>
+                    )}
+                  </p>
+                  <p className="text-slate-500">
+                    {auction.bidCount} offre{auction.bidCount > 1 ? "s" : ""} ·{" "}
+                    {auction.feesCollected} € de frais
+                  </p>
+                  {auction.endsAt && (
+                    <p className="mt-1 text-xs text-slate-400">
+                      Fin :{" "}
+                      {new Date(auction.endsAt).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                <Link
+                  href={`/admin/particuliers/encheres/${auction.id}`}
+                  className="font-medium text-brand-700 hover:underline"
+                >
+                  Consulter →
+                </Link>
+                {auction.workRequestId && (
+                  <Link
+                    href="/admin/particuliers/demandes"
+                    className="text-slate-600 hover:underline"
+                  >
+                    Demande associée
+                  </Link>
+                )}
+                <Link
+                  href={`/encheres/${auction.id}`}
+                  className="text-slate-600 hover:underline"
+                  target="_blank"
+                >
+                  Voir sur le site public
+                </Link>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {samples.length > 0 && (
+        <details className="mt-10">
+          <summary className="cursor-pointer text-sm font-medium text-slate-600">
+            Catalogue démo ({samples.length}) — hors demandes du site
+          </summary>
+          <ul className="mt-4 space-y-3">
+            {samples.map((auction) => (
+              <li
+                key={auction.id}
+                className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-800">{auction.title}</p>
+                    <p className="text-sm text-slate-500">
+                      {formatLocation(auction.city, auction.department)} · démo
+                    </p>
+                  </div>
+                  <Link
+                    href={`/admin/particuliers/encheres/${auction.id}`}
+                    className="text-sm text-brand-700 hover:underline"
+                  >
+                    Consulter →
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

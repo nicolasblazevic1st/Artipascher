@@ -1,13 +1,16 @@
 import Link from "next/link";
-import { SAMPLE_AUCTIONS } from "@/lib/data";
 import { getAdminStats, readStore } from "@/lib/store";
 import { VERIFIED_PROFESSIONALS } from "@/lib/professionals";
+import { listAdminAuctionViews } from "@/lib/work-request-auctions";
 
 export default async function AdminDashboardPage() {
   const stats = await getAdminStats();
   const store = await readStore();
   const recentPending = store.proRegistrations.filter((p) => p.status === "pending").slice(0, 3);
   const recentRequests = store.workRequests.filter((r) => r.status === "pending").slice(0, 3);
+  const activePublicAuctions = (await listAdminAuctionViews()).filter(
+    (a) => a.source === "workRequest" && a.status === "active"
+  ).length;
 
   return (
     <div>
@@ -46,8 +49,8 @@ export default async function AdminDashboardPage() {
           href="/admin/particuliers/comptes"
         />
         <StatCard
-          label="Enchères actives"
-          value={SAMPLE_AUCTIONS.length}
+          label="Enchères actives (site)"
+          value={activePublicAuctions}
           href="/admin/particuliers/encheres"
         />
       </div>
