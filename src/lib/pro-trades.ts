@@ -1,8 +1,19 @@
 import type { TradeCategory } from "./data";
 import type { ProRegistration, ProTradeSelection } from "./store-types";
 
+/** Champs métier utiles — sans exiger passwordHash (vues admin sécurisées). */
+export type ProTradeSource = Pick<
+  ProRegistration,
+  | "category"
+  | "tradeSelections"
+  | "tradeGroupId"
+  | "tradeGroupLabel"
+  | "qualibatJobId"
+  | "qualibatJobLabel"
+>;
+
 /** Sélections métier d'un pro (plusieurs corps de métier possibles). */
-export function getProTradeSelections(pro: ProRegistration): ProTradeSelection[] {
+export function getProTradeSelections(pro: ProTradeSource): ProTradeSelection[] {
   if (pro.tradeSelections?.length) {
     return pro.tradeSelections;
   }
@@ -20,7 +31,7 @@ export function getProTradeSelections(pro: ProRegistration): ProTradeSelection[]
   return [];
 }
 
-export function formatProTradeSelections(pro: ProRegistration): string {
+export function formatProTradeSelections(pro: ProTradeSource): string {
   const selections = getProTradeSelections(pro);
   if (selections.length === 0) {
     return "—";
@@ -31,7 +42,7 @@ export function formatProTradeSelections(pro: ProRegistration): string {
 }
 
 export function proCoversTradeCategory(
-  pro: ProRegistration,
+  pro: ProTradeSource,
   workCategoryLabel: string
 ): boolean {
   const label = workCategoryLabel.toLowerCase();
