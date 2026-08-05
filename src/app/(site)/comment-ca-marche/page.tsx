@@ -51,12 +51,6 @@ export default function CommentCaMarchePage() {
           <p className="mt-1 text-sm text-slate-600">Rejoindre les enchères 59/62</p>
         </Link>
       </div>
-
-      <p className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm text-slate-500">
-        <strong className="text-slate-700">Astuce vidéo :</strong> lancez la présentation,
-        passez en plein écran (F11), enregistrez l&apos;écran avec l&apos;audio de votre
-        script — vous obtiendrez une vidéo aux couleurs exactes du site.
-      </p>
     </div>
   );
 }

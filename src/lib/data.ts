@@ -112,7 +112,7 @@ export const FAQ_ITEMS = [
   {
     question: "Le service est-il gratuit pour les particuliers ?",
     answer:
-      "Oui, la publication de votre projet est gratuite et sans engagement. Vous ne payez que l'artisan retenu à la fin des travaux.",
+      "Oui, la publication de votre projet est gratuite et sans engagement. Artipascher ne prend rien : aucun frais, aucune commission, aucun pourcentage sur vos travaux.",
   },
   {
     question: "Comment fonctionnent les enchères inversées ?",

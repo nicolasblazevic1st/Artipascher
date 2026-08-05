@@ -72,9 +72,10 @@ export default function ParticulierPage() {
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h1 className="text-4xl font-bold">Réalisez vos travaux au meilleur prix</h1>
           <p className="mt-4 text-lg text-brand-100">
-            Enchères inversées dans le Nord-Pas-de-Calais. Gratuit pour vous :
-            Artipascher ne prend aucun pourcentage sur vos travaux. Les professionnels
-            paient seulement 1&nbsp;€ pour vous contacter.
+            Enchères inversées dans le Nord-Pas-de-Calais. Artipascher ne prend
+            rien : aucun frais, aucune commission, aucun pourcentage sur vos
+            travaux. Les professionnels paient seulement 1&nbsp;€ pour vous
+            contacter.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
