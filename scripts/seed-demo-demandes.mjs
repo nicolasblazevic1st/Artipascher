@@ -256,6 +256,7 @@ async function main() {
       category: demo.category,
       description: demo.description,
       startPrice: demo.startPrice,
+      startPriceMode: demo.startPrice != null ? "client" : "first_quote",
       auctionDurationDays: demo.auctionDurationDays,
       photos: demo.photos ?? [],
       status: demo.status,

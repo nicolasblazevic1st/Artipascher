@@ -621,7 +621,7 @@ export default function WorkRequestForm({
                 Je fixe mon prix de départ
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Les artisans devront proposer moins que ce montant.
+                Les artisans pourront proposer moins que ce montant.
               </span>
               {startPriceMode === "client" && (
                 <input
