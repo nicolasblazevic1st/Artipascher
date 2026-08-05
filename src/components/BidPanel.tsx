@@ -23,6 +23,7 @@ interface BidRow {
 
 interface Eligibility {
   requiresQuote: boolean;
+  requiresContactUnlock?: boolean;
   canBid: boolean;
   reason?: string;
   maxBidsPerAuction?: number;
@@ -176,17 +177,18 @@ export default function BidPanel({
   }
 
   const quoteBlocked = eligibility?.requiresQuote && !eligibility.canBid;
+  const unlockBlocked = Boolean(eligibility?.requiresContactUnlock && !eligibility.canBid);
   const bidLimitReached = (eligibility?.bidsRemaining ?? 1) <= 0;
   const maxBidFromQuote = eligibility?.quote?.maxBidAmount;
   const effectiveMax =
     maxBidFromQuote !== undefined
       ? Math.min(currentPrice - 0.01, maxBidFromQuote)
       : currentPrice - 0.01;
+  const formBlocked = quoteBlocked || unlockBlocked || bidLimitReached;
   const canSubmit =
     !paying &&
     amount < currentPrice &&
-    !quoteBlocked &&
-    !bidLimitReached &&
+    !formBlocked &&
     devisFile != null;
 
   return (
@@ -248,7 +250,16 @@ export default function BidPanel({
         </p>
       )}
 
-      {quoteBlocked && eligibility?.reason && !bidLimitReached && (
+      {unlockBlocked && eligibility?.reason && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {eligibility.reason}{" "}
+          <a href="#contact" className="font-medium underline">
+            Débloquer les coordonnées
+          </a>
+        </p>
+      )}
+
+      {quoteBlocked && eligibility?.reason && !bidLimitReached && !unlockBlocked && (
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           {eligibility.reason}{" "}
           <a href="#contact" className="font-medium underline">
@@ -293,6 +304,17 @@ export default function BidPanel({
             </div>
           )}
         </div>
+      ) : formBlocked ? (
+        <div className="mt-4 max-w-md">
+          <p className="text-sm text-slate-600">
+            Connecté : <strong>{companyName}</strong>
+          </p>
+          {bids.length > 0 && (
+            <p className="mt-2 text-xs text-slate-500">
+              Vos enchères précédentes restent visibles dans l&apos;historique ci-dessous.
+            </p>
+          )}
+        </div>
       ) : (
         <div className="mt-4 max-w-md space-y-3">
           <p className="text-sm text-slate-600">
@@ -308,8 +330,7 @@ export default function BidPanel({
             step={0.01}
             min={0.01}
             max={Math.max(0.01, effectiveMax)}
-            disabled={quoteBlocked || bidLimitReached}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm disabled:bg-slate-100"
+            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm"
           />
           <p className="text-xs text-slate-500">
             Montant libre au centime près, strictement inférieur à {formatPrice(currentPrice)}
@@ -323,9 +344,8 @@ export default function BidPanel({
           <input
             type="file"
             accept="application/pdf,.pdf"
-            disabled={quoteBlocked || bidLimitReached}
             onChange={(e) => setDevisFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-700 disabled:opacity-50"
+            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-700"
           />
           <p className="text-xs text-slate-500">
             PDF texte uniquement (pas de scan). Le total TTC lu par OCR doit être{" "}
@@ -341,15 +361,11 @@ export default function BidPanel({
           >
             {paying
               ? "Vérification OCR…"
-              : bidLimitReached
-                ? "Limite de 3 enchères atteinte"
-              : quoteBlocked
-                ? "Devis admin requis avant d'enchérir"
-                : !devisFile
-                  ? "Joignez le devis PDF pour enchérir"
+              : !devisFile
+                ? "Joignez le devis PDF pour enchérir"
                 : `Enchérir à ${formatPrice(amount)} · 1 crédit`}
           </button>
-          {process.env.NODE_ENV === "development" && !quoteBlocked && !bidLimitReached && (
+          {process.env.NODE_ENV === "development" && (
             <button
               type="button"
               onClick={() => handlePlaceBid(true)}

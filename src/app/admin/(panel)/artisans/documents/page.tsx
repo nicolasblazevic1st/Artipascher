@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminImpersonateProButton from "@/components/admin/AdminImpersonateProButton";
+import AdminQualificationLevelControl from "@/components/admin/AdminQualificationLevelControl";
 import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
 import { getProTradeSelections } from "@/lib/pro-trades";
 import type {
@@ -145,8 +146,8 @@ export default function AdminDocumentsArtisansPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Documents</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Consultez les pièces envoyées, validez ou rejetez chaque document, et renvoyez
-        un compte frauduleux au niveau 0.
+        Consultez les pièces, changez le niveau (1 / 2 / 3), et renvoyez un compte
+        frauduleux au niveau 0 si besoin.
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -243,10 +244,22 @@ export default function AdminDocumentsArtisansPage() {
                       </p>
                     )}
                   </div>
-                  <AdminImpersonateProButton
-                    proId={r.id}
-                    companyName={r.companyName}
-                  />
+                  <div className="flex flex-col items-end gap-3">
+                    <AdminImpersonateProButton
+                      proId={r.id}
+                      companyName={r.companyName}
+                    />
+                    {(r.status === "approved" || r.status === "rejected") && (
+                      <AdminQualificationLevelControl
+                        proId={r.id}
+                        companyName={r.companyName}
+                        status={r.status}
+                        qualificationLevel={r.qualificationLevel}
+                        onSaved={load}
+                        showDemote={false}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <section className="mt-5">

@@ -1,11 +1,18 @@
 import { validateBidCoherenceWithQuote } from "@/lib/bid-coherence";
 import { getProBidLimitStatus, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
 import { checkDecennaleForWorkCategory } from "@/lib/decennale-verification";
-import { countProBidsForAuction, getApprovedProById, getProQuoteByProAndAuction } from "@/lib/store";
+import {
+  countProBidsForAuction,
+  getApprovedProById,
+  getProQuoteByProAndAuction,
+  hasContactUnlock,
+} from "@/lib/store";
 import { getWorkRequestByAuctionId } from "@/lib/work-request-auctions";
 
 export interface BidEligibility {
   requiresQuote: boolean;
+  /** Coordonnées client pas encore débloquées. */
+  requiresContactUnlock?: boolean;
   canBid: boolean;
   reason?: string;
   maxBidsPerAuction: number;
@@ -37,6 +44,18 @@ export async function checkBidEligibility(
       requiresQuote: true,
       canBid: false,
       reason: `Vous avez utilisé vos ${MAX_BIDS_PER_AUCTION} enchères sur ce chantier.`,
+      ...limitFields,
+    };
+  }
+
+  const unlocked = await hasContactUnlock(proId, auctionId);
+  if (!unlocked) {
+    return {
+      requiresQuote: false,
+      requiresContactUnlock: true,
+      canBid: false,
+      reason:
+        "Débloquez d'abord les coordonnées du client (après acceptation de votre intérêt), contactez-le pour la visite, puis enchérissez.",
       ...limitFields,
     };
   }

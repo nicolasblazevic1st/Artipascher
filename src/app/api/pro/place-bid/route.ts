@@ -156,6 +156,7 @@ export async function POST(request: NextRequest) {
       {
         error: eligibility.reason ?? "Devis requis avant d'enchérir.",
         requiresQuote: eligibility.requiresQuote,
+        requiresContactUnlock: eligibility.requiresContactUnlock,
         quote: eligibility.quote,
         maxBidsPerAuction: eligibility.maxBidsPerAuction,
         bidsUsed: eligibility.bidsUsed,
