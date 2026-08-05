@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
-import { readStore, updateProRegistration } from "@/lib/store";
+import {
+  demoteProToLevelZero,
+  readStore,
+  updateProRegistration,
+} from "@/lib/store";
+
+function isQualificationLevel(value: unknown): value is QualificationLevel {
+  return value === 0 || value === 1 || value === 2 || value === 3;
+}
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -35,6 +43,30 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  if (
+    qualificationLevel !== undefined &&
+    !isQualificationLevel(qualificationLevel)
+  ) {
+    return NextResponse.json(
+      { error: "qualificationLevel invalide (0, 1, 2 ou 3)." },
+      { status: 400 }
+    );
+  }
+
+  if (qualificationLevel === 0) {
+    const updated = await demoteProToLevelZero(id, adminNote);
+    if (!updated) {
+      return NextResponse.json({ error: "Inscription introuvable." }, { status: 404 });
+    }
+    return NextResponse.json({ registration: updated });
+  }
+
+  const store = await readStore();
+  const existing = store.proRegistrations.find((p) => p.id === id);
+  if (!existing) {
+    return NextResponse.json({ error: "Inscription introuvable." }, { status: 404 });
+  }
+
   const patch: Parameters<typeof updateProRegistration>[1] = {};
   if (status) patch.status = status;
   if (adminNote !== undefined) patch.adminNote = adminNote;
@@ -44,6 +76,19 @@ export async function PATCH(request: NextRequest) {
   }
   if (status === "approved") {
     patch.level1CertifiedAt = new Date().toISOString();
+  }
+  // Remonter depuis niveau 0 (refusé) vers un niveau actif
+  if (
+    qualificationLevel !== undefined &&
+    qualificationLevel >= 1 &&
+    existing.status === "rejected" &&
+    !status
+  ) {
+    patch.status = "approved";
+    patch.level1CertifiedAt = new Date().toISOString();
+    patch.adminNote =
+      adminNote?.trim() ||
+      `Réintégré au niveau ${qualificationLevel} depuis l'admin certification.`;
   }
 
   const updated = await updateProRegistration(id, patch);

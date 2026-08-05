@@ -307,7 +307,7 @@ export async function demoteProToLevelZero(
   pro.adminNote = note;
   pro.reviewedAt = now;
   delete pro.level1CertifiedAt;
-  pro.qualificationLevel = 1;
+  pro.qualificationLevel = 0;
 
   pro.documents = (pro.documents ?? []).map((doc) => ({
     ...doc,
@@ -505,9 +505,12 @@ export async function getProForSession(session: {
   return getApprovedProById(session.proId);
 }
 
-export async function getQualificationLevelForPro(proId: string): Promise<1 | 2 | 3> {
+export async function getQualificationLevelForPro(
+  proId: string
+): Promise<1 | 2 | 3> {
   const pro = await getApprovedProById(proId);
-  return pro?.qualificationLevel ?? 1;
+  const level = pro?.qualificationLevel ?? 1;
+  return level === 0 ? 1 : level;
 }
 
 export async function mapBidsWithQualification<
@@ -521,9 +524,10 @@ export async function mapBidsWithQualification<
   return Promise.all(
     bids.map(async (bid) => {
       const pro = await getApprovedProById(bid.proId);
+      const raw = pro?.qualificationLevel ?? 1;
       return {
         ...bid,
-        qualificationLevel: pro?.qualificationLevel ?? 1,
+        qualificationLevel: (raw === 0 ? 1 : raw) as 1 | 2 | 3,
         ...(workCategoryLabel && pro
           ? {
               decennaleVerifiedLabels: getValidatedDecennaleLabelsForWorkCategory(
@@ -548,9 +552,10 @@ export async function mapQuotesWithQualification<
   return Promise.all(
     quotes.map(async (quote) => {
       const pro = await getApprovedProById(quote.proId);
+      const raw = pro?.qualificationLevel ?? 1;
       return {
         ...quote,
-        qualificationLevel: pro?.qualificationLevel ?? 1,
+        qualificationLevel: (raw === 0 ? 1 : raw) as 1 | 2 | 3,
         ...(workCategoryLabel && pro
           ? {
               decennaleVerifiedLabels: getValidatedDecennaleLabelsForWorkCategory(

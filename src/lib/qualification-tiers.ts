@@ -1,4 +1,6 @@
-export type QualificationLevel = 1 | 2 | 3;
+export type QualificationLevel = 0 | 1 | 2 | 3;
+/** Niveaux affichés aux clients / sur les enchères (hors démotion). */
+export type ActiveQualificationLevel = Exclude<QualificationLevel, 0>;
 
 export interface QualificationDocument {
   id: string;
@@ -15,6 +17,14 @@ export interface QualificationTier {
 }
 
 export const QUALIFICATION_TIERS: QualificationTier[] = [
+  {
+    level: 0,
+    badge: "Niveau 0",
+    title: "Niveau 0 — Non certifié",
+    summary:
+      "Certification retirée (fraude ou non-conformité). Compte refusé, plus d'accès aux enchères ni aux clients.",
+    documents: [],
+  },
   {
     level: 1,
     badge: "Certifié",
@@ -99,7 +109,9 @@ export const LEVEL_2_CATEGORIES = [
   "Menuiserie (fenêtres, portes, volets)",
 ] as const;
 
-export function getRecommendedLevelForCategory(category: string): QualificationLevel {
+export function getRecommendedLevelForCategory(
+  category: string
+): ActiveQualificationLevel {
   if (category === "Rénovation complète") return 3;
   if (
     category === "Rénovation énergétique" ||
@@ -116,5 +128,14 @@ export function getRecommendedLevelForCategory(category: string): QualificationL
 export const getMinimumLevelForCategory = getRecommendedLevelForCategory;
 
 export function getQualificationTier(level: QualificationLevel = 1) {
-  return QUALIFICATION_TIERS.find((t) => t.level === level) ?? QUALIFICATION_TIERS[0];
+  return (
+    QUALIFICATION_TIERS.find((t) => t.level === level) ??
+    QUALIFICATION_TIERS.find((t) => t.level === 1)!
+  );
+}
+
+export function isActiveQualificationLevel(
+  level: number
+): level is ActiveQualificationLevel {
+  return level === 1 || level === 2 || level === 3;
 }

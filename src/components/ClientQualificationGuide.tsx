@@ -9,7 +9,7 @@ import {
 } from "@/lib/qualification-tiers";
 
 const LEVEL_STYLES: Record<
-  QualificationLevel,
+  Exclude<QualificationLevel, 0>,
   { ring: string; badge: string; header: string }
 > = {
   1: {
@@ -64,8 +64,8 @@ export default function ClientQualificationGuide({ selectedCategory = "" }: Prop
       )}
 
       <div className="mt-4 space-y-3">
-        {QUALIFICATION_TIERS.map((tier) => {
-          const styles = LEVEL_STYLES[tier.level];
+        {QUALIFICATION_TIERS.filter((tier) => tier.level > 0).map((tier) => {
+          const styles = LEVEL_STYLES[tier.level as Exclude<QualificationLevel, 0>];
           const isRecommended =
             selectedCategory !== "" && tier.level === recommendedLevel;
 

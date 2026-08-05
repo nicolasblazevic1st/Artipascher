@@ -208,7 +208,9 @@ export default function AdminComptesArtisansPage() {
                 <Row label="Métiers" value={a.tradesLabel || "—"} />
                 <Row
                   label="Niveau"
-                  value={a.qualificationLevel ? `N${a.qualificationLevel}` : "—"}
+                  value={
+                    a.qualificationLevel != null ? `N${a.qualificationLevel}` : "—"
+                  }
                 />
                 <Row label="Crédits" value={`${a.creditBalance} (dépensés ${a.spentCredits})`} />
                 <Row
