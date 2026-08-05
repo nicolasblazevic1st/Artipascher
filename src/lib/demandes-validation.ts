@@ -70,6 +70,30 @@ export function validatePreviousQuoteAmount(amountRaw: unknown): string | null {
   return null;
 }
 
+/** Montant de prix de départ saisi par le client. */
+export function validateClientStartPrice(amountRaw: unknown): string | null {
+  if (amountRaw === null || amountRaw === undefined || String(amountRaw).trim() === "") {
+    return "Indiquez votre prix de départ (nombre entier en euros).";
+  }
+  const amount = Number(amountRaw);
+  if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount <= 0) {
+    return "Indiquez un prix de départ valide (nombre entier en euros).";
+  }
+  if (amount > 10_000_000) {
+    return "Le prix de départ semble trop élevé.";
+  }
+  return null;
+}
+
+export type StartPriceMode = "client" | "first_quote" | "unspecified";
+
+export function parseStartPriceMode(raw: unknown): StartPriceMode {
+  if (raw === "client" || raw === "first_quote" || raw === "unspecified") {
+    return raw;
+  }
+  return "first_quote";
+}
+
 export function validateProofFile(file: File | null | undefined): string | null {
   if (!file || file.size === 0) {
     return "Joignez une photo ou un PDF du devis reçu.";

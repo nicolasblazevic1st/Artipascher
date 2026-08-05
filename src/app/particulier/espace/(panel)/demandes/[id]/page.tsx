@@ -126,13 +126,25 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-3">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
               {request.startPrice != null
                 ? formatPrice(request.startPrice)
-                : "En attente du 1er devis"}
+                : request.startPriceMode === "unspecified"
+                  ? "Non précisé"
+                  : "En attente du 1er devis"}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Mode prix de départ</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              {request.startPriceMode === "client"
+                ? "Fixé par vous"
+                : request.startPriceMode === "unspecified"
+                  ? "Non précisé"
+                  : "Premier devis Artipascher"}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">

@@ -48,6 +48,7 @@ export async function PATCH(request: NextRequest) {
   const existing = storeBefore.workRequests.find((r) => r.id === id);
   const startPriceFromPreviousQuote =
     status === "approved" &&
+    existing?.startPrice == null &&
     existing?.previousQuoteAmount != null &&
     existing.startPriceQuoteId == null
       ? existing.previousQuoteAmount

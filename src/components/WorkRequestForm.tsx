@@ -12,6 +12,8 @@ import {
   validatePhotoFiles,
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
+  validateClientStartPrice,
+  type StartPriceMode,
 } from "@/lib/demandes-validation";
 import BanAddressAutocomplete, {
   type SelectedBanAddress,
@@ -57,6 +59,8 @@ export default function WorkRequestForm({
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
   const [previousQuoteNote, setPreviousQuoteNote] = useState("");
   const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [startPriceMode, setStartPriceMode] = useState<StartPriceMode>("first_quote");
+  const [clientStartPrice, setClientStartPrice] = useState("");
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
   const [auctionDurationDays, setAuctionDurationDays] = useState(DEFAULT_AUCTION_DURATION_DAYS);
@@ -167,6 +171,15 @@ export default function WorkRequestForm({
       }
     }
 
+    if (startPriceMode === "client") {
+      const startPriceError = validateClientStartPrice(clientStartPrice);
+      if (startPriceError) {
+        setError(startPriceError);
+        setStatus("error");
+        return;
+      }
+    }
+
     setStatus("submitting");
 
     const formData = new FormData(form);
@@ -177,6 +190,12 @@ export default function WorkRequestForm({
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
     formData.set("auctionDurationDays", String(auctionDurationDays));
+    formData.set("startPriceMode", startPriceMode);
+    if (startPriceMode === "client") {
+      formData.set("clientStartPrice", clientStartPrice.trim());
+    } else {
+      formData.delete("clientStartPrice");
+    }
     formData.set("clientKind", isCompany ? "company" : "individual");
     if (isCompany && companyVerification) {
       formData.set("clientSiret", companyVerification.siret);
@@ -227,6 +246,8 @@ export default function WorkRequestForm({
     setPreviousQuoteAmount("");
     setPreviousQuoteProof(null);
     setPreviousQuoteNote("");
+    setStartPriceMode("first_quote");
+    setClientStartPrice("");
     if (proofPreview) URL.revokeObjectURL(proofPreview);
     setProofPreview(null);
     setSelectedAddress(null);
@@ -575,6 +596,96 @@ export default function WorkRequestForm({
         )}
       </div>
 
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <p className="text-sm font-medium text-slate-800">
+          Prix de départ de l&apos;enchère
+        </p>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Choisissez comment démarrer l&apos;enchère inversée.
+        </p>
+        <fieldset className="mt-3 space-y-3">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="radio"
+              name="startPriceMode"
+              value="client"
+              checked={startPriceMode === "client"}
+              onChange={() => {
+                setStartPriceMode("client");
+                setError(null);
+              }}
+              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
+            />
+            <span className="flex-1">
+              <span className="block text-sm font-medium text-slate-800">
+                Je fixe mon prix de départ
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Les artisans devront proposer moins que ce montant.
+              </span>
+              {startPriceMode === "client" && (
+                <input
+                  name="clientStartPrice"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={clientStartPrice}
+                  onChange={(e) => setClientStartPrice(e.target.value)}
+                  placeholder="Ex. 4500"
+                  className={`${inputClass} mt-2`}
+                  required
+                />
+              )}
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="radio"
+              name="startPriceMode"
+              value="first_quote"
+              checked={startPriceMode === "first_quote"}
+              onChange={() => {
+                setStartPriceMode("first_quote");
+                setClientStartPrice("");
+                setError(null);
+              }}
+              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
+            />
+            <span>
+              <span className="block text-sm font-medium text-slate-800">
+                Partir du premier devis Artipascher
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Le prix de départ sera fixé au premier devis validé après visite.
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="radio"
+              name="startPriceMode"
+              value="unspecified"
+              checked={startPriceMode === "unspecified"}
+              onChange={() => {
+                setStartPriceMode("unspecified");
+                setClientStartPrice("");
+                setError(null);
+              }}
+              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
+            />
+            <span>
+              <span className="block text-sm font-medium text-slate-800">
+                Ne pas préciser
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Aucun prix annoncé pour l&apos;instant ; il pourra être fixé plus
+                tard (ex. au premier devis).
+              </span>
+            </span>
+          </label>
+        </fieldset>
+      </div>
+
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <label className="flex cursor-pointer items-start gap-3">
           <input
@@ -598,9 +709,9 @@ export default function WorkRequestForm({
               J&apos;ai déjà reçu un devis d&apos;un autre artisan
             </span>
             <span className="mt-0.5 block text-xs text-slate-500">
-              Optionnel — ce montant deviendra le prix de départ de l&apos;enchère (avec
-              justificatif). Il sera remplacé par le premier devis Artipascher validé après
-              visite sur site.
+              Optionnel — justificatif visible par Artipascher. Si vous n&apos;avez
+              pas fixé de prix ci-dessus, ce montant pourra servir de départ à
+              l&apos;ouverture.
             </span>
           </span>
         </label>

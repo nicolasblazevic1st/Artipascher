@@ -824,7 +824,7 @@ export async function updateProQuoteStatus(
   if (status === "approved") {
     const quote = store.proQuotes[index];
     const requestIndex = store.workRequests.findIndex((r) => r.id === quote.workRequestId);
-    if (requestIndex !== -1 && store.workRequests[requestIndex].startPriceQuoteId == null) {
+    if (requestIndex !== -1 && store.workRequests[requestIndex].startPrice == null) {
       store.workRequests[requestIndex] = {
         ...store.workRequests[requestIndex],
         startPrice: quote.amount,

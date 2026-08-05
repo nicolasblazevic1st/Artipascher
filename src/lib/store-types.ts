@@ -190,9 +190,16 @@ export interface WorkRequest {
   requestedWorkStartDate?: string;
   category: string;
   description: string;
-  /** Prix de départ de l'enchère. Peut venir du devis précédent client (à l'approbation)
-   *  ou du premier devis Artipascher validé (prioritaire). */
+  /** Prix de départ de l'enchère. Peut venir du client, d'un devis précédent,
+   *  ou du premier devis Artipascher validé. */
   startPrice?: number;
+  /**
+   * Comment le prix de départ est déterminé :
+   * - client : montant fixé par le particulier
+   * - first_quote : fixé au premier devis Artipascher validé
+   * - unspecified : non précisé (équivalent pratique au 1er devis)
+   */
+  startPriceMode?: "client" | "first_quote" | "unspecified";
   /** Renseigné lorsque le prix de départ provient d'un devis Artipascher validé. */
   startPriceQuoteId?: string;
   /** Durée souhaitée de l'enchère en jours (max. 90). */

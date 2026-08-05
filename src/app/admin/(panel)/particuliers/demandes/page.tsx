@@ -144,10 +144,16 @@ export default function AdminDemandesPage() {
                       Prix de départ :{" "}
                       {r.startPrice != null
                         ? formatPrice(r.startPrice)
-                        : "En attente (devis précédent ou 1er devis Artipascher)"}
+                        : r.startPriceMode === "unspecified"
+                          ? "Non précisé"
+                          : "En attente du 1er devis Artipascher"}
+                      {r.startPrice != null && r.startPriceMode === "client" && (
+                        <span className="text-client-700"> · fixé par le client</span>
+                      )}
                       {r.startPrice != null &&
                         r.previousQuoteAmount != null &&
-                        r.startPriceQuoteId == null && (
+                        r.startPriceQuoteId == null &&
+                        r.startPriceMode !== "client" && (
                           <span className="text-amber-700"> · devis précédent</span>
                         )}
                       {r.startPriceQuoteId != null && (

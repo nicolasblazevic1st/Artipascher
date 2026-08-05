@@ -13,6 +13,8 @@ import {
   validatePhotoFiles,
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
+  validateClientStartPrice,
+  parseStartPriceMode,
 } from "@/lib/demandes-validation";
 import { getClientSession } from "@/lib/client-auth";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
@@ -66,6 +68,8 @@ export async function POST(request: NextRequest) {
     );
     const previousQuoteAmountRaw = String(formData.get("previousQuoteAmount") ?? "").trim();
     const previousQuoteNote = String(formData.get("previousQuoteNote") ?? "").trim();
+    const startPriceMode = parseStartPriceMode(formData.get("startPriceMode"));
+    const clientStartPriceRaw = String(formData.get("clientStartPrice") ?? "").trim();
 
     const photoEntries = formData.getAll("photos");
     const photos = photoEntries.filter(
@@ -189,6 +193,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: previousQuoteError }, { status: 400 });
     }
 
+    let clientStartPrice: number | undefined;
+    if (startPriceMode === "client") {
+      const startPriceError = validateClientStartPrice(clientStartPriceRaw);
+      if (startPriceError) {
+        return NextResponse.json({ error: startPriceError }, { status: 400 });
+      }
+      clientStartPrice = Number(clientStartPriceRaw);
+    }
+
     const existing = await getClientById(session.clientId);
     if (!existing) {
       return NextResponse.json(
@@ -229,6 +242,8 @@ export async function POST(request: NextRequest) {
       category,
       description: description.trim(),
       auctionDurationDays,
+      startPriceMode,
+      startPrice: clientStartPrice,
       photos: [],
     });
 
