@@ -7,6 +7,7 @@ import ClientContactPanel from "@/components/ClientContactPanel";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
 import { formatPrice } from "@/lib/data";
@@ -65,6 +66,7 @@ export default async function SharedAuctionPage({ params }: Props) {
   const quotes = await getApprovedProQuotesForAuction(request.auctionId);
   const bidsWithLevel = await mapBidsWithQualification(bids, request.category);
   const quotesWithLevel = await mapQuotesWithQualification(quotes, request.category);
+  const anonymousBids = annotateAnonymousBids(bidsWithLevel);
   const currentPrice = computeCurrentPrice(
     request.startPrice,
     bids.map((b) => b.amount)
@@ -168,9 +170,10 @@ export default async function SharedAuctionPage({ params }: Props) {
               auctionId={request.auctionId}
               startPrice={request.startPrice}
               initialCurrentPrice={currentPrice}
-              initialBids={bidsWithLevel.map((b, index) => ({
+              initialBids={anonymousBids.map((b) => ({
                 id: b.id,
-                label: `Artisan ${index + 1}`,
+                label: b.anonymousLabel,
+                offerNumber: b.offerNumber,
                 amount: b.amount,
                 createdAt: b.createdAt,
                 qualificationLevel: b.qualificationLevel,
@@ -203,11 +206,14 @@ export default async function SharedAuctionPage({ params }: Props) {
             </p>
             <div className="mt-4">
               <VerifiedBidsList
-                bids={bidsWithLevel.map((b) => ({
+                bids={anonymousBids.map((b) => ({
                   id: b.id,
                   amount: b.amount,
                   qualificationLevel: b.qualificationLevel,
                   decennaleVerifiedLabels: b.decennaleVerifiedLabels,
+                  anonymousArtisanIndex: b.anonymousArtisanIndex,
+                  offerNumber: b.offerNumber,
+                  anonymousLabel: b.anonymousLabel,
                 }))}
               />
             </div>

@@ -14,6 +14,7 @@ interface BidRow {
   id: string;
   companyName?: string;
   label?: string;
+  offerNumber?: number;
   amount: number;
   createdAt: string;
   qualificationLevel?: QualificationLevel;
@@ -372,6 +373,11 @@ export default function BidPanel({
               <li key={b.id} className="flex items-center justify-between gap-2">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="truncate">{b.label ?? `Artisan ${index + 1}`}</span>
+                  {b.offerNumber != null && (
+                    <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                      {b.offerNumber}/3
+                    </span>
+                  )}
                   {b.qualificationLevel != null && (
                     <QualificationBadge level={b.qualificationLevel} compact />
                   )}

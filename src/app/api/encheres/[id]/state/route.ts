@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { resolveAuction } from "@/lib/work-request-auctions";
 import { getBidsForAuction, mapBidsWithQualification } from "@/lib/store";
@@ -14,6 +15,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   const bids = await getBidsForAuction(id);
   const bidsWithLevel = await mapBidsWithQualification(bids);
+  const annotated = annotateAnonymousBids(bidsWithLevel);
   const amounts = bids.map((b) => b.amount);
   const currentPrice = computeCurrentPrice(auction.startPrice, amounts);
 
@@ -21,9 +23,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
     startPrice: auction.startPrice ?? null,
     currentPrice: currentPrice ?? null,
     bidCount: bids.length,
-    bids: bidsWithLevel.map((b, index) => ({
+    bids: annotated.map((b) => ({
       id: b.id,
-      label: `Artisan ${index + 1}`,
+      label: b.anonymousLabel,
+      offerNumber: b.offerNumber,
       amount: b.amount,
       createdAt: b.createdAt,
       qualificationLevel: b.qualificationLevel,

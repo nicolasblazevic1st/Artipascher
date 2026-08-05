@@ -8,6 +8,7 @@ import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
@@ -46,6 +47,7 @@ export default async function EnchereDetailPage({ params }: Props) {
     (sample ? CATEGORY_LABELS[sample.category] : resolved.title);
   const bidsWithLevel = await mapBidsWithQualification(bids, workCategory);
   const quotesWithLevel = await mapQuotesWithQualification(quotes, workCategory);
+  const anonymousBids = annotateAnonymousBids(bidsWithLevel);
   const currentPrice = computeCurrentPrice(
     resolved.startPrice,
     bids.map((b) => b.amount)
@@ -65,9 +67,10 @@ export default async function EnchereDetailPage({ params }: Props) {
       })
     : "—";
 
-  const bidRows = bidsWithLevel.map((b, index) => ({
+  const bidRows = anonymousBids.map((b) => ({
     id: b.id,
-    label: `Artisan ${index + 1}`,
+    label: b.anonymousLabel,
+    offerNumber: b.offerNumber,
     amount: b.amount,
     createdAt: b.createdAt,
     qualificationLevel: b.qualificationLevel,
@@ -204,11 +207,14 @@ export default async function EnchereDetailPage({ params }: Props) {
           </p>
           <div className="mt-4">
             <VerifiedBidsList
-              bids={bidsWithLevel.map((b) => ({
+              bids={anonymousBids.map((b) => ({
                 id: b.id,
                 amount: b.amount,
                 qualificationLevel: b.qualificationLevel,
                 decennaleVerifiedLabels: b.decennaleVerifiedLabels,
+                anonymousArtisanIndex: b.anonymousArtisanIndex,
+                offerNumber: b.offerNumber,
+                anonymousLabel: b.anonymousLabel,
               }))}
             />
           </div>
