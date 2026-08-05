@@ -24,6 +24,8 @@ export interface Auction {
   bidCount: number;
   status: AuctionStatus;
   endsAt: string;
+  /** Affiche le bandeau TEST (démo / seed). */
+  isTest?: boolean;
 }
 
 export const CATEGORY_LABELS: Record<TradeCategory, string> = {
@@ -207,10 +209,12 @@ export const FAQ_ITEMS = [
 ];
 
 export function formatPrice(amount: number): string {
+  const hasCents = Math.round(amount * 100) % 100 !== 0;
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
     currency: "EUR",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
   }).format(amount);
 }
 

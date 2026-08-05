@@ -27,6 +27,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       amount: b.amount,
       createdAt: b.createdAt,
       qualificationLevel: b.qualificationLevel,
+      devisProofUrl: b.devisProofUrl,
     })),
   });
 }

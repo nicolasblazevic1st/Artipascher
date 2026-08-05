@@ -76,6 +76,41 @@ export async function saveProRegistrationDocuments(
   return documents;
 }
 
+/** Devis PDF joint à une enchère (vérification OCR du montant). */
+export async function saveBidDevisProof(
+  proId: string,
+  auctionId: string,
+  file: File
+): Promise<string> {
+  const dir = path.join(getProUploadDir(proId), "bids");
+  await fs.mkdir(dir, { recursive: true });
+
+  const ext = path.extname(file.name) || (file.type === "application/pdf" ? ".pdf" : ".jpg");
+  const safeAuction = auctionId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48);
+  const safeName = `devis-${safeAuction}-${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, "")}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await fs.writeFile(path.join(dir, safeName), buffer);
+  return `/uploads/pros/${proId}/bids/${safeName}`;
+}
+
+export async function saveBidDevisProofFromBuffer(
+  proId: string,
+  auctionId: string,
+  buffer: Buffer,
+  originalName: string,
+  mimeType: string
+): Promise<string> {
+  const dir = path.join(getProUploadDir(proId), "bids");
+  await fs.mkdir(dir, { recursive: true });
+
+  const ext =
+    path.extname(originalName) || (mimeType === "application/pdf" ? ".pdf" : ".bin");
+  const safeAuction = auctionId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 48);
+  const safeName = `devis-${safeAuction}-${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, "")}`;
+  await fs.writeFile(path.join(dir, safeName), buffer);
+  return `/uploads/pros/${proId}/bids/${safeName}`;
+}
+
 export async function saveTradeDecennaleDocuments(
   proId: string,
   files: Array<{ tradeGroupId: string; tradeGroupLabel: string; file: File }>

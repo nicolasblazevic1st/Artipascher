@@ -1,3 +1,4 @@
+import { eurosToCents } from "./money";
 import type { WorkRequest } from "./store-types";
 
 export interface BidCoherenceInput {
@@ -16,7 +17,7 @@ export function validateBidCoherenceWithQuote(
 ): BidCoherenceResult {
   const { bidAmount, quoteAmount } = input;
 
-  if (bidAmount > quoteAmount) {
+  if (eurosToCents(bidAmount) > eurosToCents(quoteAmount)) {
     return {
       ok: false,
       error: `Votre enchère (${bidAmount} €) ne peut pas dépasser votre devis (${quoteAmount} €).`,

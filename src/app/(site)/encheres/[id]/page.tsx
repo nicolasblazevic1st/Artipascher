@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
+import TestBanner from "@/components/TestBanner";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { computeCurrentPrice } from "@/lib/auctions";
@@ -69,9 +70,12 @@ export default async function EnchereDetailPage({ params }: Props) {
     amount: b.amount,
     createdAt: b.createdAt,
     qualificationLevel: b.qualificationLevel,
+    devisProofUrl: b.devisProofUrl,
   }));
 
   const categoryLabel = workCategory;
+
+  const isTest = resolved.isTest === true || workRequest?.isTest === true;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
@@ -79,12 +83,17 @@ export default async function EnchereDetailPage({ params }: Props) {
         ← Retour aux enchères
       </Link>
 
+      {isTest && <TestBanner className="mt-6" />}
+
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-              {categoryLabel}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+                {categoryLabel}
+              </span>
+              {isTest && <TestBanner compact />}
+            </div>
             <h1 className="mt-3 text-3xl font-bold text-slate-900">
               {resolved.title}
             </h1>
@@ -197,13 +206,14 @@ export default async function EnchereDetailPage({ params }: Props) {
                 amount: b.amount,
                 qualificationLevel: b.qualificationLevel,
                 decennaleVerifiedLabels: b.decennaleVerifiedLabels,
+                devisProofUrl: b.devisProofUrl,
               }))}
             />
           </div>
         </section>
 
         <p className="mt-8 text-center text-xs text-slate-500">
-          Devis obligatoire avant enchère · Validation admin · Artisans RCS
+          Devis PDF OCR obligatoire à chaque enchère (montant TTC au centime près) · Artisans RCS
         </p>
       </div>
     </div>

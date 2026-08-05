@@ -215,6 +215,8 @@ export interface WorkRequest {
   previousQuoteProofUrl?: string;
   /** Précisions optionnelles (artisan, date…). */
   previousQuoteNote?: string;
+  /** Demande / enchère de démonstration (bandeau TEST). */
+  isTest?: boolean;
 }
 
 export type ProQuoteStatus = "pending_moderation" | "approved" | "rejected";
@@ -246,6 +248,12 @@ export interface Bid {
   feeEur: number;
   createdAt: string;
   stripeSessionId?: string;
+  /** PDF du devis joint à l'enchère (vérifié OCR). */
+  devisProofUrl?: string;
+  /** Montant TTC extrait du devis (égal à `amount` au centime près). */
+  ocrAmount?: number;
+  ocrMatchedLabel?: string;
+  ocrSnippet?: string;
 }
 
 export interface ContactUnlock {

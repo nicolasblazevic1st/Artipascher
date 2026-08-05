@@ -1,8 +1,9 @@
-import { SAMPLE_AUCTIONS, type Auction } from "./data";
+import { computeCurrentPrice } from "./auctions";
+import { SAMPLE_AUCTIONS, type Auction, type TradeCategory } from "./data";
 import { isAuctionStillActive } from "./share";
-import { readStore } from "./store";
+import { getBidsForAuction, readStore } from "./store";
 import type { WorkRequest } from "./store-types";
-import { TRADE_CATEGORY_TO_WORK } from "./work-categories";
+import { TRADE_CATEGORY_TO_WORK, WORK_TO_TRADE_CATEGORY } from "./work-categories";
 
 export interface ResolvedAuction {
   id: string;
@@ -15,6 +16,7 @@ export interface ResolvedAuction {
   endsAt?: string;
   shareToken?: string;
   source: "sample" | "workRequest";
+  isTest?: boolean;
 }
 
 export function getWorkRequestStartPrice(request: WorkRequest): number | undefined {
@@ -36,6 +38,7 @@ function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
     endsAt: request.auctionEndsAt,
     shareToken: request.shareToken,
     source: "workRequest",
+    isTest: request.isTest === true,
   };
 }
 
@@ -50,7 +53,80 @@ function fromSample(auction: Auction): ResolvedAuction {
     status: auction.status,
     endsAt: auction.endsAt,
     source: "sample",
+    isTest: auction.isTest === true,
   };
+}
+
+function tradeCategoryForRequest(request: WorkRequest): TradeCategory {
+  const mapped = WORK_TO_TRADE_CATEGORY[request.category];
+  if (mapped) return mapped as TradeCategory;
+  return "peinture";
+}
+
+/** Convertit une demande approuvée en carte enchère (active ou terminée). */
+export async function workRequestToAuctionCard(
+  request: WorkRequest,
+  options?: { activeOnly?: boolean }
+): Promise<Auction | null> {
+  if (request.status !== "approved" || !request.auctionId) return null;
+  const active = isAuctionStillActive(request.auctionEndsAt);
+  if (options?.activeOnly !== false && !active) return null;
+
+  const startPrice = request.startPrice ?? request.previousQuoteAmount ?? 0;
+  const bids = await getBidsForAuction(request.auctionId);
+  const currentPrice =
+    computeCurrentPrice(
+      startPrice || undefined,
+      bids.map((b) => b.amount)
+    ) ?? startPrice;
+
+  return {
+    id: request.auctionId,
+    title: `${request.category} · ${request.city}`,
+    description: request.description,
+    category: tradeCategoryForRequest(request),
+    city: request.city,
+    department: request.department,
+    startPrice,
+    currentPrice,
+    bidCount: bids.length,
+    status: active ? "active" : "ended",
+    endsAt: request.auctionEndsAt ?? new Date().toISOString(),
+    isTest: request.isTest === true,
+  };
+}
+
+/** Liste publique : demandes store actives + catalogue démo. */
+export async function listPublicAuctions(): Promise<Auction[]> {
+  const store = await readStore();
+  const fromStore = (
+    await Promise.all(
+      store.workRequests.map((request) =>
+        workRequestToAuctionCard(request, { activeOnly: true })
+      )
+    )
+  ).filter((a): a is Auction => a != null);
+
+  const sampleIds = new Set(SAMPLE_AUCTIONS.map((a) => a.id));
+  const uniqueStore = fromStore.filter((a) => !sampleIds.has(a.id));
+
+  return [...uniqueStore, ...SAMPLE_AUCTIONS.filter((a) => a.status === "active")];
+}
+
+/** Admin : toutes les enchères store (y compris terminées) + catalogue démo. */
+export async function listAdminAuctions(): Promise<Auction[]> {
+  const store = await readStore();
+  const fromStore = (
+    await Promise.all(
+      store.workRequests.map((request) =>
+        workRequestToAuctionCard(request, { activeOnly: false })
+      )
+    )
+  ).filter((a): a is Auction => a != null);
+
+  const storeIds = new Set(fromStore.map((a) => a.id));
+  const samples = SAMPLE_AUCTIONS.filter((a) => !storeIds.has(a.id));
+  return [...fromStore, ...samples];
 }
 
 export async function resolveAuction(auctionId: string): Promise<ResolvedAuction | null> {

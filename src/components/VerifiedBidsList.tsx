@@ -12,6 +12,7 @@ export interface BidDisplay {
   siretMasked?: string;
   qualificationLevel?: QualificationLevel;
   decennaleVerifiedLabels?: string[];
+  devisProofUrl?: string;
 }
 
 export default function VerifiedBidsList({ bids }: { bids: BidDisplay[] }) {
@@ -51,9 +52,21 @@ export default function VerifiedBidsList({ bids }: { bids: BidDisplay[] }) {
                 </p>
               )}
             </div>
-            <span className="text-lg font-bold text-brand-700">
-              {formatPrice(bid.amount)}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-lg font-bold text-brand-700">
+                {formatPrice(bid.amount)}
+              </span>
+              {bid.devisProofUrl && (
+                <a
+                  href={bid.devisProofUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-brand-700 underline"
+                >
+                  Devis OCR
+                </a>
+              )}
+            </div>
           </li>
         ))}
       </ul>

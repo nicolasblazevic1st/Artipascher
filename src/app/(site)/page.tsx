@@ -2,8 +2,11 @@ import Link from "next/link";
 import AuctionCard from "@/components/AuctionCard";
 import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
-import { FAQ_ITEMS, SAMPLE_AUCTIONS } from "@/lib/data";
-import { getActiveWorkCategories } from "@/lib/work-request-auctions";
+import { FAQ_ITEMS } from "@/lib/data";
+import {
+  getActiveWorkCategories,
+  listPublicAuctions,
+} from "@/lib/work-request-auctions";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
 
 const STEPS = [
@@ -25,7 +28,10 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
-  const activeCategories = await getActiveWorkCategories();
+  const [activeCategories, auctions] = await Promise.all([
+    getActiveWorkCategories(),
+    listPublicAuctions(),
+  ]);
 
   return (
     <>
@@ -111,7 +117,7 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {SAMPLE_AUCTIONS.slice(0, 6).map((auction) => (
+            {auctions.slice(0, 6).map((auction) => (
               <AuctionCard key={auction.id} auction={auction} />
             ))}
           </div>

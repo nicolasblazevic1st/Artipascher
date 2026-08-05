@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import TestBanner from "@/components/TestBanner";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
 import { CATEGORY_LABELS, formatLocation, formatPrice } from "@/lib/data";
@@ -39,7 +40,10 @@ export default async function ProEncheresPage() {
             {auctions.map((auction) => (
               <tr key={auction.id} className="hover:bg-slate-50">
                 <td className="px-4 py-4">
-                  <p className="font-medium text-slate-900">{auction.title}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium text-slate-900">{auction.title}</p>
+                    {auction.isTest && <TestBanner compact />}
+                  </div>
                   <p className="mt-0.5 text-xs text-slate-500 sm:hidden">
                     {formatLocation(auction.city, auction.department)}
                   </p>

@@ -33,6 +33,26 @@ export const TRADE_CATEGORY_TO_WORK: Record<string, WorkCategory | undefined> = 
   couverture: "Toiture / Couverture",
 };
 
+/** Inverse pour afficher les demandes store comme cartes enchères. */
+export const WORK_TO_TRADE_CATEGORY: Record<string, string> = {
+  Peinture: "peinture",
+  Plomberie: "plomberie",
+  Électricité: "electricite",
+  Maçonnerie: "maconnerie",
+  Isolation: "plaquiste",
+  "Chauffage / Pompe à chaleur": "chauffage",
+  "Rénovation énergétique": "chauffage",
+  "Rénovation complète": "maconnerie",
+  "Menuiserie (fenêtres, portes, volets)": "menuiserie",
+  "Toiture / Couverture": "couverture",
+  "Carrelage / Revêtements de sol": "carrelage",
+  "Placo / Cloisons": "plaquiste",
+  "Extérieur / Aménagement paysager": "maconnerie",
+  Terrassement: "maconnerie",
+  Serrurerie: "menuiserie",
+  "Nettoyage / Multi-services": "peinture",
+};
+
 export function isWorkCategory(value: string): value is WorkCategory {
   return (WORK_CATEGORIES as readonly string[]).includes(value);
 }

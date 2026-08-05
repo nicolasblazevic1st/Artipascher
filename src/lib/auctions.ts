@@ -33,10 +33,14 @@ export function validateBidAmount(
   if (currentPrice == null) {
     return "Le prix de départ n'est pas encore fixé (premier devis en attente).";
   }
-  if (!Number.isInteger(amount) || amount <= 0) {
+  if (!Number.isFinite(amount) || amount <= 0) {
     return "Montant invalide.";
   }
-  if (amount >= currentPrice) {
+  const cents = Math.round(amount * 100);
+  if (Math.abs(amount * 100 - cents) > 0.001) {
+    return "Le montant doit être précisé au centime près (2 décimales max).";
+  }
+  if (cents >= Math.round(currentPrice * 100)) {
     return `Votre enchère doit être strictement inférieure au prix actuel (${currentPrice} €).`;
   }
   return null;

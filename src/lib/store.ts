@@ -463,6 +463,10 @@ export async function addBid(data: {
   amount: number;
   feeEur: number;
   stripeSessionId?: string;
+  devisProofUrl?: string;
+  ocrAmount?: number;
+  ocrMatchedLabel?: string;
+  ocrSnippet?: string;
 }): Promise<Bid> {
   const store = await readStore();
   const entry: Bid = {

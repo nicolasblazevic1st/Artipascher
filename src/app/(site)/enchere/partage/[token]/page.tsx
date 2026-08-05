@@ -184,6 +184,7 @@ export default async function SharedAuctionPage({ params }: Props) {
                 amount: b.amount,
                 createdAt: b.createdAt,
                 qualificationLevel: b.qualificationLevel,
+                devisProofUrl: b.devisProofUrl,
               }))}
               requiresQuote
             />
@@ -220,6 +221,7 @@ export default async function SharedAuctionPage({ params }: Props) {
                   amount: b.amount,
                   qualificationLevel: b.qualificationLevel,
                   decennaleVerifiedLabels: b.decennaleVerifiedLabels,
+                  devisProofUrl: b.devisProofUrl,
                 }))}
               />
             </div>

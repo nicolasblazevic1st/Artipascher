@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
@@ -82,6 +83,7 @@ export default function AdminDemandesPage() {
               key={r.id}
               className="rounded-xl border border-slate-200 bg-white p-5"
             >
+              {r.isTest && <TestBanner className="mb-3" />}
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-2xl">
                   <div className="flex items-center gap-2">

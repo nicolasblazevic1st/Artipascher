@@ -16,6 +16,7 @@ interface BidRow {
   amount: number;
   createdAt: string;
   qualificationLevel?: QualificationLevel;
+  devisProofUrl?: string;
 }
 
 interface Eligibility {
@@ -56,6 +57,7 @@ export default function BidPanel({
   const [amount, setAmount] = useState(
     initialCurrentPrice != null ? suggestNextBid(initialCurrentPrice) ?? 1 : 1
   );
+  const [devisFile, setDevisFile] = useState<File | null>(null);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -127,10 +129,23 @@ export default function BidPanel({
     setError(null);
     setSuccess(null);
 
+    if (!devisFile) {
+      setPaying(false);
+      setError(
+        "Joignez le PDF de votre devis : le montant TTC doit être identique à votre enchère au centime près."
+      );
+      return;
+    }
+
+    const form = new FormData();
+    form.set("auctionId", auctionId);
+    form.set("amount", String(amount));
+    form.set("devis", devisFile);
+    if (demo) form.set("demo", "true");
+
     const res = await fetch("/api/pro/place-bid", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId, amount, demo }),
+      body: form,
     });
     const data = await res.json();
     setPaying(false);
@@ -143,10 +158,11 @@ export default function BidPanel({
     if (data.success) {
       await refreshFromServer();
       await refreshEligibility(amount);
+      setDevisFile(null);
       setSuccess(
         demo && data.demo
-          ? `Enchère à ${formatPrice(amount)} enregistrée (mode démo).`
-          : `Enchère à ${formatPrice(amount)} enregistrée (−1 crédit).`
+          ? `Enchère à ${formatPrice(amount)} enregistrée (mode démo) — devis OCR vérifié.`
+          : `Enchère à ${formatPrice(amount)} enregistrée (−1 crédit) — devis OCR vérifié.`
       );
       return;
     }
@@ -162,8 +178,14 @@ export default function BidPanel({
   const maxBidFromQuote = eligibility?.quote?.maxBidAmount;
   const effectiveMax =
     maxBidFromQuote !== undefined
-      ? Math.min(currentPrice - 1, maxBidFromQuote)
-      : currentPrice - 1;
+      ? Math.min(currentPrice - 0.01, maxBidFromQuote)
+      : currentPrice - 0.01;
+  const canSubmit =
+    !paying &&
+    amount < currentPrice &&
+    !quoteBlocked &&
+    !bidLimitReached &&
+    devisFile != null;
 
   return (
     <section id="enchere" className="mt-8 rounded-xl border border-brand-200 bg-brand-50/50 p-6">
@@ -179,9 +201,15 @@ export default function BidPanel({
         <>
       {requiresQuote && (
         <p className="mt-2 rounded-lg bg-white px-3 py-2 text-sm text-slate-600 ring-1 ring-brand-100">
-          <strong>Obligatoire :</strong> déposez d&apos;abord un devis après visite sur le
-          chantier, validé par l&apos;administration. L&apos;enchère doit rester cohérente
-          avec le montant de votre devis.
+          <strong>Obligatoire :</strong> devis après visite validé par l&apos;admin, puis à
+          chaque enchère un <strong>PDF devis</strong> dont le total TTC égale votre offre{" "}
+          <strong>au centime près</strong> (vérification OCR).
+        </p>
+      )}
+      {!requiresQuote && (
+        <p className="mt-2 rounded-lg bg-white px-3 py-2 text-sm text-slate-600 ring-1 ring-brand-100">
+          <strong>Obligatoire :</strong> joignez un PDF devis dont le total TTC égale votre
+          enchère <strong>au centime près</strong> (vérification OCR).
         </p>
       )}
       <p className="mt-2 text-sm text-slate-600">
@@ -269,45 +297,64 @@ export default function BidPanel({
             Connecté : <strong>{companyName}</strong>
           </p>
           <label className="block text-sm font-medium text-slate-700">
-            Votre enchère (€)
+            Votre enchère (€ TTC)
           </label>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(Number(e.target.value))}
-            step={1}
-            min={1}
-            max={Math.max(1, effectiveMax)}
+            step={0.01}
+            min={0.01}
+            max={Math.max(0.01, effectiveMax)}
             disabled={quoteBlocked || bidLimitReached}
             className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm disabled:bg-slate-100"
           />
           <p className="text-xs text-slate-500">
-            Montant libre, strictement inférieur à {formatPrice(currentPrice)}
+            Montant libre au centime près, strictement inférieur à {formatPrice(currentPrice)}
             {maxBidFromQuote !== undefined &&
-              ` · Max. selon votre devis : ${formatPrice(maxBidFromQuote)}`}
+              ` · Max. selon votre devis admin : ${formatPrice(maxBidFromQuote)}`}
           </p>
+
+          <label className="block text-sm font-medium text-slate-700">
+            Devis PDF (total TTC = enchère)
+          </label>
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            disabled={quoteBlocked || bidLimitReached}
+            onChange={(e) => setDevisFile(e.target.files?.[0] ?? null)}
+            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-700 disabled:opacity-50"
+          />
+          <p className="text-xs text-slate-500">
+            PDF texte uniquement (pas de scan). Le total TTC lu par OCR doit être{" "}
+            <strong>strictement égal</strong> au montant saisi.
+            {devisFile ? ` Fichier : ${devisFile.name}` : ""}
+          </p>
+
           <button
             type="button"
             onClick={() => handlePlaceBid(false)}
-            disabled={paying || amount >= currentPrice || quoteBlocked || bidLimitReached}
+            disabled={!canSubmit}
             className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {paying
-              ? "Traitement…"
+              ? "Vérification OCR…"
               : bidLimitReached
                 ? "Limite de 3 enchères atteinte"
               : quoteBlocked
-                ? "Devis requis avant d'enchérir"
+                ? "Devis admin requis avant d'enchérir"
+                : !devisFile
+                  ? "Joignez le devis PDF pour enchérir"
                 : `Enchérir à ${formatPrice(amount)} · 1 crédit`}
           </button>
           {process.env.NODE_ENV === "development" && !quoteBlocked && !bidLimitReached && (
             <button
               type="button"
               onClick={() => handlePlaceBid(true)}
-              disabled={paying || amount >= currentPrice}
+              disabled={paying || amount >= currentPrice || !devisFile}
               className="text-xs text-slate-500 underline"
             >
-              Mode démo — enchérir sans crédit
+              Mode démo — enchérir sans crédit (OCR devis obligatoire)
             </button>
           )}
           <a href="/pro/compte#credits" className="block text-xs text-brand-700 underline">
@@ -327,6 +374,16 @@ export default function BidPanel({
                   {b.qualificationLevel != null && (
                     <QualificationBadge level={b.qualificationLevel} compact />
                   )}
+                  {b.devisProofUrl && (
+                    <a
+                      href={b.devisProofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-xs text-brand-700 underline"
+                    >
+                      Devis
+                    </a>
+                  )}
                 </span>
                 <span className="shrink-0 font-semibold text-brand-700">
                   {formatPrice(b.amount)}
@@ -338,8 +395,8 @@ export default function BidPanel({
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Départ : {formatPrice(startPrice!)} · 1 crédit ({BID_FEE_EUR} €) par enchère · Maximum 3
-        enchères par artisan et par chantier
+        Départ : {formatPrice(startPrice!)} · 1 crédit ({BID_FEE_EUR} €) par enchère · Devis PDF
+        OCR obligatoire · Maximum 3 enchères par artisan et par chantier
       </p>
         </>
       )}

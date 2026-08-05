@@ -1,6 +1,7 @@
 import { computeCurrentPrice } from "./auctions";
-import { SAMPLE_AUCTIONS, type Auction } from "./data";
+import type { Auction } from "./data";
 import { getBidsForAuction, getBidsForPro, type Bid } from "./store";
+import { listPublicAuctions } from "./work-request-auctions";
 
 export interface EnrichedAuction extends Auction {
   liveCurrentPrice: number;
@@ -11,9 +12,10 @@ export interface EnrichedAuction extends Auction {
 
 export async function getEnrichedAuctions(proId?: string): Promise<EnrichedAuction[]> {
   const myBids = proId ? await getBidsForPro(proId) : [];
+  const auctions = await listPublicAuctions();
 
   return Promise.all(
-    SAMPLE_AUCTIONS.filter((a) => a.status === "active").map(async (auction) => {
+    auctions.map(async (auction) => {
       const bids = await getBidsForAuction(auction.id);
       const amounts = bids.map((b) => b.amount);
       const liveCurrentPrice =

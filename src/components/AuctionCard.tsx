@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TestBanner from "@/components/TestBanner";
 import {
   Auction,
   CATEGORY_LABELS,
@@ -11,6 +12,7 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
 
   return (
     <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-md">
+      {auction.isTest && <TestBanner className="mb-3" />}
       <div className="mb-3 flex items-start justify-between gap-3">
         <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
           {CATEGORY_LABELS[auction.category]}

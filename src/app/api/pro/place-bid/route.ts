@@ -5,6 +5,9 @@ import {
   validateBidAmount,
 } from "@/lib/auctions";
 import { checkBidEligibility } from "@/lib/bid-eligibility";
+import { verifyDevisFileMatchesAmount } from "@/lib/devis-ocr";
+import { validateProofFile } from "@/lib/demandes-validation";
+import { parseAmountToCents, centsToEuros } from "@/lib/money";
 import { resolveAuction } from "@/lib/work-request-auctions";
 import { getProSession } from "@/lib/pro-auth";
 import { isDemoPaymentAllowed } from "@/lib/payments";
@@ -16,6 +19,86 @@ import {
   getProCreditBalance,
   spendProCredit,
 } from "@/lib/store";
+import { saveBidDevisProofFromBuffer } from "@/lib/uploads";
+
+async function parsePlaceBidRequest(request: NextRequest): Promise<
+  | {
+      ok: true;
+      auctionId: string;
+      amount: number;
+      amountCents: number;
+      demo: boolean;
+      devisFile: File;
+      devisBuffer: Buffer;
+    }
+  | { ok: false; error: string; status: number }
+> {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const form = await request.formData();
+    const auctionId = String(form.get("auctionId") ?? "");
+    const amountCents = parseAmountToCents(form.get("amount"));
+    const demo = form.get("demo") === "true" || form.get("demo") === "1";
+    const devisFile = form.get("devis");
+
+    if (!auctionId) {
+      return { ok: false, error: "Enchère manquante.", status: 400 };
+    }
+    if (amountCents == null) {
+      return {
+        ok: false,
+        error: "Montant invalide (précisez au centime près).",
+        status: 400,
+      };
+    }
+    if (!(devisFile instanceof File) || devisFile.size === 0) {
+      return {
+        ok: false,
+        error: "Joignez le PDF de votre devis : le montant TTC doit égaler votre enchère au centime près.",
+        status: 400,
+      };
+    }
+
+    const fileError = validateProofFile(devisFile);
+    if (fileError) {
+      return { ok: false, error: fileError, status: 400 };
+    }
+
+    if (devisFile.type !== "application/pdf") {
+      return {
+        ok: false,
+        error:
+          "Pour la vérification OCR, le devis doit être un PDF texte (pas une image ni un scan).",
+        status: 400,
+      };
+    }
+
+    const devisBuffer = Buffer.from(await devisFile.arrayBuffer());
+    return {
+      ok: true,
+      auctionId,
+      amount: centsToEuros(amountCents),
+      amountCents,
+      demo,
+      devisFile,
+      devisBuffer,
+    };
+  }
+
+  // Ancien JSON sans devis → refusé
+  try {
+    await request.json();
+  } catch {
+    /* ignore */
+  }
+  return {
+    ok: false,
+    error:
+      "Joignez le PDF de votre devis (formulaire multipart). Le montant OCR doit correspondre à l'enchère au centime près.",
+    status: 400,
+  };
+}
 
 export async function POST(request: NextRequest) {
   const session = await getProSession();
@@ -34,18 +117,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let auctionId: string;
-  let amount: number;
-  let demo = false;
-
-  try {
-    const body = await request.json();
-    auctionId = body.auctionId ?? "";
-    amount = Number(body.amount);
-    demo = body.demo === true;
-  } catch {
-    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+  const parsed = await parsePlaceBidRequest(request);
+  if (!parsed.ok) {
+    return NextResponse.json({ error: parsed.error }, { status: parsed.status });
   }
+
+  const { auctionId, amount, amountCents, demo, devisFile, devisBuffer } = parsed;
 
   const auction = await resolveAuction(auctionId);
   if (!auction || auction.status !== "active") {
@@ -88,6 +165,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const ocr = await verifyDevisFileMatchesAmount(
+    devisBuffer,
+    devisFile.name || devisFile.type,
+    amountCents
+  );
+  if (!ocr.ok) {
+    return NextResponse.json(
+      {
+        error: ocr.error ?? "Le devis ne correspond pas au montant de l'enchère.",
+        ocrAmount: ocr.ocrAmountEuros,
+        ocrSnippet: ocr.rawSnippet,
+      },
+      { status: 422 }
+    );
+  }
+
   const balance = await getProCreditBalance(session.proId);
   const canSpend = balance >= 1;
   const allowDemoWithoutCredit = demo && isDemoPaymentAllowed() && !canSpend;
@@ -103,6 +196,14 @@ export async function POST(request: NextRequest) {
       { status: 402 }
     );
   }
+
+  const devisProofUrl = await saveBidDevisProofFromBuffer(
+    session.proId,
+    auctionId,
+    devisBuffer,
+    devisFile.name || "devis.pdf",
+    devisFile.type || "application/pdf"
+  );
 
   if (canSpend) {
     const spent = await spendProCredit({
@@ -138,6 +239,10 @@ export async function POST(request: NextRequest) {
       companyName: pro.companyName,
       amount,
       feeEur: BID_FEE_EUR,
+      devisProofUrl,
+      ocrAmount: ocr.ocrAmountEuros,
+      ocrMatchedLabel: ocr.matchedLabel,
+      ocrSnippet: ocr.rawSnippet,
     });
 
     const newBalance = await getProCreditBalance(session.proId);
@@ -150,6 +255,7 @@ export async function POST(request: NextRequest) {
       demo: allowDemoWithoutCredit,
       bidsUsed: eligibility.bidsUsed + 1,
       bidsRemaining: Math.max(0, eligibility.bidsRemaining - 1),
+      ocrVerified: true,
     });
   } catch (err) {
     if (err instanceof Error && err.message === "BID_LIMIT_REACHED") {

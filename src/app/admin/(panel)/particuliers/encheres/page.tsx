@@ -1,11 +1,14 @@
 import Link from "next/link";
+import TestBanner from "@/components/TestBanner";
 import { computeCurrentPrice } from "@/lib/auctions";
-import { CATEGORY_LABELS, SAMPLE_AUCTIONS, formatLocation, formatPrice } from "@/lib/data";
+import { CATEGORY_LABELS, formatLocation, formatPrice } from "@/lib/data";
 import { getBidsForAuction } from "@/lib/store";
+import { listAdminAuctions } from "@/lib/work-request-auctions";
 
 export default async function AdminEncheresPage() {
+  const auctions = await listAdminAuctions();
   const auctionsWithBids = await Promise.all(
-    SAMPLE_AUCTIONS.map(async (auction) => {
+    auctions.map(async (auction) => {
       const bids = await getBidsForAuction(auction.id);
       const currentPrice = computeCurrentPrice(
         auction.startPrice,
@@ -29,6 +32,7 @@ export default async function AdminEncheresPage() {
             key={auction.id}
             className="rounded-xl border border-slate-200 bg-white p-5"
           >
+            {auction.isTest && <TestBanner className="mb-3" />}
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <span className="text-xs font-medium text-brand-600">
