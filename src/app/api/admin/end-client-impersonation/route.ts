@@ -18,7 +18,7 @@ export async function POST() {
 
   const response = NextResponse.json({
     success: true,
-    redirectTo: "/admin/comptes-particuliers",
+    redirectTo: "/admin/particuliers/comptes",
   });
   response.cookies.set(CLIENT_SESSION_COOKIE, "", { path: "/", maxAge: 0 });
   return response;

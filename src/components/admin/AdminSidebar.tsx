@@ -1,37 +1,81 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import AdminLogoutButton from "./AdminLogoutButton";
 
-const NAV = [
-  { href: "/admin", label: "Tableau de bord", icon: "📊" },
-  { href: "/admin/professionnels", label: "Artisans", icon: "👷" },
-  { href: "/admin/documents-artisans", label: "Documents artisans", icon: "📎" },
-  { href: "/admin/comptes-artisans", label: "Comptes artisans", icon: "🏢" },
-  { href: "/admin/comptes-particuliers", label: "Comptes particuliers", icon: "👤" },
-  { href: "/admin/demandes", label: "Demandes travaux", icon: "📋" },
-  { href: "/admin/campagnes-sms", label: "Campagnes SMS", icon: "📱" },
-  { href: "/admin/devis", label: "Devis à modérer", icon: "📄" },
-  { href: "/admin/encheres", label: "Enchères", icon: "🔨" },
+type NavLink = { href: string; label: string };
+type NavSection = { title: string; items: NavLink[] };
+
+const SECTIONS: NavSection[] = [
+  {
+    title: "Général",
+    items: [{ href: "/admin", label: "Tableau de bord" }],
+  },
+  {
+    title: "Artisans",
+    items: [
+      { href: "/admin/artisans/certification", label: "Certification" },
+      { href: "/admin/artisans/comptes", label: "Comptes" },
+      { href: "/admin/artisans/documents", label: "Documents" },
+      { href: "/admin/artisans/devis", label: "Devis" },
+    ],
+  },
+  {
+    title: "Particuliers & chantiers",
+    items: [
+      { href: "/admin/particuliers/comptes", label: "Comptes" },
+      { href: "/admin/particuliers/demandes", label: "Demandes travaux" },
+      { href: "/admin/particuliers/encheres", label: "Enchères" },
+    ],
+  },
+  {
+    title: "Acquisition",
+    items: [{ href: "/admin/campagnes-sms", label: "Campagnes SMS" }],
+  },
 ];
 
+function isActive(pathname: string, href: string) {
+  if (href === "/admin") return pathname === "/admin";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export default function AdminSidebar() {
+  const pathname = usePathname();
+
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-slate-300">
+    <aside className="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-slate-300">
       <div className="border-b border-slate-800 px-5 py-5">
         <Link href="/admin" className="block">
           <p className="text-lg font-bold text-white">Artipascher</p>
           <p className="text-xs text-slate-400">Administration</p>
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 p-3">
-        {NAV.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-slate-800 hover:text-white"
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </Link>
+      <nav className="flex-1 space-y-5 overflow-y-auto p-3">
+        {SECTIONS.map((section) => (
+          <div key={section.title}>
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              {section.title}
+            </p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`block rounded-lg px-3 py-2 text-sm transition ${
+                      active
+                        ? "bg-brand-700 font-medium text-white"
+                        : "hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </nav>
       <div className="space-y-2 border-t border-slate-800 p-3">

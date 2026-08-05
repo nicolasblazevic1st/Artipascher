@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function LegacyAdminComptesParticuliersRedirect() {
+export default function AdminParticuliersIndexPage() {
   redirect("/admin/particuliers/comptes");
 }

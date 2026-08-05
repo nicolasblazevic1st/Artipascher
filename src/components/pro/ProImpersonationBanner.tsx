@@ -15,7 +15,7 @@ export default function ProImpersonationBanner({ companyName, status }: Props) {
     const res = await fetch("/api/admin/end-pro-impersonation", { method: "POST" });
     const data = (await res.json()) as { redirectTo?: string };
     setLoading(false);
-    window.location.href = data.redirectTo ?? "/admin/comptes-artisans";
+    window.location.href = data.redirectTo ?? "/admin/artisans/comptes";
   }
 
   return (

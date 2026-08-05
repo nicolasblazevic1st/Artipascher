@@ -20,39 +20,43 @@ export default async function AdminDashboardPage() {
         <StatCard
           label="Inscriptions en attente"
           value={stats.pendingPros}
-          href="/admin/professionnels"
+          href="/admin/artisans/certification"
           urgent={stats.pendingPros > 0}
         />
         <StatCard
           label="Demandes travaux en attente"
           value={stats.pendingRequests}
-          href="/admin/demandes"
+          href="/admin/particuliers/demandes"
           urgent={stats.pendingRequests > 0}
         />
         <StatCard
           label="Devis à modérer"
           value={stats.pendingQuotes}
-          href="/admin/devis"
+          href="/admin/artisans/devis"
           urgent={stats.pendingQuotes > 0}
         />
         <StatCard
           label="Artisans approuvés"
           value={stats.approvedPros}
-          href="/admin/comptes-artisans"
+          href="/admin/artisans/comptes"
         />
         <StatCard
           label="Comptes particuliers"
           value={stats.totalClients}
-          href="/admin/comptes-particuliers"
+          href="/admin/particuliers/comptes"
         />
-        <StatCard label="Enchères actives" value={SAMPLE_AUCTIONS.length} href="/admin/encheres" />
+        <StatCard
+          label="Enchères actives"
+          value={SAMPLE_AUCTIONS.length}
+          href="/admin/particuliers/encheres"
+        />
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Inscriptions artisans à valider</h2>
-            <Link href="/admin/professionnels" className="text-sm text-brand-600">
+            <Link href="/admin/artisans/certification" className="text-sm text-brand-600">
               Voir tout →
             </Link>
           </div>
@@ -75,7 +79,7 @@ export default async function AdminDashboardPage() {
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Demandes particuliers à valider</h2>
-            <Link href="/admin/demandes" className="text-sm text-brand-600">
+            <Link href="/admin/particuliers/demandes" className="text-sm text-brand-600">
               Voir tout →
             </Link>
           </div>

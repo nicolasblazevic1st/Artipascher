@@ -22,7 +22,7 @@ export default function ClientImpersonationBanner({
     });
     const data = (await res.json()) as { redirectTo?: string };
     setLoading(false);
-    window.location.href = data.redirectTo ?? "/admin/comptes-particuliers";
+    window.location.href = data.redirectTo ?? "/admin/particuliers/comptes";
   }
 
   return (
