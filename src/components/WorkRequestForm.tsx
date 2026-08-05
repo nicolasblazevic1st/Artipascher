@@ -215,8 +215,6 @@ export default function WorkRequestForm({
     previews.forEach((url) => URL.revokeObjectURL(url));
     setPreviews([]);
     setCategory("");
-    setPassword("");
-    setPasswordConfirm("");
     setHasPreviousQuote(false);
     setPreviousQuoteAmount("");
     setPreviousQuoteProof(null);
