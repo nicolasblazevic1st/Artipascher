@@ -93,6 +93,7 @@ export async function workRequestToAuctionCard(
     status: active ? "active" : "ended",
     endsAt: request.auctionEndsAt ?? new Date().toISOString(),
     isTest: request.isTest === true,
+    coverPhotoUrl: request.photos?.[0],
   };
 }
 

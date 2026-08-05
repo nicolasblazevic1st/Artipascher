@@ -64,6 +64,7 @@ const DEMO_REQUESTS = [
     auctionDurationDays: 14,
     endsInDays: 10,
     previousQuoteAmount: 3200,
+    photos: ["/demo/projets/demo-peinture.jpg"],
     bids: [2650, 2480],
   },
   {
@@ -80,6 +81,7 @@ const DEMO_REQUESTS = [
     auctionDurationDays: 7,
     endsInDays: 5,
     previousQuoteAmount: 1600,
+    photos: ["/demo/projets/demo-plomberie.jpg"],
     bids: [1380],
   },
   {
@@ -95,6 +97,7 @@ const DEMO_REQUESTS = [
     startPrice: 2100,
     auctionDurationDays: 21,
     endsInDays: 18,
+    photos: ["/demo/projets/demo-electricite.jpg"],
     bids: [],
   },
   {
@@ -110,6 +113,7 @@ const DEMO_REQUESTS = [
     startPrice: 3900,
     auctionDurationDays: 14,
     endsInDays: 12,
+    photos: ["/demo/projets/demo-toiture.jpg"],
     bids: [3700, 3550, 3420],
   },
   {
@@ -125,6 +129,7 @@ const DEMO_REQUESTS = [
     startPrice: 4200,
     auctionDurationDays: 10,
     endsInDays: 8,
+    photos: ["/demo/projets/demo-carrelage.jpg"],
     bids: [],
   },
   {
@@ -140,6 +145,7 @@ const DEMO_REQUESTS = [
     startPrice: 6200,
     auctionDurationDays: 14,
     previousQuoteAmount: 6800,
+    photos: ["/demo/projets/demo-menuiserie.jpg"],
   },
   {
     slug: "placo-calais",
@@ -153,6 +159,7 @@ const DEMO_REQUESTS = [
       "[TEST] Création de 2 cloisons BA13 + isolation phonique pour aménager un bureau dans un loft. Surface ~18 m².",
     startPrice: 2400,
     auctionDurationDays: 10,
+    photos: ["/demo/projets/demo-placo.jpg"],
   },
   {
     slug: "chauffage-bethune",
@@ -167,6 +174,7 @@ const DEMO_REQUESTS = [
     startPrice: 12500,
     auctionDurationDays: 30,
     previousQuoteAmount: 13800,
+    photos: ["/demo/projets/demo-chauffage.jpg"],
   },
 ];
 
@@ -249,7 +257,7 @@ async function main() {
       description: demo.description,
       startPrice: demo.startPrice,
       auctionDurationDays: demo.auctionDurationDays,
-      photos: [],
+      photos: demo.photos ?? [],
       status: demo.status,
       createdAt,
       isTest: true,

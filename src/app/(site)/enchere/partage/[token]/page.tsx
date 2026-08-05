@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
+import ProjectPhotos from "@/components/ProjectPhotos";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { computeCurrentPrice } from "@/lib/auctions";
@@ -114,18 +115,7 @@ export default async function SharedAuctionPage({ params }: Props) {
 
         <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
 
-        {(request.photos?.length ?? 0) > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {request.photos.map((photo) => (
-              <img
-                key={photo}
-                src={photo}
-                alt="Photo du projet"
-                className="h-24 w-24 rounded-lg border border-slate-200 object-cover"
-              />
-            ))}
-          </div>
-        )}
+        <ProjectPhotos photos={request.photos ?? []} showPublicNote />
 
         {request.previousQuoteAmount != null && request.previousQuoteProofUrl && (
           <div className="mt-6">

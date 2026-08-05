@@ -26,6 +26,8 @@ export interface Auction {
   endsAt: string;
   /** Affiche le bandeau TEST (démo / seed). */
   isTest?: boolean;
+  /** Première photo projet (visible sans crédit). */
+  coverPhotoUrl?: string;
 }
 
 export const CATEGORY_LABELS: Record<TradeCategory, string> = {

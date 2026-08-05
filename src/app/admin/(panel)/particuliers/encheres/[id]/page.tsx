@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatPrice } from "@/lib/data";
@@ -93,6 +94,7 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
           <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
             {auction.description}
           </p>
+          <ProjectPhotos photos={workRequest?.photos ?? []} showPublicNote />
           {workRequest && (
             <dl className="mt-4 space-y-2 text-sm">
               <div>

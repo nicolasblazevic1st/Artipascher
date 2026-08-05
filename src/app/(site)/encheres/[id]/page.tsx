@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
+import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
@@ -109,6 +110,11 @@ export default async function EnchereDetailPage({ params }: Props) {
         </div>
 
         <p className="mt-6 leading-relaxed text-slate-600">{resolved.description}</p>
+
+        <ProjectPhotos
+          photos={workRequest?.photos ?? []}
+          showPublicNote
+        />
 
         {workRequest?.previousQuoteAmount != null && workRequest.previousQuoteProofUrl && (
           <div className="mt-6">

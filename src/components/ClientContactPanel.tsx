@@ -201,8 +201,9 @@ export default function ClientContactPanel({
     <section id="contact" className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6">
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Manifestez d&apos;abord votre intérêt. Après acceptation du client dans son espace,
-        vous pourrez débloquer les coordonnées pour{" "}
+        Les <strong>photos du projet</strong> restent visibles librement (sans crédit).
+        Manifestez d&apos;abord votre intérêt. Après acceptation du client, vous pourrez
+        débloquer les coordonnées pour{" "}
         <strong>1 crédit ({UNLOCK_PRICE_EUR}&nbsp;€)</strong>.
       </p>
 

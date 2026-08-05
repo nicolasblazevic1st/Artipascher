@@ -11,7 +11,15 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
   const savings = auction.startPrice - auction.currentPrice;
 
   return (
-    <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-brand-200 hover:shadow-md">
+    <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-brand-200 hover:shadow-md">
+      {auction.coverPhotoUrl && (
+        <img
+          src={auction.coverPhotoUrl}
+          alt=""
+          className="h-40 w-full object-cover"
+        />
+      )}
+      <div className="flex flex-1 flex-col p-5">
       {auction.isTest && <TestBanner className="mb-3" />}
       <div className="mb-3 flex items-start justify-between gap-3">
         <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
@@ -63,6 +71,7 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
       >
         Voir l&apos;enchère
       </Link>
+      </div>
     </article>
   );
 }
