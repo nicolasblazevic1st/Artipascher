@@ -135,3 +135,22 @@ export async function saveTradeDecennaleDocuments(
 
   return byGroup;
 }
+
+/** Supprime un fichier photo de demande si le chemin est bien sous ce requestId. */
+export async function deleteRequestPhoto(
+  requestId: string,
+  photoUrl: string
+): Promise<void> {
+  const prefix = `/uploads/demandes/${requestId}/`;
+  if (!photoUrl.startsWith(prefix)) return;
+
+  const fileName = path.basename(photoUrl);
+  if (!fileName || fileName === "." || fileName === "..") return;
+
+  const filePath = path.join(getRequestUploadDir(requestId), fileName);
+  try {
+    await fs.unlink(filePath);
+  } catch {
+    // Fichier déjà absent — ignore.
+  }
+}

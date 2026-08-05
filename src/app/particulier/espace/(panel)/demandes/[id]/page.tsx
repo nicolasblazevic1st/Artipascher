@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactRequestsPanel from "@/components/client/ClientContactRequestsPanel";
+import ClientDemandePhotosPanel from "@/components/client/ClientDemandePhotosPanel";
 import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
@@ -46,6 +47,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
     request.status === "approved"
       ? await ensureWorkRequestShareToken(id, session.clientId)
       : null;
+  const photosEditable = request.status !== "rejected";
 
   return (
     <div>
@@ -108,18 +110,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           {formatRequestedWorkStartDate(request.requestedWorkStartDate)}
         </p>
 
-        {(request.photos?.length ?? 0) > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {request.photos.map((photo) => (
-              <img
-                key={photo}
-                src={photo}
-                alt="Photo projet"
-                className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
-              />
-            ))}
-          </div>
-        )}
+        <ClientDemandePhotosPanel
+          requestId={request.id}
+          initialPhotos={request.photos ?? []}
+          editable={photosEditable}
+        />
 
         {request.previousQuoteAmount != null && request.previousQuoteProofUrl && (
           <div className="mt-6">

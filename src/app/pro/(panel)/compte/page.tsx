@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { getProSession } from "@/lib/pro-auth";
 import ProCreditsPanel from "@/components/pro/ProCreditsPanel";
 import ProReferralPanel from "@/components/pro/ProReferralPanel";
-import ProDocumentsList from "@/components/ProDocumentsList";
-import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
+import ProDocumentsManager from "@/components/pro/ProDocumentsManager";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import {
@@ -30,6 +29,8 @@ export default async function ProComptePage() {
   ]);
 
   if (!pro) return null;
+
+  const tradeSelections = getProTradeSelections(pro);
 
   return (
     <div>
@@ -58,9 +59,9 @@ export default async function ProComptePage() {
             <Row
               label="Corps de métier"
               value={
-                getProTradeSelections(pro)
-                  .map((s) => s.tradeGroupLabel)
-                  .join(" · ") || CATEGORY_LABELS[pro.category] || pro.category
+                tradeSelections.map((s) => s.tradeGroupLabel).join(" · ") ||
+                CATEGORY_LABELS[pro.category] ||
+                pro.category
               }
             />
             <Row label="Métiers Qualibat" value={formatProTradeSelections(pro)} />
@@ -93,49 +94,19 @@ export default async function ProComptePage() {
           </dl>
         </section>
 
-        {(pro.documents?.length ?? 0) > 0 && (
-          <section className="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
-            <h2 className="font-semibold text-slate-900">Documents transmis</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Fichiers déposés lors de votre inscription.
-            </p>
-            <div className="mt-4">
-              <ProDocumentsList documents={pro.documents!} />
-            </div>
-          </section>
-        )}
-
-        {getProTradeSelections(pro).length > 0 && (
-          <section className="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
-            <h2 className="font-semibold text-slate-900">Décennale par corps de métier</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Vous ne pouvez enchérir sur un chantier que si la décennale correspondante
-              a été validée pour ce métier.
-            </p>
-            <ul className="mt-4 space-y-3">
-              {getProTradeSelections(pro).map((selection) => {
-                const status = selection.decennaleStatus ?? "en_attente_verification";
-                const meta = DECENNALE_STATUS_LABELS[status];
-                return (
-                  <li
-                    key={selection.tradeGroupId}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm"
-                  >
-                    <div>
-                      <p className="font-medium text-slate-900">{selection.tradeGroupLabel}</p>
-                      <p className="text-xs text-slate-500">{selection.qualibatJobLabel}</p>
-                    </div>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.className}`}
-                    >
-                      {status === "validé" ? "Décennale vérifiée ✓" : meta.text}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
+        <section className="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
+          <h2 className="font-semibold text-slate-900">Documents</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Ajoutez ou remplacez vos documents (RC, KBIS, RGE, Qualibat, décennales).
+            Chaque nouveau fichier repasse en vérification.
+          </p>
+          <div className="mt-4">
+            <ProDocumentsManager
+              documents={pro.documents ?? []}
+              tradeSelections={tradeSelections}
+            />
+          </div>
+        </section>
       </div>
 
       {unlocks.length > 0 && (
@@ -159,7 +130,8 @@ export default async function ProComptePage() {
       )}
 
       <p className="mt-6 text-xs text-slate-500">
-        Pour modifier vos informations, contactez l&apos;administrateur Artipascher.
+        Pour modifier les informations d&apos;entreprise (SIRET, siège…), contactez
+        l&apos;administrateur Artipascher.
       </p>
     </div>
   );

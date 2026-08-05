@@ -36,12 +36,22 @@ export function validatePhotoFiles(files: File[]): string | null {
     return `Maximum ${MAX_PHOTOS} photos autorisées.`;
   }
   for (const file of files) {
-    if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number])) {
-      return "Format non accepté. Utilisez JPG, PNG ou WebP.";
-    }
-    if (file.size > MAX_PHOTO_SIZE_BYTES) {
-      return `Chaque photo doit faire moins de ${MAX_PHOTO_SIZE_BYTES / 1024 / 1024} Mo.`;
-    }
+    const fileError = validatePhotoFile(file);
+    if (fileError) return fileError;
+  }
+  return null;
+}
+
+/** Valide un fichier photo individuel (sans exiger un nombre minimum). */
+export function validatePhotoFile(file: File): string | null {
+  if (!file || file.size === 0) {
+    return "Fichier photo manquant.";
+  }
+  if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number])) {
+    return "Format non accepté. Utilisez JPG, PNG ou WebP.";
+  }
+  if (file.size > MAX_PHOTO_SIZE_BYTES) {
+    return `Chaque photo doit faire moins de ${MAX_PHOTO_SIZE_BYTES / 1024 / 1024} Mo.`;
   }
   return null;
 }
