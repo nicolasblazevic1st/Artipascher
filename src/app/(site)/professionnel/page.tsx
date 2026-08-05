@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 const FEATURES = [
   {
     title: "Clients qualifiés",
-    description: "Budget défini, demande validée. Prospects sérieux du Nord et Pas-de-Calais.",
+    description: "Budget défini, demande validée. Prospects sérieux du Nord-Pas-de-Calais.",
   },
   {
     title: "Marché local",
@@ -84,7 +84,7 @@ export default function ProfessionnelPage() {
       <section className="bg-gradient-to-br from-slate-900 to-slate-800 py-16 text-white">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h1 className="text-4xl font-bold">
-            Développez votre activité dans le Nord
+            Développez votre activité dans le Nord-Pas-de-Calais
           </h1>
           <p className="mt-4 text-lg text-slate-300">
             Rejoignez Artipascher : clients qualifiés en 59 et 62, enchères

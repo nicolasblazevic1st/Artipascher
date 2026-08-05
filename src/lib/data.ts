@@ -156,12 +156,12 @@ export const FAQ_ITEMS = [
   {
     question: "Comment fonctionnent les enchères inversées ?",
     answer:
-      "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Le prix de départ est fixé au premier devis validé, puis les professionnels du Nord proposent des prix de plus en plus bas. À la clôture, vous comparez les offres et choisissez vous-même l'artisan retenu.",
+      "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Le prix de départ est fixé au premier devis validé, puis les professionnels du Nord-Pas-de-Calais proposent des prix de plus en plus bas. À la clôture, vous comparez les offres et choisissez vous-même l'artisan retenu.",
   },
   {
     question: "Artipascher couvre quelles zones ?",
     answer:
-      "Artipascher est spécialisé dans les Hauts-de-France : départements Nord (59) et Pas-de-Calais (62). Lille, Roubaix, Tourcoing, Valenciennes, Dunkerque, Douai, Lens, Arras et environs.",
+      "Artipascher est spécialisé dans le Nord-Pas-de-Calais : départements Nord (59) et Pas-de-Calais (62). Lille, Roubaix, Tourcoing, Valenciennes, Dunkerque, Douai, Lens, Arras et environs.",
   },
   {
     question: "Comment demander des travaux ?",

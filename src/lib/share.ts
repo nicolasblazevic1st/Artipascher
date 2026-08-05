@@ -35,9 +35,9 @@ export function buildShareText(
 ): string {
   const title = buildShareTitle(request);
   if (request.startPrice != null) {
-    return `${title} — prix de départ ${formatPrice(request.startPrice)}. Artisans du Nord, enchérissez sur Artipascher !`;
+    return `${title} — prix de départ ${formatPrice(request.startPrice)}. Artisans du Nord-Pas-de-Calais, enchérissez sur Artipascher !`;
   }
-  return `${title}. Artisans du Nord, déposez votre devis sur Artipascher !`;
+  return `${title}. Artisans du Nord-Pas-de-Calais, déposez votre devis sur Artipascher !`;
 }
 
 export function buildFacebookShareUrl(pageUrl: string): string {

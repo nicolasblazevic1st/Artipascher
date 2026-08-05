@@ -6,7 +6,7 @@ import StepCard from "@/components/StepCard";
 export const metadata: Metadata = {
   title: "Particulier — Réalisez vos travaux au meilleur prix",
   description:
-    "Demandez des travaux dans le Nord via enchères inversées. Budget fixé, artisans locaux font baisser le prix.",
+    "Demandez des travaux dans le Nord-Pas-de-Calais via enchères inversées. Budget fixé, artisans locaux font baisser le prix.",
 };
 
 const SIGNUP_HREF =
@@ -72,7 +72,7 @@ export default function ParticulierPage() {
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h1 className="text-4xl font-bold">Réalisez vos travaux au meilleur prix</h1>
           <p className="mt-4 text-lg text-brand-100">
-            Enchères inversées dans les Hauts-de-France. Les professionnels
+            Enchères inversées dans le Nord-Pas-de-Calais. Les professionnels
             disputent votre projet en proposant des prix toujours plus bas.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

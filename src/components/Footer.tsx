@@ -8,8 +8,8 @@ export default function Footer() {
         <div>
           <p className="text-lg font-bold text-white">Artipascher</p>
           <p className="mt-2 text-sm leading-relaxed">
-            La plateforme d&apos;enchères inversées pour vos travaux dans les
-            Hauts-de-France. Artisans vérifiés du Nord et du Pas-de-Calais.
+            La plateforme d&apos;enchères inversées pour vos travaux dans le
+            Nord-Pas-de-Calais. Artisans vérifiés des départements 59 et 62.
           </p>
         </div>
         <div>

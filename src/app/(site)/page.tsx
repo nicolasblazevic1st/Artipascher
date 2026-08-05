@@ -18,7 +18,7 @@ const STEPS = [
   {
     title: "Enchère inversée",
     description:
-      "Une enchère est créée. Les artisans du Nord proposent des prix de plus en plus bas, librement.",
+      "Une enchère est créée. Les artisans du Nord-Pas-de-Calais proposent des prix de plus en plus bas, librement.",
   },
   {
     title: "Choisissez votre artisan",
@@ -39,10 +39,10 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_50%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <p className="mb-4 inline-block rounded-full bg-white/10 px-4 py-1 text-sm font-medium backdrop-blur">
-            Spécialiste Hauts-de-France · Nord 59 · Pas-de-Calais 62
+            Spécialiste Nord-Pas-de-Calais · Nord 59 · Pas-de-Calais 62
           </p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Enchères inversées pour vos travaux dans le Nord
+            Enchères inversées pour vos travaux dans le Nord-Pas-de-Calais
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-brand-100">
             Artipascher connecte particuliers et artisans locaux inscrits au
@@ -103,7 +103,7 @@ export default async function HomePage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="text-3xl font-bold text-slate-900">
-                Enchères actives dans le Nord
+                Enchères actives dans le Nord-Pas-de-Calais
               </h2>
               <p className="mt-2 text-slate-600">
                 Dernières opportunités disponibles en 59 et 62
@@ -129,7 +129,7 @@ export default async function HomePage() {
           Catégories de travaux
         </h2>
         <p className="mt-2 text-center text-slate-600">
-          Tous corps de métier du bâtiment, artisans du Nord
+          Tous corps de métier du bâtiment, artisans du Nord-Pas-de-Calais
         </p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {WORK_CATEGORIES.map((category) => (
@@ -180,8 +180,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-bold">Prêt à lancer votre projet ?</h2>
           <p className="mt-4 text-brand-100">
-            Gratuit pour les particuliers. Artisans vérifiés du Nord et
-            Pas-de-Calais.
+            Gratuit pour les particuliers. Artisans vérifiés du Nord-Pas-de-Calais.
           </p>
           <Link
             href="/particulier"

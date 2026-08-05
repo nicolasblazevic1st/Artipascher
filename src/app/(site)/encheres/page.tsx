@@ -4,7 +4,7 @@ import { listPublicAuctions } from "@/lib/work-request-auctions";
 
 export const metadata: Metadata = {
   title: "Enchères actives — Nord 59/62",
-  description: "Consultez les enchères inversées travaux actives dans les Hauts-de-France.",
+  description: "Consultez les enchères inversées travaux actives dans le Nord-Pas-de-Calais.",
 };
 
 export default async function EncheresPage() {

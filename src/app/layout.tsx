@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     template: "%s | Artipascher",
   },
   description:
-    "Plateforme d'enchères inversées pour vos travaux dans les Hauts-de-France.",
+    "Plateforme d'enchères inversées pour vos travaux dans le Nord-Pas-de-Calais.",
   icons: {
     icon: [
       { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },
