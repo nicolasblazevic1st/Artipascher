@@ -41,9 +41,9 @@ const FEATURES = [
       "Vos données sont protégées et hébergées chez OVH, dans un datacenter du Nord de la France. Les artisans ne voient que les infos nécessaires à leur proposition. C'est à eux de vous contacter et de prendre rendez-vous pour établir un devis gratuit sur place.",
   },
   {
-    title: "100 % gratuit",
+    title: "100 % gratuit pour vous",
     description:
-      "Publication gratuite, sans frais cachés. Vous ne payez que l'artisan retenu. Les artisans, eux, paient 1 € pour accéder à votre contact et aux coordonnées du chantier, et 1 € pour enchérir.",
+      "Aucun frais, aucune commission, aucun pourcentage sur vos travaux. Vous ne payez que l'artisan retenu. Les professionnels paient seulement 1 € pour vous contacter.",
   },
 ];
 
@@ -51,7 +51,7 @@ const STEPS = [
   {
     title: "Créez votre compte",
     description:
-      "Inscription gratuite en quelques minutes. Une fois connecté, vous accédez à votre espace particulier.",
+      "Gratuit pour vous : inscription en quelques minutes, sans commission sur les travaux. Les pros paient 1 € pour vous aborder.",
   },
   {
     title: "Publiez votre demande",
@@ -72,8 +72,9 @@ export default function ParticulierPage() {
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h1 className="text-4xl font-bold">Réalisez vos travaux au meilleur prix</h1>
           <p className="mt-4 text-lg text-brand-100">
-            Enchères inversées dans le Nord-Pas-de-Calais. Les professionnels
-            disputent votre projet en proposant des prix toujours plus bas.
+            Enchères inversées dans le Nord-Pas-de-Calais. Gratuit pour vous :
+            Artipascher ne prend aucun pourcentage sur vos travaux. Les professionnels
+            paient seulement 1&nbsp;€ pour vous contacter.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -139,7 +140,7 @@ export default function ParticulierPage() {
         <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
           <h2 className="text-2xl font-bold">Demander des travaux</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Réservé aux particuliers inscrits · Gratuit · Nord 59 / Pas-de-Calais 62
+            Gratuit pour vous · Aucun % sur les travaux · Les pros paient 1&nbsp;€ pour vous contacter · 59 / 62
           </p>
           <p className="mt-4 text-sm text-slate-700">
             Créez votre compte, confirmez votre email, puis publiez votre demande depuis votre
