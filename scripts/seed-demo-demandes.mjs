@@ -225,9 +225,21 @@ async function main() {
         .filter((r) => r.id.startsWith(ID_PREFIX) && r.auctionId)
         .map((r) => r.auctionId)
     );
+    const workRequestIds = new Set(
+      store.workRequests.filter((r) => r.id.startsWith(ID_PREFIX)).map((r) => r.id)
+    );
     store.workRequests = store.workRequests.filter((r) => !r.id.startsWith(ID_PREFIX));
     store.bids = store.bids.filter(
       (b) => !b.id.startsWith(BID_PREFIX) && !auctionIds.has(b.auctionId)
+    );
+    store.contactUnlocks = (store.contactUnlocks ?? []).filter(
+      (u) => !auctionIds.has(u.auctionId)
+    );
+    store.contactRequests = (store.contactRequests ?? []).filter(
+      (r) => !auctionIds.has(r.auctionId) && !workRequestIds.has(r.workRequestId)
+    );
+    store.proQuotes = (store.proQuotes ?? []).filter(
+      (q) => !auctionIds.has(q.auctionId) && !workRequestIds.has(q.workRequestId)
     );
   }
 
@@ -276,7 +288,48 @@ async function main() {
       request.shareToken = createShareToken();
       createdApproved += 1;
 
-      if (pro && Array.isArray(demo.bids)) {
+      if (pro && Array.isArray(demo.bids) && demo.bids.length > 0) {
+        const interestCreatedAt = hoursAgo(14);
+        const unlockPaidAt = hoursAgo(13);
+        const visitDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        const quoteAmount = Math.max(demo.startPrice ?? 0, ...demo.bids);
+
+        store.contactRequests.unshift({
+          id: `cr-test-${demo.slug}`,
+          auctionId,
+          workRequestId: id,
+          proId: pro.id,
+          status: "accepted",
+          createdAt: interestCreatedAt,
+          expiresAt: daysFromNow(7),
+          decidedAt: hoursAgo(13.5),
+        });
+
+        store.contactUnlocks.unshift({
+          id: `unlock-test-${demo.slug}`,
+          proId: pro.id,
+          auctionId,
+          amountEur: 1,
+          paidAt: unlockPaidAt,
+        });
+
+        store.proQuotes.unshift({
+          id: `quote-test-${demo.slug}`,
+          workRequestId: id,
+          auctionId,
+          proId: pro.id,
+          companyName: pro.companyName || "Artisan test",
+          visitDate,
+          amount: quoteAmount,
+          description: `[TEST] Devis après visite — ${demo.category} à ${demo.city}. Parcours cohérent : intérêt accepté → contact débloqué → visite → devis validé.`,
+          status: "approved",
+          createdAt: hoursAgo(12),
+          reviewedAt: hoursAgo(11),
+          adminNote: "Devis TEST validé pour parcours démo cohérent.",
+        });
+
         demo.bids.forEach((amount, index) => {
           store.bids.unshift({
             id: `${BID_PREFIX}${demo.slug}-${index + 1}`,
@@ -286,6 +339,7 @@ async function main() {
             amount,
             feeEur: 1,
             createdAt: hoursAgo(10 - index),
+            fromQuoteId: `quote-test-${demo.slug}`,
           });
           createdBids += 1;
         });
