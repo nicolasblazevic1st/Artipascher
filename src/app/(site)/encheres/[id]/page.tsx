@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
-import BidPanel from "@/components/BidPanel";
+import BidPanelPublicCta from "@/components/BidPanelPublicCta";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
@@ -66,15 +66,6 @@ export default async function EnchereDetailPage({ params }: Props) {
         minute: "2-digit",
       })
     : "—";
-
-  const bidRows = anonymousBids.map((b) => ({
-    id: b.id,
-    label: b.anonymousLabel,
-    offerNumber: b.offerNumber,
-    amount: b.amount,
-    createdAt: b.createdAt,
-    qualificationLevel: b.qualificationLevel,
-  }));
 
   const categoryLabel = workCategory;
 
@@ -177,17 +168,17 @@ export default async function EnchereDetailPage({ params }: Props) {
           requestedWorkStartDate={workRequest?.requestedWorkStartDate}
         />
 
-        <BidPanel
+        <BidPanelPublicCta
           auctionId={id}
           startPrice={resolved.startPrice}
-          initialCurrentPrice={currentPrice}
-          initialBids={bidRows}
-          requiresQuote={workRequest !== null}
+          currentPrice={currentPrice}
         />
 
         {quotes.length > 0 && (
           <section className="mt-8">
-            <ApprovedQuotesList quotes={quotesWithLevel.map((q) => ({
+            <ApprovedQuotesList
+              title="Devis après visite (validés)"
+              quotes={quotesWithLevel.map((q) => ({
               id: q.id,
               amount: q.amount,
               description: q.description,
@@ -195,6 +186,11 @@ export default async function EnchereDetailPage({ params }: Props) {
               qualificationLevel: q.qualificationLevel,
               decennaleVerifiedLabels: q.decennaleVerifiedLabels,
             }))} />
+            <p className="mt-2 text-xs text-slate-500">
+              À la validation admin, un devis devient aussi une offre indicative (si le montant
+              peut entrer dans l&apos;enchère). Les repositionnements se font dans l&apos;espace
+              pro.
+            </p>
           </section>
         )}
 
@@ -203,7 +199,8 @@ export default async function EnchereDetailPage({ params }: Props) {
             Offres indicatives en ligne
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Estimations avant visite — le devis formalisé après passage sur site prime.
+            Prix proposés dans l&apos;enchère (issus d&apos;un devis validé ou d&apos;une
+            surenchère). Noms masqués · max. 3 offres par artisan.
           </p>
           <div className="mt-4">
             <VerifiedBidsList

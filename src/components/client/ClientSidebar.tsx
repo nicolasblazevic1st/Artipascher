@@ -38,7 +38,7 @@ export default function ClientSidebar({
       </nav>
       <div className="space-y-2 border-t border-client-900 p-3">
         <Link
-          href="/particulier#demande"
+          href="/particulier/espace/demandes/nouvelle"
           className="block rounded-lg px-3 py-2 text-sm hover:bg-client-700 hover:text-white"
         >
           Nouvelle demande

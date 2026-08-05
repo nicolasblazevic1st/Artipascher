@@ -70,7 +70,7 @@ export default async function ProDashboardPage() {
                     </span>
                   </div>
                   <Link
-                    href={`/encheres/${a.id}`}
+                    href={`/pro/encheres/${a.id}`}
                     className="mt-2 inline-block text-xs font-medium text-brand-600"
                   >
                     Enchérir →
@@ -110,7 +110,7 @@ export default async function ProDashboardPage() {
                     </strong>
                   </p>
                   <Link
-                    href={`/encheres/${a.id}`}
+                    href={`/pro/encheres/${a.id}`}
                     className="mt-2 inline-block text-xs font-medium text-brand-600"
                   >
                     Repositionner →

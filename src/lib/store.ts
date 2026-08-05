@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { hashPassword, verifyPassword, validatePassword } from "./password";
 import { randomBytes } from "crypto";
+import { computeCurrentPrice, MAX_BIDS_PER_AUCTION } from "./auctions";
 import {
   generateReferralCode,
   isValidReferralCodeFormat,
@@ -467,6 +468,7 @@ export async function addBid(data: {
   ocrAmount?: number;
   ocrMatchedLabel?: string;
   ocrSnippet?: string;
+  fromQuoteId?: string;
 }): Promise<Bid> {
   const store = await readStore();
   const entry: Bid = {
@@ -829,10 +831,74 @@ export async function updateProQuoteStatus(
         startPriceQuoteId: quote.id,
       };
     }
+
+    // Convertit le devis validé en offre indicative (sans crédit ni OCR).
+    maybeCreateBidFromApprovedQuote(store, quote);
   }
 
   await writeStore(store);
   return store.proQuotes[index];
+}
+
+/**
+ * À la validation admin d'un devis après visite : crée une offre indicative
+ * au montant du devis si elle peut entrer dans l'enchère.
+ * - 1er devis : fixe aussi le prix de départ, et constitue la 1re offre.
+ * - Devis suivants : offre créée seulement si montant < prix actuel.
+ */
+function maybeCreateBidFromApprovedQuote(store: DataStore, quote: ProQuote): void {
+  if (!quote.auctionId) return;
+
+  const alreadyFromQuote = store.bids.some((b) => b.fromQuoteId === quote.id);
+  if (alreadyFromQuote) return;
+
+  const proBids = store.bids.filter(
+    (b) => b.proId === quote.proId && b.auctionId === quote.auctionId
+  );
+  if (proBids.length >= MAX_BIDS_PER_AUCTION) return;
+
+  const request = store.workRequests.find((r) => r.id === quote.workRequestId);
+  const startPrice =
+    request?.startPrice ??
+    (request?.startPriceQuoteId === quote.id ? quote.amount : undefined) ??
+    quote.amount;
+
+  const auctionBids = store.bids.filter((b) => b.auctionId === quote.auctionId);
+  const currentPrice =
+    computeCurrentPrice(
+      startPrice,
+      auctionBids.map((b) => b.amount)
+    ) ?? startPrice;
+
+  const isOpeningOffer = auctionBids.length === 0 && quote.amount === startPrice;
+  const canEnterAuction = quote.amount < currentPrice || isOpeningOffer;
+  if (!canEnterAuction) return;
+
+  store.bids.push({
+    id: newId("bid"),
+    auctionId: quote.auctionId,
+    proId: quote.proId,
+    companyName: quote.companyName,
+    amount: quote.amount,
+    feeEur: 0,
+    createdAt: new Date().toISOString(),
+    fromQuoteId: quote.id,
+    ocrAmount: quote.amount,
+    ocrMatchedLabel: "Devis après visite validé par l'admin",
+  });
+}
+
+/** Rejoue la conversion devis → offre pour les devis déjà validés sans bid liée. */
+export async function backfillBidsFromApprovedQuotes(): Promise<number> {
+  const store = await readStore();
+  const before = store.bids.length;
+  for (const quote of store.proQuotes) {
+    if (quote.status !== "approved") continue;
+    maybeCreateBidFromApprovedQuote(store, quote);
+  }
+  const created = store.bids.length - before;
+  if (created > 0) await writeStore(store);
+  return created;
 }
 
 export async function selectQuoteForWorkRequest(

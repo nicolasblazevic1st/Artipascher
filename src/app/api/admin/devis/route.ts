@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { readStore, updateProQuoteStatus } from "@/lib/store";
+import {
+  backfillBidsFromApprovedQuotes,
+  readStore,
+  updateProQuoteStatus,
+} from "@/lib/store";
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
+
+  await backfillBidsFromApprovedQuotes();
 
   const store = await readStore();
   const quotes = [...store.proQuotes].sort(

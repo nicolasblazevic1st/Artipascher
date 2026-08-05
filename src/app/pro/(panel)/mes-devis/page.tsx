@@ -64,7 +64,7 @@ export default async function ProMesDevisPage() {
                 </p>
               )}
               <Link
-                href={`/encheres/${q.auctionId}#devis`}
+                href={`/pro/encheres/${q.auctionId}#devis`}
                 className="mt-4 inline-block text-sm font-medium text-brand-600 hover:text-brand-700"
               >
                 Voir le chantier →

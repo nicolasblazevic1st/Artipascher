@@ -26,10 +26,30 @@ import {
   type RcsVerificationResult,
 } from "@/lib/rcs";
 
-export default function WorkRequestForm() {
+export interface WorkRequestFormDefaults {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+}
+
+interface Props {
+  /** Formulaire depuis l'espace connecté (pas de création de compte). */
+  authenticated?: boolean;
+  defaults?: WorkRequestFormDefaults;
+  /** Redirection / lien après succès (espace client). */
+  successHref?: string;
+}
+
+export default function WorkRequestForm({
+  authenticated = false,
+  defaults,
+  successHref = "/particulier/espace/login",
+}: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -129,7 +149,7 @@ export default function WorkRequestForm() {
       return;
     }
 
-    if (password !== passwordConfirm) {
+    if (!authenticated && password !== passwordConfirm) {
       setError("Les mots de passe ne correspondent pas.");
       setStatus("error");
       return;
@@ -196,8 +216,12 @@ export default function WorkRequestForm() {
       return;
     }
 
-    const body = (await res.json()) as { emailVerificationSent?: boolean };
+    const body = (await res.json()) as {
+      emailVerificationSent?: boolean;
+      id?: string;
+    };
     setEmailVerificationSent(body.emailVerificationSent === true);
+    setCreatedRequestId(body.id ?? null);
     setStatus("success");
     if (descriptionRef.current) {
       descriptionRef.current.value = "";
@@ -343,6 +367,8 @@ export default function WorkRequestForm() {
           placeholder={isCompany ? "Prénom du contact" : "Prénom"}
           className={inputClass}
           required
+          defaultValue={defaults?.firstName ?? ""}
+          readOnly={authenticated}
         />
         <input
           name="lastName"
@@ -350,9 +376,19 @@ export default function WorkRequestForm() {
           placeholder={isCompany ? "Nom du contact" : "Nom"}
           className={inputClass}
           required
+          defaultValue={defaults?.lastName ?? ""}
+          readOnly={authenticated}
         />
       </div>
-      <input name="email" type="email" placeholder="Email" className={inputClass} required />
+      <input
+        name="email"
+        type="email"
+        placeholder="Email"
+        className={inputClass}
+        required
+        defaultValue={defaults?.email ?? ""}
+        readOnly={authenticated}
+      />
       <input
         name="phone"
         type="tel"
@@ -361,6 +397,7 @@ export default function WorkRequestForm() {
         className={inputClass}
         required
         autoComplete="tel"
+        defaultValue={defaults?.phone ?? ""}
       />
       <p className="-mt-2 text-xs text-slate-500">
         Numéro français obligatoire — communiqué aux artisans uniquement après acceptation et
@@ -611,6 +648,8 @@ export default function WorkRequestForm() {
         </p>
       </div>
 
+      {!authenticated && (
+        <>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
@@ -653,6 +692,8 @@ export default function WorkRequestForm() {
         </Link>{" "}
         pour suivre votre enchère et choisir votre artisan.
       </p>
+        </>
+      )}
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -673,15 +714,34 @@ export default function WorkRequestForm() {
       {status === "success" && (
         <div className="space-y-2 text-center text-sm text-brand-700">
           <p className="font-semibold">Demande envoyée.</p>
-          <p>
-            {emailVerificationSent
-              ? "Un email de confirmation vient de vous être envoyé. Validez votre adresse puis "
-              : ""}
-            <Link href="/particulier/espace/login" className="font-semibold underline">
-              connectez-vous à votre espace
-            </Link>{" "}
-            pour suivre votre enchère.
-          </p>
+          {authenticated ? (
+            <p>
+              <Link
+                href={
+                  createdRequestId
+                    ? `/particulier/espace/demandes/${createdRequestId}`
+                    : successHref
+                }
+                className="font-semibold underline"
+              >
+                Voir ma demande
+              </Link>
+              {" · "}
+              <Link href="/particulier/espace/demandes" className="underline">
+                Mes demandes
+              </Link>
+            </p>
+          ) : (
+            <p>
+              {emailVerificationSent
+                ? "Un email de confirmation vient de vous être envoyé. Validez votre adresse puis "
+                : ""}
+              <Link href={successHref} className="font-semibold underline">
+                connectez-vous à votre espace
+              </Link>{" "}
+              pour suivre votre enchère.
+            </p>
+          )}
         </div>
       )}
       </form>

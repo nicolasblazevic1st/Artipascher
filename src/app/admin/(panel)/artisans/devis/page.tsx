@@ -63,8 +63,9 @@ export default function AdminDevisPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Modération des devis</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Chaque artisan dépose son devis après visite sur le chantier. Validez-le avant
-        publication au particulier.
+        Chaque artisan dépose son devis après visite. En le validant, vous publiez le devis
+        et créez automatiquement une offre indicative au même montant (si elle peut entrer
+        dans l&apos;enchère).
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">

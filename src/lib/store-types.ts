@@ -254,6 +254,8 @@ export interface Bid {
   ocrAmount?: number;
   ocrMatchedLabel?: string;
   ocrSnippet?: string;
+  /** Devis après visite à l'origine de cette offre (conversion auto à la validation admin). */
+  fromQuoteId?: string;
 }
 
 export interface ContactUnlock {

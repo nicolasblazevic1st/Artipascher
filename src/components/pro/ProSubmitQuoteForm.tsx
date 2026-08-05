@@ -21,7 +21,10 @@ const STATUS_LABELS = {
     text: "En attente de validation",
     className: "bg-amber-100 text-amber-800",
   },
-  approved: { text: "Publié sur le site", className: "bg-emerald-100 text-emerald-800" },
+  approved: {
+    text: "Validé — offre indicative créée",
+    className: "bg-emerald-100 text-emerald-800",
+  },
   rejected: { text: "Refusé — à corriger", className: "bg-red-100 text-red-800" },
 };
 
@@ -216,15 +219,15 @@ export default function ProSubmitQuoteForm({ auctionId }: Props) {
 
       {existing?.status === "pending_moderation" && (
         <p className="mt-4 text-sm text-amber-700">
-          Votre devis est en cours de modération. Vous pourrez enchérir dès qu&apos;il sera
-          accepté — descendez à la section enchère ci-dessous.
+          Votre devis est en cours de modération. Dès validation, il devient une offre
+          indicative sur l&apos;enchère (si le montant peut y entrer).
         </p>
       )}
 
       {existing?.status === "approved" && (
         <p className="mt-4 text-sm text-emerald-700">
-          Devis accepté — vous pouvez maintenant placer votre enchère ci-dessous (montant
-          cohérent avec votre devis).
+          Devis accepté — une offre indicative a été créée à ce montant. Vous pouvez encore
+          repositionner jusqu&apos;à 3 fois via la section enchère (montant ≤ devis).
         </p>
       )}
     </section>

@@ -41,7 +41,7 @@ export default async function ClientDashboardPage() {
           <div className="mt-4 text-center">
             <p className="text-sm text-slate-500">Aucune demande pour le moment.</p>
             <Link
-              href="/particulier#demande"
+              href="/particulier/espace/demandes/nouvelle"
               className="mt-3 inline-block text-sm font-medium text-client-600"
             >
               Créer une demande →

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
-import BidPanel from "@/components/BidPanel";
+import BidPanelPublicCta from "@/components/BidPanelPublicCta";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
@@ -166,19 +166,10 @@ export default async function SharedAuctionPage({ params }: Props) {
               auctionId={request.auctionId}
               publicLocation={formatPublicLocation(request)}
             />
-            <BidPanel
+            <BidPanelPublicCta
               auctionId={request.auctionId}
               startPrice={request.startPrice}
-              initialCurrentPrice={currentPrice}
-              initialBids={anonymousBids.map((b) => ({
-                id: b.id,
-                label: b.anonymousLabel,
-                offerNumber: b.offerNumber,
-                amount: b.amount,
-                createdAt: b.createdAt,
-                qualificationLevel: b.qualificationLevel,
-              }))}
-              requiresQuote
+              currentPrice={currentPrice}
             />
           </>
         )}

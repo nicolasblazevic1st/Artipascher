@@ -42,7 +42,7 @@ export default function ClientDemandesPage() {
           </p>
         </div>
         <Link
-          href="/particulier#demande"
+          href="/particulier/espace/demandes/nouvelle"
           className="rounded-lg bg-client-600 px-4 py-2 text-sm font-semibold text-white hover:bg-client-700"
         >
           Nouvelle demande
@@ -54,7 +54,10 @@ export default function ClientDemandesPage() {
       ) : requests.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-slate-500">
           Aucune demande.{" "}
-          <Link href="/particulier#demande" className="font-medium text-client-600">
+          <Link
+            href="/particulier/espace/demandes/nouvelle"
+            className="font-medium text-client-600"
+          >
             Créer votre première demande
           </Link>
         </p>

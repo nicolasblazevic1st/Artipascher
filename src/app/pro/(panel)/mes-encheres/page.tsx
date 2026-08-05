@@ -124,14 +124,14 @@ export default async function ProMesEncheresPage() {
 
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link
-                    href={`/encheres/${auctionId}`}
+                    href={`/pro/encheres/${auctionId}`}
                     className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
                   >
                     {isWinning ? "Voir l'enchère" : "Repositionner"}
                   </Link>
                   {isWinning && (
                     <Link
-                      href={`/encheres/${auctionId}#contact`}
+                      href={`/pro/encheres/${auctionId}#contact`}
                       className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
                       Débloquer les coordonnées client

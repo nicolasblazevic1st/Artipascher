@@ -82,7 +82,7 @@ export default async function ProEncheresPage() {
                 </td>
                 <td className="px-4 py-4">
                   <Link
-                    href={`/encheres/${auction.id}`}
+                    href={`/pro/encheres/${auction.id}`}
                     className="whitespace-nowrap rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
                   >
                     {auction.myBestBid ? "Repositionner" : "Enchérir"}
