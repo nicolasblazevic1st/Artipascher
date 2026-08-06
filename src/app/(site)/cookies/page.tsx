@@ -165,8 +165,28 @@ export default function CookiesPage() {
         <section>
           <h2 className="text-xl font-semibold text-slate-900">Contact</h2>
           <p className="mt-3">
-            Pour toute question relative aux cookies, contactez-nous via les
-            formulaires du site. Consultez aussi notre{" "}
+            Pour toute question relative aux cookies :{" "}
+            <a
+              href="mailto:contact@artipascher.fr"
+              className="font-medium text-brand-700 underline underline-offset-2"
+            >
+              contact@artipascher.fr
+            </a>
+            . Voir aussi les{" "}
+            <Link
+              href="/mentions-legales"
+              className="font-medium text-brand-700 underline underline-offset-2"
+            >
+              mentions légales
+            </Link>
+            , les{" "}
+            <Link
+              href="/cgu"
+              className="font-medium text-brand-700 underline underline-offset-2"
+            >
+              CGU
+            </Link>{" "}
+            et la{" "}
             <Link
               href="/faq"
               className="font-medium text-brand-700 underline underline-offset-2"

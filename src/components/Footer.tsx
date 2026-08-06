@@ -42,6 +42,26 @@ export default function Footer() {
           <p className="font-semibold text-white">Informations</p>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
+              <Link href="/mentions-legales" className="hover:text-white">
+                Mentions légales
+              </Link>
+            </li>
+            <li>
+              <Link href="/cgu" className="hover:text-white">
+                CGU
+              </Link>
+            </li>
+            <li>
+              <Link href="/cgv" className="hover:text-white">
+                CGV
+              </Link>
+            </li>
+            <li>
+              <Link href="/confidentialite" className="hover:text-white">
+                Confidentialité
+              </Link>
+            </li>
+            <li>
               <Link href="/cookies" className="hover:text-white">
                 Politique de cookies
               </Link>
