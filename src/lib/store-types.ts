@@ -348,6 +348,12 @@ export interface ContactRequest {
   createdAt: string;
   expiresAt: string;
   decidedAt?: string;
+  /**
+   * Le particulier a déjà rappelé une fois cet artisan après refus/expiration.
+   * Un seul rappel est autorisé.
+   */
+  clientRecallUsed?: boolean;
+  recalledAt?: string;
 }
 
 /** Prospect SIRENE / carnet téléphone pour campagnes SMS. */

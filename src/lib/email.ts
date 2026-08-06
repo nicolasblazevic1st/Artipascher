@@ -288,6 +288,33 @@ export async function sendContactInterestEmailToClient(params: {
   await sendMail({ to: params.clientEmail, subject, text, html });
 }
 
+export async function sendContactRecallEmailToPro(params: {
+  proEmail: string;
+  proCompanyName: string;
+  category: string;
+  city: string;
+  auctionId: string;
+}): Promise<void> {
+  const auctionUrl = absoluteUrl(`/encheres/${params.auctionId}`);
+  const subject = "Le client vous a rappelé — Artipascher";
+  const text = [
+    `Bonjour ${params.proCompanyName},`,
+    "",
+    `Le client a reconsidéré votre demande de contact pour le chantier ${params.category} à ${params.city}.`,
+    "La demande est de nouveau en attente de sa décision (48 h).",
+    "",
+    `Voir le chantier : ${auctionUrl}`,
+    "",
+    "L'équipe Artipascher",
+  ].join("\n");
+  await sendMail({
+    to: params.proEmail,
+    subject,
+    text,
+    html: `<p>${text.replace(/\n/g, "<br>")}</p>`,
+  });
+}
+
 export async function sendContactDecisionEmailToPro(params: {
   proEmail: string;
   proCompanyName: string;

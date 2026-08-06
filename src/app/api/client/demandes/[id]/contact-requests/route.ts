@@ -33,6 +33,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       createdAt: cr.createdAt,
       expiresAt: cr.expiresAt,
       decidedAt: cr.decidedAt,
+      clientRecallUsed: cr.clientRecallUsed === true,
       companyName: pro?.companyName ?? "Artisan",
       siret: pro?.siret ?? "",
       city: pro?.city ?? "",

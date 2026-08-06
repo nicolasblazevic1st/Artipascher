@@ -7,6 +7,7 @@ interface InterestItem {
   status: "pending" | "accepted" | "refused" | "expired";
   createdAt: string;
   expiresAt: string;
+  clientRecallUsed: boolean;
   companyName: string;
   siret: string;
   city: string;
@@ -22,6 +23,62 @@ const STATUS_LABELS: Record<InterestItem["status"], string> = {
 
 interface Props {
   workRequestId: string;
+}
+
+function formatRemaining(ms: number): string {
+  if (ms <= 0) return "Délai écoulé";
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) {
+    return `${h} h ${String(m).padStart(2, "0")} min restantes`;
+  }
+  if (m > 0) {
+    return `${m} min ${String(s).padStart(2, "0")} s restantes`;
+  }
+  return `${s} s restantes`;
+}
+
+function RemainingCountdown({
+  expiresAt,
+  onExpired,
+}: {
+  expiresAt: string;
+  onExpired: () => void;
+}) {
+  const [label, setLabel] = useState(() =>
+    formatRemaining(new Date(expiresAt).getTime() - Date.now())
+  );
+
+  useEffect(() => {
+    let expiredNotified = false;
+    function tick() {
+      const ms = new Date(expiresAt).getTime() - Date.now();
+      setLabel(formatRemaining(ms));
+      if (ms <= 0 && !expiredNotified) {
+        expiredNotified = true;
+        onExpired();
+      }
+    }
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [expiresAt, onExpired]);
+
+  const urgent =
+    new Date(expiresAt).getTime() - Date.now() > 0 &&
+    new Date(expiresAt).getTime() - Date.now() < 6 * 60 * 60 * 1000;
+
+  return (
+    <span
+      className={`self-center text-xs font-medium tabular-nums ${
+        urgent ? "text-amber-700" : "text-slate-600"
+      }`}
+    >
+      {label}
+    </span>
+  );
 }
 
 export default function ClientContactRequestsPanel({ workRequestId }: Props) {
@@ -58,6 +115,21 @@ export default function ClientContactRequestsPanel({ workRequestId }: Props) {
     await load();
   }
 
+  async function recall(id: string) {
+    setActingId(id);
+    setError(null);
+    const res = await fetch(`/api/client/contact-requests/${id}/recall`, {
+      method: "POST",
+    });
+    const data = await res.json();
+    setActingId(null);
+    if (!res.ok) {
+      setError(data.error ?? "Rappel impossible.");
+      return;
+    }
+    await load();
+  }
+
   if (loading) {
     return <p className="mt-6 text-sm text-slate-500">Chargement des artisans intéressés…</p>;
   }
@@ -75,7 +147,8 @@ export default function ClientContactRequestsPanel({ workRequestId }: Props) {
       <h2 className="text-lg font-semibold text-slate-900">Artisans intéressés</h2>
       <p className="mt-1 text-sm text-slate-600">
         Acceptez un artisan pour qu&apos;il puisse débloquer vos coordonnées (1&nbsp;crédit).
-        Vous avez 48&nbsp;h pour répondre à chaque demande.
+        Vous avez 48&nbsp;h pour répondre. Après un refus ou une expiration, vous pouvez
+        rappeler un artisan une seule fois.
       </p>
 
       {error && (
@@ -105,7 +178,7 @@ export default function ClientContactRequestsPanel({ workRequestId }: Props) {
             </div>
 
             {item.status === "pending" && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   disabled={actingId === item.id}
@@ -122,11 +195,33 @@ export default function ClientContactRequestsPanel({ workRequestId }: Props) {
                 >
                   Refuser
                 </button>
-                <span className="self-center text-xs text-slate-400">
-                  Expire le {new Date(item.expiresAt).toLocaleString("fr-FR")}
-                </span>
+                <RemainingCountdown expiresAt={item.expiresAt} onExpired={load} />
               </div>
             )}
+
+            {(item.status === "refused" || item.status === "expired") &&
+              !item.clientRecallUsed && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={actingId === item.id}
+                    onClick={() => recall(item.id)}
+                    className="rounded-lg bg-client-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-client-700 disabled:opacity-50"
+                  >
+                    Rappeler cet artisan
+                  </button>
+                  <span className="text-xs text-slate-500">
+                    Une seule fois · nouveau délai de 48&nbsp;h
+                  </span>
+                </div>
+              )}
+
+            {(item.status === "refused" || item.status === "expired") &&
+              item.clientRecallUsed && (
+                <p className="mt-3 text-xs text-slate-500">
+                  Rappel déjà utilisé pour cet artisan.
+                </p>
+              )}
           </li>
         ))}
       </ul>

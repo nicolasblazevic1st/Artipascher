@@ -9,6 +9,8 @@ import {
   normalizeReferralCode,
 } from "./referral";
 import { createShareToken } from "./share";
+import { formatWorkRequestAddress } from "./client-address";
+import { getClientContact } from "./client-contacts";
 import { getSampleQuotesForAuction } from "./sample-quotes";
 import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
 import {
@@ -581,6 +583,80 @@ export async function getContactUnlocksForPro(proId: string): Promise<ContactUnl
   return store.contactUnlocks
     .filter((u) => u.proId === proId)
     .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+}
+
+export type ProUnlockedContact = {
+  unlockId: string;
+  auctionId: string;
+  paidAt: string;
+  amountEur: number;
+  category: string;
+  city: string;
+  department: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  companyName?: string;
+  clientKind?: "individual" | "company";
+};
+
+/** Coordonnées clients débloquées par l'artisan (carnet Contacts). */
+export async function getUnlockedContactsForPro(
+  proId: string
+): Promise<ProUnlockedContact[]> {
+  const store = await readStore();
+  const unlocks = store.contactUnlocks
+    .filter((u) => u.proId === proId)
+    .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+
+  const results: ProUnlockedContact[] = [];
+
+  for (const unlock of unlocks) {
+    const request = store.workRequests.find((r) => r.auctionId === unlock.auctionId);
+    if (request) {
+      results.push({
+        unlockId: unlock.id,
+        auctionId: unlock.auctionId,
+        paidAt: unlock.paidAt,
+        amountEur: unlock.amountEur,
+        category: request.category,
+        city: request.city,
+        department: request.department,
+        firstName: request.firstName,
+        lastName: request.lastName,
+        email: request.email,
+        phone: request.phone?.trim() || "Non renseigné",
+        address: formatWorkRequestAddress(request),
+        companyName: request.companyName,
+        clientKind: request.clientKind ?? "individual",
+      });
+      continue;
+    }
+
+    const staticContact = getClientContact(unlock.auctionId);
+    if (!staticContact) continue;
+
+    results.push({
+      unlockId: unlock.id,
+      auctionId: unlock.auctionId,
+      paidAt: unlock.paidAt,
+      amountEur: unlock.amountEur,
+      category: "Projet",
+      city: staticContact.postalCode.replace(/^\d+\s*/, "") || "—",
+      department: staticContact.postalCode.slice(0, 2),
+      firstName: staticContact.firstName,
+      lastName: staticContact.lastName,
+      email: staticContact.email,
+      phone: staticContact.phone,
+      address: `${staticContact.address}, ${staticContact.postalCode}`,
+      companyName: staticContact.companyName,
+      clientKind: staticContact.clientKind,
+    });
+  }
+
+  return results;
 }
 
 export async function getProDashboardStats(proId: string) {
@@ -1368,6 +1444,44 @@ export async function decideContactRequest(
 
   store.contactRequests[index].status = decision;
   store.contactRequests[index].decidedAt = new Date().toISOString();
+  await writeStore(store);
+  return { request: store.contactRequests[index] };
+}
+
+/**
+ * Remet en attente une demande refusée ou expirée (1 seul rappel par artisan / chantier).
+ */
+export async function recallContactRequest(
+  requestId: string,
+  clientId: string
+): Promise<{ request: ContactRequest } | { error: string }> {
+  const store = await readStore();
+  expireContactRequestsInStore(store);
+
+  const index = store.contactRequests.findIndex((r) => r.id === requestId);
+  if (index === -1) return { error: "Demande introuvable." };
+
+  const req = store.contactRequests[index];
+  const workRequest = store.workRequests.find((w) => w.id === req.workRequestId);
+  if (!workRequest || workRequest.clientId !== clientId) {
+    return { error: "Accès refusé." };
+  }
+  if (req.status !== "refused" && req.status !== "expired") {
+    return { error: "Seules les demandes refusées ou expirées peuvent être rappelées." };
+  }
+  if (req.clientRecallUsed) {
+    return { error: "Vous avez déjà utilisé votre rappel unique pour cet artisan." };
+  }
+
+  const now = new Date();
+  store.contactRequests[index] = {
+    ...req,
+    status: "pending",
+    expiresAt: new Date(now.getTime() + CONTACT_REQUEST_TTL_MS).toISOString(),
+    decidedAt: undefined,
+    clientRecallUsed: true,
+    recalledAt: now.toISOString(),
+  };
   await writeStore(store);
   return { request: store.contactRequests[index] };
 }

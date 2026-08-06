@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getProSession } from "@/lib/pro-auth";
 import ProCreditsPanel from "@/components/pro/ProCreditsPanel";
 import ProReferralPanel from "@/components/pro/ProReferralPanel";
@@ -6,7 +7,6 @@ import ProDocumentsManager from "@/components/pro/ProDocumentsManager";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 import {
-  getContactUnlocksForPro,
   getProCreditBalance,
   getProDashboardStats,
   getProForSession,
@@ -21,10 +21,9 @@ export default async function ProComptePage() {
   const session = await getProSession();
   if (!session) return null;
 
-  const [pro, stats, unlocks, creditBalance] = await Promise.all([
+  const [pro, stats, creditBalance] = await Promise.all([
     getProForSession(session),
     getProDashboardStats(session.proId),
-    getContactUnlocksForPro(session.proId),
     getProCreditBalance(session.proId),
   ]);
 
@@ -109,23 +108,20 @@ export default async function ProComptePage() {
         </section>
       </div>
 
-      {unlocks.length > 0 && (
+      {stats.contactUnlocks > 0 && (
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-slate-900">Contacts débloqués</h2>
-          <ul className="mt-4 divide-y divide-slate-100 text-sm">
-            {unlocks.map((unlock) => (
-              <li
-                key={unlock.id}
-                className="flex flex-wrap items-center justify-between gap-2 py-3"
-              >
-                <span>Enchère #{unlock.auctionId}</span>
-                <span className="text-slate-500">
-                  {new Date(unlock.paidAt).toLocaleDateString("fr-FR")} ·{" "}
-                  {unlock.amountEur.toFixed(2)} €
-                </span>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-2 text-sm text-slate-600">
+            {stats.contactUnlocks} contact
+            {stats.contactUnlocks > 1 ? "s" : ""} — consultez le détail (téléphone,
+            email, adresse) dans le menu Contacts.
+          </p>
+          <Link
+            href="/pro/contacts"
+            className="mt-3 inline-block text-sm font-medium text-brand-600 hover:text-brand-700"
+          >
+            Ouvrir Contacts →
+          </Link>
         </section>
       )}
 
