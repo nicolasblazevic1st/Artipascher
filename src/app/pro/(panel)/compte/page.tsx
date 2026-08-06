@@ -96,8 +96,8 @@ export default async function ProComptePage() {
         <section className="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
           <h2 className="font-semibold text-slate-900">Documents</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Ajoutez ou remplacez vos documents (RC, KBIS, RGE, Qualibat, décennales).
-            Chaque nouveau fichier repasse en vérification.
+            Documents regroupés par niveau de certification (1 = essentiel, 2 = qualifié,
+            3 = premium en développement). Chaque nouveau fichier repasse en vérification.
           </p>
           <div className="mt-4">
             <ProDocumentsManager

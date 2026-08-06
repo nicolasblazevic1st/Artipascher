@@ -79,8 +79,8 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
   {
     level: 3,
     badge: "Premium",
-    title: "Niveau 3 — Premium",
-    summary: "Partenaires de confiance pour les gros chantiers et rénovations globales.",
+    title: "Niveau 3 — Premium (en développement)",
+    summary: "Partenaires de confiance pour les gros chantiers et rénovations globales (en développement).",
     documents: [
       {
         id: "charte",

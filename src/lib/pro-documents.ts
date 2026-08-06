@@ -73,9 +73,9 @@ export const PRO_REGISTRATION_COMPARTMENTS: ProRegistrationDocumentCompartment[]
   {
     level: 3,
     badge: "Premium",
-    title: "Niveau 3 — Premium",
+    title: "Niveau 3 — Premium (en développement)",
     summary:
-      "Réservé aux partenaires de confiance — complété après votre inscription avec notre équipe.",
+      "Réservé aux partenaires de confiance — parcours complété avec notre équipe (fonctionnalité en cours de déploiement).",
     documentIds: [],
     infoOnly: true,
     infoItems: [
