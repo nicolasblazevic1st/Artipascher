@@ -45,6 +45,21 @@ export async function savePreviousQuoteProof(
   return `/uploads/demandes/${requestId}/${safeName}`;
 }
 
+/** Justificatif d'un devis artisan transmis par le particulier. */
+export async function saveClientSubmittedQuoteProof(
+  requestId: string,
+  file: File
+): Promise<string> {
+  const dir = getRequestUploadDir(requestId);
+  await fs.mkdir(dir, { recursive: true });
+
+  const ext = path.extname(file.name) || (file.type === "application/pdf" ? ".pdf" : ".jpg");
+  const safeName = `devis-client-${Date.now()}${ext.replace(/[^a-zA-Z0-9.]/g, "")}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await fs.writeFile(path.join(dir, safeName), buffer);
+  return `/uploads/demandes/${requestId}/${safeName}`;
+}
+
 export function getProUploadDir(proId: string): string {
   return path.join(PRO_UPLOADS_ROOT, proId);
 }

@@ -15,6 +15,8 @@ interface EnrichedQuote {
   status: ProQuoteStatus;
   createdAt: string;
   adminNote?: string;
+  proofUrl?: string;
+  submittedBy?: "pro" | "client";
 }
 
 const STATUS_LABELS = {
@@ -63,9 +65,10 @@ export default function AdminDevisPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Modération des devis</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Chaque artisan dépose son devis après visite. En le validant, vous publiez le devis
-        et créez automatiquement une offre indicative au même montant (si elle peut entrer
-        dans l&apos;enchère).
+        Chaque artisan dépose son devis après visite (ou le particulier le transmet s&apos;il
+        l&apos;a reçu hors site). En le validant, vous publiez le devis et créez
+        automatiquement une offre indicative au même montant (si elle peut entrer dans
+        l&apos;enchère).
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -108,6 +111,11 @@ export default function AdminDevisPage() {
                     >
                       {STATUS_LABELS[q.status].text}
                     </span>
+                    {q.submittedBy === "client" && (
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">
+                        Soumis par le client
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {q.projectLabel} · Client : {q.clientName}
@@ -123,6 +131,19 @@ export default function AdminDevisPage() {
               <p className="mt-4 whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
                 {q.description}
               </p>
+
+              {q.proofUrl && (
+                <p className="mt-3 text-sm">
+                  <a
+                    href={q.proofUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-brand-700 underline"
+                  >
+                    Voir le justificatif
+                  </a>
+                </p>
+              )}
 
               {q.adminNote && (
                 <p className="mt-3 text-sm text-red-600">Note admin : {q.adminNote}</p>

@@ -781,6 +781,9 @@ export async function addProQuote(data: {
   visitDate: string;
   amount: number;
   description: string;
+  proofUrl?: string;
+  submittedBy?: "pro" | "client";
+  uploadedByClientId?: string;
 }): Promise<ProQuote | { error: string }> {
   const store = await readStore();
   const existing = store.proQuotes.find(
@@ -788,13 +791,26 @@ export async function addProQuote(data: {
   );
 
   if (existing && existing.status !== "rejected") {
-    return { error: "Vous avez déjà déposé un devis pour ce chantier." };
+    return {
+      error:
+        data.submittedBy === "client"
+          ? "Un devis est déjà en cours ou validé pour cet artisan sur ce chantier."
+          : "Vous avez déjà déposé un devis pour ce chantier.",
+    };
   }
 
   const entry: ProQuote = {
     id: newId("quote"),
-    ...data,
+    workRequestId: data.workRequestId,
+    auctionId: data.auctionId,
+    proId: data.proId,
+    companyName: data.companyName,
+    visitDate: data.visitDate,
+    amount: data.amount,
     description: data.description.trim(),
+    proofUrl: data.proofUrl,
+    submittedBy: data.submittedBy ?? "pro",
+    uploadedByClientId: data.uploadedByClientId,
     status: "pending_moderation",
     createdAt: new Date().toISOString(),
   };
@@ -808,6 +824,26 @@ export async function addProQuote(data: {
 
   await writeStore(store);
   return entry;
+}
+
+/** Artisans ayant débloqué les coordonnées d'une enchère (éligibles au dépôt de devis). */
+export async function getUnlockedProsForAuction(
+  auctionId: string
+): Promise<Array<{ proId: string; companyName: string }>> {
+  const store = await readStore();
+  const unlocks = store.contactUnlocks.filter((u) => u.auctionId === auctionId);
+  const seen = new Set<string>();
+  const result: Array<{ proId: string; companyName: string }> = [];
+
+  for (const unlock of unlocks) {
+    if (seen.has(unlock.proId)) continue;
+    seen.add(unlock.proId);
+    const pro = store.proRegistrations.find((p) => p.id === unlock.proId);
+    if (!pro || pro.status !== "approved") continue;
+    result.push({ proId: pro.id, companyName: pro.companyName });
+  }
+
+  return result.sort((a, b) => a.companyName.localeCompare(b.companyName, "fr"));
 }
 
 export async function updateProQuoteStatus(

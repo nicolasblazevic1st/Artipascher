@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactRequestsPanel from "@/components/client/ClientContactRequestsPanel";
 import ClientDemandePhotosPanel from "@/components/client/ClientDemandePhotosPanel";
+import ClientSubmitQuotePanel from "@/components/client/ClientSubmitQuotePanel";
 import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
@@ -196,6 +197,10 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             />
           </div>
         </section>
+
+        {request.status === "approved" && request.auctionId && (
+          <ClientSubmitQuotePanel requestId={request.id} />
+        )}
       </div>
     </div>
   );

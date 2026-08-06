@@ -244,6 +244,11 @@ export interface ProQuote {
   createdAt: string;
   reviewedAt?: string;
   adminNote?: string;
+  /** Justificatif (PDF/image), surtout si transmis par le particulier. */
+  proofUrl?: string;
+  /** Qui a déposé le devis sur la plateforme. */
+  submittedBy?: "pro" | "client";
+  uploadedByClientId?: string;
 }
 
 export interface Bid {

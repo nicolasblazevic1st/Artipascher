@@ -1,0 +1,144 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getClientSession } from "@/lib/client-auth";
+import { validateProQuote } from "@/lib/devis-validation";
+import { validateProofFile } from "@/lib/demandes-validation";
+import {
+  addProQuote,
+  getApprovedProById,
+  getProQuoteByProAndAuction,
+  getUnlockedProsForAuction,
+  getWorkRequestForClient,
+  hasContactUnlock,
+} from "@/lib/store";
+import { saveClientSubmittedQuoteProof } from "@/lib/uploads";
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+/**
+ * Liste les artisans ayant débloqué le chantier + leur devis éventuel,
+ * pour permettre au particulier de transmettre un devis reçu hors plateforme.
+ */
+export async function GET(_request: NextRequest, context: RouteContext) {
+  const session = await getClientSession();
+  if (!session) {
+    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+  const workRequest = await getWorkRequestForClient(id, session.clientId);
+  if (!workRequest) {
+    return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
+  }
+
+  if (workRequest.status !== "approved" || !workRequest.auctionId) {
+    return NextResponse.json({ artisans: [] });
+  }
+
+  const unlocked = await getUnlockedProsForAuction(workRequest.auctionId);
+  const artisans = await Promise.all(
+    unlocked.map(async (artisan) => {
+      const quote = await getProQuoteByProAndAuction(
+        artisan.proId,
+        workRequest.auctionId!
+      );
+      return {
+        proId: artisan.proId,
+        companyName: artisan.companyName,
+        quote: quote
+          ? {
+              id: quote.id,
+              status: quote.status,
+              amount: quote.amount,
+              visitDate: quote.visitDate,
+              description: quote.description,
+              proofUrl: quote.proofUrl,
+              submittedBy: quote.submittedBy ?? "pro",
+              adminNote: quote.adminNote,
+            }
+          : null,
+      };
+    })
+  );
+
+  return NextResponse.json({ artisans });
+}
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  const session = await getClientSession();
+  if (!session) {
+    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+  const workRequest = await getWorkRequestForClient(id, session.clientId);
+  if (!workRequest) {
+    return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
+  }
+
+  if (workRequest.status !== "approved" || !workRequest.auctionId) {
+    return NextResponse.json(
+      { error: "La demande doit être validée et l'enchère active." },
+      { status: 400 }
+    );
+  }
+
+  const formData = await request.formData();
+  const proId = String(formData.get("proId") ?? "").trim();
+  const visitDate = String(formData.get("visitDate") ?? "").trim();
+  const amount = Number(formData.get("amount"));
+  const description = String(formData.get("description") ?? "");
+  const proofEntry = formData.get("proof");
+  const proofFile =
+    proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
+
+  if (!proId) {
+    return NextResponse.json({ error: "Choisissez l'artisan concerné." }, { status: 400 });
+  }
+
+  const unlocked = await hasContactUnlock(proId, workRequest.auctionId);
+  if (!unlocked) {
+    return NextResponse.json(
+      {
+        error:
+          "Vous ne pouvez transmettre un devis que pour un artisan ayant débloqué vos coordonnées.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const pro = await getApprovedProById(proId);
+  if (!pro) {
+    return NextResponse.json({ error: "Artisan introuvable." }, { status: 404 });
+  }
+
+  const proofError = validateProofFile(proofFile);
+  if (proofError) {
+    return NextResponse.json({ error: proofError }, { status: 400 });
+  }
+
+  const validationError = validateProQuote({ visitDate, amount, description });
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
+  }
+
+  const proofUrl = await saveClientSubmittedQuoteProof(workRequest.id, proofFile!);
+
+  const result = await addProQuote({
+    workRequestId: workRequest.id,
+    auctionId: workRequest.auctionId,
+    proId: pro.id,
+    companyName: pro.companyName,
+    visitDate,
+    amount,
+    description,
+    proofUrl,
+    submittedBy: "client",
+    uploadedByClientId: session.clientId,
+  });
+
+  if ("error" in result) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
+  return NextResponse.json({ success: true, quote: result });
+}
