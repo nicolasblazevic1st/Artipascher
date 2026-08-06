@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import CookieConsentBanner from "@/components/CookieConsentBanner";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
-
-const GA_MEASUREMENT_ID =
-  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-S1NP0RF6Y4";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -35,33 +33,12 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const enableAnalytics =
-    process.env.NODE_ENV === "production" ||
-    process.env.NEXT_PUBLIC_GA_DEBUG === "true";
-
   return (
     <html lang="fr">
-      <head>
-        {enableAnalytics && (
-          <>
-            {/* Google tag (gtag.js) — une seule balise, sur toutes les pages */}
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="google-analytics" strategy="afterInteractive">
-              {`
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '${GA_MEASUREMENT_ID}');
-              `}
-            </Script>
-          </>
-        )}
-      </head>
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         {children}
+        <CookieConsentBanner />
+        <GoogleAnalytics />
       </body>
     </html>
   );

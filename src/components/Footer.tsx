@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ManageCookiesButton from "@/components/ManageCookiesButton";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
 
 export default function Footer() {
@@ -38,17 +39,30 @@ export default function Footer() {
           </ul>
         </div>
         <div>
-          <p className="font-semibold text-white">Zone d&apos;intervention</p>
-          <p className="mt-3 text-sm leading-relaxed">
+          <p className="font-semibold text-white">Informations</p>
+          <ul className="mt-3 space-y-2 text-sm">
+            <li>
+              <Link href="/cookies" className="hover:text-white">
+                Politique de cookies
+              </Link>
+            </li>
+            <li>
+              <ManageCookiesButton className="text-left hover:text-white" />
+            </li>
+          </ul>
+          <p className="mt-4 text-sm leading-relaxed">
             Lille · Roubaix · Tourcoing · Valenciennes · Dunkerque · Douai ·
             Lens · Arras · Cambrai · Maubeuge
           </p>
           <p className="mt-2 text-xs text-brand-300">Départements 59 et 62</p>
-          <p className="mt-4 text-xs leading-relaxed text-brand-300">{DATA_HOSTING_NOTICE}</p>
+          <p className="mt-4 text-xs leading-relaxed text-brand-300">
+            {DATA_HOSTING_NOTICE}
+          </p>
         </div>
       </div>
       <div className="border-t border-brand-900 py-4 text-center text-xs text-brand-300">
-        © {new Date().getFullYear()} Artipascher — Enchères inversées travaux Nord-Pas-de-Calais
+        © {new Date().getFullYear()} Artipascher — Enchères inversées travaux
+        Nord-Pas-de-Calais
       </div>
     </footer>
   );
