@@ -4,18 +4,18 @@ import { validateProQuote } from "@/lib/devis-validation";
 import { validateProofFile } from "@/lib/demandes-validation";
 import {
   addProQuote,
+  canClientSubmitQuoteForPro,
   getApprovedProById,
+  getClientQuoteEligibleProsForAuction,
   getProQuoteByProAndAuction,
-  getUnlockedProsForAuction,
   getWorkRequestForClient,
-  hasContactUnlock,
 } from "@/lib/store";
 import { saveClientSubmittedQuoteProof } from "@/lib/uploads";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 /**
- * Liste les artisans ayant débloqué le chantier + leur devis éventuel,
+ * Liste les artisans acceptés / ayant débloqué le chantier + leur devis éventuel,
  * pour permettre au particulier de transmettre un devis reçu hors plateforme.
  */
 export async function GET(_request: NextRequest, context: RouteContext) {
@@ -34,9 +34,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return NextResponse.json({ artisans: [] });
   }
 
-  const unlocked = await getUnlockedProsForAuction(workRequest.auctionId);
+  const eligible = await getClientQuoteEligibleProsForAuction(workRequest.auctionId);
   const artisans = await Promise.all(
-    unlocked.map(async (artisan) => {
+    eligible.map(async (artisan) => {
       const quote = await getProQuoteByProAndAuction(
         artisan.proId,
         workRequest.auctionId!
@@ -95,12 +95,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Choisissez l'artisan concerné." }, { status: 400 });
   }
 
-  const unlocked = await hasContactUnlock(proId, workRequest.auctionId);
-  if (!unlocked) {
+  const allowed = await canClientSubmitQuoteForPro(proId, workRequest.auctionId);
+  if (!allowed) {
     return NextResponse.json(
       {
         error:
-          "Vous ne pouvez transmettre un devis que pour un artisan ayant débloqué vos coordonnées.",
+          "Vous ne pouvez transmettre un devis que pour un artisan dont vous avez accepté la demande de contact.",
       },
       { status: 403 }
     );

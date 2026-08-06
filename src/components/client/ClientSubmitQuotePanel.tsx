@@ -128,9 +128,9 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
         Transmettre un devis reçu hors site
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        Si un artisan vous a remis un devis (e-mail, papier…) sans le déposer sur
-        Artipascher, vous pouvez le transmettre ici. Notre équipe le vérifiera
-        comme un devis classique.
+        Si un artisan accepté vous a remis un devis (e-mail, papier…) sans le
+        déposer sur Artipascher, saisissez le montant ici pour publier son offre
+        après validation par notre équipe.
       </p>
 
       <ul className="mt-4 space-y-2">
@@ -265,8 +265,8 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
         </form>
       ) : (
         <p className="mt-4 text-sm text-slate-500">
-          Tous les artisans ayant débloqué vos coordonnées ont déjà un devis en
-          cours ou validé sur le site.
+          Tous les artisans acceptés ont déjà un devis en cours ou validé sur le
+          site.
         </p>
       )}
     </section>

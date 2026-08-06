@@ -826,7 +826,7 @@ export async function addProQuote(data: {
   return entry;
 }
 
-/** Artisans ayant débloqué les coordonnées d'une enchère (éligibles au dépôt de devis). */
+/** Artisans ayant débloqué les coordonnées d'une enchère. */
 export async function getUnlockedProsForAuction(
   auctionId: string
 ): Promise<Array<{ proId: string; companyName: string }>> {
@@ -844,6 +844,50 @@ export async function getUnlockedProsForAuction(
   }
 
   return result.sort((a, b) => a.companyName.localeCompare(b.companyName, "fr"));
+}
+
+/**
+ * Artisans pour lesquels le particulier peut transmettre un devis hors site :
+ * intérêt accepté et/ou coordonnées déjà débloquées.
+ */
+export async function getClientQuoteEligibleProsForAuction(
+  auctionId: string
+): Promise<Array<{ proId: string; companyName: string }>> {
+  const store = await readStore();
+  if (expireContactRequestsInStore(store)) await writeStore(store);
+  const seen = new Set<string>();
+  const result: Array<{ proId: string; companyName: string }> = [];
+
+  const pushPro = (proId: string) => {
+    if (seen.has(proId)) return;
+    const pro = store.proRegistrations.find((p) => p.id === proId);
+    if (!pro || pro.status !== "approved") return;
+    seen.add(proId);
+    result.push({ proId: pro.id, companyName: pro.companyName });
+  };
+
+  for (const req of store.contactRequests) {
+    if (req.auctionId === auctionId && req.status === "accepted") {
+      pushPro(req.proId);
+    }
+  }
+  for (const unlock of store.contactUnlocks) {
+    if (unlock.auctionId === auctionId) {
+      pushPro(unlock.proId);
+    }
+  }
+
+  return result.sort((a, b) => a.companyName.localeCompare(b.companyName, "fr"));
+}
+
+export async function canClientSubmitQuoteForPro(
+  proId: string,
+  auctionId: string
+): Promise<boolean> {
+  const unlocked = await hasContactUnlock(proId, auctionId);
+  if (unlocked) return true;
+  const accepted = await getAcceptedContactRequest(proId, auctionId);
+  return accepted != null;
 }
 
 export async function updateProQuoteStatus(
