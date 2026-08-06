@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteLogo from "@/components/SiteLogo";
 
 const NAV_LINKS = [
@@ -119,13 +120,13 @@ export default function Header() {
               Espace Pro
             </Link>
 
-            <Link
+            <BetaAwareLink
               href="/particulier/espace/inscription?from=/particulier/espace/demandes/nouvelle"
               className="flex items-center gap-1.5 rounded-lg bg-accent-500 px-2.5 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-accent-600 xl:px-4 xl:py-2 xl:text-base"
             >
               <HammerIcon className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
               <span>Demander mes travaux</span>
-            </Link>
+            </BetaAwareLink>
           </div>
         </div>
 
@@ -163,14 +164,14 @@ export default function Header() {
                 Espace Pro
               </Link>
 
-              <Link
+              <BetaAwareLink
                 href="/particulier/espace/inscription?from=/particulier/espace/demandes/nouvelle"
                 className="flex items-center gap-2 rounded-lg bg-accent-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-600"
                 onClick={() => setMobileOpen(false)}
               >
                 <HammerIcon className="h-4 w-4" />
                 <span>Demander des travaux</span>
-              </Link>
+              </BetaAwareLink>
             </div>
           </div>
         )}

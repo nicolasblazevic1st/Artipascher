@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BetaClosedNotice from "@/components/BetaClosedNotice";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
+import { isBetaMode } from "@/lib/beta";
 
 export const metadata: Metadata = {
   title: "Particulier — Réalisez vos travaux au meilleur prix",
@@ -143,24 +145,32 @@ export default function ParticulierPage() {
           <p className="mt-2 text-sm text-slate-600">
             Gratuit pour vous · Aucun % sur les travaux · Les pros paient 1&nbsp;€ pour vous contacter · 59 / 62
           </p>
-          <p className="mt-4 text-sm text-slate-700">
-            Créez votre compte, confirmez votre email, puis publiez votre demande depuis votre
-            espace personnel.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={SIGNUP_HREF}
-              className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white hover:bg-accent-600"
-            >
-              Créer mon compte
-            </Link>
-            <Link
-              href={LOGIN_HREF}
-              className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-            >
-              Se connecter
-            </Link>
-          </div>
+          {isBetaMode() ? (
+            <div className="mt-8 text-left">
+              <BetaClosedNotice title="Demandes de travaux non ouvertes" />
+            </div>
+          ) : (
+            <>
+              <p className="mt-4 text-sm text-slate-700">
+                Créez votre compte, confirmez votre email, puis publiez votre demande depuis votre
+                espace personnel.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={SIGNUP_HREF}
+                  className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white hover:bg-accent-600"
+                >
+                  Créer mon compte
+                </Link>
+                <Link
+                  href={LOGIN_HREF}
+                  className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  Se connecter
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
     </>

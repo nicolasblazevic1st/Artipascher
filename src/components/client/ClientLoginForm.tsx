@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { isBetaMode } from "@/lib/beta";
 
 export default function ClientLoginForm() {
   const router = useRouter();
@@ -164,15 +165,21 @@ export default function ClientLoginForm() {
       </button>
 
       <p className="text-center text-sm text-slate-500">
-        Pas encore de compte ?{" "}
-        <Link
-          href={`/particulier/espace/inscription?from=${encodeURIComponent(
-            "/particulier/espace/demandes/nouvelle"
-          )}`}
-          className="font-medium text-client-600 hover:text-client-700"
-        >
-          Créer un compte
-        </Link>
+        {isBetaMode() ? (
+          <>Inscriptions fermées — version bêta (préouverture).</>
+        ) : (
+          <>
+            Pas encore de compte ?{" "}
+            <Link
+              href={`/particulier/espace/inscription?from=${encodeURIComponent(
+                "/particulier/espace/demandes/nouvelle"
+              )}`}
+              className="font-medium text-client-600 hover:text-client-700"
+            >
+              Créer un compte
+            </Link>
+          </>
+        )}
       </p>
     </form>
   );

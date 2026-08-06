@@ -12,6 +12,8 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "3000",
+        // Bêta publique (préouverture). Passer à "false" pour ouvrir le service.
+        NEXT_PUBLIC_BETA_MODE: "true",
       },
     },
   ],

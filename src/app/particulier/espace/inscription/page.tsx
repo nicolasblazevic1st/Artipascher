@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import BetaClosedNotice from "@/components/BetaClosedNotice";
 import ClientRegisterForm from "@/components/client/ClientRegisterForm";
+import { isBetaMode } from "@/lib/beta";
 
 export const metadata: Metadata = {
   title: "Créer un compte particulier",
@@ -21,9 +23,13 @@ export default function ClientRegisterPage() {
             </p>
           </div>
         </div>
-        <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
-          <ClientRegisterForm />
-        </Suspense>
+        {isBetaMode() ? (
+          <BetaClosedNotice title="Inscriptions temporairement fermées" />
+        ) : (
+          <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
+            <ClientRegisterForm />
+          </Suspense>
+        )}
       </div>
     </div>
   );

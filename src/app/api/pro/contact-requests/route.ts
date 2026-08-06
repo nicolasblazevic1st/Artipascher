@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
 import { sendContactInterestEmailToClient } from "@/lib/email";
 import { notifyClientContactInterest } from "@/lib/notify";
 import { formatProTradeSelections } from "@/lib/pro-trades";
@@ -20,6 +21,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (isBetaMode()) return betaClosedJsonResponse();
+
   const session = await getProSession();
   if (!session) {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });

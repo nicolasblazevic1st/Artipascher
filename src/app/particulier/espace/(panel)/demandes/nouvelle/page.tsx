@@ -1,5 +1,7 @@
 import Link from "next/link";
+import BetaClosedNotice from "@/components/BetaClosedNotice";
 import WorkRequestForm from "@/components/WorkRequestForm";
+import { isBetaMode } from "@/lib/beta";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientById } from "@/lib/store";
 
@@ -22,15 +24,21 @@ export default async function NouvelleDemandePage() {
         Décrivez votre projet : il restera dans votre espace particulier.
       </p>
 
-      <WorkRequestForm
-        successHref="/particulier/espace/demandes"
-        defaults={{
-          firstName: client?.firstName ?? session.firstName,
-          lastName: client?.lastName ?? session.lastName,
-          email: client?.email ?? session.email,
-          phone: client?.phone,
-        }}
-      />
+      {isBetaMode() ? (
+        <div className="mt-6">
+          <BetaClosedNotice title="Création de demandes fermée" />
+        </div>
+      ) : (
+        <WorkRequestForm
+          successHref="/particulier/espace/demandes"
+          defaults={{
+            firstName: client?.firstName ?? session.firstName,
+            lastName: client?.lastName ?? session.lastName,
+            email: client?.email ?? session.email,
+            phone: client?.phone,
+          }}
+        />
+      )}
     </div>
   );
 }

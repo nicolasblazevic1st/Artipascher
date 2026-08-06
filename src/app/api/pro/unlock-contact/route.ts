@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
 import { SAMPLE_AUCTIONS } from "@/lib/data";
 import { getClientContact, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { canUnlockContacts } from "@/lib/level1-certification";
@@ -15,6 +16,8 @@ import {
 import { getWorkRequestByAuctionId } from "@/lib/work-request-auctions";
 
 export async function POST(request: NextRequest) {
+  if (isBetaMode()) return betaClosedJsonResponse();
+
   const session = await getProSession();
   if (!session) {
     return NextResponse.json(

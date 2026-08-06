@@ -4,6 +4,7 @@ import {
   computeCurrentPrice,
   validateBidAmount,
 } from "@/lib/auctions";
+import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
 import { checkBidEligibility } from "@/lib/bid-eligibility";
 import { verifyDevisFileMatchesAmount } from "@/lib/devis-ocr";
 import { validateProofFile } from "@/lib/demandes-validation";
@@ -102,6 +103,8 @@ async function parsePlaceBidRequest(request: NextRequest): Promise<
 }
 
 export async function POST(request: NextRequest) {
+  if (isBetaMode()) return betaClosedJsonResponse();
+
   const session = await getProSession();
   if (!session) {
     return NextResponse.json(

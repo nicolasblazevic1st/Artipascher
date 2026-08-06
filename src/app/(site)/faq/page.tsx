@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import BetaAwareLink from "@/components/BetaAwareLink";
 import { FAQ_ITEMS } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -36,12 +36,12 @@ export default function FaqPage() {
           Contactez notre équipe pour toute question sur votre projet dans le 59
           ou 62.
         </p>
-        <Link
+        <BetaAwareLink
           href="/particulier"
           className="mt-4 inline-block text-sm font-semibold text-brand-700"
         >
           Demander des travaux →
-        </Link>
+        </BetaAwareLink>
       </div>
     </div>
   );

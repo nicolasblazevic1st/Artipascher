@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AuctionCard from "@/components/AuctionCard";
+import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
 import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
@@ -53,12 +54,12 @@ export default async function HomePage() {
             vérifiés font baisser le prix.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
-            <Link
+            <BetaAwareLink
               href="/particulier"
               className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
             >
               Demander des travaux
-            </Link>
+            </BetaAwareLink>
             <Link
               href="/professionnel"
               className="rounded-xl border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
@@ -192,12 +193,12 @@ export default async function HomePage() {
           <p className="mt-4 text-brand-100">
             Gratuit pour les particuliers. Artisans vérifiés du Nord-Pas-de-Calais.
           </p>
-          <Link
+          <BetaAwareLink
             href="/particulier"
             className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white transition hover:bg-accent-600"
           >
             Demander des travaux maintenant
-          </Link>
+          </BetaAwareLink>
         </div>
       </section>
     </>

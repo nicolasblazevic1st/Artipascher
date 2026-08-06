@@ -61,8 +61,8 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-brand-900 py-4 text-center text-xs text-brand-300">
-        © {new Date().getFullYear()} Artipascher — Enchères inversées travaux
-        Nord-Pas-de-Calais
+        © {new Date().getFullYear()} Artipascher — Version bêta (préouverture) —
+        Enchères inversées travaux Nord-Pas-de-Calais
       </div>
     </footer>
   );

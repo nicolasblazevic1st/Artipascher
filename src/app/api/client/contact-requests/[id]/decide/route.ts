@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
 import { getClientSession } from "@/lib/client-auth";
 import { sendContactDecisionEmailToPro } from "@/lib/email";
 import { notifyProContactDecision } from "@/lib/notify";
@@ -11,6 +12,8 @@ import {
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  if (isBetaMode()) return betaClosedJsonResponse();
+
   const session = await getClientSession();
   if (!session) {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });

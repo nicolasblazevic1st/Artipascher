@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BetaAwareLink from "@/components/BetaAwareLink";
+import BetaClosedNotice from "@/components/BetaClosedNotice";
 import ProRegistrationForm from "@/components/ProRegistrationForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
+import { isBetaMode } from "@/lib/beta";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import {
   REFERRAL_REWARD_CREDITS,
@@ -92,12 +95,12 @@ export default function ProfessionnelPage() {
             commerce.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link
+            <BetaAwareLink
               href="#inscription"
               className="rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
             >
               S&apos;inscrire
-            </Link>
+            </BetaAwareLink>
             <Link
               href="/pro/login"
               className="rounded-xl border border-slate-500 px-8 py-3 font-semibold hover:bg-slate-800"
@@ -176,12 +179,12 @@ export default function ProfessionnelPage() {
             </li>
           </ul>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link
+            <BetaAwareLink
               href="#inscription"
               className="rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
             >
               S&apos;inscrire avec un code
-            </Link>
+            </BetaAwareLink>
             <Link
               href="/pro/compte#parrainage"
               className="rounded-xl border border-brand-500 px-8 py-3 font-semibold hover:bg-brand-800"
@@ -200,7 +203,11 @@ export default function ProfessionnelPage() {
             parrainage optionnel
           </p>
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
-            <ProRegistrationForm />
+            {isBetaMode() ? (
+              <BetaClosedNotice title="Inscriptions professionnelles fermées" />
+            ) : (
+              <ProRegistrationForm />
+            )}
           </div>
         </div>
       </section>

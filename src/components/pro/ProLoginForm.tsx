@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { isBetaMode } from "@/lib/beta";
 
 export default function ProLoginForm() {
   const router = useRouter();
@@ -157,10 +158,16 @@ export default function ProLoginForm() {
       </button>
 
       <p className="text-center text-sm text-slate-500">
-        Pas encore inscrit ?{" "}
-        <Link href="/professionnel" className="font-medium text-brand-600 hover:text-brand-700">
-          Créer un compte pro
-        </Link>
+        {isBetaMode() ? (
+          <>Inscriptions fermées — version bêta (préouverture).</>
+        ) : (
+          <>
+            Pas encore inscrit ?{" "}
+            <Link href="/professionnel" className="font-medium text-brand-600 hover:text-brand-700">
+              Créer un compte pro
+            </Link>
+          </>
+        )}
       </p>
     </form>
   );
