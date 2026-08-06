@@ -4,6 +4,7 @@ import ClientLogoutButton from "./ClientLogoutButton";
 const NAV = [
   { href: "/particulier/espace", label: "Tableau de bord", icon: "📊" },
   { href: "/particulier/espace/demandes", label: "Mes demandes", icon: "🏠" },
+  { href: "/particulier/espace/offres", label: "Mes offres", icon: "💶" },
 ];
 
 export default function ClientSidebar({

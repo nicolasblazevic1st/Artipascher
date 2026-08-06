@@ -116,6 +116,11 @@ export default function AdminDevisPage() {
                         Soumis par le client
                       </span>
                     )}
+                    {q.submittedBy === "client" && !q.proofUrl && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        Sans justificatif
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {q.projectLabel} · Client : {q.clientName}

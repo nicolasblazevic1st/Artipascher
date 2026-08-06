@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { MIN_QUOTE_DESCRIPTION_LENGTH } from "@/lib/devis-validation";
 import { formatPrice } from "@/lib/data";
 
@@ -77,7 +78,7 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit || !proof) return;
+    if (!canSubmit) return;
 
     setError(null);
     setSuccess(false);
@@ -88,7 +89,7 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
     formData.set("visitDate", visitDate);
     formData.set("amount", amount);
     formData.set("description", description);
-    formData.set("proof", proof);
+    if (proof) formData.set("proof", proof);
 
     const res = await fetch(`/api/client/demandes/${requestId}/devis`, {
       method: "POST",
@@ -98,7 +99,7 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
     setSubmitting(false);
 
     if (!res.ok) {
-      setError(data.error ?? "Impossible de transmettre le devis.");
+      setError(data.error ?? "Impossible d'enregistrer le prix.");
       return;
     }
 
@@ -113,7 +114,7 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
   if (loading) {
     return (
       <p className="mt-8 text-sm text-slate-500">
-        Chargement du dépôt de devis…
+        Chargement du dépôt de prix…
       </p>
     );
   }
@@ -125,12 +126,16 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
   return (
     <section className="mt-10 rounded-2xl border border-slate-200 bg-white p-6">
       <h2 className="text-lg font-semibold text-slate-900">
-        Transmettre un devis reçu hors site
+        Saisir le prix d&apos;un artisan
       </h2>
       <p className="mt-1 text-sm text-slate-600">
-        Si un artisan accepté vous a remis un devis (e-mail, papier…) sans le
-        déposer sur Artipascher, saisissez le montant ici pour publier son offre
-        après validation par notre équipe.
+        Si un artisan accepté vous a donné un prix hors site, saisissez-le ici.
+        Le justificatif (PDF/photo) est optionnel — vous pourrez l&apos;ajouter
+        plus tard dans{" "}
+        <Link href="/particulier/espace/offres" className="font-medium underline">
+          Mes offres
+        </Link>
+        .
       </p>
 
       <ul className="mt-4 space-y-2">
@@ -145,13 +150,16 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_LABELS[a.quote.status].className}`}
               >
                 {STATUS_LABELS[a.quote.status].text}
-                {a.quote.submittedBy === "client" ? " · transmis par vous" : ""}
+                {a.quote.submittedBy === "client" ? " · saisi par vous" : ""}
+                {!a.quote.proofUrl && a.quote.submittedBy === "client"
+                  ? " · sans justificatif"
+                  : ""}
                 {a.quote.status !== "rejected"
                   ? ` · ${formatPrice(a.quote.amount)}`
                   : ""}
               </span>
             ) : (
-              <span className="text-xs text-slate-500">Aucun devis sur le site</span>
+              <span className="text-xs text-slate-500">Aucun prix sur le site</span>
             )}
           </li>
         ))}
@@ -217,33 +225,31 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
 
           <div>
             <label className="block text-sm font-medium text-slate-700">
-              Détail du devis
+              Détail (optionnel)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              required
-              rows={4}
-              minLength={MIN_QUOTE_DESCRIPTION_LENGTH}
-              placeholder="Prestations, matériaux, délais… (reprenez les infos du devis reçu)"
+              rows={3}
+              placeholder={`Prestations, matériaux… (sinon texte automatique). Min. ${MIN_QUOTE_DESCRIPTION_LENGTH} caractères si vous remplissez.`}
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
-            <p className="mt-1 text-xs text-slate-500">
-              {description.trim().length}/{MIN_QUOTE_DESCRIPTION_LENGTH} caractères min.
-            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700">
-              Justificatif (PDF ou photo)
+              Justificatif (optionnel)
             </label>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,application/pdf"
-              required
               onChange={(e) => setProof(e.target.files?.[0] ?? null)}
               className="mt-1 block w-full text-sm text-slate-600"
             />
+            <p className="mt-1 text-xs text-slate-500">
+              PDF ou photo du devis — vous pourrez l&apos;ajouter plus tard dans Mes
+              offres.
+            </p>
           </div>
 
           {error && (
@@ -251,7 +257,12 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
           )}
           {success && (
             <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-              Devis transmis. Il sera visible après validation par notre équipe.
+              Prix enregistré. Il sera visible après validation. Vous pouvez joindre
+              le devis dans{" "}
+              <Link href="/particulier/espace/offres" className="font-medium underline">
+                Mes offres
+              </Link>
+              .
             </p>
           )}
 
@@ -260,13 +271,16 @@ export default function ClientSubmitQuotePanel({ requestId }: Props) {
             disabled={submitting}
             className="rounded-xl bg-client-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-client-700 disabled:opacity-50"
           >
-            {submitting ? "Envoi…" : "Transmettre le devis"}
+            {submitting ? "Envoi…" : "Enregistrer le prix"}
           </button>
         </form>
       ) : (
         <p className="mt-4 text-sm text-slate-500">
-          Tous les artisans acceptés ont déjà un devis en cours ou validé sur le
-          site.
+          Tous les artisans acceptés ont déjà un prix en cours ou validé sur le
+          site.{" "}
+          <Link href="/particulier/espace/offres" className="font-medium underline">
+            Voir Mes offres
+          </Link>
         </p>
       )}
     </section>

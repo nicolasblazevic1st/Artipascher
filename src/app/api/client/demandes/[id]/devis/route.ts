@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
-import { validateProQuote } from "@/lib/devis-validation";
+import { DEFAULT_CLIENT_PRICE_DESCRIPTION } from "@/lib/client-quote";
+import {
+  MIN_QUOTE_DESCRIPTION_LENGTH,
+  validateProQuote,
+} from "@/lib/devis-validation";
 import { validateProofFile } from "@/lib/demandes-validation";
 import {
   addProQuote,
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const proId = String(formData.get("proId") ?? "").trim();
   const visitDate = String(formData.get("visitDate") ?? "").trim();
   const amount = Number(formData.get("amount"));
-  const description = String(formData.get("description") ?? "");
+  const descriptionRaw = String(formData.get("description") ?? "").trim();
   const proofEntry = formData.get("proof");
   const proofFile =
     proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
@@ -100,7 +104,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json(
       {
         error:
-          "Vous ne pouvez transmettre un devis que pour un artisan dont vous avez accepté la demande de contact.",
+          "Vous ne pouvez saisir un prix que pour un artisan dont vous avez accepté la demande de contact.",
       },
       { status: 403 }
     );
@@ -111,17 +115,35 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Artisan introuvable." }, { status: 404 });
   }
 
-  const proofError = validateProofFile(proofFile);
-  if (proofError) {
-    return NextResponse.json({ error: proofError }, { status: 400 });
+  if (proofFile) {
+    const proofError = validateProofFile(proofFile);
+    if (proofError) {
+      return NextResponse.json({ error: proofError }, { status: 400 });
+    }
   }
 
+  if (
+    descriptionRaw &&
+    descriptionRaw.length > 0 &&
+    descriptionRaw.length < MIN_QUOTE_DESCRIPTION_LENGTH
+  ) {
+    return NextResponse.json(
+      {
+        error: `Le détail doit contenir au moins ${MIN_QUOTE_DESCRIPTION_LENGTH} caractères, ou restez vide pour le texte automatique.`,
+      },
+      { status: 400 }
+    );
+  }
+
+  const description = descriptionRaw || DEFAULT_CLIENT_PRICE_DESCRIPTION;
   const validationError = validateProQuote({ visitDate, amount, description });
   if (validationError) {
     return NextResponse.json({ error: validationError }, { status: 400 });
   }
 
-  const proofUrl = await saveClientSubmittedQuoteProof(workRequest.id, proofFile!);
+  const proofUrl = proofFile
+    ? await saveClientSubmittedQuoteProof(workRequest.id, proofFile)
+    : undefined;
 
   const result = await addProQuote({
     workRequestId: workRequest.id,

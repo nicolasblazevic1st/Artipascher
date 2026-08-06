@@ -849,6 +849,71 @@ export async function getProQuotesForPro(proId: string): Promise<ProQuote[]> {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+export type ClientOfferRow = ProQuote & {
+  projectLabel: string;
+  workRequestId: string;
+  canAttachProof: boolean;
+};
+
+/** Offres / devis liés aux demandes du particulier. */
+export async function getOffersForClient(clientId: string): Promise<ClientOfferRow[]> {
+  const store = await readStore();
+  const myRequests = store.workRequests.filter((r) => r.clientId === clientId);
+  const byId = Object.fromEntries(myRequests.map((r) => [r.id, r]));
+  const requestIds = new Set(myRequests.map((r) => r.id));
+
+  return store.proQuotes
+    .filter((q) => requestIds.has(q.workRequestId))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .map((q) => {
+      const request = byId[q.workRequestId];
+      return {
+        ...q,
+        workRequestId: q.workRequestId,
+        projectLabel: request
+          ? `${request.category} · ${request.city}`
+          : "Demande",
+        canAttachProof:
+          q.submittedBy === "client" &&
+          !q.proofUrl &&
+          (q.status === "pending_moderation" ||
+            q.status === "approved" ||
+            q.status === "rejected"),
+      };
+    });
+}
+
+/** Joindre un justificatif à une offre déjà saisie par le particulier. */
+export async function attachProofToClientQuote(
+  quoteId: string,
+  clientId: string,
+  proofUrl: string
+): Promise<ProQuote | { error: string }> {
+  const store = await readStore();
+  const index = store.proQuotes.findIndex((q) => q.id === quoteId);
+  if (index === -1) return { error: "Offre introuvable." };
+
+  const quote = store.proQuotes[index];
+  const request = store.workRequests.find((r) => r.id === quote.workRequestId);
+  if (!request || request.clientId !== clientId) {
+    return { error: "Accès refusé." };
+  }
+  if (quote.submittedBy !== "client") {
+    return { error: "Seul un prix saisi par vous peut recevoir un justificatif ici." };
+  }
+  if (quote.proofUrl) {
+    return { error: "Un justificatif est déjà joint à cette offre." };
+  }
+
+  store.proQuotes[index] = {
+    ...quote,
+    proofUrl,
+    uploadedByClientId: clientId,
+  };
+  await writeStore(store);
+  return store.proQuotes[index];
+}
+
 export async function addProQuote(data: {
   workRequestId: string;
   auctionId: string;
