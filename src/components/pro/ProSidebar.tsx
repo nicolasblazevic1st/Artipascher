@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NotificationBell from "@/components/NotificationBell";
 import ProLogoutButton from "./ProLogoutButton";
 
 const NAV = [
@@ -43,6 +44,11 @@ export default function ProSidebar({
         </Link>
       </div>
       <nav className="flex-1 space-y-1 p-3">
+        <NotificationBell
+          audience="pro"
+          listHref="/pro/notifications"
+          accent="brand"
+        />
         {NAV.map((item) => (
           <Link
             key={item.href}

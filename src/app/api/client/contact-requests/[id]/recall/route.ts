@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { sendContactRecallEmailToPro } from "@/lib/email";
+import { notifyProContactRecalled } from "@/lib/notify";
 import {
   getApprovedProById,
   getWorkRequestById,
@@ -32,6 +33,13 @@ export async function POST(_request: NextRequest, context: RouteContext) {
       city: workRequest.city,
       auctionId: result.request.auctionId,
     }).catch((err) => console.error("[email] contact recall", err));
+
+    void notifyProContactRecalled({
+      proId: pro.id,
+      category: workRequest.category,
+      city: workRequest.city,
+      auctionId: result.request.auctionId,
+    }).catch((err) => console.error("[notify] contact recall", err));
   }
 
   return NextResponse.json({ request: result.request });

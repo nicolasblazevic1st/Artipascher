@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { sendContactDecisionEmailToPro } from "@/lib/email";
+import { notifyProContactDecision } from "@/lib/notify";
 import {
   decideContactRequest,
   getApprovedProById,
@@ -43,6 +44,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       city: workRequest.city,
       auctionId: result.request.auctionId,
     }).catch((err) => console.error("[email] contact decision", err));
+
+    void notifyProContactDecision({
+      proId: pro.id,
+      decision,
+      category: workRequest.category,
+      city: workRequest.city,
+      auctionId: result.request.auctionId,
+    }).catch((err) => console.error("[notify] contact decision", err));
   }
 
   return NextResponse.json({ request: result.request });

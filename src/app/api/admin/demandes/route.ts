@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeAuctionEndsAt } from "@/lib/auction-duration";
 import { createShareToken } from "@/lib/share";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { notifyClientRequestReviewed } from "@/lib/notify";
 import { maybeAutoNotifyOnApprove } from "@/lib/sms-campaigns";
 import { readStore, updateWorkRequest } from "@/lib/store";
 
@@ -72,6 +73,11 @@ export async function PATCH(request: NextRequest) {
       console.error("[sms] auto notify", err)
     );
   }
+
+  void notifyClientRequestReviewed({
+    workRequest: updated,
+    status,
+  }).catch((err) => console.error("[notify] request reviewed", err));
 
   return NextResponse.json({ request: updated });
 }

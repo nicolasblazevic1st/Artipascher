@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NotificationBell from "@/components/NotificationBell";
 import ClientLogoutButton from "./ClientLogoutButton";
 
 const NAV = [
@@ -26,6 +27,11 @@ export default function ClientSidebar({
         </p>
       </div>
       <nav className="flex-1 space-y-1 p-3">
+        <NotificationBell
+          audience="client"
+          listHref="/particulier/espace/notifications"
+          accent="client"
+        />
         {NAV.map((item) => (
           <Link
             key={item.href}

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { notifyQuoteReviewed } from "@/lib/notify";
 import {
   backfillBidsFromApprovedQuotes,
+  getWorkRequestById,
   readStore,
   updateProQuoteStatus,
 } from "@/lib/store";
@@ -53,6 +55,18 @@ export async function PATCH(request: NextRequest) {
   const quote = await updateProQuoteStatus(id, status, adminNote);
   if (!quote) {
     return NextResponse.json({ error: "Devis introuvable." }, { status: 404 });
+  }
+
+  const workRequest = await getWorkRequestById(quote.workRequestId);
+  if (workRequest) {
+    void notifyQuoteReviewed({
+      proId: quote.proId,
+      workRequest,
+      status,
+      amount: quote.amount,
+      submittedByClientId:
+        quote.submittedBy === "client" ? quote.uploadedByClientId : undefined,
+    }).catch((err) => console.error("[notify] quote reviewed", err));
   }
 
   return NextResponse.json({ success: true, quote });

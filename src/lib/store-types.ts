@@ -427,6 +427,34 @@ export interface ProCreditWallet {
   updatedAt: string;
 }
 
+export type NotificationAudience = "client" | "pro";
+
+export type NotificationKind =
+  | "contact_interest"
+  | "contact_accepted"
+  | "contact_refused"
+  | "contact_recalled"
+  | "quote_submitted"
+  | "quote_approved"
+  | "quote_rejected"
+  | "bid_placed"
+  | "artisan_selected"
+  | "request_approved"
+  | "request_rejected";
+
+/** Notification in-app (espace particulier ou pro). */
+export interface AppNotification {
+  id: string;
+  audience: NotificationAudience;
+  userId: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  href: string;
+  createdAt: string;
+  readAt?: string;
+}
+
 export interface DataStore {
   clientAccounts: ClientAccount[];
   proRegistrations: ProRegistration[];
@@ -442,6 +470,7 @@ export interface DataStore {
   smsSettings?: SmsCampaignSettings;
   creditWallets: ProCreditWallet[];
   creditTransactions: ProCreditTransaction[];
+  notifications: AppNotification[];
 }
 
 export const EMPTY_STORE: DataStore = {
@@ -459,4 +488,5 @@ export const EMPTY_STORE: DataStore = {
   smsSettings: { ...DEFAULT_SMS_SETTINGS },
   creditWallets: [],
   creditTransactions: [],
+  notifications: [],
 };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendContactInterestEmailToClient } from "@/lib/email";
+import { notifyClientContactInterest } from "@/lib/notify";
 import { formatProTradeSelections } from "@/lib/pro-trades";
 import { getProSession } from "@/lib/pro-auth";
 import {
@@ -68,6 +69,11 @@ export async function POST(request: NextRequest) {
     city: workRequest.city,
     workRequestId: workRequest.id,
   }).catch((err) => console.error("[email] contact interest", err));
+
+  void notifyClientContactInterest({
+    workRequest,
+    companyName: pro.companyName,
+  }).catch((err) => console.error("[notify] contact interest", err));
 
   return NextResponse.json(
     {

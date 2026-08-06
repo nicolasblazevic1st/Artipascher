@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkDecennaleForWorkCategory } from "@/lib/decennale-verification";
 import { validateProQuote } from "@/lib/devis-validation";
+import { notifyClientQuoteSubmitted } from "@/lib/notify";
 import { getProSession } from "@/lib/pro-auth";
 import {
   addProQuote,
@@ -100,6 +101,12 @@ export async function POST(request: NextRequest) {
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+
+  void notifyClientQuoteSubmitted({
+    workRequest,
+    companyName: session.companyName,
+    amount: result.amount,
+  }).catch((err) => console.error("[notify] quote submitted", err));
 
   return NextResponse.json({ success: true, quote: result });
 }

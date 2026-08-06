@@ -18,6 +18,7 @@ import {
   EMPTY_STORE,
   REFERRAL_REWARD_CREDITS,
   REFERRAL_SPEND_THRESHOLD,
+  type AppNotification,
   type ArtisanProspect,
   type Bid,
   type ClientAccount,
@@ -29,6 +30,8 @@ import {
   type DecennaleVerificationStatus,
   type DocumentVerificationStatus,
   type EmailVerificationToken,
+  type NotificationAudience,
+  type NotificationKind,
   type ProCreditTransaction,
   type ProCreditWallet,
   type ProQuote,
@@ -90,6 +93,7 @@ export async function readStore(): Promise<DataStore> {
     },
     creditWallets: parsed.creditWallets ?? [],
     creditTransactions: parsed.creditTransactions ?? [],
+    notifications: parsed.notifications ?? [],
   };
 }
 
@@ -1927,4 +1931,89 @@ export async function getProReferralStats(proId: string): Promise<ProReferralSta
     referrals,
     rewardsEarned: referrals.filter((r) => r.rewardGrantedAt).length * REFERRAL_REWARD_CREDITS,
   };
+}
+
+const MAX_NOTIFICATIONS_PER_USER = 100;
+
+export async function createAppNotification(data: {
+  audience: NotificationAudience;
+  userId: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  href: string;
+}): Promise<AppNotification | null> {
+  if (!data.userId) return null;
+  const store = await readStore();
+  const entry: AppNotification = {
+    id: newId("notif"),
+    audience: data.audience,
+    userId: data.userId,
+    kind: data.kind,
+    title: data.title.trim(),
+    body: data.body.trim(),
+    href: data.href,
+    createdAt: new Date().toISOString(),
+  };
+  store.notifications.unshift(entry);
+
+  const mine = store.notifications.filter(
+    (n) => n.audience === data.audience && n.userId === data.userId
+  );
+  if (mine.length > MAX_NOTIFICATIONS_PER_USER) {
+    const dropIds = new Set(mine.slice(MAX_NOTIFICATIONS_PER_USER).map((n) => n.id));
+    store.notifications = store.notifications.filter((n) => !dropIds.has(n.id));
+  }
+
+  await writeStore(store);
+  return entry;
+}
+
+export async function getNotificationsForUser(
+  audience: NotificationAudience,
+  userId: string,
+  limit = 50
+): Promise<AppNotification[]> {
+  const store = await readStore();
+  return store.notifications
+    .filter((n) => n.audience === audience && n.userId === userId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit);
+}
+
+export async function getUnreadNotificationCount(
+  audience: NotificationAudience,
+  userId: string
+): Promise<number> {
+  const store = await readStore();
+  return store.notifications.filter(
+    (n) => n.audience === audience && n.userId === userId && !n.readAt
+  ).length;
+}
+
+export async function markNotificationsRead(
+  audience: NotificationAudience,
+  userId: string,
+  ids?: string[]
+): Promise<number> {
+  const store = await readStore();
+  const now = new Date().toISOString();
+  let changed = 0;
+  for (const n of store.notifications) {
+    if (n.audience !== audience || n.userId !== userId || n.readAt) continue;
+    if (ids && ids.length > 0 && !ids.includes(n.id)) continue;
+    n.readAt = now;
+    changed += 1;
+  }
+  if (changed > 0) await writeStore(store);
+  return changed;
+}
+
+/** Résout l'id compte particulier lié à une demande. */
+export async function resolveClientUserIdForRequest(
+  workRequest: WorkRequest
+): Promise<string | null> {
+  if (workRequest.clientId) return workRequest.clientId;
+  const client = await getClientByEmail(workRequest.email);
+  return client?.id ?? null;
 }

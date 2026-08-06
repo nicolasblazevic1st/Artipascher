@@ -8,7 +8,8 @@ import { checkBidEligibility } from "@/lib/bid-eligibility";
 import { verifyDevisFileMatchesAmount } from "@/lib/devis-ocr";
 import { validateProofFile } from "@/lib/demandes-validation";
 import { parseAmountToCents, centsToEuros } from "@/lib/money";
-import { resolveAuction } from "@/lib/work-request-auctions";
+import { notifyClientBidPlaced } from "@/lib/notify";
+import { getWorkRequestByAuctionId, resolveAuction } from "@/lib/work-request-auctions";
 import { getProSession } from "@/lib/pro-auth";
 import { isDemoPaymentAllowed } from "@/lib/payments";
 import {
@@ -245,6 +246,15 @@ export async function POST(request: NextRequest) {
       ocrMatchedLabel: ocr.matchedLabel,
       ocrSnippet: ocr.rawSnippet,
     });
+
+    const workRequest = await getWorkRequestByAuctionId(auctionId);
+    if (workRequest) {
+      void notifyClientBidPlaced({
+        workRequest,
+        companyName: pro.companyName,
+        amount,
+      }).catch((err) => console.error("[notify] bid placed", err));
+    }
 
     const newBalance = await getProCreditBalance(session.proId);
     return NextResponse.json({

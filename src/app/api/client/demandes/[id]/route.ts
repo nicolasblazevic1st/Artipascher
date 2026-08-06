@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
+import { notifyProArtisanSelected } from "@/lib/notify";
 import {
   getApprovedProQuotesForAuction,
   getBidsForAuction,
@@ -71,6 +72,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    const quotes = result.request.auctionId
+      ? await getProQuotesForAuction(result.request.auctionId)
+      : [];
+    const selected = quotes.find((q) => q.id === quoteId);
+    if (selected && result.request.auctionId) {
+      void notifyProArtisanSelected({
+        proId: selected.proId,
+        category: result.request.category,
+        city: result.request.city,
+        auctionId: result.request.auctionId,
+        amount: selected.amount,
+      }).catch((err) => console.error("[notify] artisan selected", err));
+    }
     return NextResponse.json({ success: true, request: result.request });
   }
 
@@ -81,6 +95,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
   const result = await selectBidForWorkRequest(id, session.clientId, bidId);
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+
+  const bids = result.request.auctionId
+    ? await getBidsForAuction(result.request.auctionId)
+    : [];
+  const selectedBid = bids.find((b) => b.id === bidId);
+  if (selectedBid && result.request.auctionId) {
+    void notifyProArtisanSelected({
+      proId: selectedBid.proId,
+      category: result.request.category,
+      city: result.request.city,
+      auctionId: result.request.auctionId,
+      amount: selectedBid.amount,
+    }).catch((err) => console.error("[notify] artisan selected", err));
   }
 
   return NextResponse.json({ success: true, request: result.request });
