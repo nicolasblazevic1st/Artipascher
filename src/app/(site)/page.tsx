@@ -8,6 +8,7 @@ import {
   getActiveWorkCategories,
   listPublicAuctions,
 } from "@/lib/work-request-auctions";
+import { shouldShowDemoBanner } from "@/lib/demo-banners";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
 
 const STEPS = [
@@ -29,9 +30,10 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
-  const [activeCategories, auctions] = await Promise.all([
+  const [activeCategories, auctions, showDemoBanner] = await Promise.all([
     getActiveWorkCategories(),
     listPublicAuctions(),
+    shouldShowDemoBanner(),
   ]);
 
   return (
@@ -119,7 +121,11 @@ export default async function HomePage() {
           </div>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {auctions.slice(0, 6).map((auction) => (
-              <AuctionCard key={auction.id} auction={auction} />
+              <AuctionCard
+                key={auction.id}
+                auction={auction}
+                showDemoBanner={showDemoBanner}
+              />
             ))}
           </div>
         </div>

@@ -10,6 +10,7 @@ import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
 import { formatLocation, formatPrice } from "@/lib/data";
+import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
 import {
   getBidsForAuction,
@@ -49,13 +50,15 @@ export default async function ProEnchereDetailPage({ params }: Props) {
     bids.map((b) => b.amount)
   );
 
+  const showDemoBanner = shouldShowDemoBannerForProSession(session);
+
   return (
     <div>
       <Link href="/pro/encheres" className="text-sm font-medium text-brand-700">
         ← Retour aux enchères
       </Link>
 
-      {resolved.isTest && <TestBanner className="mt-4" />}
+      {resolved.isTest && showDemoBanner && <TestBanner className="mt-4" />}
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>

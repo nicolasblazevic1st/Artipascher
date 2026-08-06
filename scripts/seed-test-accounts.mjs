@@ -68,6 +68,7 @@ async function main() {
     client.lastName = client.lastName || "Test";
     client.phone = client.phone || "0612345678";
     client.kind = "individual";
+    client.isTestAccount = true;
   } else {
     client = {
       id: "client-test-001",
@@ -77,6 +78,7 @@ async function main() {
       lastName: "Test",
       phone: "0612345678",
       kind: "individual",
+      isTestAccount: true,
       emailVerified: true,
       emailVerifiedAt: now,
       createdAt: now,
@@ -92,6 +94,7 @@ async function main() {
   if (pro) {
     pro.passwordHash = passwordHash;
     pro.status = "approved";
+    pro.isTestAccount = true;
     pro.rcsVerified = true;
     pro.qualificationLevel = pro.qualificationLevel ?? 1;
     pro.level1CertifiedAt = pro.level1CertifiedAt ?? now;
@@ -135,6 +138,7 @@ async function main() {
       createdAt: now,
       reviewedAt: now,
       referralCode: "APTEST01",
+      isTestAccount: true,
       emailVerified: true,
       emailVerifiedAt: now,
     };

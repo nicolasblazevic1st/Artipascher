@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PublicAuctionsBoard from "@/components/PublicAuctionsBoard";
+import { shouldShowDemoBanner } from "@/lib/demo-banners";
 import { listPublicAuctions } from "@/lib/work-request-auctions";
 
 export const metadata: Metadata = {
@@ -8,7 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default async function EncheresPage() {
-  const auctions = await listPublicAuctions();
+  const [auctions, showDemoBanner] = await Promise.all([
+    listPublicAuctions(),
+    shouldShowDemoBanner(),
+  ]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
@@ -17,7 +21,7 @@ export default async function EncheresPage() {
         Projets en cours dans le Nord (59) et Pas-de-Calais (62)
       </p>
 
-      <PublicAuctionsBoard auctions={auctions} />
+      <PublicAuctionsBoard auctions={auctions} showDemoBanner={showDemoBanner} />
     </div>
   );
 }

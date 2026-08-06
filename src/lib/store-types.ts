@@ -127,6 +127,8 @@ export interface ProRegistration {
   referredByProId?: string;
   /** Horodatage d'application du code de parrainage. */
   referralCodeAppliedAt?: string;
+  /** Compte de démonstration (présentation / tests). */
+  isTestAccount?: boolean;
   /** Horodatage du crédit versé au parrain (après 5 dépenses du filleul). */
   referralRewardGrantedAt?: string;
   /**
@@ -158,6 +160,8 @@ export interface ClientAccount {
    */
   emailVerified?: boolean;
   emailVerifiedAt?: string;
+  /** Compte de démonstration (présentation / tests). */
+  isTestAccount?: boolean;
   createdAt: string;
 }
 
@@ -222,7 +226,7 @@ export interface WorkRequest {
   previousQuoteProofUrl?: string;
   /** Précisions optionnelles (artisan, date…). */
   previousQuoteNote?: string;
-  /** Demande / enchère de démonstration (bandeau TEST). */
+  /** Demande / enchère de démonstration (bande de démonstration). */
   isTest?: boolean;
 }
 

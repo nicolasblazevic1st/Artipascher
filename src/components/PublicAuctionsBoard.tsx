@@ -21,9 +21,13 @@ interface CitySuggestion {
 
 interface Props {
   auctions: Auction[];
+  showDemoBanner?: boolean;
 }
 
-export default function PublicAuctionsBoard({ auctions }: Props) {
+export default function PublicAuctionsBoard({
+  auctions,
+  showDemoBanner = true,
+}: Props) {
   const [mode, setMode] = useState<ZoneMode>("all");
   const [department, setDepartment] = useState<DepartmentFilter>("all");
   const [radiusKm, setRadiusKm] = useState<(typeof RADIUS_OPTIONS)[number]>(20);
@@ -251,7 +255,11 @@ export default function PublicAuctionsBoard({ auctions }: Props) {
       ) : (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((auction) => (
-            <AuctionCard key={auction.id} auction={auction} />
+            <AuctionCard
+              key={auction.id}
+              auction={auction}
+              showDemoBanner={showDemoBanner}
+            />
           ))}
         </div>
       )}

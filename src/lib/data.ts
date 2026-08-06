@@ -24,7 +24,7 @@ export interface Auction {
   bidCount: number;
   status: AuctionStatus;
   endsAt: string;
-  /** Affiche le bandeau TEST (démo / seed). */
+  /** Enchère de démonstration (bande de démonstration). */
   isTest?: boolean;
   /** Première photo projet (visible sans crédit). */
   coverPhotoUrl?: string;

@@ -7,7 +7,13 @@ import {
   formatPrice,
 } from "@/lib/data";
 
-export default function AuctionCard({ auction }: { auction: Auction }) {
+export default function AuctionCard({
+  auction,
+  showDemoBanner = true,
+}: {
+  auction: Auction;
+  showDemoBanner?: boolean;
+}) {
   const savings = auction.startPrice - auction.currentPrice;
 
   return (
@@ -20,7 +26,7 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
         />
       )}
       <div className="flex flex-1 flex-col p-5">
-      {auction.isTest && <TestBanner className="mb-3" />}
+      {auction.isTest && showDemoBanner && <TestBanner className="mb-3" />}
       <div className="mb-3 flex items-start justify-between gap-3">
         <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
           {CATEGORY_LABELS[auction.category]}

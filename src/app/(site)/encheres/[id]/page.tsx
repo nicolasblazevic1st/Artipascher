@@ -9,6 +9,7 @@ import TestBanner from "@/components/TestBanner";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
+import { shouldShowDemoBanner } from "@/lib/demo-banners";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
@@ -70,6 +71,7 @@ export default async function EnchereDetailPage({ params }: Props) {
   const categoryLabel = workCategory;
 
   const isTest = resolved.isTest === true || workRequest?.isTest === true;
+  const showDemoBanner = await shouldShowDemoBanner();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
@@ -77,7 +79,7 @@ export default async function EnchereDetailPage({ params }: Props) {
         ← Retour aux enchères
       </Link>
 
-      {isTest && <TestBanner className="mt-6" />}
+      {isTest && showDemoBanner && <TestBanner className="mt-6" />}
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -86,7 +88,7 @@ export default async function EnchereDetailPage({ params }: Props) {
               <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
                 {categoryLabel}
               </span>
-              {isTest && <TestBanner compact />}
+              {isTest && showDemoBanner && <TestBanner compact />}
             </div>
             <h1 className="mt-3 text-3xl font-bold text-slate-900">
               {resolved.title}

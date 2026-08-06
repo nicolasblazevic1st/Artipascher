@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import TestBanner from "@/components/TestBanner";
+import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
 import { CATEGORY_LABELS, formatLocation, formatPrice } from "@/lib/data";
@@ -15,6 +16,7 @@ export default async function ProEncheresPage() {
   if (!session) return null;
 
   const auctions = await getEnrichedAuctions(session.proId);
+  const showDemoBanner = shouldShowDemoBannerForProSession(session);
 
   return (
     <div>
@@ -42,7 +44,7 @@ export default async function ProEncheresPage() {
                 <td className="px-4 py-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-slate-900">{auction.title}</p>
-                    {auction.isTest && <TestBanner compact />}
+                    {auction.isTest && showDemoBanner && <TestBanner compact />}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-500 sm:hidden">
                     {formatLocation(auction.city, auction.department)}
