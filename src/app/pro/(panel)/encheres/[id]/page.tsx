@@ -58,11 +58,12 @@ export default async function ProEnchereDetailPage({ params }: Props) {
         ← Retour aux enchères
       </Link>
 
-      {resolved.isTest && showDemoBanner && <TestBanner className="mt-4" />}
-
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{resolved.title}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-900">{resolved.title}</h1>
+            {resolved.isTest && showDemoBanner && <TestBanner />}
+          </div>
           <p className="mt-1 text-sm text-slate-500">
             {workRequest
               ? formatPublicLocation(workRequest)

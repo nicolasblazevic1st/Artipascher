@@ -44,7 +44,7 @@ export default async function ProEncheresPage() {
                 <td className="px-4 py-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium text-slate-900">{auction.title}</p>
-                    {auction.isTest && showDemoBanner && <TestBanner compact />}
+                    {auction.isTest && showDemoBanner && <TestBanner />}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-500 sm:hidden">
                     {formatLocation(auction.city, auction.department)}

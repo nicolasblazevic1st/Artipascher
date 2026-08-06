@@ -26,11 +26,13 @@ export default function AuctionCard({
         />
       )}
       <div className="flex flex-1 flex-col p-5">
-      {auction.isTest && showDemoBanner && <TestBanner className="mb-3" />}
       <div className="mb-3 flex items-start justify-between gap-3">
-        <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-          {CATEGORY_LABELS[auction.category]}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+            {CATEGORY_LABELS[auction.category]}
+          </span>
+          {auction.isTest && showDemoBanner && <TestBanner />}
+        </div>
         <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
           Active
         </span>
