@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
         a.siret,
         a.siren,
         a.nafCode,
+        ...(a.nafSecondaryCodes ?? []),
         a.phone ?? "",
         a.postalCode,
       ]

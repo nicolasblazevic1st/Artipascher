@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { NafCodeLabel, NafCodeList } from "@/components/NafCodeLabel";
 import type { CompanyAgeCohort } from "@/lib/artisans-for-chantier";
+import { formatNafList } from "@/lib/naf-trade-groups";
 
 interface ArtisanRow {
   siret: string;
@@ -10,6 +12,8 @@ interface ArtisanRow {
   postalCode: string;
   department: string;
   nafCode: string;
+  nafSecondaryCodes?: string[];
+  matchedNafCode: string;
   companyCreatedAt?: string;
   ageCohort: CompanyAgeCohort;
   distanceKm: number | null;
@@ -145,7 +149,8 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
 
       <p className="mt-2 text-[11px] text-slate-500">
         Filtres obligatoires : statut actif · NAF de la catégorie
-        {category ? ` « ${category} »` : ""}. Tri : distance croissante.
+        {category ? ` « ${category} »` : ""} (principal ou autre établissement du
+        SIREN). Tri : distance croissante.
       </p>
 
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -173,7 +178,7 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
           </div>
           {nafCodes.length > 0 && (
             <p className="text-[11px] text-slate-500">
-              NAF ciblés : {nafCodes.join(", ")}
+              NAF ciblés : {formatNafList(nafCodes, ", ")}
             </p>
           )}
 
@@ -212,7 +217,22 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
                           {a.city} ({a.postalCode}) · {a.siret}
                         </div>
                       </td>
-                      <td className="px-2 py-1.5 text-slate-600">{a.nafCode}</td>
+                      <td className="px-2 py-1.5 text-slate-600">
+                        <div>
+                          <NafCodeLabel code={a.nafCode} />
+                          {a.matchedNafCode !== a.nafCode && (
+                            <div className="mt-0.5 text-[10px] text-brand-700">
+                              Match via {a.matchedNafCode}
+                            </div>
+                          )}
+                        </div>
+                        {a.nafSecondaryCodes && a.nafSecondaryCodes.length > 0 && (
+                          <div className="mt-0.5 text-[10px] text-slate-500">
+                            Autres :{" "}
+                            <NafCodeList codes={a.nafSecondaryCodes} separator=", " />
+                          </div>
+                        )}
+                      </td>
                       <td className="px-2 py-1.5">
                         <span
                           className={

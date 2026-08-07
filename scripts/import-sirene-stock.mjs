@@ -107,6 +107,33 @@ function deptFromPostal(postal) {
   return null;
 }
 
+/** NAF secondaires = autres APET actifs du même SIREN (+ APEN si déjà posé). */
+function computeNafSecondaryForArtisans(artisans) {
+  const bySiren = new Map();
+  for (const a of artisans) {
+    if (a.status !== "active") continue;
+    const code = normalizeNaf(a.nafCode);
+    if (!code) continue;
+    if (!bySiren.has(a.siren)) bySiren.set(a.siren, new Set());
+    bySiren.get(a.siren).add(code);
+  }
+  for (const a of artisans) {
+    const primary = normalizeNaf(a.nafCode);
+    const merged = new Set(
+      (a.nafSecondaryCodes ?? []).map(normalizeNaf).filter(Boolean)
+    );
+    merged.delete(primary);
+    const sibling = bySiren.get(a.siren);
+    if (sibling) {
+      for (const code of sibling) {
+        if (code !== primary) merged.add(code);
+      }
+    }
+    a.nafSecondaryCodes =
+      merged.size > 0 ? [...merged].sort((x, y) => x.localeCompare(y)) : undefined;
+  }
+}
+
 /** Parse CSV line (INSEE: comma-separated, optional quotes). */
 function parseCsvLine(line) {
   const out = [];
@@ -388,6 +415,8 @@ async function main() {
   const sirensNeeded = new Set([...matched.values()].map((r) => r.siren));
   /** @type {Map<string, string>} */
   const names = new Map();
+  /** @type {Map<string, string>} */
+  const apenBySiren = new Map();
   console.log(`Résolution noms (unités légales) pour ${sirensNeeded.size.toLocaleString("fr-FR")} SIREN…`);
   await streamCsv(ulCsv, async (row) => {
     const siren = String(row.siren ?? "").trim();
@@ -397,6 +426,8 @@ async function main() {
       [row.prenom1UniteLegale, row.nomUniteLegale].filter(Boolean).join(" ").trim() ||
       (row.nomUsageUniteLegale || "").trim();
     if (name) names.set(siren, name);
+    const apen = normalizeNaf(row.activitePrincipaleUniteLegale ?? "");
+    if (apen) apenBySiren.set(siren, apen);
   });
 
   let named = 0;
@@ -415,6 +446,15 @@ async function main() {
     }
   }
   console.log(`Noms complétés via unité légale: ${named.toLocaleString("fr-FR")}`);
+
+  for (const row of matched.values()) {
+    const apen = apenBySiren.get(row.siren);
+    const primary = normalizeNaf(row.nafCode);
+    if (apen && apen !== primary) {
+      row.nafSecondaryCodes = [apen];
+    }
+  }
+  computeNafSecondaryForArtisans([...matched.values()]);
 
   const topNaf = [...byNaf.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20);
   let unmapped = 0;
@@ -507,6 +547,8 @@ async function main() {
       updated += 1;
     }
   }
+
+  computeNafSecondaryForArtisans(db.artisans);
 
   db.jobs = [
     {

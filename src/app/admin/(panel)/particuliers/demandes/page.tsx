@@ -8,6 +8,7 @@ import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatPrice } from "@/lib/data";
+import { formatNafList } from "@/lib/naf-trade-groups";
 import type { WorkRequest } from "@/lib/store-types";
 
 const STATUS_LABELS = {
@@ -144,7 +145,7 @@ export default function AdminDemandesPage() {
                       {r.nafCodes && r.nafCodes.length > 0 && (
                         <span className="text-slate-400">
                           {" "}
-                          · NAF {r.nafCodes.join(", ")}
+                          · {formatNafList(r.nafCodes, ", ")}
                         </span>
                       )}
                     </div>

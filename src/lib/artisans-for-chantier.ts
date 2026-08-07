@@ -13,7 +13,11 @@ import {
 } from "./geo-distance";
 import { geocodeCity } from "./geo";
 import { resolveWorkRequestNafCodes } from "./naf-codes";
-import { normalizeNafCode } from "./naf-trade-groups";
+import {
+  artisanMatchesNafCodes,
+  collectArtisanNafCodes,
+  normalizeNafCode,
+} from "./naf-trade-groups";
 import type { WorkRequest } from "./store-types";
 
 const TWO_YEARS_MS = 2 * 365.25 * 24 * 60 * 60 * 1000;
@@ -28,6 +32,9 @@ export interface ChantierArtisanRow {
   postalCode: string;
   department: "59" | "62";
   nafCode: string;
+  nafSecondaryCodes?: string[];
+  /** NAF qui a déclenché le match (principal ou secondaire). */
+  matchedNafCode: string;
   companyCreatedAt?: string;
   ageCohort: CompanyAgeCohort;
   distanceKm: number | null;
@@ -117,8 +124,11 @@ export async function searchArtisansForChantier(
   for (const a of active) {
     if (a.optedOut) continue;
     if (a.department !== request.department) continue;
-    const naf = normalizeNafCode(a.nafCode);
-    if (!nafSet.has(naf)) continue;
+    if (!artisanMatchesNafCodes(a, nafCodes)) continue;
+
+    const matchedNafCode =
+      collectArtisanNafCodes(a).find((code) => nafSet.has(code)) ??
+      normalizeNafCode(a.nafCode);
 
     const ageCohort = companyAgeCohort(a.companyCreatedAt);
     if (ageFilter !== "all" && ageCohort !== ageFilter) continue;
@@ -149,7 +159,9 @@ export async function searchArtisansForChantier(
       city: a.city,
       postalCode: a.postalCode,
       department: a.department,
-      nafCode: naf,
+      nafCode: normalizeNafCode(a.nafCode),
+      nafSecondaryCodes: a.nafSecondaryCodes,
+      matchedNafCode,
       companyCreatedAt: a.companyCreatedAt,
       ageCohort,
       distanceKm,

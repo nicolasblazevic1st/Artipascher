@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { NafCodeLabel, NafCodeList } from "@/components/NafCodeLabel";
+import { formatNafWithLabel } from "@/lib/naf-trade-groups";
 
 interface ArtisanRow {
   siret: string;
@@ -10,6 +12,7 @@ interface ArtisanRow {
   postalCode: string;
   department: "59" | "62";
   nafCode: string;
+  nafSecondaryCodes?: string[];
   phone?: string;
   enrichmentStatus: string;
   status: string;
@@ -26,7 +29,7 @@ interface Stats {
   invalidPhone: number;
   unmappedCategory: number;
   byDepartment: Record<string, number>;
-  topNaf: Array<{ naf: string; count: number; mapped: boolean }>;
+  topNaf: Array<{ naf: string; count: number; mapped: boolean; label?: string }>;
   remaining: number;
   placesEnabled: boolean;
   quota: {
@@ -460,7 +463,18 @@ export default function AdminBaseArtisansPage() {
                   </div>
                 </td>
                 <td className="px-3 py-2">
-                  <div>{row.nafCode}</div>
+                  <div>
+                    <NafCodeLabel code={row.nafCode} />
+                  </div>
+                  {row.nafSecondaryCodes && row.nafSecondaryCodes.length > 0 && (
+                    <div className="mt-1 text-xs text-slate-500">
+                      Autres NAF :{" "}
+                      <NafCodeList
+                        codes={row.nafSecondaryCodes}
+                        separator=", "
+                      />
+                    </div>
+                  )}
                   {!row.mappedToCategory && (
                     <span className="mt-0.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
                       Hors cat.
@@ -554,7 +568,7 @@ export default function AdminBaseArtisansPage() {
             {stats.topNaf.map((n) => (
               <li key={n.naf} className="flex justify-between gap-2 text-slate-700">
                 <span>
-                  {n.naf}
+                  {formatNafWithLabel(n.naf)}
                   {!n.mapped && (
                     <span className="ml-1 text-amber-700">(hors cat.)</span>
                   )}

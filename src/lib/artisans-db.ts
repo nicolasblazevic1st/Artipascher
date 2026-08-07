@@ -9,6 +9,7 @@ import {
   type EnrichmentJobKind,
   type QuotaTracking,
 } from "./artisans-types";
+import { normalizeNafCode, getNafLabel } from "./naf-trade-groups";
 
 const DB_PATH = path.join(process.cwd(), "data", "artisans-enrichment.json");
 
@@ -369,8 +370,49 @@ export async function bulkUpsertArtisans(
       updated += 1;
     }
 
+    computeNafSecondaryForArtisans(db.artisans);
     await writeArtisansDb(db);
     return { inserted, updated };
+  });
+}
+
+/** Agrège les NAF des autres établissements actifs du même SIREN. */
+export function computeNafSecondaryForArtisans(
+  artisans: EnrichedArtisan[]
+): void {
+  const bySiren = new Map<string, Set<string>>();
+  for (const a of artisans) {
+    if (a.status !== "active") continue;
+    const code = normalizeNafCode(a.nafCode);
+    if (!code) continue;
+    if (!bySiren.has(a.siren)) bySiren.set(a.siren, new Set());
+    bySiren.get(a.siren)!.add(code);
+  }
+
+  for (const a of artisans) {
+    const primary = normalizeNafCode(a.nafCode);
+    const merged = new Set(
+      (a.nafSecondaryCodes ?? []).map(normalizeNafCode).filter(Boolean)
+    );
+    merged.delete(primary);
+    const sibling = bySiren.get(a.siren);
+    if (sibling) {
+      for (const code of sibling) {
+        if (code !== primary) merged.add(code);
+      }
+    }
+    a.nafSecondaryCodes =
+      merged.size > 0 ? [...merged].sort((x, y) => x.localeCompare(y)) : undefined;
+  }
+}
+
+export async function backfillNafSecondaryCodes(): Promise<number> {
+  return enqueueWrite(async () => {
+    const db = await readArtisansDb();
+    computeNafSecondaryForArtisans(db.artisans);
+    await writeArtisansDb(db);
+    return db.artisans.filter((a) => (a.nafSecondaryCodes?.length ?? 0) > 0)
+      .length;
   });
 }
 
@@ -394,7 +436,12 @@ export async function getArtisansStats() {
   const topNaf = [...nafCounts.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15)
-    .map(([naf, count]) => ({ naf, count, mapped: isMappedToPlatformCategory(naf) }));
+    .map(([naf, count]) => ({
+      naf,
+      count,
+      mapped: isMappedToPlatformCategory(naf),
+      label: getNafLabel(naf),
+    }));
 
   return {
     total: db.artisans.length,

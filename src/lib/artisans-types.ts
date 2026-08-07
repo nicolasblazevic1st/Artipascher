@@ -21,7 +21,14 @@ export interface EnrichedArtisan {
   postalCode: string;
   city: string;
   department: ArtisanDepartment;
+  /** Activité principale (APET) de l’établissement. */
   nafCode: string;
+  /**
+   * Autres NAF connus pour cet établissement (agrégés depuis le SIREN :
+   * autres établissements actifs, APEN unité légale si différent).
+   * SIRENE open data ne diffuse pas les activités secondaires déclarées sur un même SIRET.
+   */
+  nafSecondaryCodes?: string[];
   companyCreatedAt?: string;
   status: ArtisanStatus;
   closedAt?: string;

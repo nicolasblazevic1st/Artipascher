@@ -5,6 +5,7 @@ import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatPrice } from "@/lib/data";
+import { formatNafList } from "@/lib/naf-trade-groups";
 import {
   getApprovedProQuotesForAuction,
   getBidsForAuction,
@@ -114,7 +115,9 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
               {workRequest.nafCodes && workRequest.nafCodes.length > 0 && (
                 <div>
                   <dt className="text-xs text-slate-400">NAF ciblés</dt>
-                  <dd className="text-slate-700">{workRequest.nafCodes.join(", ")}</dd>
+                  <dd className="text-slate-700">
+                    {formatNafList(workRequest.nafCodes, ", ")}
+                  </dd>
                 </div>
               )}
             </dl>

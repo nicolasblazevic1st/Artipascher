@@ -2,7 +2,20 @@ import { getJobsForTradeGroup } from "./qualibat-job-groups";
 
 /** Libellés NAF rév. 2 (section F — construction & services associés). */
 export const NAF_LABELS: Record<string, string> = {
+  "41.10A": "Promotion immobilière de logements",
+  "41.10B": "Promotion immobilière de bureaux",
+  "41.10C": "Promotion immobilière d'autres bâtiments",
+  "41.10D": "Supports juridiques de programmes",
   "41.20A": "Construction de maisons individuelles",
+  "41.20B": "Construction d'autres bâtiments",
+  "42.11Z": "Construction de routes et autoroutes",
+  "42.12Z": "Construction de voies ferrées",
+  "42.13A": "Construction d'ouvrages d'art",
+  "42.13B": "Construction et entretien de tunnels",
+  "42.21Z": "Construction de réseaux pour fluides",
+  "42.22Z": "Construction de réseaux électriques",
+  "42.91Z": "Construction d'ouvrages maritimes",
+  "42.99Z": "Construction d'autres ouvrages de génie civil",
   "43.11Z": "Travaux de démolition",
   "43.12A": "Travaux de terrassement courants",
   "43.12B": "Travaux de terrassement spécialisés ou de grande masse",
@@ -18,8 +31,15 @@ export const NAF_LABELS: Record<string, string> = {
   "43.34Z": "Travaux de peinture et vitrerie",
   "43.91A": "Travaux de charpente",
   "43.91B": "Travaux de couverture",
+  "43.99A": "Travaux d'étanchéification",
+  "43.99B": "Travaux de montage de structures métalliques",
   "43.99C": "Travaux de maçonnerie générale et gros œuvre",
+  "43.99D": "Autres travaux spécialisés de construction",
+  "43.99E": "Location avec opérateur de matériel de construction",
   "25.11Z": "Fabrication de structures métalliques et de parties de structures",
+  "52.10B": "Entreposage et stockage non frigorifique",
+  "68.31Z": "Agences immobilières",
+  "82.11Z": "Services administratifs combinés de bureau",
   "81.21Z": "Nettoyage courant des bâtiments",
   "81.22Z": "Autres activités de nettoyage des bâtiments",
   "81.29B": "Autres activités de nettoyage",
@@ -83,6 +103,52 @@ export function normalizeNafCode(code: string): string {
 export function getNafLabel(nafCode: string): string {
   const normalized = normalizeNafCode(nafCode);
   return NAF_LABELS[normalized] ?? `Activité NAF ${normalized}`;
+}
+
+/** Affichage admin : `43.22A (Travaux d'installation d'eau et de gaz)`. */
+export function formatNafWithLabel(nafCode: string): string {
+  const code = normalizeNafCode(nafCode);
+  if (!code) return "";
+  return `${code} (${getNafLabel(code)})`;
+}
+
+export function formatNafList(
+  nafCodes: readonly string[],
+  separator = " · "
+): string {
+  const seen = new Set<string>();
+  const parts: string[] = [];
+  for (const raw of nafCodes) {
+    const code = normalizeNafCode(raw);
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    parts.push(formatNafWithLabel(code));
+  }
+  return parts.join(separator);
+}
+
+export function collectArtisanNafCodes(artisan: {
+  nafCode: string;
+  nafSecondaryCodes?: string[];
+}): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of [artisan.nafCode, ...(artisan.nafSecondaryCodes ?? [])]) {
+    const code = normalizeNafCode(raw);
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    out.push(code);
+  }
+  return out;
+}
+
+export function artisanMatchesNafCodes(
+  artisan: { nafCode: string; nafSecondaryCodes?: string[] },
+  targetNafCodes: readonly string[]
+): boolean {
+  const target = new Set(targetNafCodes.map(normalizeNafCode).filter(Boolean));
+  if (target.size === 0) return false;
+  return collectArtisanNafCodes(artisan).some((code) => target.has(code));
 }
 
 export function getTradeGroupIdsForNaf(nafCode: string): string[] {

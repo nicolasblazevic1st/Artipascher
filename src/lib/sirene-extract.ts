@@ -10,6 +10,7 @@ import {
   type EnrichedArtisan,
 } from "./artisans-types";
 import { geocodeAddress } from "./geo";
+import { normalizeNafCode } from "./naf-trade-groups";
 
 const ENTREPRISES_API = "https://recherche-entreprises.api.gouv.fr";
 const PER_PAGE = 25;
@@ -103,6 +104,7 @@ function extractEstablishments(
   city: string;
   department: ArtisanDepartment;
   nafCode: string;
+  nafSecondaryCodes?: string[];
   companyCreatedAt?: string;
   lat?: number;
   lon?: number;
@@ -116,6 +118,7 @@ function extractEstablishments(
     city: string;
     department: ArtisanDepartment;
     nafCode: string;
+    nafSecondaryCodes?: string[];
     companyCreatedAt?: string;
     lat?: number;
     lon?: number;
@@ -136,6 +139,12 @@ function extractEstablishments(
 
     const lat = est.latitude ? Number(est.latitude) : undefined;
     const lon = est.longitude ? Number(est.longitude) : undefined;
+    const estNaf = normalizeNafCode(
+      est.activite_principale ?? company.activite_principale ?? naf
+    );
+    const companyNaf = normalizeNafCode(company.activite_principale ?? "");
+    const nafSecondaryCodes =
+      companyNaf && companyNaf !== estNaf ? [companyNaf] : undefined;
 
     out.push({
       siret: est.siret,
@@ -145,7 +154,8 @@ function extractEstablishments(
       postalCode: est.code_postal ?? "",
       city: est.libelle_commune ?? "",
       department: dep,
-      nafCode: est.activite_principale ?? company.activite_principale ?? naf,
+      nafCode: estNaf,
+      nafSecondaryCodes,
       companyCreatedAt: est.date_creation ?? company.date_creation,
       lat: Number.isFinite(lat) ? lat : undefined,
       lon: Number.isFinite(lon) ? lon : undefined,
@@ -263,6 +273,7 @@ export async function syncSireneWeekly(
               city: est.city,
               department: est.department,
               nafCode: est.nafCode,
+              nafSecondaryCodes: est.nafSecondaryCodes,
               companyCreatedAt: est.companyCreatedAt,
               status: "active",
               lat,
