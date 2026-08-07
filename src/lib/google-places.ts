@@ -4,6 +4,10 @@ export interface PlacesLookupResult {
   ok: boolean;
   phone?: string;
   website?: string;
+  /** Note Google Maps (1.0–5.0). */
+  rating?: number;
+  /** Nombre d’avis Google. */
+  userRatingCount?: number;
   matched: boolean;
   /** Nombre d'appels HTTP Google facturés (Search + Details). */
   requestsUsed: number;
@@ -103,7 +107,8 @@ export async function lookupPlacePhone(query: {
         method: "GET",
         headers: {
           "X-Goog-Api-Key": key,
-          "X-Goog-FieldMask": "id,nationalPhoneNumber,internationalPhoneNumber,websiteUri",
+          "X-Goog-FieldMask":
+            "id,nationalPhoneNumber,internationalPhoneNumber,websiteUri,rating,userRatingCount",
         },
       }
     );
@@ -124,6 +129,8 @@ export async function lookupPlacePhone(query: {
       nationalPhoneNumber?: string;
       internationalPhoneNumber?: string;
       websiteUri?: string;
+      rating?: number;
+      userRatingCount?: number;
     };
 
     const rawPhone =
@@ -139,6 +146,15 @@ export async function lookupPlacePhone(query: {
       placeId,
       phone,
       website: details.websiteUri?.trim() || undefined,
+      rating:
+        typeof details.rating === "number" && Number.isFinite(details.rating)
+          ? details.rating
+          : undefined,
+      userRatingCount:
+        typeof details.userRatingCount === "number" &&
+        Number.isFinite(details.userRatingCount)
+          ? details.userRatingCount
+          : undefined,
     };
   } catch (e) {
     return {

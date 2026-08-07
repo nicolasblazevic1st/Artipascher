@@ -312,6 +312,68 @@ export async function addEnrichmentJob(
   });
 }
 
+export async function bulkUpsertArtisans(
+  rows: Array<
+    Omit<EnrichedArtisan, "createdAt" | "updatedAt"> & { createdAt?: string }
+  >,
+  options?: { preserveContact?: boolean }
+): Promise<{ inserted: number; updated: number }> {
+  if (rows.length === 0) return { inserted: 0, updated: 0 };
+  return enqueueWrite(async () => {
+    const db = await readArtisansDb();
+    const now = new Date().toISOString();
+    const preserve = options?.preserveContact !== false;
+    const bySiret = new Map(db.artisans.map((a, i) => [a.siret, i]));
+    let inserted = 0;
+    let updated = 0;
+
+    for (const data of rows) {
+      const index = bySiret.get(data.siret);
+      if (index == null) {
+        const entry: EnrichedArtisan = {
+          ...data,
+          createdAt: data.createdAt ?? now,
+          updatedAt: now,
+        };
+        bySiret.set(data.siret, db.artisans.length);
+        db.artisans.push(entry);
+        inserted += 1;
+        continue;
+      }
+
+      const existing = db.artisans[index];
+      const next: EnrichedArtisan = {
+        ...existing,
+        ...data,
+        phone: preserve && existing.phone ? existing.phone : data.phone,
+        website: preserve && existing.website ? existing.website : data.website,
+        enrichmentStatus:
+          preserve && existing.phone && data.enrichmentStatus === "pending"
+            ? existing.enrichmentStatus
+            : data.enrichmentStatus ?? existing.enrichmentStatus,
+        enrichedAt: existing.enrichedAt,
+        lastVerifiedAt: existing.lastVerifiedAt,
+        lastSmsFailedAt: existing.lastSmsFailedAt,
+        optedOut: existing.optedOut,
+        createdAt: existing.createdAt,
+        updatedAt: now,
+      };
+      if (!preserve) {
+        next.phone = data.phone;
+        next.website = data.website;
+        next.enrichmentStatus = data.enrichmentStatus;
+        next.enrichedAt = data.enrichedAt;
+        next.lastVerifiedAt = data.lastVerifiedAt;
+      }
+      db.artisans[index] = next;
+      updated += 1;
+    }
+
+    await writeArtisansDb(db);
+    return { inserted, updated };
+  });
+}
+
 export async function getArtisansStats() {
   const db = await readArtisansDb();
   const quota = await getOrCreateQuota();
@@ -320,6 +382,20 @@ export async function getArtisansStats() {
   const pending = active.filter((a) => a.enrichmentStatus === "pending");
   const invalid = active.filter((a) => a.enrichmentStatus === "invalid_phone");
   const used = quota.requestsProduction + quota.requestsEnrichment;
+
+  const { isMappedToPlatformCategory } = await import("./acquisition-naf");
+  const unmapped = active.filter((a) => !isMappedToPlatformCategory(a.nafCode));
+  const byDepartment: Record<string, number> = { "59": 0, "62": 0 };
+  const nafCounts = new Map<string, number>();
+  for (const a of active) {
+    byDepartment[a.department] = (byDepartment[a.department] ?? 0) + 1;
+    nafCounts.set(a.nafCode, (nafCounts.get(a.nafCode) ?? 0) + 1);
+  }
+  const topNaf = [...nafCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([naf, count]) => ({ naf, count, mapped: isMappedToPlatformCategory(naf) }));
+
   return {
     total: db.artisans.length,
     active: active.length,
@@ -327,6 +403,9 @@ export async function getArtisansStats() {
     withPhone: withPhone.length,
     pendingEnrichment: pending.length,
     invalidPhone: invalid.length,
+    unmappedCategory: unmapped.length,
+    byDepartment,
+    topNaf,
     geocoded: active.filter((a) => a.lat != null && a.lon != null).length,
     quota,
     remaining: Math.max(0, quota.monthlyLimit - used),

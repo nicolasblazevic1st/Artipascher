@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
@@ -110,7 +111,24 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
                 <dt className="text-xs text-slate-400">Id demande</dt>
                 <dd className="font-mono text-xs text-slate-500">{workRequest.id}</dd>
               </div>
+              {workRequest.nafCodes && workRequest.nafCodes.length > 0 && (
+                <div>
+                  <dt className="text-xs text-slate-400">NAF ciblés</dt>
+                  <dd className="text-slate-700">{workRequest.nafCodes.join(", ")}</dd>
+                </div>
+              )}
             </dl>
+          )}
+          {workRequest && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold text-slate-900">
+                Artisans autour du chantier
+              </h3>
+              <NearbyBusinessesPanel
+                requestId={workRequest.id}
+                category={workRequest.category}
+              />
+            </div>
           )}
         </section>
 

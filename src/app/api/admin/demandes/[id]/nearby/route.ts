@@ -1,50 +1,76 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import {
-  findNearbyBusinesses,
-  getSmsEligibleBusinesses,
-} from "@/lib/nearby-businesses";
-import { readStore } from "@/lib/store";
+  searchArtisansForChantier,
+  type CompanyAgeCohort,
+} from "@/lib/artisans-for-chantier";
+import { defaultNearbyRadiusKm } from "@/lib/geo-distance";
+import { resolveWorkRequestNafCodes } from "@/lib/naf-codes";
+import { ensureWorkRequestNafCodes } from "@/lib/store";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: NextRequest, context: RouteContext) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
 
   const { id } = await context.params;
-  const store = await readStore();
-  const request = store.workRequests.find((r) => r.id === id);
+  const workRequest = await ensureWorkRequestNafCodes(id);
 
-  if (!request) {
+  if (!workRequest) {
     return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
   }
 
-  const { businesses, geoFound } = await findNearbyBusinesses({
-    city: request.city,
-    department: request.department,
-    category: request.category,
-  });
+  const { searchParams } = request.nextUrl;
+  const radiusRaw = Number(searchParams.get("radiusKm") ?? defaultNearbyRadiusKm());
+  const radiusKm =
+    Number.isFinite(radiusRaw) && radiusRaw > 0
+      ? Math.min(80, Math.max(1, radiusRaw))
+      : defaultNearbyRadiusKm();
 
-  const platformCount = businesses.filter((b) => b.source === "platform").length;
-  const gouvCount = businesses.filter((b) => b.source === "gouv").length;
-  const smsEligible = getSmsEligibleBusinesses(businesses);
+  const ageParam = searchParams.get("ageCohort") ?? "all";
+  const ageCohort = (
+    ["all", "young", "established"].includes(ageParam) ? ageParam : "all"
+  ) as CompanyAgeCohort | "all";
+
+  const phoneParam = searchParams.get("hasPhone") ?? "all";
+  const hasPhone = (
+    ["all", "yes", "no"].includes(phoneParam) ? phoneParam : "all"
+  ) as "all" | "yes" | "no";
+
+  const limitRaw = Number(searchParams.get("limit") ?? 100);
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(500, Math.max(1, Math.floor(limitRaw)))
+    : 100;
+
+  const result = await searchArtisansForChantier(workRequest, {
+    radiusKm,
+    ageCohort,
+    hasPhone,
+    limit,
+  });
 
   return NextResponse.json({
     requestId: id,
-    city: request.city,
-    department: request.department,
-    category: request.category,
-    geoFound,
+    city: workRequest.city,
+    department: workRequest.department,
+    category: workRequest.category,
+    nafCodes: result.nafCodes.length
+      ? result.nafCodes
+      : resolveWorkRequestNafCodes(workRequest),
+    origin: result.origin,
+    geoFound: result.geoFound,
+    radiusKm: result.radiusKm,
     stats: {
-      total: businesses.length,
-      platform: platformCount,
-      gouv: gouvCount,
-      smsEligible: smsEligible.length,
+      total: result.total,
+      withCoords: result.withCoords,
+      young: result.young,
+      established: result.established,
+      withPhone: result.withPhone,
+      returned: result.artisans.length,
     },
-    businesses: businesses.slice(0, 50),
-    note:
-      "La base SIRENE ne diffuse pas les mobiles. Enrichissez les téléphones dans Campagnes SMS, puis sélectionnez les destinataires.",
+    artisans: result.artisans,
+    filters: { ageCohort, hasPhone, radiusKm, limit },
   });
 }

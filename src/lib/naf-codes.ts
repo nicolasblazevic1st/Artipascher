@@ -1,5 +1,7 @@
 /** Codes NAF (INSEE) associés aux catégories de travaux Artipascher. */
 
+import { normalizeNafCode } from "./naf-trade-groups";
+
 export const CATEGORY_NAF_CODES: Record<string, string[]> = {
   Peinture: ["43.34Z"],
   Plomberie: ["43.22A", "43.22B"],
@@ -24,4 +26,19 @@ export const DEFAULT_CONSTRUCTION_NAF = ["43.99C"];
 
 export function getNafCodesForCategory(category: string): string[] {
   return CATEGORY_NAF_CODES[category] ?? DEFAULT_CONSTRUCTION_NAF;
+}
+
+/** NAF stockés sur l’annonce, sinon dérivés de la catégorie. */
+export function resolveWorkRequestNafCodes(request: {
+  category: string;
+  nafCodes?: string[];
+}): string[] {
+  if (request.nafCodes && request.nafCodes.length > 0) {
+    return [
+      ...new Set(
+        request.nafCodes.map((c) => normalizeNafCode(c)).filter(Boolean)
+      ),
+    ];
+  }
+  return getNafCodesForCategory(request.category).map(normalizeNafCode);
 }

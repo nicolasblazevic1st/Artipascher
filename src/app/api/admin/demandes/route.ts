@@ -4,12 +4,17 @@ import { createShareToken } from "@/lib/share";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { notifyClientRequestReviewed } from "@/lib/notify";
 import { maybeAutoNotifyOnApprove } from "@/lib/sms-campaigns";
-import { readStore, updateWorkRequest } from "@/lib/store";
+import {
+  backfillWorkRequestNafCodes,
+  readStore,
+  updateWorkRequest,
+} from "@/lib/store";
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
+  await backfillWorkRequestNafCodes();
   const store = await readStore();
   return NextResponse.json({ requests: store.workRequests });
 }

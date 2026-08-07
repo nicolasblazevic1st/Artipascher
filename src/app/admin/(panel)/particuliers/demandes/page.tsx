@@ -139,7 +139,15 @@ export default function AdminDemandesPage() {
                       Début travaux souhaité :{" "}
                       {formatRequestedWorkStartDate(r.requestedWorkStartDate)}
                     </div>
-                    <div>{r.category}</div>
+                    <div>
+                      {r.category}
+                      {r.nafCodes && r.nafCodes.length > 0 && (
+                        <span className="text-slate-400">
+                          {" "}
+                          · NAF {r.nafCodes.join(", ")}
+                        </span>
+                      )}
+                    </div>
                     <div>
                       Prix de départ :{" "}
                       {r.startPrice != null
@@ -187,7 +195,10 @@ export default function AdminDemandesPage() {
                   <p className="mt-2 text-xs text-slate-400">
                     Reçue le {new Date(r.createdAt).toLocaleString("fr-FR")}
                   </p>
-                  <NearbyBusinessesPanel requestId={r.id} />
+                  <NearbyBusinessesPanel
+                    requestId={r.id}
+                    category={r.category}
+                  />
                 </div>
                 {r.status === "pending" && (
                   <div className="flex gap-2">

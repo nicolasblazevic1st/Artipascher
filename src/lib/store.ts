@@ -13,6 +13,7 @@ import { formatWorkRequestAddress } from "./client-address";
 import { getClientContact } from "./client-contacts";
 import { getSampleQuotesForAuction } from "./sample-quotes";
 import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
+import { getNafCodesForCategory } from "./naf-codes";
 import {
   DEFAULT_SMS_SETTINGS,
   EMPTY_STORE,
@@ -224,9 +225,14 @@ export async function addWorkRequest(
   data: Omit<WorkRequest, "id" | "status" | "createdAt">
 ): Promise<WorkRequest> {
   const store = await readStore();
+  const nafCodes =
+    data.nafCodes && data.nafCodes.length > 0
+      ? [...new Set(data.nafCodes.map((c) => c.trim().toUpperCase()).filter(Boolean))]
+      : getNafCodesForCategory(data.category);
   const entry: WorkRequest = {
     ...data,
     photos: data.photos ?? [],
+    nafCodes,
     id: newId("req"),
     status: "pending",
     createdAt: new Date().toISOString(),
@@ -234,6 +240,39 @@ export async function addWorkRequest(
   store.workRequests.unshift(entry);
   await writeStore(store);
   return entry;
+}
+
+export { resolveWorkRequestNafCodes } from "./naf-codes";
+
+/** Persiste les NAF manquants sur les annonces existantes (dérivés de la catégorie). */
+export async function ensureWorkRequestNafCodes(
+  id: string
+): Promise<WorkRequest | null> {
+  const store = await readStore();
+  const index = store.workRequests.findIndex((r) => r.id === id);
+  if (index === -1) return null;
+  const current = store.workRequests[index];
+  if (current.nafCodes && current.nafCodes.length > 0) return current;
+  const nafCodes = getNafCodesForCategory(current.category);
+  store.workRequests[index] = { ...current, nafCodes };
+  await writeStore(store);
+  return store.workRequests[index];
+}
+
+export async function backfillWorkRequestNafCodes(): Promise<number> {
+  const store = await readStore();
+  let n = 0;
+  for (let i = 0; i < store.workRequests.length; i++) {
+    const r = store.workRequests[i];
+    if (r.nafCodes && r.nafCodes.length > 0) continue;
+    store.workRequests[i] = {
+      ...r,
+      nafCodes: getNafCodesForCategory(r.category),
+    };
+    n += 1;
+  }
+  if (n > 0) await writeStore(store);
+  return n;
 }
 
 export async function setWorkRequestPhotos(
@@ -358,6 +397,7 @@ export async function updateWorkRequest(
       | "shareToken"
       | "startPrice"
       | "startPriceQuoteId"
+      | "nafCodes"
     >
   >
 ): Promise<WorkRequest | null> {

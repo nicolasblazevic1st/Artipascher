@@ -193,6 +193,11 @@ export interface WorkRequest {
   /** Date souhaitée par le particulier pour le début des travaux (YYYY-MM-DD). */
   requestedWorkStartDate?: string;
   category: string;
+  /**
+   * Codes NAF ciblés pour cette annonce (dérivés de la catégorie à la création).
+   * Obligatoires pour la recherche d’artisans autour du chantier.
+   */
+  nafCodes?: string[];
   description: string;
   /** Prix de départ de l'enchère. Peut venir du client, d'un devis précédent,
    *  ou du premier devis Artipascher validé. */

@@ -1,10 +1,11 @@
 import {
   addEnrichmentJob,
+  bulkUpsertArtisans,
   markArtisansClosed,
-  upsertArtisan,
 } from "./artisans-db";
+import { listAcquisitionNafCodesForApi } from "./acquisition-naf";
+import { readAcquisitionNafExtras } from "./acquisition-naf-extras";
 import {
-  CONSTRUCTION_NAF_CODES,
   type ArtisanDepartment,
   type EnrichedArtisan,
 } from "./artisans-types";
@@ -13,6 +14,13 @@ import { geocodeAddress } from "./geo";
 const ENTREPRISES_API = "https://recherche-entreprises.api.gouv.fr";
 const PER_PAGE = 25;
 const DEFAULT_MAX_PAGES_PER_NAF = 4;
+/** Plafond API pratique (25 × 400 = 10k résultats / NAF / dept). */
+const FULL_MAX_PAGES_PER_NAF = 400;
+const BATCH_FLUSH = 250;
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 interface GouvEstablishment {
   siret?: string;
@@ -150,6 +158,8 @@ export interface SireneSyncOptions {
   departments?: ArtisanDepartment[];
   nafCodes?: readonly string[];
   maxPagesPerNaf?: number;
+  /** Pagination jusqu’à épuisement (plafonnée à FULL_MAX_PAGES_PER_NAF). */
+  full?: boolean;
   geocodeMissing?: boolean;
   /** Si true, marque closed les actifs du NAF+dept non revus dans cette sync complète. */
   markMissingClosed?: boolean;
@@ -165,8 +175,12 @@ export async function syncSireneWeekly(
   pages: number;
 }> {
   const departments = options.departments ?? (["59", "62"] as ArtisanDepartment[]);
-  const nafCodes = options.nafCodes ?? CONSTRUCTION_NAF_CODES;
-  const maxPages = options.maxPagesPerNaf ?? DEFAULT_MAX_PAGES_PER_NAF;
+  const extras = await readAcquisitionNafExtras();
+  const nafCodes =
+    options.nafCodes ?? listAcquisitionNafCodesForApi(extras);
+  const maxPages = options.full
+    ? FULL_MAX_PAGES_PER_NAF
+    : options.maxPagesPerNaf ?? DEFAULT_MAX_PAGES_PER_NAF;
   const geocodeMissing = options.geocodeMissing !== false;
   const markMissingClosed = options.markMissingClosed === true;
 
@@ -176,6 +190,16 @@ export async function syncSireneWeekly(
   let pages = 0;
   const errors: string[] = [];
   const now = new Date().toISOString();
+  type Row = Omit<EnrichedArtisan, "createdAt" | "updatedAt">;
+  let batch: Row[] = [];
+
+  async function flushBatch() {
+    if (batch.length === 0) return;
+    const chunk = batch;
+    batch = [];
+    const res = await bulkUpsertArtisans(chunk, { preserveContact: true });
+    upserted += res.inserted + res.updated;
+  }
 
   for (const department of departments) {
     for (const naf of nafCodes) {
@@ -186,6 +210,8 @@ export async function syncSireneWeekly(
         try {
           companies = await fetchNafPage(department, naf, page);
           pages += 1;
+          // ~7 req/s max côté API
+          await sleep(160);
         } catch (e) {
           errors.push(
             `${department}/${naf}/p${page}: ${
@@ -228,7 +254,7 @@ export async function syncSireneWeekly(
               }
             }
 
-            const payload: Omit<EnrichedArtisan, "createdAt" | "updatedAt"> = {
+            batch.push({
               siret: est.siret,
               siren: est.siren,
               companyName: est.companyName,
@@ -244,18 +270,20 @@ export async function syncSireneWeekly(
               enrichmentStatus: "pending",
               lastSeenAt: now,
               source: "gouv",
-            };
+            });
 
-            await upsertArtisan(payload, { preserveContact: true });
-            upserted += 1;
+            if (batch.length >= BATCH_FLUSH) {
+              await flushBatch();
+            }
           }
         }
 
         if (companies.length < PER_PAGE) break;
       }
 
+      await flushBatch();
+
       if (markMissingClosed && seenThisSlice.size > 0) {
-        // Mark closed only artisans of this NAF+dept that were not seen — requires reading DB
         const { listArtisans } = await import("./artisans-db");
         const existing = await listArtisans({
           department,
@@ -273,6 +301,8 @@ export async function syncSireneWeekly(
       }
     }
   }
+
+  await flushBatch();
 
   await addEnrichmentJob({
     kind: "sirene_weekly",
