@@ -1,27 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { NafCodeLabel, NafCodeList } from "@/components/NafCodeLabel";
+import { NafCodeList } from "@/components/NafCodeLabel";
 import NafMultiSelect, {
   type NafFilterOption,
 } from "@/components/admin/NafMultiSelect";
 import { formatNafWithLabel } from "@/lib/naf-trade-groups";
 
-interface ArtisanRow {
-  siret: string;
+interface ArtisanCompanyRow {
   siren: string;
   companyName: string;
-  city: string;
-  postalCode: string;
   department: "59" | "62";
-  nafCode: string;
-  nafSecondaryCodes?: string[];
+  cities: string[];
+  sirets: string[];
+  establishments: Array<{
+    siret: string;
+    city: string;
+    department: "59" | "62";
+    postalCode: string;
+    nafCode: string;
+  }>;
+  nafCodes: string[];
+  mappedToCategory: boolean;
+  hasUnmappedPrimary: boolean;
   phone?: string;
   enrichmentStatus: string;
-  status: string;
-  source: string;
   optedOut?: boolean;
-  mappedToCategory: boolean;
+  source: string;
 }
 
 interface Stats {
@@ -55,8 +60,9 @@ const ENRICH_LABELS: Record<string, string> = {
 
 export default function AdminBaseArtisansPage() {
   const [stats, setStats] = useState<Stats | null>(null);
-  const [items, setItems] = useState<ArtisanRow[]>([]);
+  const [items, setItems] = useState<ArtisanCompanyRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [establishmentCount, setEstablishmentCount] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [q, setQ] = useState("");
@@ -105,10 +111,11 @@ export default function AdminBaseArtisansPage() {
       if (!res.ok) throw new Error(data.error ?? "Erreur chargement");
       setItems(data.items ?? []);
       setTotal(data.total ?? 0);
+      setEstablishmentCount(data.establishmentCount ?? data.total ?? 0);
       setTotalPages(data.totalPages ?? 1);
       const drafts: Record<string, string> = {};
       for (const row of data.items ?? []) {
-        drafts[row.siret] = row.phone ?? "";
+        drafts[row.siren] = row.phone ?? "";
       }
       setPhoneDrafts(drafts);
     } catch (e) {
@@ -126,66 +133,57 @@ export default function AdminBaseArtisansPage() {
     void loadList();
   }, [loadList]);
 
-  async function savePhone(siret: string) {
-    setBusy(siret);
+  async function patchAllSirets(
+    sirets: string[],
+    body: Record<string, unknown>,
+    busyKey: string
+  ): Promise<boolean> {
+    setBusy(busyKey);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/artisans/${siret}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: phoneDrafts[siret] ?? "" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Échec");
-      setSuccess(`Téléphone mis à jour · ${siret}`);
+      for (const siret of sirets) {
+        const res = await fetch(`/api/admin/artisans/${siret}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Échec");
+      }
       await loadList();
       await loadStats();
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
+      return false;
     } finally {
       setBusy(null);
     }
   }
 
-  async function markInvalid(siret: string) {
-    setBusy(siret);
-    try {
-      const res = await fetch(`/api/admin/artisans/${siret}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markInvalidPhone: true }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Échec");
-      }
-      await loadList();
-      await loadStats();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setBusy(null);
-    }
+  async function savePhone(row: ArtisanCompanyRow) {
+    const ok = await patchAllSirets(
+      row.sirets,
+      { phone: phoneDrafts[row.siren] ?? "" },
+      row.siren
+    );
+    if (ok) setSuccess(`Téléphone mis à jour · ${row.companyName}`);
   }
 
-  async function toggleOptOut(row: ArtisanRow) {
-    setBusy(row.siret);
-    try {
-      const res = await fetch(`/api/admin/artisans/${row.siret}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ optedOut: !row.optedOut }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error ?? "Échec");
-      }
-      await loadList();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setBusy(null);
-    }
+  async function markInvalid(row: ArtisanCompanyRow) {
+    await patchAllSirets(
+      row.sirets,
+      { markInvalidPhone: true },
+      row.siren
+    );
+  }
+
+  async function toggleOptOut(row: ArtisanCompanyRow) {
+    await patchAllSirets(
+      row.sirets,
+      { optedOut: !row.optedOut },
+      row.siren
+    );
   }
 
   async function runAction(kind: "sirene" | "sirene-full" | "places") {
@@ -484,7 +482,13 @@ export default function AdminBaseArtisansPage() {
       )}
 
       <p className="text-sm text-slate-600">
-        {total.toLocaleString("fr-FR")} résultat{total > 1 ? "s" : ""}
+        {total.toLocaleString("fr-FR")} entreprise{total > 1 ? "s" : ""}
+        {establishmentCount > total && (
+          <span className="text-slate-500">
+            {" "}
+            ({establishmentCount.toLocaleString("fr-FR")} établ.)
+          </span>
+        )}
         {loading ? " · chargement…" : ""}
       </p>
 
@@ -501,37 +505,35 @@ export default function AdminBaseArtisansPage() {
           </thead>
           <tbody>
             {items.map((row) => (
-              <tr key={row.siret} className="border-b border-slate-100 align-top">
+              <tr key={row.siren} className="border-b border-slate-100 align-top">
                 <td className="px-3 py-2">
                   <div className="font-medium text-slate-900">{row.companyName}</div>
                   <div className="text-xs text-slate-500">
-                    {row.city} ({row.department}) · {row.siret}
+                    {row.cities.join(", ")} ({row.department})
+                    {row.establishments.length > 1 && (
+                      <span> · {row.establishments.length} établ.</span>
+                    )}
+                  </div>
+                  <div className="mt-0.5 font-mono text-[10px] text-slate-400">
+                    SIREN {row.siren}
+                    {row.establishments.length === 1 && (
+                      <> · {row.establishments[0].siret}</>
+                    )}
                   </div>
                 </td>
                 <td className="px-3 py-2">
-                  <div>
-                    <NafCodeLabel code={row.nafCode} />
-                  </div>
-                  {row.nafSecondaryCodes && row.nafSecondaryCodes.length > 0 && (
-                    <div className="mt-1 text-xs text-slate-500">
-                      Autres NAF :{" "}
-                      <NafCodeList
-                        codes={row.nafSecondaryCodes}
-                        separator=", "
-                      />
-                    </div>
-                  )}
-                  {!row.mappedToCategory && (
-                    <span className="mt-0.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+                  <NafCodeList codes={row.nafCodes} separator=" · " />
+                  {row.hasUnmappedPrimary && (
+                    <span className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
                       Hors cat.
                     </span>
                   )}
                 </td>
                 <td className="px-3 py-2">
                   <input
-                    value={phoneDrafts[row.siret] ?? ""}
+                    value={phoneDrafts[row.siren] ?? ""}
                     onChange={(e) =>
-                      setPhoneDrafts((d) => ({ ...d, [row.siret]: e.target.value }))
+                      setPhoneDrafts((d) => ({ ...d, [row.siren]: e.target.value }))
                     }
                     className="w-36 rounded border border-slate-300 px-2 py-1 text-sm"
                     placeholder="06…"
@@ -545,23 +547,23 @@ export default function AdminBaseArtisansPage() {
                   <div className="flex flex-wrap gap-1">
                     <button
                       type="button"
-                      disabled={busy === row.siret}
-                      onClick={() => void savePhone(row.siret)}
+                      disabled={busy === row.siren}
+                      onClick={() => void savePhone(row)}
                       className="rounded bg-slate-900 px-2 py-1 text-xs text-white disabled:opacity-50"
                     >
                       Sauver
                     </button>
                     <button
                       type="button"
-                      disabled={busy === row.siret}
-                      onClick={() => void markInvalid(row.siret)}
+                      disabled={busy === row.siren}
+                      onClick={() => void markInvalid(row)}
                       className="rounded border border-slate-300 px-2 py-1 text-xs disabled:opacity-50"
                     >
                       Invalide
                     </button>
                     <button
                       type="button"
-                      disabled={busy === row.siret}
+                      disabled={busy === row.siren}
                       onClick={() => void toggleOptOut(row)}
                       className="rounded border border-slate-300 px-2 py-1 text-xs disabled:opacity-50"
                     >

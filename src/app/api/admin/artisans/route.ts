@@ -15,9 +15,11 @@ import {
 } from "@/lib/artisans-db";
 import type { ArtisanDepartment, EnrichmentStatus } from "@/lib/artisans-types";
 import {
-  artisanMatchesNafCodes,
-  normalizeNafCode,
-} from "@/lib/naf-trade-groups";
+  companyMatchesNafFilter,
+  companyMatchesQuery,
+  groupArtisansBySiren,
+} from "@/lib/artisans-group";
+import { normalizeNafCode } from "@/lib/naf-trade-groups";
 
 function departmentFromPostal(code: string): ArtisanDepartment | null {
   const postal = code.replace(/\D/g, "");
@@ -67,47 +69,36 @@ export async function GET(request: NextRequest) {
     rows = rows.filter((a) => !a.phone?.trim());
   }
 
+  let groups = groupArtisansBySiren(rows);
+
   if (unmappedOnly) {
-    rows = rows.filter((a) => !isMappedToPlatformCategory(a.nafCode));
+    groups = groups.filter((g) => g.hasUnmappedPrimary);
   }
 
   if (nafFilter.length > 0) {
-    rows = rows.filter((a) => artisanMatchesNafCodes(a, nafFilter));
+    groups = groups.filter((g) => companyMatchesNafFilter(g, nafFilter));
   }
 
   if (q) {
-    rows = rows.filter((a) => {
-      const hay = [
-        a.companyName,
-        a.city,
-        a.siret,
-        a.siren,
-        a.nafCode,
-        ...(a.nafSecondaryCodes ?? []),
-        a.phone ?? "",
-        a.postalCode,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
+    groups = groups.filter((g) => companyMatchesQuery(g, q));
   }
 
-  rows.sort((a, b) => a.companyName.localeCompare(b.companyName, "fr"));
-
-  const total = rows.length;
+  const total = groups.length;
+  const establishmentCount = groups.reduce(
+    (n, g) => n + g.establishments.length,
+    0
+  );
   const start = (page - 1) * pageSize;
-  const items = rows.slice(start, start + pageSize).map((a) => ({
-    ...a,
-    mappedToCategory: isMappedToPlatformCategory(a.nafCode),
-  }));
+  const items = groups.slice(start, start + pageSize);
 
   return NextResponse.json({
     items,
     total,
+    establishmentCount,
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    groupedBySiren: true,
   });
 }
 
