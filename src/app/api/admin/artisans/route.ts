@@ -14,7 +14,10 @@ import {
   upsertArtisan,
 } from "@/lib/artisans-db";
 import type { ArtisanDepartment, EnrichmentStatus } from "@/lib/artisans-types";
-import { normalizeNafCode } from "@/lib/naf-trade-groups";
+import {
+  artisanMatchesNafCodes,
+  normalizeNafCode,
+} from "@/lib/naf-trade-groups";
 
 function departmentFromPostal(code: string): ArtisanDepartment | null {
   const postal = code.replace(/\D/g, "");
@@ -36,6 +39,15 @@ export async function GET(request: NextRequest) {
   ) as EnrichmentStatus | null;
   const hasPhone = searchParams.get("hasPhone");
   const unmappedOnly = searchParams.get("unmappedOnly") === "1";
+  const nafRaw = searchParams.get("naf") ?? "";
+  const nafFilter = [
+    ...new Set(
+      nafRaw
+        .split(",")
+        .map((c) => normalizeNafCode(c.trim()))
+        .filter(Boolean)
+    ),
+  ];
   const status = (searchParams.get("status") as "active" | "closed" | null) ?? "active";
   const page = Math.max(1, Number(searchParams.get("page") ?? 1) || 1);
   const pageSize = Math.min(
@@ -57,6 +69,10 @@ export async function GET(request: NextRequest) {
 
   if (unmappedOnly) {
     rows = rows.filter((a) => !isMappedToPlatformCategory(a.nafCode));
+  }
+
+  if (nafFilter.length > 0) {
+    rows = rows.filter((a) => artisanMatchesNafCodes(a, nafFilter));
   }
 
   if (q) {

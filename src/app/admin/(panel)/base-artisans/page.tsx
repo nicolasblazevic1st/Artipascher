@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { NafCodeLabel, NafCodeList } from "@/components/NafCodeLabel";
+import NafMultiSelect, {
+  type NafFilterOption,
+} from "@/components/admin/NafMultiSelect";
 import { formatNafWithLabel } from "@/lib/naf-trade-groups";
 
 interface ArtisanRow {
@@ -30,6 +33,7 @@ interface Stats {
   unmappedCategory: number;
   byDepartment: Record<string, number>;
   topNaf: Array<{ naf: string; count: number; mapped: boolean; label?: string }>;
+  nafOptions?: NafFilterOption[];
   remaining: number;
   placesEnabled: boolean;
   quota: {
@@ -59,6 +63,7 @@ export default function AdminBaseArtisansPage() {
   const [department, setDepartment] = useState("");
   const [hasPhone, setHasPhone] = useState("");
   const [enrichmentStatus, setEnrichmentStatus] = useState("");
+  const [selectedNaf, setSelectedNaf] = useState<string[]>([]);
   const [unmappedOnly, setUnmappedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -93,6 +98,7 @@ export default function AdminBaseArtisansPage() {
       if (department) params.set("department", department);
       if (hasPhone) params.set("hasPhone", hasPhone);
       if (enrichmentStatus) params.set("enrichmentStatus", enrichmentStatus);
+      if (selectedNaf.length > 0) params.set("naf", selectedNaf.join(","));
       if (unmappedOnly) params.set("unmappedOnly", "1");
       const res = await fetch(`/api/admin/artisans?${params}`);
       const data = await res.json();
@@ -110,7 +116,7 @@ export default function AdminBaseArtisansPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, q, department, hasPhone, enrichmentStatus, unmappedOnly]);
+  }, [page, q, department, hasPhone, enrichmentStatus, selectedNaf, unmappedOnly]);
 
   useEffect(() => {
     void loadStats();
@@ -397,6 +403,15 @@ export default function AdminBaseArtisansPage() {
           <option value="59">59</option>
           <option value="62">62</option>
         </select>
+        <NafMultiSelect
+          options={stats?.nafOptions ?? stats?.topNaf ?? []}
+          value={selectedNaf}
+          onChange={(codes) => {
+            setPage(1);
+            setSelectedNaf(codes);
+          }}
+          disabled={loading && !stats}
+        />
         <select
           value={hasPhone}
           onChange={(e) => {
@@ -436,6 +451,37 @@ export default function AdminBaseArtisansPage() {
           Hors catégories
         </label>
       </div>
+
+      {selectedNaf.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-slate-500">NAF actifs :</span>
+          {selectedNaf.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => {
+                setPage(1);
+                setSelectedNaf((prev) => prev.filter((c) => c !== code));
+              }}
+              className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs text-brand-900 hover:bg-brand-100"
+              title="Retirer ce filtre"
+            >
+              {formatNafWithLabel(code)}
+              <span aria-hidden>×</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setPage(1);
+              setSelectedNaf([]);
+            }}
+            className="text-xs text-slate-500 hover:text-slate-800 hover:underline"
+          >
+            Tout effacer
+          </button>
+        </div>
+      )}
 
       <p className="text-sm text-slate-600">
         {total.toLocaleString("fr-FR")} résultat{total > 1 ? "s" : ""}

@@ -442,6 +442,14 @@ export async function getArtisansStats() {
       mapped: isMappedToPlatformCategory(naf),
       label: getNafLabel(naf),
     }));
+  const nafOptions = [...nafCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([naf, count]) => ({
+      naf,
+      count,
+      mapped: isMappedToPlatformCategory(naf),
+      label: getNafLabel(naf),
+    }));
 
   return {
     total: db.artisans.length,
@@ -453,6 +461,7 @@ export async function getArtisansStats() {
     unmappedCategory: unmapped.length,
     byDepartment,
     topNaf,
+    nafOptions,
     geocoded: active.filter((a) => a.lat != null && a.lon != null).length,
     quota,
     remaining: Math.max(0, quota.monthlyLimit - used),
