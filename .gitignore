@@ -37,9 +37,11 @@ yarn-error.log*
 
 # local data store (inscriptions / demandes)
 data/store.json
-data/artisans-enrichment.json
 data/sirene/
 data/acquisition-naf-extras.json
+data/exports/
+data/*.tmp
+tmp/
 
 # uploads particuliers
 public/uploads/
