@@ -82,6 +82,8 @@ export default async function AdminEncheresPage() {
                   </p>
                   <p className="text-slate-500">
                     {auction.bidCount} offre{auction.bidCount > 1 ? "s" : ""} ·{" "}
+                    {auction.acceptedArtisansCount}/
+                    {auction.maxAcceptedArtisans} artisans acceptés ·{" "}
                     {auction.feesCollected} € de frais
                   </p>
                   {auction.endsAt && (

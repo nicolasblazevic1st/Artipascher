@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import {
+  formatAcceptedArtisanSlots,
+  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+} from "@/lib/contact-slots";
 
 interface Props {
   auctionId: string;
   publicLocation: string;
   requestedWorkStartDate?: string;
+  acceptedArtisansCount?: number;
+  maxAcceptedArtisans?: number;
 }
 
 /**
@@ -16,6 +22,8 @@ export default function ClientContactPublicCta({
   auctionId,
   publicLocation,
   requestedWorkStartDate,
+  acceptedArtisansCount = 0,
+  maxAcceptedArtisans = MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 }: Props) {
   const href = `/pro/encheres/${encodeURIComponent(auctionId)}`;
 
@@ -29,6 +37,12 @@ export default function ClientContactPublicCta({
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
+        <div className="flex justify-between border-b border-slate-100 py-2">
+          <dt className="text-slate-500">Artisans acceptés</dt>
+          <dd className="font-semibold tabular-nums text-slate-900">
+            {formatAcceptedArtisanSlots(acceptedArtisansCount, maxAcceptedArtisans)}
+          </dd>
+        </div>
         <div className="flex justify-between border-b border-slate-100 py-2">
           <dt className="text-slate-500">Localisation</dt>
           <dd className="font-medium">{publicLocation}</dd>

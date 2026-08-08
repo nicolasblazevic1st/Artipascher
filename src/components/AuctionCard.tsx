@@ -1,5 +1,6 @@
 import Link from "next/link";
 import TestBanner from "@/components/TestBanner";
+import { formatAcceptedArtisanSlots } from "@/lib/contact-slots";
 import {
   Auction,
   CATEGORY_LABELS,
@@ -46,7 +47,7 @@ export default function AuctionCard({
         {auction.description}
       </p>
 
-      <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
+      <dl className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-center sm:grid-cols-4">
         <div>
           <dt className="text-xs text-slate-500">Départ</dt>
           <dd className="text-sm font-semibold text-slate-700">
@@ -63,6 +64,15 @@ export default function AuctionCard({
           <dt className="text-xs text-slate-500">Offres</dt>
           <dd className="text-sm font-semibold text-slate-700">
             {auction.bidCount}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-500">Artisans acceptés</dt>
+          <dd className="text-sm font-semibold text-slate-700 tabular-nums">
+            {formatAcceptedArtisanSlots(
+              auction.acceptedArtisansCount ?? 0,
+              auction.maxAcceptedArtisans
+            )}
           </dd>
         </div>
       </dl>

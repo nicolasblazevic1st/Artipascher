@@ -54,6 +54,11 @@ export interface QuotaTracking {
   requestsEnrichment: number;
   /** Consommation production par jour (YYYY-MM-DD). */
   dailyProductionLog: Record<string, number>;
+  /**
+   * Bonus enrichissement exceptionnel par jour (YYYY-MM-DD → requêtes Places).
+   * S’ajoute au budget nuit/jour calculé (base + report − prod).
+   */
+  dailyEnrichmentBonus?: Record<string, number>;
   enrichmentCarryover: number;
   enrichmentPaused: boolean;
   paidOverageEnabled: boolean;

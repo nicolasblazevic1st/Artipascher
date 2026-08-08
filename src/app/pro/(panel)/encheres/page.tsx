@@ -4,6 +4,7 @@ import TestBanner from "@/components/TestBanner";
 import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
+import { formatAcceptedArtisanSlots } from "@/lib/contact-slots";
 import { CATEGORY_LABELS, formatLocation, formatPrice } from "@/lib/data";
 import { BID_FEE_EUR } from "@/lib/auctions";
 
@@ -34,6 +35,9 @@ export default async function ProEncheresPage() {
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Lieu</th>
               <th className="px-4 py-3 font-medium">Prix actuel</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Offres</th>
+              <th className="hidden px-4 py-3 font-medium lg:table-cell">
+                Acceptés
+              </th>
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -66,6 +70,12 @@ export default async function ProEncheresPage() {
                 </td>
                 <td className="hidden px-4 py-4 text-slate-600 md:table-cell">
                   {auction.liveBidCount}
+                </td>
+                <td className="hidden px-4 py-4 tabular-nums text-slate-600 lg:table-cell">
+                  {formatAcceptedArtisanSlots(
+                    auction.acceptedArtisansCount ?? 0,
+                    auction.maxAcceptedArtisans
+                  )}
                 </td>
                 <td className="px-4 py-4">
                   {auction.isWinning ? (

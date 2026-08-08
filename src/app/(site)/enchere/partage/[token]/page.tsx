@@ -10,6 +10,10 @@ import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
+import {
+  formatAcceptedArtisanSlots,
+  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+} from "@/lib/contact-slots";
 import { formatPrice } from "@/lib/data";
 import {
   buildShareText,
@@ -18,6 +22,7 @@ import {
   isAuctionStillActive,
 } from "@/lib/share";
 import {
+  countAcceptedArtisansForAuction,
   getApprovedProQuotesForAuction,
   getBidsForAuction,
   mapBidsWithQualification,
@@ -64,6 +69,9 @@ export default async function SharedAuctionPage({ params }: Props) {
 
   const bids = await getBidsForAuction(request.auctionId);
   const quotes = await getApprovedProQuotesForAuction(request.auctionId);
+  const acceptedArtisansCount = await countAcceptedArtisansForAuction(
+    request.auctionId
+  );
   const bidsWithLevel = await mapBidsWithQualification(bids, request.category);
   const quotesWithLevel = await mapQuotesWithQualification(quotes, request.category);
   const anonymousBids = annotateAnonymousBids(bidsWithLevel);
@@ -129,7 +137,7 @@ export default async function SharedAuctionPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-4">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
@@ -149,6 +157,15 @@ export default async function SharedAuctionPage({ params }: Props) {
             <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
+            <dt className="text-xs text-slate-500">Artisans acceptés</dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums">
+              {formatAcceptedArtisanSlots(
+                acceptedArtisansCount,
+                MAX_ACCEPTED_ARTISANS_PER_AUCTION
+              )}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Fin</dt>
             <dd className="mt-1 text-sm font-semibold">{endsAt ?? "—"}</dd>
           </div>
@@ -166,6 +183,8 @@ export default async function SharedAuctionPage({ params }: Props) {
               auctionId={request.auctionId}
               publicLocation={formatPublicLocation(request)}
               requestedWorkStartDate={request.requestedWorkStartDate}
+              acceptedArtisansCount={acceptedArtisansCount}
+              maxAcceptedArtisans={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
             />
             <BidPanelPublicCta
               auctionId={request.auctionId}

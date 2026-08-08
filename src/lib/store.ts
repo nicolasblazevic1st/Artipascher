@@ -4,6 +4,10 @@ import { hashPassword, verifyPassword, validatePassword } from "./password";
 import { randomBytes } from "crypto";
 import { computeCurrentPrice, MAX_BIDS_PER_AUCTION } from "./auctions";
 import {
+  isAcceptSlotsFull,
+  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+} from "./contact-slots";
+import {
   generateReferralCode,
   isValidReferralCodeFormat,
   normalizeReferralCode,
@@ -1476,6 +1480,21 @@ export async function getAcceptedContactRequest(
   return req?.status === "accepted" ? req : null;
 }
 
+/** Nombre d’artisans distincts acceptés pour une enchère. */
+export async function countAcceptedArtisansForAuction(
+  auctionId: string
+): Promise<number> {
+  const store = await readStore();
+  if (expireContactRequestsInStore(store)) await writeStore(store);
+  const pros = new Set<string>();
+  for (const req of store.contactRequests) {
+    if (req.auctionId === auctionId && req.status === "accepted") {
+      pros.add(req.proId);
+    }
+  }
+  return pros.size;
+}
+
 export async function createContactRequest(data: {
   auctionId: string;
   workRequestId: string;
@@ -1549,6 +1568,20 @@ export async function decideContactRequest(
     store.contactRequests[index].decidedAt = new Date().toISOString();
     await writeStore(store);
     return { error: "Cette demande a expiré." };
+  }
+
+  if (decision === "accepted") {
+    const acceptedPros = new Set<string>();
+    for (const r of store.contactRequests) {
+      if (r.auctionId === req.auctionId && r.status === "accepted") {
+        acceptedPros.add(r.proId);
+      }
+    }
+    if (!acceptedPros.has(req.proId) && isAcceptSlotsFull(acceptedPros.size)) {
+      return {
+        error: `Vous avez déjà accepté ${MAX_ACCEPTED_ARTISANS_PER_AUCTION} artisans pour cette offre (maximum autorisé).`,
+      };
+    }
   }
 
   store.contactRequests[index].status = decision;

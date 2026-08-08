@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { readAdminJson } from "@/lib/admin-fetch-json";
 import type { SmsCampaign, SmsCampaignSettings, SmsCohort } from "@/lib/store-types";
 
 interface WorkRequestOption {
@@ -127,9 +128,15 @@ export default function AdminSmsCampaignsPage() {
       enrichmentPaused: boolean;
       enrichmentCarryover: number;
     };
-    dailyBudget: { budget: number; paused: boolean; prodToday: number };
+    dailyBudget: {
+      budget: number;
+      paused: boolean;
+      prodToday: number;
+      bonusToday?: number;
+    };
   } | null>(null);
   const [artisanBusy, setArtisanBusy] = useState<string | null>(null);
+  const [placesBoost, setPlacesBoost] = useState("100");
   const [mounted, setMounted] = useState(false);
 
   const loadArtisanStats = useCallback(async () => {
@@ -187,19 +194,31 @@ export default function AdminSmsCampaignsPage() {
       const res = await fetch("/api/admin/artisans/extract-sirene", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ maxPagesPerNaf: 2 }),
+        body: JSON.stringify({ maxPagesPerNaf: 2, geocodeMissing: false }),
       });
-      const data = await res.json();
+      const data = await readAdminJson<{
+        error?: string;
+        started?: boolean;
+        message?: string;
+        result?: { upserted?: number; geocoded?: number; pages?: number };
+      }>(res);
       if (!res.ok) {
         setError(data.error ?? "Extraction SIRENE impossible.");
         return;
       }
-      setSuccess(
-        `SIRENE : ${data.result.upserted} fiches, ${data.result.geocoded} géocodées (${data.result.pages} pages).`
-      );
+      if (data.started) {
+        setSuccess(
+          data.message ??
+            "Sync SIRENE lancée en arrière-plan. Rechargez les stats ensuite."
+        );
+      } else {
+        setSuccess(
+          `SIRENE : ${data.result?.upserted ?? 0} fiches, ${data.result?.geocoded ?? 0} géocodées (${data.result?.pages ?? 0} pages).`
+        );
+      }
       await loadArtisanStats();
-    } catch {
-      setError("Erreur réseau extraction SIRENE.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur réseau extraction SIRENE.");
     } finally {
       setArtisanBusy(null);
     }
@@ -225,6 +244,41 @@ export default function AdminSmsCampaignsPage() {
       await loadArtisanStats();
     } catch {
       setError("Erreur réseau enrichissement Places.");
+    } finally {
+      setArtisanBusy(null);
+    }
+  }
+
+  async function boostPlacesQuota() {
+    const extra = Math.floor(Number(placesBoost));
+    if (!Number.isFinite(extra) || extra < 1) {
+      setError("Indiquez un nombre de requêtes Places ≥ 1.");
+      return;
+    }
+    setArtisanBusy("places-boost");
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/artisans/places-quota-boost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ extra }),
+      });
+      const data = await readAdminJson<{
+        error?: string;
+        added?: number;
+        bonusToday?: number;
+        budget?: number;
+      }>(res);
+      if (!res.ok) {
+        setError(data.error ?? "Boost Places impossible.");
+        return;
+      }
+      setSuccess(
+        `Budget Places jour +${data.added ?? extra} · bonus ${data.bonusToday ?? "?"} · budget ${data.budget ?? "?"}`
+      );
+      await loadArtisanStats();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur boost Places.");
     } finally {
       setArtisanBusy(null);
     }
@@ -491,9 +545,12 @@ export default function AdminSmsCampaignsPage() {
               {artisanStats.quota.requestsEnrichment}
             </div>
             <div>
-              Budget nuit : {artisanStats.dailyBudget.budget}
-              {artisanStats.dailyBudget.paused ? " (pause)" : ""} · prod jour{" "}
-              {artisanStats.dailyBudget.prodToday}
+              Budget jour : {artisanStats.dailyBudget.budget}
+              {artisanStats.dailyBudget.paused ? " (pause)" : ""}
+              {(artisanStats.dailyBudget.bonusToday ?? 0) > 0
+                ? ` · bonus ${artisanStats.dailyBudget.bonusToday}`
+                : ""}{" "}
+              · prod jour {artisanStats.dailyBudget.prodToday}
             </div>
             <div>
               Places :{" "}
@@ -528,6 +585,29 @@ export default function AdminSmsCampaignsPage() {
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-800 disabled:opacity-50"
           >
             {artisanBusy === "places" ? "Enrichissement…" : "Lancer enrichissement Places"}
+          </button>
+          <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+            Boost
+            <input
+              type="number"
+              min={1}
+              max={2000}
+              step={10}
+              value={placesBoost}
+              onChange={(e) => setPlacesBoost(e.target.value)}
+              className="w-20 rounded border border-slate-300 px-2 py-1 text-xs"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => void boostPlacesQuota()}
+            disabled={disableWhen(
+              Boolean(artisanBusy) || artisanStats?.placesEnabled === false
+            )}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-950 disabled:opacity-50"
+            title="Augmente exceptionnellement le budget Places d'aujourd'hui"
+          >
+            {artisanBusy === "places-boost" ? "Boost…" : "Augmenter budget jour"}
           </button>
           <button
             type="button"

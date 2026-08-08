@@ -22,6 +22,10 @@ export interface Auction {
   startPrice: number;
   currentPrice: number;
   bidCount: number;
+  /** Artisans acceptés par le client (demandes de contact). */
+  acceptedArtisansCount: number;
+  /** Plafond d’artisans acceptés pour cette enchère. */
+  maxAcceptedArtisans: number;
   status: AuctionStatus;
   endsAt: string;
   /** Enchère de démonstration (bande de démonstration). */

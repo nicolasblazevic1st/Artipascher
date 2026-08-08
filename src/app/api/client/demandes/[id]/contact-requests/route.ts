@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
+import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
 import { formatProTradeSelections } from "@/lib/pro-trades";
 import {
+  countAcceptedArtisansForAuction,
   getApprovedProById,
   getContactRequestsForWorkRequest,
   getWorkRequestForClient,
@@ -41,5 +43,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     });
   }
 
-  return NextResponse.json({ items });
+  const acceptedArtisansCount = workRequest.auctionId
+    ? await countAcceptedArtisansForAuction(workRequest.auctionId)
+    : items.filter((i) => i.status === "accepted").length;
+
+  return NextResponse.json({
+    items,
+    acceptedArtisansCount,
+    maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+  });
 }

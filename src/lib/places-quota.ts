@@ -34,13 +34,14 @@ export async function recordPlacesSpend(
   });
 }
 
-/** Budget enrichissement pour la nuit (solde journalier + report − prod du jour). */
+/** Budget enrichissement pour la nuit (solde journalier + report + bonus − prod du jour). */
 export async function computeDailyEnrichmentBudget(
   date = new Date()
 ): Promise<{
   budget: number;
   base: number;
   carryover: number;
+  bonusToday: number;
   prodToday: number;
   remainingMonth: number;
   paused: boolean;
@@ -50,25 +51,71 @@ export async function computeDailyEnrichmentBudget(
   const base = Math.floor(quota.monthlyLimit / days);
   const day = currentDayKey(date);
   const prodToday = quota.dailyProductionLog[day] ?? 0;
+  const bonusToday = Math.max(0, quota.dailyEnrichmentBonus?.[day] ?? 0);
   const remainingMonth = Math.max(
     0,
     quota.monthlyLimit - quota.requestsProduction - quota.requestsEnrichment
   );
-  const solde = Math.max(0, base + quota.enrichmentCarryover - prodToday);
+  const solde = Math.max(
+    0,
+    base + quota.enrichmentCarryover + bonusToday - prodToday
+  );
+  // Le bonus du jour peut dépasser le reste mensuel (exception admin).
+  const hardCap = quota.paidOverageEnabled
+    ? solde
+    : Math.min(solde, remainingMonth + bonusToday);
   const budget =
-    quota.enrichmentPaused && !quota.paidOverageEnabled
-      ? 0
-      : Math.min(solde, remainingMonth);
+    quota.enrichmentPaused && !quota.paidOverageEnabled ? 0 : hardCap;
 
   return {
     budget,
     base,
     carryover: quota.enrichmentCarryover,
+    bonusToday,
     prodToday,
     remainingMonth,
     paused: quota.enrichmentPaused && !quota.paidOverageEnabled,
   };
 }
+
+const MAX_SINGLE_DAILY_BOOST = 2000;
+
+/**
+ * Augmente exceptionnellement le budget Places d’enrichissement pour aujourd’hui.
+ * Relance aussi l’enrichissement s’il était en pause mensuelle.
+ */
+export async function boostDailyEnrichmentBudget(extra: number): Promise<{
+  added: number;
+  bonusToday: number;
+  budget: number;
+}> {
+  const amount = Math.floor(Number(extra));
+  if (!Number.isFinite(amount) || amount < 1) {
+    throw new Error("Indiquez un nombre de requêtes ≥ 1.");
+  }
+  if (amount > MAX_SINGLE_DAILY_BOOST) {
+    throw new Error(
+      `Maximum ${MAX_SINGLE_DAILY_BOOST} requêtes par boost (reçu ${amount}).`
+    );
+  }
+
+  const day = currentDayKey();
+  await updateQuota((q) => {
+    if (!q.dailyEnrichmentBonus) q.dailyEnrichmentBonus = {};
+    q.dailyEnrichmentBonus[day] = (q.dailyEnrichmentBonus[day] ?? 0) + amount;
+    // Boost admin = déblocage volontaire pour la journée.
+    q.enrichmentPaused = false;
+  });
+
+  const daily = await computeDailyEnrichmentBudget();
+  return {
+    added: amount,
+    bonusToday: daily.bonusToday,
+    budget: daily.budget,
+  };
+}
+
+export { MAX_SINGLE_DAILY_BOOST };
 
 function priorityScore(a: EnrichedArtisan, now: number): number {
   if (a.enrichmentStatus === "invalid_phone" || a.lastSmsFailedAt) return 3000;

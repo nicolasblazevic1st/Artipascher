@@ -9,10 +9,15 @@ import VerifiedBidsList from "@/components/VerifiedBidsList";
 import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
+import {
+  formatAcceptedArtisanSlots,
+  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+} from "@/lib/contact-slots";
 import { formatLocation, formatPrice } from "@/lib/data";
 import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
 import {
+  countAcceptedArtisansForAuction,
   getBidsForAuction,
   mapBidsWithQualification,
 } from "@/lib/store";
@@ -40,6 +45,7 @@ export default async function ProEnchereDetailPage({ params }: Props) {
 
   const workRequest = await getWorkRequestByAuctionId(id);
   const bids = await getBidsForAuction(id);
+  const acceptedArtisansCount = await countAcceptedArtisansForAuction(id);
   const bidsWithLevel = await mapBidsWithQualification(
     bids,
     workRequest?.category
@@ -69,6 +75,15 @@ export default async function ProEnchereDetailPage({ params }: Props) {
               ? formatPublicLocation(workRequest)
               : formatLocation(resolved.city, resolved.department)}
           </p>
+          <p className="mt-2 text-sm text-slate-600">
+            Artisans acceptés :{" "}
+            <span className="font-semibold tabular-nums text-slate-900">
+              {formatAcceptedArtisanSlots(
+                acceptedArtisansCount,
+                MAX_ACCEPTED_ARTISANS_PER_AUCTION
+              )}
+            </span>
+          </p>
         </div>
         <div className="text-right">
           <p className="text-xs text-slate-500">Prix actuel</p>
@@ -97,6 +112,8 @@ export default async function ProEnchereDetailPage({ params }: Props) {
             : formatLocation(resolved.city, resolved.department)
         }
         requestedWorkStartDate={workRequest?.requestedWorkStartDate}
+        acceptedArtisansCount={acceptedArtisansCount}
+        maxAcceptedArtisans={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
       />
 
       <BidPanel

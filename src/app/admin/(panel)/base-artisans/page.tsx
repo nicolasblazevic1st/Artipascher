@@ -5,6 +5,7 @@ import { NafCodeList } from "@/components/NafCodeLabel";
 import NafMultiSelect, {
   type NafFilterOption,
 } from "@/components/admin/NafMultiSelect";
+import { readAdminJson } from "@/lib/admin-fetch-json";
 import { formatNafWithLabel } from "@/lib/naf-trade-groups";
 
 interface ArtisanCompanyRow {
@@ -49,7 +50,13 @@ interface Stats {
     requestsEnrichment: number;
     enrichmentPaused: boolean;
   };
-  dailyBudget: { budget: number; paused: boolean };
+  dailyBudget: {
+    budget: number;
+    paused: boolean;
+    bonusToday?: number;
+    base?: number;
+    carryover?: number;
+  };
 }
 
 const ENRICH_LABELS: Record<string, string> = {
@@ -79,6 +86,7 @@ export default function AdminBaseArtisansPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
   const [showAdd, setShowAdd] = useState(false);
+  const [placesBoost, setPlacesBoost] = useState("100");
   const [addForm, setAddForm] = useState({
     siret: "",
     companyName: "",
@@ -199,7 +207,10 @@ export default function AdminBaseArtisansPage() {
         const res = await fetch("/api/admin/artisans/enrich-places", {
           method: "POST",
         });
-        const data = await res.json();
+        const data = await readAdminJson<{
+          error?: string;
+          result?: { processed?: number; spent?: number; budget?: number };
+        }>(res);
         if (!res.ok) throw new Error(data.error ?? "Échec Places");
         setSuccess(
           `Places: traités ${data.result?.processed ?? 0}, requêtes ${data.result?.spent ?? 0}, budget ${data.result?.budget ?? "?"}`
@@ -210,7 +221,15 @@ export default function AdminBaseArtisansPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ limit: 200 }),
         });
-        const data = await res.json();
+        const data = await readAdminJson<{
+          error?: string;
+          result?: {
+            geocoded?: number;
+            failed?: number;
+            remaining?: number;
+            attempted?: number;
+          };
+        }>(res);
         if (!res.ok) throw new Error(data.error ?? "Échec géocode BAN");
         const r = data.result;
         setSuccess(
@@ -223,17 +242,62 @@ export default function AdminBaseArtisansPage() {
           body: JSON.stringify(
             kind === "sirene-full"
               ? { full: true, geocodeMissing: false }
-              : { maxPagesPerNaf: 4 }
+              : { maxPagesPerNaf: 4, geocodeMissing: false }
           ),
         });
-        const data = await res.json();
+        const data = await readAdminJson<{
+          error?: string;
+          started?: boolean;
+          message?: string;
+          result?: { upserted?: number; pages?: number };
+        }>(res);
         if (!res.ok) throw new Error(data.error ?? "Échec SIRENE");
-        setSuccess(
-          `SIRENE: upsert ${data.result?.upserted ?? 0}, pages ${data.result?.pages ?? 0}`
-        );
+        if (data.started) {
+          setSuccess(
+            data.message ??
+              "Sync SIRENE lancée en arrière-plan. Rechargez la liste dans une à deux minutes."
+          );
+        } else {
+          setSuccess(
+            `SIRENE: upsert ${data.result?.upserted ?? 0}, pages ${data.result?.pages ?? 0}`
+          );
+        }
       }
       await loadStats();
       await loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function boostPlacesQuota() {
+    const extra = Math.floor(Number(placesBoost));
+    if (!Number.isFinite(extra) || extra < 1) {
+      setError("Indiquez un nombre de requêtes Places ≥ 1.");
+      return;
+    }
+    setBusy("places-boost");
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/artisans/places-quota-boost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ extra }),
+      });
+      const data = await readAdminJson<{
+        error?: string;
+        added?: number;
+        bonusToday?: number;
+        budget?: number;
+      }>(res);
+      if (!res.ok) throw new Error(data.error ?? "Boost impossible");
+      setSuccess(
+        `Budget Places du jour +${data.added ?? extra} req · bonus jour ${data.bonusToday ?? "?"} · budget actuel ${data.budget ?? "?"}`
+      );
+      await loadStats();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -371,8 +435,46 @@ export default function AdminBaseArtisansPage() {
           <StatCard
             label="Quota Places"
             value={stats.remaining}
-            hint={`Budget jour ${stats.dailyBudget?.budget ?? 0}${stats.quota.enrichmentPaused ? " · pause" : ""}`}
+            hint={`Budget jour ${stats.dailyBudget?.budget ?? 0}${
+              (stats.dailyBudget?.bonusToday ?? 0) > 0
+                ? ` · bonus ${stats.dailyBudget.bonusToday}`
+                : ""
+            }${stats.quota.enrichmentPaused ? " · pause" : ""}`}
           />
+        </div>
+      )}
+
+      {stats && (
+        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="min-w-[12rem] flex-1">
+            <p className="text-sm font-semibold text-slate-900">
+              Boost Places (exceptionnel)
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Ajoute des requêtes au budget d&apos;enrichissement d&apos;aujourd&apos;hui
+              uniquement (max 2000 / boost). Débloque aussi une pause mensuelle.
+            </p>
+          </div>
+          <label className="block text-xs text-slate-600">
+            Requêtes à ajouter
+            <input
+              type="number"
+              min={1}
+              max={2000}
+              step={10}
+              value={placesBoost}
+              onChange={(e) => setPlacesBoost(e.target.value)}
+              className="mt-1 block w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={Boolean(busy) || stats.placesEnabled === false}
+            onClick={() => void boostPlacesQuota()}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
+          >
+            {busy === "places-boost" ? "Ajout…" : "Augmenter le budget jour"}
+          </button>
         </div>
       )}
 

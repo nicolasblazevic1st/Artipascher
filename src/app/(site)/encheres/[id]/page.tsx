@@ -12,6 +12,10 @@ import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { shouldShowDemoBanner } from "@/lib/demo-banners";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
+import {
+  formatAcceptedArtisanSlots,
+  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+} from "@/lib/contact-slots";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import {
   CATEGORY_LABELS,
@@ -19,7 +23,13 @@ import {
   formatLocation,
   formatPrice,
 } from "@/lib/data";
-import { getApprovedProQuotesForAuction, getBidsForAuction, mapBidsWithQualification, mapQuotesWithQualification } from "@/lib/store";
+import {
+  countAcceptedArtisansForAuction,
+  getApprovedProQuotesForAuction,
+  getBidsForAuction,
+  mapBidsWithQualification,
+  mapQuotesWithQualification,
+} from "@/lib/store";
 import { getWorkRequestByAuctionId, resolveAuction } from "@/lib/work-request-auctions";
 
 type Props = { params: Promise<{ id: string }> };
@@ -42,6 +52,7 @@ export default async function EnchereDetailPage({ params }: Props) {
   const bids = await getBidsForAuction(id);
   const quotes = await getApprovedProQuotesForAuction(id);
   const workRequest = await getWorkRequestByAuctionId(id);
+  const acceptedArtisansCount = await countAcceptedArtisansForAuction(id);
   const sample = SAMPLE_AUCTIONS.find((a) => a.id === id);
   const workCategory =
     workRequest?.category ??
@@ -119,7 +130,7 @@ export default async function EnchereDetailPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
@@ -139,11 +150,20 @@ export default async function EnchereDetailPage({ params }: Props) {
             <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
+            <dt className="text-xs text-slate-500">Artisans acceptés</dt>
+            <dd className="mt-1 text-xl font-semibold tabular-nums">
+              {formatAcceptedArtisanSlots(
+                acceptedArtisansCount,
+                MAX_ACCEPTED_ARTISANS_PER_AUCTION
+              )}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Fin</dt>
             <dd className="mt-1 text-sm font-semibold">{endsAt}</dd>
           </div>
           {workRequest?.requestedWorkStartDate && (
-            <div className="rounded-xl bg-amber-50 p-4 text-center sm:col-span-2 lg:col-span-1">
+            <div className="rounded-xl bg-amber-50 p-4 text-center">
               <dt className="text-xs text-amber-700">Début travaux souhaité</dt>
               <dd className="mt-1 text-sm font-semibold text-amber-900">
                 {formatRequestedWorkStartDate(workRequest.requestedWorkStartDate)}
@@ -166,6 +186,8 @@ export default async function EnchereDetailPage({ params }: Props) {
               : formatLocation(resolved.city, resolved.department)
           }
           requestedWorkStartDate={workRequest?.requestedWorkStartDate}
+          acceptedArtisansCount={acceptedArtisansCount}
+          maxAcceptedArtisans={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
         />
 
         <BidPanelPublicCta

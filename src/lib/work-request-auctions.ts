@@ -1,12 +1,15 @@
 import { computeCurrentPrice } from "./auctions";
 import {
+  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+} from "./contact-slots";
+import {
   SAMPLE_AUCTIONS,
   coordinatesForCity,
   type Auction,
   type TradeCategory,
 } from "./data";
 import { isAuctionStillActive } from "./share";
-import { getBidsForAuction, readStore } from "./store";
+import { countAcceptedArtisansForAuction, getBidsForAuction, readStore } from "./store";
 import type { WorkRequest } from "./store-types";
 import { TRADE_CATEGORY_TO_WORK, WORK_TO_TRADE_CATEGORY } from "./work-categories";
 
@@ -79,6 +82,9 @@ export async function workRequestToAuctionCard(
 
   const startPrice = request.startPrice ?? request.previousQuoteAmount ?? 0;
   const bids = await getBidsForAuction(request.auctionId);
+  const acceptedArtisansCount = await countAcceptedArtisansForAuction(
+    request.auctionId
+  );
   const currentPrice =
     computeCurrentPrice(
       startPrice || undefined,
@@ -99,6 +105,8 @@ export async function workRequestToAuctionCard(
     startPrice,
     currentPrice,
     bidCount: bids.length,
+    acceptedArtisansCount,
+    maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
     status: active ? "active" : "ended",
     endsAt: request.auctionEndsAt ?? new Date().toISOString(),
     isTest: request.isTest === true,
@@ -152,6 +160,8 @@ export interface AdminAuctionView {
   endsAt?: string;
   createdAt?: string;
   bidCount: number;
+  acceptedArtisansCount: number;
+  maxAcceptedArtisans: number;
   feesCollected: number;
   source: "workRequest" | "sample";
   isTest: boolean;
@@ -172,6 +182,9 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
 
     const active = isAuctionStillActive(request.auctionEndsAt);
     const bids = await getBidsForAuction(request.auctionId);
+    const acceptedArtisansCount = await countAcceptedArtisansForAuction(
+      request.auctionId
+    );
     const startPrice = request.startPrice ?? request.previousQuoteAmount;
     const currentPrice =
       startPrice != null
@@ -194,6 +207,8 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
       endsAt: request.auctionEndsAt,
       createdAt: request.createdAt,
       bidCount: bids.length,
+      acceptedArtisansCount,
+      maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
       feesCollected: bids.reduce((sum, b) => sum + b.feeEur, 0),
       source: "workRequest",
       isTest: request.isTest === true,
@@ -214,6 +229,7 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
   for (const auction of SAMPLE_AUCTIONS) {
     if (storeIds.has(auction.id)) continue;
     const bids = await getBidsForAuction(auction.id);
+    const acceptedArtisansCount = await countAcceptedArtisansForAuction(auction.id);
     views.push({
       id: auction.id,
       title: auction.title,
@@ -230,6 +246,8 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
       status: auction.status,
       endsAt: auction.endsAt,
       bidCount: bids.length,
+      acceptedArtisansCount,
+      maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
       feesCollected: bids.reduce((sum, b) => sum + b.feeEur, 0),
       source: "sample",
       isTest: auction.isTest === true,
