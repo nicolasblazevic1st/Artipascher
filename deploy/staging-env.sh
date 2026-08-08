@@ -25,8 +25,11 @@ set_env() {
 
 set_env NEXT_PUBLIC_SITE_URL "https://dev.artipascher.fr"
 set_env NEXT_PUBLIC_BETA_MODE "false"
+set_env NEXT_PUBLIC_ARTIPASCHER_STAGING "1"
+set_env ARTIPASCHER_STAGING "1"
+set_env BETA_MODE "false"
 set_env PAYMENT_MODE "demo"
 set_env GOOGLE_PLACES_ENABLED "false"
 set_env OVH_SMS_ENABLED "false"
 
-echo "==> $ENV_FILE staging : BETA off, parcours complets activés"
+echo "==> $ENV_FILE staging : BETA off, ARTIPASCHER_STAGING=1, parcours complets activés"

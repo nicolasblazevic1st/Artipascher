@@ -35,8 +35,9 @@ npm run build
 
 mkdir -p data public/uploads
 
-echo "==> restart PM2 artipascher-dev"
-pm2 restart artipascher-dev || pm2 start ecosystem.staging.config.cjs
+echo "==> restart PM2 artipascher-dev (env staging)"
+pm2 delete artipascher-dev 2>/dev/null || true
+pm2 start ecosystem.staging.config.cjs
 pm2 save
 
 echo "==> Nginx dev.artipascher.fr (accès IP uniquement)"
