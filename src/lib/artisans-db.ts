@@ -247,6 +247,32 @@ export async function updateArtisanBySiret(
   });
 }
 
+/** Applique des coords GPS en lot (backfill BAN). */
+export async function applyArtisanCoordinates(
+  updates: Array<{ siret: string; lat: number; lon: number }>
+): Promise<number> {
+  if (updates.length === 0) return 0;
+  return enqueueWrite(async () => {
+    const db = await readArtisansDb();
+    const now = new Date().toISOString();
+    const bySiret = new Map(db.artisans.map((a, i) => [a.siret, i]));
+    let n = 0;
+    for (const u of updates) {
+      const index = bySiret.get(u.siret);
+      if (index == null) continue;
+      db.artisans[index] = {
+        ...db.artisans[index],
+        lat: u.lat,
+        lon: u.lon,
+        updatedAt: now,
+      };
+      n += 1;
+    }
+    if (n > 0) await writeArtisansDb(db);
+    return n;
+  });
+}
+
 export async function getArtisanBySiret(
   siret: string
 ): Promise<EnrichedArtisan | null> {
@@ -462,7 +488,22 @@ export async function getArtisansStats() {
     byDepartment,
     topNaf,
     nafOptions,
-    geocoded: active.filter((a) => a.lat != null && a.lon != null).length,
+    geocoded: active.filter(
+      (a) =>
+        typeof a.lat === "number" &&
+        typeof a.lon === "number" &&
+        Number.isFinite(a.lat) &&
+        Number.isFinite(a.lon)
+    ).length,
+    withoutGeocode: active.filter(
+      (a) =>
+        !(
+          typeof a.lat === "number" &&
+          typeof a.lon === "number" &&
+          Number.isFinite(a.lat) &&
+          Number.isFinite(a.lon)
+        )
+    ).length,
     quota,
     remaining: Math.max(0, quota.monthlyLimit - used),
     recentJobs: db.jobs.slice(0, 10),

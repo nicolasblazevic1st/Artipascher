@@ -63,7 +63,8 @@ export interface QuotaTracking {
 export type EnrichmentJobKind =
   | "sirene_weekly"
   | "places_daily"
-  | "places_production";
+  | "places_production"
+  | "geocode_backfill";
 
 export interface EnrichmentJob {
   id: string;

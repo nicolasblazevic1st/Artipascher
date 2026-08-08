@@ -36,6 +36,8 @@ interface Stats {
   pendingEnrichment: number;
   invalidPhone: number;
   unmappedCategory: number;
+  geocoded: number;
+  withoutGeocode: number;
   byDepartment: Record<string, number>;
   topNaf: Array<{ naf: string; count: number; mapped: boolean; label?: string }>;
   nafOptions?: NafFilterOption[];
@@ -186,7 +188,9 @@ export default function AdminBaseArtisansPage() {
     );
   }
 
-  async function runAction(kind: "sirene" | "sirene-full" | "places") {
+  async function runAction(
+    kind: "sirene" | "sirene-full" | "places" | "geocode"
+  ) {
     setBusy(kind);
     setError(null);
     setSuccess(null);
@@ -199,6 +203,18 @@ export default function AdminBaseArtisansPage() {
         if (!res.ok) throw new Error(data.error ?? "Échec Places");
         setSuccess(
           `Places: traités ${data.result?.processed ?? 0}, requêtes ${data.result?.spent ?? 0}, budget ${data.result?.budget ?? "?"}`
+        );
+      } else if (kind === "geocode") {
+        const res = await fetch("/api/admin/artisans/geocode-backfill", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 200 }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Échec géocode BAN");
+        const r = data.result;
+        setSuccess(
+          `Géocode BAN: ${r?.geocoded ?? 0} OK · ${r?.failed ?? 0} échecs · ${r?.remaining ?? "?"} restants (lot ${r?.attempted ?? 0})`
         );
       } else {
         const res = await fetch("/api/admin/artisans/extract-sirene", {
@@ -285,6 +301,19 @@ export default function AdminBaseArtisansPage() {
           </button>
           <button
             type="button"
+            disabled={
+              Boolean(busy) ||
+              !stats ||
+              (stats.withoutGeocode ?? 0) === 0
+            }
+            onClick={() => void runAction("geocode")}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+            title="Complète lat/lon via l’API Adresse (BAN) — lots de 200"
+          >
+            Géocoder les manquants
+          </button>
+          <button
+            type="button"
             disabled={Boolean(busy) || stats?.placesEnabled === false}
             onClick={() => void runAction("places")}
             className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50"
@@ -318,8 +347,17 @@ export default function AdminBaseArtisansPage() {
       )}
 
       {stats && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard label="Actifs" value={stats.active} hint={`Total fiches ${stats.total}`} />
+          <StatCard
+            label="Avec GPS"
+            value={stats.geocoded ?? 0}
+            hint={
+              stats.active > 0
+                ? `${(((stats.geocoded ?? 0) / stats.active) * 100).toFixed(1)} % · ${stats.withoutGeocode ?? 0} sans coords`
+                : "Aucun actif"
+            }
+          />
           <StatCard
             label="Avec téléphone"
             value={stats.withPhone}
