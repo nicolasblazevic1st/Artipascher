@@ -39,9 +39,20 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const beta = await getIsBetaMode();
+  const buildId = process.env.ARTIPASCHER_BUILD_ID ?? "unknown";
+  const staging =
+    process.env.ARTIPASCHER_STAGING === "1" ||
+    process.env.NEXT_PUBLIC_ARTIPASCHER_STAGING === "1";
 
   return (
     <html lang="fr">
+      <head>
+        <meta name="x-artipascher-build" content={buildId} />
+        <meta
+          name="x-artipascher-env"
+          content={staging ? "staging" : beta ? "prod-beta" : "prod"}
+        />
+      </head>
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         <BetaModeProvider beta={beta}>
           <BetaBanner />

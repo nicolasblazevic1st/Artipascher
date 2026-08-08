@@ -4,11 +4,17 @@
 
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+STAGING_DIR="/var/www/artipascher-dev"
+cd "$STAGING_DIR"
 
 BRANCH="${ARTIPASCHER_STAGING_BRANCH:-dev}"
 ENRICHMENT="data/artisans-enrichment.json"
 BACKUP=""
+
+if [ "$(pwd)" != "$STAGING_DIR" ]; then
+  echo "ERREUR: cwd=$(pwd) — attendu $STAGING_DIR"
+  exit 1
+fi
 
 if [ -f "$ENRICHMENT" ] && ! git diff --quiet "$ENRICHMENT" 2>/dev/null; then
   BACKUP="$(mktemp /tmp/artisans-enrichment-staging.XXXXXX.json)"
@@ -24,7 +30,7 @@ git reset --hard "origin/$BRANCH"
 BUILD_ID="$(git rev-parse --short HEAD)"
 echo "==> commit déployé : $(git log -1 --oneline)"
 
-# Si le script vient d’être mis à jour par le reset, se relancer une fois
+# Relance une fois si le script deploy a changé (évite ancienne version en mémoire)
 SCRIPT_MARKER="/tmp/artipascher-staging-script-rev"
 CURRENT_SCRIPT_REV="$(git rev-parse HEAD:deploy/deploy-staging.sh 2>/dev/null || echo unknown)"
 PREV_SCRIPT_REV="$(cat "$SCRIPT_MARKER" 2>/dev/null || true)"
@@ -35,7 +41,7 @@ if [ "$CURRENT_SCRIPT_REV" != "$PREV_SCRIPT_REV" ]; then
   fi
   export ARTIPASCHER_BUILD_ID="$BUILD_ID"
   echo "==> script deploy mis à jour — relance"
-  exec bash deploy/deploy-staging.sh
+  exec bash "$STAGING_DIR/deploy/deploy-staging.sh"
 fi
 
 if [ -n "${ARTIPASCHER_STAGING_ENRICHMENT_BACKUP:-}" ] && [ -f "$ARTIPASCHER_STAGING_ENRICHMENT_BACKUP" ]; then
@@ -50,43 +56,81 @@ fi
 
 bash deploy/staging-env.sh .env.local
 
-# Identifiant de build lisible par /api/runtime-info
-set_env_build() {
-  local key="ARTIPASCHER_BUILD_ID"
-  local value="${ARTIPASCHER_BUILD_ID:-$BUILD_ID}"
-  local tmp=".env.local.tmp.$$"
-  if [ -f .env.local ]; then
-    grep -v "^${key}=" .env.local > "$tmp" || true
-  else
-    : > "$tmp"
-  fi
-  printf '%s=%s\n' "$key" "$value" >> "$tmp"
-  mv "$tmp" .env.local
-}
-set_env_build
+# Identifiant de build
+{
+  grep -v '^ARTIPASCHER_BUILD_ID=' .env.local 2>/dev/null || true
+  printf 'ARTIPASCHER_BUILD_ID=%s\n' "$BUILD_ID"
+} > .env.local.tmp.$$
+mv .env.local.tmp.$$ .env.local
 
-echo "==> npm ci + build (staging) — buildId=${ARTIPASCHER_BUILD_ID:-$BUILD_ID}"
+echo "==> clean .next + npm ci + build (buildId=$BUILD_ID)"
+rm -rf .next
 npm ci
-ARTIPASCHER_BUILD_ID="${ARTIPASCHER_BUILD_ID:-$BUILD_ID}" npm run build
+ARTIPASCHER_BUILD_ID="$BUILD_ID" npm run build
 
 mkdir -p data public/uploads
-printf '%s\n' "${ARTIPASCHER_BUILD_ID:-$BUILD_ID}" > public/build-id.txt
+printf '%s\n' "$BUILD_ID" > public/build-id.txt
 
-echo "==> restart PM2 artipascher-dev (env staging)"
+# Preuves que le build contient bien le nouveau code
+echo "==> vérif artefacts .next"
+if grep -R "Bêta ·" .next >/dev/null 2>&1; then
+  echo "ERREUR: le titre 'Bêta ·' est encore dans .next — build contaminé"
+  grep -R "Bêta ·" .next | head -5
+  exit 1
+fi
+echo "   OK: pas de titre 'Bêta ·' dans .next"
+
+if ! find .next -type f \( -name '*runtime-info*' -o -path '*runtime-info*' \) | head -1 | grep -q .; then
+  echo "ERREUR: route runtime-info absente du build .next"
+  exit 1
+fi
+echo "   OK: runtime-info présent dans .next"
+
+echo "==> restart PM2 artipascher-dev (cwd forcé $STAGING_DIR)"
 pm2 delete artipascher-dev 2>/dev/null || true
-ARTIPASCHER_BUILD_ID="${ARTIPASCHER_BUILD_ID:-$BUILD_ID}" pm2 start ecosystem.staging.config.cjs
+# Tuer tout ce qui écoute encore 3001
+if command -v fuser >/dev/null 2>&1; then
+  fuser -k 3001/tcp 2>/dev/null || true
+fi
+sleep 1
+ARTIPASCHER_BUILD_ID="$BUILD_ID" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
 pm2 save
+
+echo "==> PM2 exec cwd :"
+pm2 prettylist | grep -A2 -E 'name:.*artipascher-dev|pm_cwd|exec_cwd' || pm2 show artipascher-dev | grep -iE 'cwd|script|exec'
+
+# Laisser Next démarrer
+sleep 4
 
 echo "==> Nginx dev.artipascher.fr (accès IP uniquement)"
 bash deploy/apply-dev-ip-lock.sh
 
 echo "==> vérif proxy local"
-echo -n "   :3001 title: "
-curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/" | grep -o '<title>[^<]*</title>' | head -1 || echo "(échec)"
-echo -n "   :3000 title: "
-curl -s -H "Host: artipascher.fr" "http://127.0.0.1:3000/" | grep -o '<title>[^<]*</title>' | head -1 || echo "(échec)"
-echo -n "   runtime-info: "
-curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/api/runtime-info" || echo "(échec)"
-echo
+TITLE_3001="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+TITLE_3000="$(curl -s -H "Host: artipascher.fr" "http://127.0.0.1:3000/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+echo "   :3001 title: ${TITLE_3001:-'(vide)'}"
+echo "   :3000 title: ${TITLE_3000:-'(vide)'}"
 
-echo "✅ Staging déployé (dev.artipascher.fr:3001) — commit ${ARTIPASCHER_BUILD_ID:-$BUILD_ID} — $(date -Iseconds)"
+RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/api/runtime-info" || true)"
+echo "   runtime-info: $RUNTIME"
+
+BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/build-id.txt" || true)"
+echo "   build-id.txt: $BUILD_TXT"
+
+if echo "$TITLE_3001" | grep -q "Bêta ·"; then
+  echo ""
+  echo "ERREUR: :3001 sert encore l'ancien titre bêta."
+  echo "Diagnostic :"
+  pm2 show artipascher-dev | sed -n '1,40p'
+  ss -lptn 'sport = :3001' || netstat -lptn | grep 3001 || true
+  exit 1
+fi
+
+if ! echo "$RUNTIME" | grep -q '"beta":false'; then
+  echo ""
+  echo "ERREUR: /api/runtime-info n'indique pas beta:false"
+  echo "$RUNTIME" | head -c 500
+  exit 1
+fi
+
+echo "✅ Staging OK (dev.artipascher.fr:3001) — commit $BUILD_ID — $(date -Iseconds)"
