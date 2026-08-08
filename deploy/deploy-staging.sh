@@ -97,10 +97,36 @@ ARTIPASCHER_BUILD_ID="$BUILD_ID" pm2 start "$STAGING_DIR/ecosystem.staging.confi
 pm2 save
 
 echo "==> PM2 exec cwd :"
-pm2 prettylist | grep -A2 -E 'name:.*artipascher-dev|pm_cwd|exec_cwd' || pm2 show artipascher-dev | grep -iE 'cwd|script|exec'
+pm2 show artipascher-dev | grep -iE 'cwd|script path|status|restarts|uptime' || true
 
-# Laisser Next démarrer
-sleep 4
+# Attendre un process stable (pas de crash loop)
+echo "==> attente démarrage Next…"
+STABLE=0
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  sleep 2
+  UP="$(pm2 jlist | node -e "
+    const apps=JSON.parse(require('fs').readFileSync(0,'utf8'));
+    const a=apps.find(x=>x.name==='artipascher-dev');
+    if(!a){console.log('missing'); process.exit(0)}
+    console.log([a.pm2_env.status, a.pm2_env.unstable_restarts||0, Math.floor((Date.now()-a.pm2_env.pm_uptime)/1000)].join(' '));
+  " 2>/dev/null || echo missing)"
+  echo "   try $i: $UP"
+  STATUS="$(echo "$UP" | awk '{print $1}')"
+  UNSTABLE="$(echo "$UP" | awk '{print $2}')"
+  SECS="$(echo "$UP" | awk '{print $3}')"
+  if [ "$STATUS" = "online" ] && [ "${UNSTABLE:-99}" -lt 3 ] && [ "${SECS:-0}" -ge 3 ]; then
+    STABLE=1
+    break
+  fi
+done
+
+if [ "$STABLE" != "1" ]; then
+  echo "ERREUR: artipascher-dev ne reste pas stable (crash loop ?)"
+  echo "==> logs erreur (80 dernières lignes) :"
+  pm2 logs artipascher-dev --err --lines 80 --nostream || true
+  tail -n 80 /home/ubuntu/.pm2/logs/artipascher-dev-error-*.log 2>/dev/null || true
+  exit 1
+fi
 
 echo "==> Nginx dev.artipascher.fr (accès IP uniquement)"
 bash deploy/apply-dev-ip-lock.sh
