@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { sendContactInterestEmailToClient } from "@/lib/email";
-import { notifyClientContactInterest } from "@/lib/notify";
+import {
+  notifyClientContactInterest,
+  notifyProContactDecision,
+} from "@/lib/notify";
 import { formatProTradeSelections } from "@/lib/pro-trades";
 import { getProSession } from "@/lib/pro-auth";
 import {
@@ -76,11 +79,27 @@ export async function POST(request: NextRequest) {
   void notifyClientContactInterest({
     workRequest,
     companyName: pro.companyName,
+    autoAccepted: result.autoAccepted,
+    acceptedCount: result.acceptedCount,
+    maxAccepted: result.maxAccepted,
   }).catch((err) => console.error("[notify] contact interest", err));
+
+  if (result.autoAccepted) {
+    void notifyProContactDecision({
+      proId: pro.id,
+      decision: "accepted",
+      category: workRequest.category,
+      city: workRequest.city,
+      auctionId,
+    }).catch((err) => console.error("[notify] contact auto-accepted", err));
+  }
 
   return NextResponse.json(
     {
       request: result.request,
+      autoAccepted: result.autoAccepted,
+      acceptedCount: result.acceptedCount,
+      maxAccepted: result.maxAccepted,
       proSummary: {
         companyName: pro.companyName,
         siret: pro.siret,

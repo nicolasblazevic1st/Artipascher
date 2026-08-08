@@ -96,7 +96,11 @@ export default function ClientContactPanel({
       setError(data.error ?? "Impossible d'envoyer la demande.");
       return;
     }
-    setInterestStatus("pending");
+    const status =
+      data.request?.status === "accepted" || data.autoAccepted === true
+        ? "accepted"
+        : "pending";
+    setInterestStatus(status);
   }
 
   async function handleUnlock(demo = false) {
@@ -202,8 +206,10 @@ export default function ClientContactPanel({
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
         Les photos du projet restent visibles librement (sans crédit). Manifestez
-        d&apos;abord votre intérêt. Après acceptation du client, vous pourrez débloquer
-        les coordonnées pour 1 crédit ({UNLOCK_PRICE_EUR}&nbsp;€).
+        votre intérêt (gratuit). Si le client a activé l&apos;alerte SMS (défaut),
+        votre demande est acceptée automatiquement (dans la limite de 5 artisans) et
+        vous pouvez débloquer les coordonnées pour 1 crédit ({UNLOCK_PRICE_EUR}
+        &nbsp;€). Sinon, le client a 48&nbsp;h pour répondre.
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -306,7 +312,8 @@ export default function ClientContactPanel({
           {interestStatus === "accepted" && (
             <>
               <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                Le client a accepté. Vous pouvez débloquer les coordonnées.
+                Contact autorisé (acceptation client ou alerte SMS). Vous pouvez
+                débloquer les coordonnées.
               </p>
               <button
                 type="button"

@@ -23,9 +23,10 @@ export default function ClientContactPublicCta({
     <section id="contact" className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6">
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Les photos du projet restent visibles librement (sans crédit). Manifestez
-        d&apos;abord votre intérêt depuis votre espace pro. Après acceptation du client,
-        vous pourrez débloquer les coordonnées pour 1 crédit ({UNLOCK_PRICE_EUR}&nbsp;€).
+        Les photos restent visibles librement. Depuis votre espace pro, manifestez
+        votre intérêt : si le client a activé l&apos;alerte SMS (défaut), le contact
+        est ouvert automatiquement (max. 5 artisans), puis déblocage pour 1 crédit
+        ({UNLOCK_PRICE_EUR}&nbsp;€).
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">

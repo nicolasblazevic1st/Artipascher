@@ -172,6 +172,14 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Contact auto + SMS</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              {request.smsContactAlertsEnabled === false
+                ? "Désactivé (acceptation manuelle)"
+                : "Activé (max. 5 artisans)"}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Devis validés</dt>
             <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>

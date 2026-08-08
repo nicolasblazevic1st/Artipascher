@@ -70,6 +70,7 @@ export default function WorkRequestForm({
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
   const [auctionDurationDays, setAuctionDurationDays] = useState(DEFAULT_AUCTION_DURATION_DAYS);
   const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
+  const [smsContactAlertsEnabled, setSmsContactAlertsEnabled] = useState(true);
   const [isCompany, setIsCompany] = useState(false);
   const [clientSiret, setClientSiret] = useState("");
   const [companyVerification, setCompanyVerification] =
@@ -232,6 +233,10 @@ export default function WorkRequestForm({
     formData.set(
       "preferEstablishedCompany",
       preferEstablishedCompany ? "true" : "false"
+    );
+    formData.set(
+      "smsContactAlertsEnabled",
+      smsContactAlertsEnabled ? "true" : "false"
     );
     formData.set("startPriceMode", startPriceMode);
     if (startPriceMode === "client") {
@@ -619,6 +624,33 @@ export default function WorkRequestForm({
           </label>
         </div>
       </fieldset>
+
+      <label
+        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+          smsContactAlertsEnabled
+            ? "border-brand-500 bg-brand-50"
+            : "border-slate-200 bg-white"
+        }`}
+      >
+        <input
+          type="checkbox"
+          name="smsContactAlertsEnabled"
+          checked={smsContactAlertsEnabled}
+          onChange={(e) => setSmsContactAlertsEnabled(e.target.checked)}
+          className="mt-1"
+        />
+        <span>
+          <span className="font-semibold text-slate-900">
+            M&apos;alerter par SMS et autoriser le contact artisan
+          </span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            Activé par défaut. Un artisan intéressé peut vous contacter
+            automatiquement (jusqu&apos;à 5), vous êtes prévenu par SMS, email et
+            notification. Décochez pour devoir accepter chaque demande sous
+            48&nbsp;h.
+          </span>
+        </span>
+      </label>
 
       <select
         name="category"

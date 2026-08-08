@@ -81,6 +81,14 @@ export async function POST(request: NextRequest) {
       preferEstablishedRaw === "true" ||
       preferEstablishedRaw === "1" ||
       preferEstablishedRaw === "on";
+    // Option par défaut activée : absente ou true → SMS contact.
+    const smsContactAlertsRaw = String(
+      formData.get("smsContactAlertsEnabled") ?? "true"
+    ).toLowerCase();
+    const smsContactAlertsEnabled =
+      smsContactAlertsRaw === "true" ||
+      smsContactAlertsRaw === "1" ||
+      smsContactAlertsRaw === "on";
     const previousQuoteAmountRaw = String(formData.get("previousQuoteAmount") ?? "").trim();
     const previousQuoteNote = String(formData.get("previousQuoteNote") ?? "").trim();
     const startPriceMode = parseStartPriceMode(formData.get("startPriceMode"));
@@ -264,6 +272,7 @@ export async function POST(request: NextRequest) {
       description: description.trim(),
       auctionDurationDays,
       preferEstablishedCompany,
+      smsContactAlertsEnabled,
       startPriceMode,
       startPrice: clientStartPrice,
       photos: [],

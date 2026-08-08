@@ -179,6 +179,12 @@ export default function AdminDemandesPage() {
                         ? "préfère +2 ans (mix SMS 2/3)"
                         : "peu importe"}
                     </div>
+                    <div>
+                      Contact auto + SMS :{" "}
+                      {r.smsContactAlertsEnabled === false
+                        ? "désactivé (manuel 48 h)"
+                        : "activé — acceptation auto / 5 places"}
+                    </div>
                     <div>{r.email}</div>
                     <div>Tél : {r.phone?.trim() || "Non renseigné"}</div>
                   </dl>

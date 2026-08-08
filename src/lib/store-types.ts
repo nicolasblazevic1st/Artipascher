@@ -218,6 +218,12 @@ export interface WorkRequest {
    * Influence le mix SMS (2/3 ≥2 ans, 1/3 &lt;2 ans).
    */
   preferEstablishedCompany?: boolean;
+  /**
+   * Si true (défaut) : SMS + acceptation auto quand un artisan demande le contact
+   * (compte dans le plafond de 5). undefined = true.
+   * Si false : le client doit accepter manuellement sous 48 h.
+   */
+  smsContactAlertsEnabled?: boolean;
   photos: string[];
   status: AdminReviewStatus;
   createdAt: string;

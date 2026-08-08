@@ -1,5 +1,16 @@
+import type { WorkRequest } from "@/lib/store-types";
+
 /** Nombre max d’artisans acceptés par le client pour une même enchère. */
 export const MAX_ACCEPTED_ARTISANS_PER_AUCTION = 5;
+
+/**
+ * Option « M'alerter par SMS » (défaut ON).
+ * Si active : un artisan qui manifeste son intérêt est accepté automatiquement
+ * et occupe une place de contact (sur 5).
+ */
+export function isSmsContactAlertsEnabled(request: WorkRequest): boolean {
+  return request.smsContactAlertsEnabled !== false;
+}
 
 /**
  * Interrupteur code du bandeau / pastilles « places de contact ».

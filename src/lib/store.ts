@@ -5,6 +5,7 @@ import { randomBytes } from "crypto";
 import { computeCurrentPrice, MAX_BIDS_PER_AUCTION } from "./auctions";
 import {
   isAcceptSlotsFull,
+  isSmsContactAlertsEnabled,
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 } from "./contact-slots";
 import {
@@ -1499,7 +1500,15 @@ export async function createContactRequest(data: {
   auctionId: string;
   workRequestId: string;
   proId: string;
-}): Promise<{ request: ContactRequest } | { error: string }> {
+}): Promise<
+  | {
+      request: ContactRequest;
+      autoAccepted: boolean;
+      acceptedCount: number;
+      maxAccepted: number;
+    }
+  | { error: string }
+> {
   const store = await readStore();
   expireContactRequestsInStore(store);
 
@@ -1513,19 +1522,46 @@ export async function createContactRequest(data: {
     };
   }
 
+  const workRequest = store.workRequests.find((w) => w.id === data.workRequestId);
+  if (!workRequest) {
+    return { error: "Demande introuvable." };
+  }
+
+  const acceptedPros = new Set<string>();
+  for (const r of store.contactRequests) {
+    if (r.auctionId === data.auctionId && r.status === "accepted") {
+      acceptedPros.add(r.proId);
+    }
+  }
+  if (isAcceptSlotsFull(acceptedPros.size)) {
+    return {
+      error: `Les ${MAX_ACCEPTED_ARTISANS_PER_AUCTION} places de contact sont déjà prises pour cette offre.`,
+    };
+  }
+
+  // Option client « M'alerter » (défaut) : acceptation auto + compte dans le plafond 5.
+  const autoAccepted = isSmsContactAlertsEnabled(workRequest);
   const now = new Date();
   const request: ContactRequest = {
     id: newId("creq"),
     auctionId: data.auctionId,
     workRequestId: data.workRequestId,
     proId: data.proId,
-    status: "pending",
+    status: autoAccepted ? "accepted" : "pending",
     createdAt: now.toISOString(),
     expiresAt: new Date(now.getTime() + CONTACT_REQUEST_TTL_MS).toISOString(),
+    ...(autoAccepted ? { decidedAt: now.toISOString() } : {}),
   };
   store.contactRequests.unshift(request);
   await writeStore(store);
-  return { request };
+
+  const acceptedCount = autoAccepted ? acceptedPros.size + 1 : acceptedPros.size;
+  return {
+    request,
+    autoAccepted,
+    acceptedCount,
+    maxAccepted: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+  };
 }
 
 export async function getContactRequestsForWorkRequest(
