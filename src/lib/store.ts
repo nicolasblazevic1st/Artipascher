@@ -47,8 +47,11 @@ import {
   type PhoneVerificationChallenge,
   type ProDocument,
   type ProRegistration,
+  type SmsAcquisitionCampaign,
+  type SmsAcquisitionStatus,
   type SmsCampaign,
   type SmsCampaignSettings,
+  type SmsCampaignTrigger,
   type WorkRequest,
 } from "./store-types";
 
@@ -96,14 +99,74 @@ export async function readStore(): Promise<DataStore> {
     emailVerificationTokens: parsed.emailVerificationTokens ?? [],
     phoneVerificationChallenges: parsed.phoneVerificationChallenges ?? [],
     smsCampaigns: parsed.smsCampaigns ?? [],
-    smsSettings: {
-      ...DEFAULT_SMS_SETTINGS,
-      ...(parsed.smsSettings ?? {}),
-    },
+    smsAcquisitionCampaigns: parsed.smsAcquisitionCampaigns ?? [],
+    smsSettings: normalizeSmsSettings(parsed.smsSettings),
     creditWallets: parsed.creditWallets ?? [],
     creditTransactions: parsed.creditTransactions ?? [],
     notifications: parsed.notifications ?? [],
   };
+}
+
+function normalizeSmsSettings(
+  raw?: Partial<SmsCampaignSettings> | null
+): SmsCampaignSettings {
+  const merged = { ...DEFAULT_SMS_SETTINGS, ...(raw ?? {}) };
+  const smsPerDay = Math.max(
+    1,
+    Math.min(
+      200,
+      Math.floor(
+        merged.smsPerDay ??
+          merged.defaultCampaignSize ??
+          DEFAULT_SMS_SETTINGS.smsPerDay
+      )
+    )
+  );
+  return {
+    ...merged,
+    smsPerDay,
+    defaultCampaignSize: smsPerDay,
+    requireReviewBeforeSend: merged.requireReviewBeforeSend !== false,
+  };
+}
+
+/** Jour civil Europe/Paris au format YYYY-MM-DD. */
+export function parisDayKey(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/** Prochain jour marketing lun–sam (Europe/Paris), en général demain. */
+export function parisNextMarketingDayKey(from = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).formatToParts(from);
+
+  const y = Number(parts.find((p) => p.type === "year")?.value);
+  const m = Number(parts.find((p) => p.type === "month")?.value);
+  const d = Number(parts.find((p) => p.type === "day")?.value);
+  // Midi UTC évite les bascules DST quand on itère les jours.
+  const cursor = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+
+  for (let i = 0; i < 8; i++) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    const wd = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Paris",
+      weekday: "short",
+    }).format(cursor);
+    if (wd !== "Sun") {
+      return parisDayKey(cursor);
+    }
+  }
+  return parisDayKey(cursor);
 }
 
 async function writeStore(store: DataStore): Promise<void> {
@@ -1598,6 +1661,60 @@ export async function addSmsCampaign(
   return entry;
 }
 
+export async function getSmsCampaignById(
+  id: string
+): Promise<SmsCampaign | null> {
+  const store = await readStore();
+  return store.smsCampaigns.find((c) => c.id === id) ?? null;
+}
+
+export async function updateSmsCampaign(
+  id: string,
+  patch: Partial<
+    Pick<
+      SmsCampaign,
+      | "status"
+      | "sentCount"
+      | "failedCount"
+      | "recipientCount"
+      | "recipients"
+      | "sentAt"
+      | "message"
+      | "scheduledForDate"
+    >
+  >
+): Promise<SmsCampaign | null> {
+  const store = await readStore();
+  const index = store.smsCampaigns.findIndex((c) => c.id === id);
+  if (index === -1) return null;
+  store.smsCampaigns[index] = { ...store.smsCampaigns[index], ...patch };
+  await writeStore(store);
+  return store.smsCampaigns[index];
+}
+
+/** Lots en attente de validation (aucun envoi OVH encore). */
+export async function getPendingReviewSmsCampaigns(): Promise<SmsCampaign[]> {
+  const campaigns = await getSmsCampaigns();
+  return campaigns.filter((c) => c.status === "pending_review");
+}
+
+export async function getPendingReviewForAcquisition(
+  acquisitionId: string,
+  scheduledForDate?: string
+): Promise<SmsCampaign | null> {
+  const dayKey = scheduledForDate ?? parisNextMarketingDayKey();
+  const campaigns = await getSmsCampaigns();
+  return (
+    campaigns.find((c) => {
+      if (c.status !== "pending_review") return false;
+      if (c.acquisitionCampaignId !== acquisitionId) return false;
+      const scheduled =
+        c.scheduledForDate ?? parisDayKey(new Date(c.createdAt));
+      return scheduled === dayKey;
+    }) ?? null
+  );
+}
+
 export async function getWorkRequestById(id: string): Promise<WorkRequest | null> {
   const store = await readStore();
   return store.workRequests.find((r) => r.id === id) ?? null;
@@ -1823,20 +1940,118 @@ export async function recallContactRequest(
 
 export async function getSmsSettings(): Promise<SmsCampaignSettings> {
   const store = await readStore();
-  return { ...DEFAULT_SMS_SETTINGS, ...(store.smsSettings ?? {}) };
+  return normalizeSmsSettings(store.smsSettings);
 }
 
 export async function updateSmsSettings(
   patch: Partial<SmsCampaignSettings>
 ): Promise<SmsCampaignSettings> {
   const store = await readStore();
-  store.smsSettings = {
-    ...DEFAULT_SMS_SETTINGS,
-    ...(store.smsSettings ?? {}),
-    ...patch,
-  };
+  const current = normalizeSmsSettings(store.smsSettings);
+  const nextPatch = { ...patch };
+  if (
+    typeof nextPatch.smsPerDay !== "number" &&
+    typeof nextPatch.defaultCampaignSize === "number"
+  ) {
+    nextPatch.smsPerDay = nextPatch.defaultCampaignSize;
+  }
+  store.smsSettings = normalizeSmsSettings({ ...current, ...nextPatch });
   await writeStore(store);
   return store.smsSettings;
+}
+
+export async function getSmsAcquisitionCampaigns(): Promise<
+  SmsAcquisitionCampaign[]
+> {
+  const store = await readStore();
+  return [...(store.smsAcquisitionCampaigns ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function getActiveSmsAcquisitionCampaign(
+  workRequestId: string
+): Promise<SmsAcquisitionCampaign | null> {
+  const all = await getSmsAcquisitionCampaigns();
+  return (
+    all.find(
+      (c) =>
+        c.workRequestId === workRequestId &&
+        (c.status === "active" || c.status === "paused")
+    ) ?? null
+  );
+}
+
+export async function getSmsAcquisitionCampaignById(
+  id: string
+): Promise<SmsAcquisitionCampaign | null> {
+  const store = await readStore();
+  return (store.smsAcquisitionCampaigns ?? []).find((c) => c.id === id) ?? null;
+}
+
+export async function createSmsAcquisitionCampaign(data: {
+  workRequestId: string;
+  smsPerDay: number;
+  trigger: SmsCampaignTrigger;
+}): Promise<SmsAcquisitionCampaign> {
+  const store = await readStore();
+  if (!store.smsAcquisitionCampaigns) store.smsAcquisitionCampaigns = [];
+  const now = new Date().toISOString();
+  const entry: SmsAcquisitionCampaign = {
+    id: newId("smsacq"),
+    workRequestId: data.workRequestId,
+    status: "active",
+    smsPerDay: Math.max(1, Math.min(200, Math.floor(data.smsPerDay))),
+    totalSent: 0,
+    sentOnLastDate: 0,
+    trigger: data.trigger,
+    createdAt: now,
+    updatedAt: now,
+  };
+  store.smsAcquisitionCampaigns.unshift(entry);
+  await writeStore(store);
+  return entry;
+}
+
+export async function updateSmsAcquisitionCampaign(
+  id: string,
+  patch: Partial<
+    Pick<
+      SmsAcquisitionCampaign,
+      | "status"
+      | "totalSent"
+      | "lastSendDate"
+      | "sentOnLastDate"
+      | "completedAt"
+      | "smsPerDay"
+    >
+  >
+): Promise<SmsAcquisitionCampaign | null> {
+  const store = await readStore();
+  if (!store.smsAcquisitionCampaigns) store.smsAcquisitionCampaigns = [];
+  const index = store.smsAcquisitionCampaigns.findIndex((c) => c.id === id);
+  if (index === -1) return null;
+  store.smsAcquisitionCampaigns[index] = {
+    ...store.smsAcquisitionCampaigns[index],
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
+  await writeStore(store);
+  return store.smsAcquisitionCampaigns[index];
+}
+
+export async function setSmsAcquisitionStatus(
+  id: string,
+  status: SmsAcquisitionStatus
+): Promise<SmsAcquisitionCampaign | null> {
+  const completedAt =
+    status === "completed" || status === "exhausted"
+      ? new Date().toISOString()
+      : undefined;
+  return updateSmsAcquisitionCampaign(id, {
+    status,
+    ...(completedAt ? { completedAt } : {}),
+  });
 }
 
 export async function getArtisanProspects(): Promise<ArtisanProspect[]> {

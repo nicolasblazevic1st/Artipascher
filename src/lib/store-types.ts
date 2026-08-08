@@ -338,9 +338,14 @@ export interface PhoneVerificationChallenge {
   createdAt: string;
 }
 
-export type SmsCampaignStatus = "demo" | "sent" | "failed";
+export type SmsCampaignStatus =
+  | "demo"
+  | "sent"
+  | "failed"
+  | "pending_review"
+  | "cancelled";
 
-export type SmsRecipientStatus = "sent" | "failed" | "skipped";
+export type SmsRecipientStatus = "sent" | "failed" | "skipped" | "pending";
 
 export type SmsCohort = "returning" | "new_young" | "new_established";
 
@@ -356,7 +361,7 @@ export interface SmsCampaignRecipient {
   cohort?: SmsCohort;
 }
 
-/** Campagne SMS admin — alerte artisans proches d'une demande de travaux. */
+/** Batch d’envoi journalier (historique) lié à une campagne d’acquisition. */
 export interface SmsCampaign {
   id: string;
   workRequestId: string;
@@ -370,8 +375,40 @@ export interface SmsCampaign {
   failedCount: number;
   recipients: SmsCampaignRecipient[];
   trigger?: SmsCampaignTrigger;
+  /** Campagne multi-jours parente, si applicable. */
+  acquisitionCampaignId?: string;
+  /**
+   * Jour d’envoi prévu (Europe/Paris YYYY-MM-DD).
+   * En mode revue : préparé la veille pour cette date.
+   */
+  scheduledForDate?: string;
   createdAt: string;
   sentAt?: string;
+}
+
+export type SmsAcquisitionStatus =
+  | "active"
+  | "completed"
+  | "paused"
+  | "exhausted";
+
+/**
+ * Campagne d’acquisition multi-jours : budget SMS/jour jusqu’à 5/5 contacts acceptés.
+ */
+export interface SmsAcquisitionCampaign {
+  id: string;
+  workRequestId: string;
+  status: SmsAcquisitionStatus;
+  /** Snapshot du budget journalier au démarrage. */
+  smsPerDay: number;
+  totalSent: number;
+  /** Jour Europe/Paris YYYY-MM-DD du dernier lot. */
+  lastSendDate?: string;
+  sentOnLastDate: number;
+  trigger: SmsCampaignTrigger;
+  createdAt: string;
+  completedAt?: string;
+  updatedAt: string;
 }
 
 export type ContactRequestStatus = "pending" | "accepted" | "refused" | "expired";
@@ -417,14 +454,26 @@ export interface ArtisanProspect {
 
 export interface SmsCampaignSettings {
   autoSendOnApprove: boolean;
-  defaultCampaignSize: number;
+  /** SMS marketing max par jour et par campagne d’acquisition. */
+  smsPerDay: number;
+  /**
+   * Si true (défaut) : préparation la veille en `pending_review` (sans OVH).
+   * Envoi réel seulement après validation admin, avec re-check 5/5.
+   */
+  requireReviewBeforeSend: boolean;
+  /**
+   * @deprecated Alias de smsPerDay (migration anciens stores).
+   */
+  defaultCampaignSize?: number;
   defaultMessageTemplate?: string;
   throttleMs: number;
 }
 
 export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
   autoSendOnApprove: false,
-  defaultCampaignSize: 30,
+  smsPerDay: 5,
+  defaultCampaignSize: 5,
+  requireReviewBeforeSend: true,
   throttleMs: 150,
 };
 
@@ -509,6 +558,7 @@ export interface DataStore {
   emailVerificationTokens: EmailVerificationToken[];
   phoneVerificationChallenges: PhoneVerificationChallenge[];
   smsCampaigns: SmsCampaign[];
+  smsAcquisitionCampaigns?: SmsAcquisitionCampaign[];
   smsSettings?: SmsCampaignSettings;
   creditWallets: ProCreditWallet[];
   creditTransactions: ProCreditTransaction[];
@@ -528,6 +578,7 @@ export const EMPTY_STORE: DataStore = {
   emailVerificationTokens: [],
   phoneVerificationChallenges: [],
   smsCampaigns: [],
+  smsAcquisitionCampaigns: [],
   smsSettings: { ...DEFAULT_SMS_SETTINGS },
   creditWallets: [],
   creditTransactions: [],

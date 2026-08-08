@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
 import {
-  executeSmsCampaignToRecipients,
-  previewSmsCampaignDetailed,
+  approvePendingReviewBatch,
+  pauseAcquisitionCampaign,
+  resumeAcquisitionCampaign,
+  runAcquisitionCampaignTick,
+  startAcquisitionCampaign,
 } from "@/lib/sms-campaigns";
 import { isDemoSmsAllowed, isSmsConfigured } from "@/lib/sms";
 import {
+  countAcceptedArtisansForAuction,
+  getPendingReviewSmsCampaigns,
+  getSmsAcquisitionCampaigns,
   getSmsCampaigns,
   getSmsSettings,
   getWorkRequestById,
+  parisDayKey,
   readStore,
   updateSmsSettings,
 } from "@/lib/store";
@@ -19,8 +27,31 @@ export async function GET() {
   }
 
   const campaigns = await getSmsCampaigns();
+  const pendingReview = await getPendingReviewSmsCampaigns();
+  const acquisitions = await getSmsAcquisitionCampaigns();
   const store = await readStore();
   const settings = await getSmsSettings();
+  const day = parisDayKey();
+
+  const acquisitionRows = await Promise.all(
+    acquisitions.map(async (a) => {
+      const wr = store.workRequests.find((r) => r.id === a.workRequestId);
+      const acceptedCount = wr?.auctionId
+        ? await countAcceptedArtisansForAuction(wr.auctionId)
+        : 0;
+      const sentToday = a.lastSendDate === day ? a.sentOnLastDate : 0;
+      return {
+        ...a,
+        category: wr?.category,
+        city: wr?.city,
+        department: wr?.department,
+        auctionId: wr?.auctionId,
+        acceptedCount,
+        maxAccepted: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+        sentToday,
+      };
+    })
+  );
 
   const eligibleRequests = store.workRequests
     .filter((r) => r.status === "approved" || r.status === "pending")
@@ -40,6 +71,8 @@ export async function GET() {
 
   return NextResponse.json({
     campaigns,
+    pendingReview,
+    acquisitions: acquisitionRows,
     requests: eligibleRequests,
     settings,
     smsConfigured: isSmsConfigured(),
@@ -54,14 +87,24 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
+    const smsPerDayRaw =
+      typeof body.smsPerDay === "number"
+        ? body.smsPerDay
+        : typeof body.defaultCampaignSize === "number"
+          ? body.defaultCampaignSize
+          : undefined;
     const settings = await updateSmsSettings({
       autoSendOnApprove:
         typeof body.autoSendOnApprove === "boolean"
           ? body.autoSendOnApprove
           : undefined,
-      defaultCampaignSize:
-        typeof body.defaultCampaignSize === "number"
-          ? Math.max(1, Math.min(200, Math.floor(body.defaultCampaignSize)))
+      requireReviewBeforeSend:
+        typeof body.requireReviewBeforeSend === "boolean"
+          ? body.requireReviewBeforeSend
+          : undefined,
+      smsPerDay:
+        typeof smsPerDayRaw === "number"
+          ? Math.max(1, Math.min(200, Math.floor(smsPerDayRaw)))
           : undefined,
       throttleMs:
         typeof body.throttleMs === "number"
@@ -83,33 +126,114 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
 
-  let workRequestId: string;
-  let message: string;
+  let workRequestId = "";
+  let acquisitionId = "";
+  let message = "";
   let demo = false;
-  let recipientSirets: string[] = [];
+  let action: "start" | "tick" | "pause" | "resume" | "approve" = "start";
+  let smsPerDay: number | undefined;
+  let batchId = "";
 
   try {
     const body = await request.json();
+    action =
+      body.action === "tick" ||
+      body.action === "pause" ||
+      body.action === "resume" ||
+      body.action === "approve"
+        ? body.action
+        : "start";
     workRequestId = String(body.workRequestId ?? "").trim();
+    acquisitionId = String(body.acquisitionId ?? "").trim();
+    batchId = String(body.batchId ?? "").trim();
     message = String(body.message ?? "").trim();
     demo = body.demo === true;
-    recipientSirets = Array.isArray(body.recipientSirets)
-      ? body.recipientSirets.map((s: unknown) => String(s).trim()).filter(Boolean)
-      : [];
+    if (typeof body.smsPerDay === "number") {
+      smsPerDay = Math.max(1, Math.min(200, Math.floor(body.smsPerDay)));
+    }
   } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  if (!workRequestId || !message) {
-    return NextResponse.json(
-      { error: "Demande de travaux et message requis." },
-      { status: 400 }
-    );
+  if (action === "approve") {
+    if (!batchId) {
+      return NextResponse.json({ error: "batchId requis." }, { status: 400 });
+    }
+    if (!demo && !isSmsConfigured()) {
+      return NextResponse.json(
+        { error: "OVH SMS non configuré. Impossible d’envoyer pour de vrai." },
+        { status: 503 }
+      );
+    }
+    try {
+      const result = await approvePendingReviewBatch(batchId, { demo });
+      return NextResponse.json({ result });
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Validation impossible." },
+        { status: 400 }
+      );
+    }
   }
 
-  if (recipientSirets.length === 0) {
+  if (action === "pause" || action === "resume") {
+    if (!acquisitionId) {
+      return NextResponse.json(
+        { error: "acquisitionId requis." },
+        { status: 400 }
+      );
+    }
+    const acquisition =
+      action === "pause"
+        ? await pauseAcquisitionCampaign(acquisitionId)
+        : await resumeAcquisitionCampaign(acquisitionId);
+    if (!acquisition) {
+      return NextResponse.json(
+        { error: "Campagne introuvable ou statut invalide." },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json({ acquisition });
+  }
+
+  if (action === "tick") {
+    if (!acquisitionId) {
+      return NextResponse.json(
+        { error: "acquisitionId requis." },
+        { status: 400 }
+      );
+    }
+    {
+      const settings = await getSmsSettings();
+      const reviewOnly = settings.requireReviewBeforeSend && !demo;
+      if (!demo && !reviewOnly && !isSmsConfigured()) {
+        return NextResponse.json(
+          {
+            error:
+              "OVH SMS non configuré. Activez la validation avant envoi, ou le mode démo.",
+          },
+          { status: 503 }
+        );
+      }
+    }
+    try {
+      const result = await runAcquisitionCampaignTick(acquisitionId, {
+        demo,
+        message: message || undefined,
+      });
+      return NextResponse.json({ result });
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Tick impossible." },
+        { status: 400 }
+      );
+    }
+  }
+
+  // start
+  if (!workRequestId) {
     return NextResponse.json(
-      { error: "Sélectionnez au moins une entreprise destinataire." },
+      { error: "Demande de travaux requise." },
       { status: 400 }
     );
   }
@@ -119,19 +243,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Demande introuvable." }, { status: 404 });
   }
 
-  if (!demo && !isSmsConfigured()) {
+  const settings = await getSmsSettings();
+  const reviewOnly = settings.requireReviewBeforeSend && !demo;
+  if (!demo && !reviewOnly && !isSmsConfigured()) {
     return NextResponse.json(
-      { error: "OVH SMS non configuré. Utilisez la simulation démo." },
+      { error: "OVH SMS non configuré. Activez la validation avant envoi, ou le mode démo." },
       { status: 503 }
     );
   }
 
-  const campaign = await executeSmsCampaignToRecipients(
-    workRequest,
-    message,
-    recipientSirets,
-    { demo, trigger: "manual" }
-  );
-
-  return NextResponse.json({ campaign }, { status: 201 });
+  try {
+    const result = await startAcquisitionCampaign(workRequest, {
+      demo,
+      message: message || undefined,
+      trigger: "manual",
+      smsPerDay,
+    });
+    return NextResponse.json({ result }, { status: 201 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Démarrage impossible." },
+      { status: 400 }
+    );
+  }
 }

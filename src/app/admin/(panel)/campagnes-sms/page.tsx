@@ -3,7 +3,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { readAdminJson } from "@/lib/admin-fetch-json";
-import type { SmsCampaign, SmsCampaignSettings, SmsCohort } from "@/lib/store-types";
+import type {
+  SmsAcquisitionCampaign,
+  SmsCampaign,
+  SmsCampaignSettings,
+  SmsCohort,
+} from "@/lib/store-types";
+
+interface AcquisitionRow extends SmsAcquisitionCampaign {
+  category?: string;
+  city?: string;
+  department?: string;
+  auctionId?: string;
+  acceptedCount: number;
+  maxAccepted: number;
+  sentToday: number;
+}
 
 interface WorkRequestOption {
   id: string;
@@ -86,6 +101,8 @@ const STATUS_LABELS: Record<SmsCampaign["status"], string> = {
   sent: "Envoyée",
   demo: "Mode démo",
   failed: "Échec partiel",
+  pending_review: "Prévu (à valider, pas d’OVH)",
+  cancelled: "Annulé (objectif atteint / obsolète)",
 };
 
 function LoadingBar({ label }: { label: string }) {
@@ -105,8 +122,17 @@ function LoadingBar({ label }: { label: string }) {
   );
 }
 
+const ACQ_STATUS_LABELS: Record<SmsAcquisitionCampaign["status"], string> = {
+  active: "Active",
+  completed: "Terminée (5/5)",
+  paused: "En pause",
+  exhausted: "Épuisée (plus de destinataires)",
+};
+
 export default function AdminSmsCampaignsPage() {
   const [campaigns, setCampaigns] = useState<SmsCampaign[]>([]);
+  const [pendingReview, setPendingReview] = useState<SmsCampaign[]>([]);
+  const [acquisitions, setAcquisitions] = useState<AcquisitionRow[]>([]);
   const [requests, setRequests] = useState<WorkRequestOption[]>([]);
   const [settings, setSettings] = useState<SmsCampaignSettings | null>(null);
   const [smsConfigured, setSmsConfigured] = useState(false);
@@ -115,7 +141,7 @@ export default function AdminSmsCampaignsPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState("");
-  const [campaignSize, setCampaignSize] = useState(30);
+  const [campaignSize, setCampaignSize] = useState(5);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [selectedSirets, setSelectedSirets] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState("");
@@ -172,9 +198,11 @@ export default function AdminSmsCampaignsPage() {
         return;
       }
       setCampaigns(data.campaigns ?? []);
+      setPendingReview(data.pendingReview ?? []);
+      setAcquisitions(data.acquisitions ?? []);
       setRequests(data.requests ?? []);
       setSettings(data.settings ?? null);
-      setCampaignSize(data.settings?.defaultCampaignSize ?? 30);
+      setCampaignSize(data.settings?.smsPerDay ?? data.settings?.defaultCampaignSize ?? 5);
       setSmsConfigured(data.smsConfigured === true);
       setDemoAllowed(data.demoAllowed === true);
     } catch {
@@ -352,8 +380,8 @@ export default function AdminSmsCampaignsPage() {
     setSelectedSirets(new Set());
   }
 
-  async function handleSend(demo = false) {
-    if (!selectedId || !message.trim() || selectedSirets.size === 0) return;
+  async function handleStartCampaign(demo = false) {
+    if (!selectedId) return;
     setSending(true);
     setError(null);
     setSuccess(null);
@@ -363,28 +391,120 @@ export default function AdminSmsCampaignsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "start",
           workRequestId: selectedId,
-          message,
+          message: message.trim() || undefined,
           demo,
-          recipientSirets: Array.from(selectedSirets),
+          smsPerDay: campaignSize,
         }),
       });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Envoi impossible.");
+        setError(data.error ?? "Démarrage impossible.");
         return;
       }
 
-      const c = data.campaign as SmsCampaign;
+      const result = data.result as {
+        acquisition: SmsAcquisitionCampaign;
+        acceptedCount: number;
+        batch?: SmsCampaign;
+        skippedReason?: string;
+      };
+      const sent = result.batch?.sentCount ?? 0;
       setSuccess(
-        demo
-          ? `Campagne simulée : ${c.sentCount}/${c.recipientCount} SMS (mode démo).`
-          : `Campagne envoyée : ${c.sentCount}/${c.recipientCount} SMS.`
+        result.skippedReason && sent === 0
+          ? `Campagne ${result.acquisition.status} — ${result.skippedReason} (contacts ${result.acceptedCount}/5).`
+          : `${demo ? "Démo" : "Campagne"} : ${sent} SMS du jour · contacts ${result.acceptedCount}/5 · statut ${result.acquisition.status}.`
       );
       await load();
     } catch {
-      setError("Erreur réseau pendant l’envoi.");
+      setError("Erreur réseau pendant le démarrage.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleApproveBatch(batchId: string, demo = false) {
+    setSending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/sms-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", batchId, demo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Validation / envoi impossible.");
+        return;
+      }
+      const result = data.result as {
+        batch?: SmsCampaign;
+        skippedReason?: string;
+        acceptedCount?: number;
+      };
+      if (result.skippedReason === "slots_full") {
+        setSuccess(
+          `Objectif déjà atteint (${result.acceptedCount ?? 5}/5) — lot annulé, aucun SMS OVH.`
+        );
+      } else if (result.skippedReason) {
+        setSuccess(`Lot non envoyé : ${result.skippedReason}`);
+      } else {
+        setSuccess(
+          `Lot validé : ${result.batch?.sentCount ?? 0}/${result.batch?.recipientCount ?? 0} SMS ${
+            demo ? "(démo)" : "OVH"
+          }.`
+        );
+      }
+      await load();
+    } catch {
+      setError("Erreur réseau pendant la validation.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleAcquisitionAction(
+    acquisitionId: string,
+    action: "tick" | "pause" | "resume",
+    demo = false
+  ) {
+    setSending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/sms-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, acquisitionId, demo }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Action impossible.");
+        return;
+      }
+      if (action === "tick") {
+        const result = data.result as {
+          acceptedCount: number;
+          batch?: SmsCampaign;
+          skippedReason?: string;
+          acquisition: SmsAcquisitionCampaign;
+        };
+        setSuccess(
+          result.skippedReason && !result.batch
+            ? `Lot du jour ignoré : ${result.skippedReason}`
+            : `Lot du jour : ${result.batch?.sentCount ?? 0} SMS · contacts ${result.acceptedCount}/5 · ${result.acquisition.status}`
+        );
+      } else {
+        setSuccess(
+          action === "pause" ? "Campagne mise en pause." : "Campagne reprise."
+        );
+      }
+      await load();
+    } catch {
+      setError("Erreur réseau.");
     } finally {
       setSending(false);
     }
@@ -453,9 +573,9 @@ export default function AdminSmsCampaignsPage() {
     <div>
       <h1 className="text-2xl font-bold">Campagnes SMS</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Contrôle total : choisissez l&apos;offre, le nombre de SMS, les entreprises à
-        garder ou écarter, puis envoyez. SIRENE n&apos;envoie pas les téléphones —
-        enrichissez-les ici pour les rendre sélectionnables.
+        Campagne multi-jours : budget SMS/jour, plus proches d&apos;abord (Places si
+        besoin), jusqu&apos;à 5/5 contacts acceptés. SIRENE sans téléphone →
+        enrichissement Places ou saisie manuelle.
       </p>
 
       {loading && (
@@ -643,30 +763,43 @@ export default function AdminSmsCampaignsPage() {
             <label className="mt-3 flex items-center gap-2">
               <input
                 type="checkbox"
+                checked={settings.requireReviewBeforeSend !== false}
+                onChange={(e) =>
+                  saveSettings({ requireReviewBeforeSend: e.target.checked })
+                }
+              />
+              Exiger validation admin avant tout envoi OVH (recommandé)
+            </label>
+            <label className="mt-2 flex items-center gap-2">
+              <input
+                type="checkbox"
                 checked={settings.autoSendOnApprove}
                 onChange={(e) =>
                   saveSettings({ autoSendOnApprove: e.target.checked })
                 }
               />
-              Envoi auto à l&apos;approbation d&apos;une offre (déconseillé au démarrage)
+              Démarrer auto une campagne à l&apos;approbation (prépare les lots
+              jusqu&apos;à 5/5)
             </label>
+            <p className="mt-2 text-xs text-slate-500">
+              Validation activée : préparation la veille pour le lendemain (sans
+              OVH). Le matin, re-check 5/5 puis tu valides l&apos;envoi OVH.
+            </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2">
-                N par défaut
+                SMS / jour
                 <input
                   type="number"
                   min={1}
                   max={200}
-                  value={settings.defaultCampaignSize}
+                  value={settings.smsPerDay}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      defaultCampaignSize: Number(e.target.value) || 30,
+                      smsPerDay: Number(e.target.value) || 5,
                     })
                   }
-                  onBlur={() =>
-                    saveSettings({ defaultCampaignSize: settings.defaultCampaignSize })
-                  }
+                  onBlur={() => saveSettings({ smsPerDay: settings.smsPerDay })}
                   className="w-20 rounded border border-slate-300 px-2 py-1"
                 />
               </label>
@@ -695,11 +828,9 @@ export default function AdminSmsCampaignsPage() {
       <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold">Nouvelle campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Conformité OVH / FR : SMS marketing avec STOP, uniquement lun–sam
-          8h–20h (heure de Paris). Un SIRET déjà contacté par campagne n&apos;est
-          plus jamais retargeté en marketing. Les inscrits plateforme sont exclus
-          (acquisition uniquement). OTP / alertes client = transactionnel, même
-          expéditeur.           Voir aussi{" "}
+          Campagne multi-jours : chaque jour jusqu&apos;à « SMS / jour », du plus
+          proche au plus loin, jusqu&apos;à 5/5 contacts acceptés. STOP + lun–sam
+          8h–20h Paris. 1 SMS marketing / SIRET. Cron quotidien recommandé. Voir{" "}
           <Link
             href="/admin/conversions-sms"
             className="font-medium text-brand-700 underline"
@@ -747,7 +878,7 @@ export default function AdminSmsCampaignsPage() {
             )}
 
             <label className="mt-3 mb-1 block text-sm font-medium text-slate-700">
-              Nombre max suggéré (N)
+              SMS / jour (cette campagne)
             </label>
             <input
               type="number"
@@ -765,8 +896,8 @@ export default function AdminSmsCampaignsPage() {
               className="mt-3 block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
               {previewLoading
-                ? "Recherche + Places jusqu’à N…"
-                : "Prévisualiser le mix & la liste"}
+                ? "Recherche + Places…"
+                : "Prévisualiser le lot du jour"}
             </button>
           </div>
 
@@ -984,39 +1115,25 @@ export default function AdminSmsCampaignsPage() {
 
               {sending && (
                 <div className="mt-3">
-                  <LoadingBar
-                    label={`Envoi en cours (${selectedCount} destinataire${selectedCount > 1 ? "s" : ""})…`}
-                  />
+                  <LoadingBar label="Démarrage campagne / envoi du lot du jour…" />
                 </div>
               )}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => handleSend(false)}
-                  disabled={disableWhen(
-                    sending || selectedCount === 0 || !smsConfigured || !message.trim()
-                  )}
-                  title={
-                    !smsConfigured
-                      ? "OVH SMS non configuré"
-                      : selectedCount === 0
-                        ? "Sélectionnez au moins une entreprise joignable"
-                        : undefined
-                  }
+                  onClick={() => handleStartCampaign(false)}
+                  disabled={disableWhen(sending || !selectedId)}
                   className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
                 >
-                  {sending ? "Envoi…" : `Envoyer ${selectedCount} SMS`}
+                  {sending
+                    ? "Préparation…"
+                    : "Démarrer / préparer le lot du jour"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSend(true)}
-                  disabled={disableWhen(
-                    sending ||
-                      !demoAllowed ||
-                      selectedCount === 0 ||
-                      !message.trim()
-                  )}
+                  onClick={() => handleStartCampaign(true)}
+                  disabled={disableWhen(sending || !demoAllowed || !selectedId)}
                   title={
                     !demoAllowed
                       ? "Mode démo désactivé quand OVH SMS est actif en production"
@@ -1024,11 +1141,38 @@ export default function AdminSmsCampaignsPage() {
                   }
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
-                  {demoAllowed ? "Simuler (démo)" : "Simuler (démo indisponible)"}
+                  {demoAllowed
+                    ? "Démarrer en démo"
+                    : "Démo indisponible"}
                 </button>
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                La prévisualisation montre le prochain lot (~{campaignSize} SMS).
+                La campagne continue chaque jour jusqu&apos;à 5/5 contacts.
+              </p>
             </div>
           </>
+        )}
+
+        {!preview && selectedId && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleStartCampaign(false)}
+              disabled={disableWhen(sending || !smsConfigured)}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+            >
+              Démarrer campagne sans prévisualiser
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStartCampaign(true)}
+              disabled={disableWhen(sending || !demoAllowed)}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
+            >
+              Démarrer en démo
+            </button>
+          </div>
         )}
 
         {error && (
@@ -1042,7 +1186,141 @@ export default function AdminSmsCampaignsPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">Historique</h2>
+        <h2 className="text-lg font-semibold">
+          Lots prévus (préparés la veille — aucun OVH)
+        </h2>
+        {pendingReview.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+            Aucun lot en attente. Le cron du soir prépare le lendemain ; tu
+            valides le matin après le re-check 5/5.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {pendingReview.map((batch) => (
+              <li
+                key={batch.id}
+                className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 text-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {batch.category} · {batch.city} ({batch.department})
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Prévu pour le{" "}
+                      <strong>{batch.scheduledForDate ?? "—"}</strong> ·{" "}
+                      {batch.recipientCount} destinataire
+                      {batch.recipientCount > 1 ? "s" : ""} · préparé{" "}
+                      {new Date(batch.createdAt).toLocaleString("fr-FR")}
+                    </p>
+                    <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-slate-700">
+                      {batch.recipients.map((r, i) => (
+                        <li key={`${r.siret ?? r.phone}-${i}`}>
+                          {r.companyName} · {r.phone}
+                          {r.siret ? ` · ${r.siret}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-xs text-slate-600">{batch.message}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={disableWhen(sending || !smsConfigured)}
+                      onClick={() => handleApproveBatch(batch.id, false)}
+                      className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      Valider → OVH
+                    </button>
+                    <button
+                      type="button"
+                      disabled={disableWhen(sending || !demoAllowed)}
+                      onClick={() => handleApproveBatch(batch.id, true)}
+                      className="rounded border border-slate-300 px-3 py-1.5 text-xs disabled:opacity-50"
+                    >
+                      Valider en démo
+                    </button>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold">Campagnes en cours</h2>
+        {loading ? (
+          <div className="mt-4">
+            <LoadingBar label="Chargement des campagnes…" />
+          </div>
+        ) : acquisitions.length === 0 ? (
+          <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+            Aucune campagne d&apos;acquisition multi-jours pour l&apos;instant.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {acquisitions.map((a) => (
+              <li
+                key={a.id}
+                className="rounded-xl border border-slate-200 bg-white p-4 text-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {a.category ?? "Demande"} · {a.city ?? "—"} (
+                      {a.department ?? "—"})
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {ACQ_STATUS_LABELS[a.status]} · contacts{" "}
+                      {a.acceptedCount}/{a.maxAccepted} · SMS aujourd&apos;hui{" "}
+                      {a.sentToday}/{a.smsPerDay} · total {a.totalSent} ·{" "}
+                      {a.trigger}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {(a.status === "active" || a.status === "paused") && (
+                      <button
+                        type="button"
+                        disabled={disableWhen(sending)}
+                        onClick={() =>
+                          handleAcquisitionAction(a.id, "tick", !smsConfigured)
+                        }
+                        className="rounded border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        Lot du jour{!smsConfigured ? " (démo)" : ""}
+                      </button>
+                    )}
+                    {a.status === "active" && (
+                      <button
+                        type="button"
+                        disabled={disableWhen(sending)}
+                        onClick={() => handleAcquisitionAction(a.id, "pause")}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        Pause
+                      </button>
+                    )}
+                    {a.status === "paused" && (
+                      <button
+                        type="button"
+                        disabled={disableWhen(sending)}
+                        onClick={() => handleAcquisitionAction(a.id, "resume")}
+                        className="rounded border border-slate-300 px-2 py-1 text-xs"
+                      >
+                        Reprendre
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-semibold">Historique des lots</h2>
         {loading ? (
           <div className="mt-4">
             <LoadingBar label="Chargement de l’historique des campagnes…" />

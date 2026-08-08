@@ -10,21 +10,37 @@ import {
   isPlacesPhoneTarget,
   markArtisanPhoneInvalid,
 } from "./places-quota";
-import { normalizeFrenchMobile, sendSms } from "./sms";
 import { absoluteUrl } from "./share";
+import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "./contact-slots";
+import { isMarketingSmsWindowOpen, normalizeFrenchMobile, sendSms } from "./sms";
 import {
   addSmsCampaign,
+  countAcceptedArtisansForAuction,
+  createSmsAcquisitionCampaign,
+  getActiveSmsAcquisitionCampaign,
   getArtisanProspects,
   getMarketingSmsContactedSirets,
-  getSmsCampaignsForWorkRequest,
+  getPendingReviewForAcquisition,
+  getPendingReviewSmsCampaigns,
+  getSmsAcquisitionCampaignById,
+  getSmsAcquisitionCampaigns,
+  getSmsCampaignById,
   getSmsSettings,
+  getWorkRequestById,
   markProspectsContacted,
+  parisDayKey,
+  parisNextMarketingDayKey,
+  setSmsAcquisitionStatus,
+  updateSmsAcquisitionCampaign,
+  updateSmsCampaign,
   upsertArtisanProspect,
 } from "./store";
 import type {
   ArtisanProspect,
+  SmsAcquisitionCampaign,
   SmsCampaign,
   SmsCampaignRecipient,
+  SmsCampaignTrigger,
   SmsCohort,
   WorkRequest,
 } from "./store-types";
@@ -517,7 +533,7 @@ export async function previewSmsCampaignDetailed(
 ): Promise<SmsCampaignPreviewDetailed> {
   const settings = await getSmsSettings();
   const opts = resolvePreviewOptions(campaignSizeOrOptions);
-  const campaignSize = opts.campaignSize ?? settings.defaultCampaignSize;
+  const campaignSize = opts.campaignSize ?? settings.smsPerDay;
   const preferEstablishedCompany = request.preferEstablishedCompany === true;
   const {
     withPhone: candidates,
@@ -603,16 +619,283 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Prépare un lot sans aucun appel OVH (relecture admin), prévu pour un jour donné. */
+export async function preparePendingReviewBatch(
+  request: WorkRequest,
+  message: string,
+  recipientSirets: string[],
+  options?: {
+    trigger?: SmsCampaignTrigger;
+    acquisitionCampaignId?: string;
+    /** Défaut : prochain jour marketing (préparation la veille). */
+    scheduledForDate?: string;
+  }
+): Promise<SmsCampaign> {
+  const settings = await getSmsSettings();
+  const preview = await previewSmsCampaignDetailed(request, {
+    campaignSize: recipientSirets.length || settings.smsPerDay,
+    fillPhonesViaPlaces: false,
+  });
+  const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
+  const selected = recipientSirets
+    .map((s) => bySiret.get(s))
+    .filter((c): c is SmsCandidate => Boolean(c));
+
+  const recipients: SmsCampaignRecipient[] = selected.map((candidate) => ({
+    proId: candidate.proId,
+    siret: candidate.siret,
+    companyName: candidate.companyName,
+    phone: candidate.phone,
+    status: "pending" as const,
+    cohort: candidate.cohort,
+  }));
+
+  return addSmsCampaign({
+    workRequestId: request.id,
+    category: request.category,
+    city: request.city,
+    department: request.department,
+    message: message.trim(),
+    status: "pending_review",
+    recipientCount: recipients.length,
+    sentCount: 0,
+    failedCount: 0,
+    recipients,
+    trigger: options?.trigger ?? "manual",
+    acquisitionCampaignId: options?.acquisitionCampaignId,
+    scheduledForDate:
+      options?.scheduledForDate ?? parisNextMarketingDayKey(),
+  });
+}
+
+export type ApprovePendingResult = {
+  batch: SmsCampaign;
+  acquisition?: SmsAcquisitionCampaign | null;
+  skippedReason?: string;
+  acceptedCount?: number;
+};
+
+/**
+ * Juste avant envoi : re-check 5/5, puis envoi OVH (ou démo) si objectif non atteint.
+ */
+export async function approvePendingReviewBatch(
+  batchId: string,
+  options?: { demo?: boolean }
+): Promise<ApprovePendingResult> {
+  const batch = await getSmsCampaignById(batchId);
+  if (!batch) throw new Error("Lot introuvable.");
+  if (batch.status !== "pending_review") {
+    throw new Error("Ce lot n’est pas en attente de validation.");
+  }
+
+  const request = await getWorkRequestById(batch.workRequestId);
+  if (!request) throw new Error("Demande introuvable.");
+
+  const acceptedCount = request.auctionId
+    ? await countAcceptedArtisansForAuction(request.auctionId)
+    : 0;
+
+  // Objectif atteint entre la veille et maintenant → annuler, pas d’OVH.
+  if (acceptedCount >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+    const cancelled = await updateSmsCampaign(batchId, {
+      status: "cancelled",
+      sentAt: new Date().toISOString(),
+    });
+    let acquisition: SmsAcquisitionCampaign | null = null;
+    if (batch.acquisitionCampaignId) {
+      acquisition = await setSmsAcquisitionStatus(
+        batch.acquisitionCampaignId,
+        "completed"
+      );
+    }
+    return {
+      batch: cancelled ?? batch,
+      acquisition,
+      skippedReason: "slots_full",
+      acceptedCount,
+    };
+  }
+
+  const settings = await getSmsSettings();
+  if (!options?.demo && !isMarketingSmsWindowOpen()) {
+    throw new Error(
+      "SMS marketing hors horaires (lun–sam 8h–20h, heure de Paris)."
+    );
+  }
+
+  // Exclure les SIRET marketés entre-temps (maj juste avant envoi).
+  const alreadyMarketed = await getMarketingSmsContactedSirets();
+  const toSend = batch.recipients.filter(
+    (r) => r.siret && !alreadyMarketed.has(r.siret)
+  );
+
+  if (toSend.length === 0) {
+    const cancelled = await updateSmsCampaign(batchId, {
+      status: "cancelled",
+      recipients: batch.recipients.map((r) => ({
+        ...r,
+        status: "skipped" as const,
+        error: "Déjà contacté ou plus éligible",
+      })),
+      sentAt: new Date().toISOString(),
+    });
+    return {
+      batch: cancelled ?? batch,
+      skippedReason: "no_eligible_recipients",
+      acceptedCount,
+    };
+  }
+
+  const recipients: SmsCampaignRecipient[] = [];
+  let sentCount = 0;
+  let failedCount = 0;
+  let demo = false;
+  let status: SmsCampaign["status"] = "sent";
+
+  // Destinataires exclus restent en skipped dans le lot final.
+  for (const row of batch.recipients) {
+    if (!row.siret || alreadyMarketed.has(row.siret)) {
+      recipients.push({
+        ...row,
+        status: "skipped",
+        error: "Exclu à la maj pré-envoi",
+      });
+    }
+  }
+
+  for (let i = 0; i < toSend.length; i++) {
+    const row = toSend[i];
+    const recipient: SmsCampaignRecipient = { ...row, status: "skipped" };
+
+    const result = options?.demo
+      ? { ok: true, demo: true }
+      : await sendSms(row.phone, batch.message, "marketing");
+
+    if (result.demo) demo = true;
+    if (result.ok) {
+      recipient.status = "sent";
+      sentCount += 1;
+    } else {
+      recipient.status = "failed";
+      recipient.error =
+        !result.ok && "error" in result ? result.error : "Échec envoi";
+      failedCount += 1;
+      status = "failed";
+      if (row.siret) await markArtisanPhoneInvalid(row.siret);
+    }
+    recipients.push(recipient);
+
+    if (i < toSend.length - 1 && settings.throttleMs > 0 && !options?.demo) {
+      await sleep(settings.throttleMs);
+    }
+  }
+
+  if (sentCount === 0) status = "failed";
+  else if (demo) status = "demo";
+
+  const contacted = recipients
+    .filter((r) => r.status === "sent" && r.siret)
+    .map((r) => ({
+      siret: r.siret!,
+      companyName: r.companyName,
+      phone: r.phone,
+    }));
+  await markProspectsContacted(contacted);
+
+  const updatedBatch = await updateSmsCampaign(batchId, {
+    status,
+    sentCount,
+    failedCount,
+    recipientCount: recipients.length,
+    recipients,
+    sentAt: new Date().toISOString(),
+  });
+
+  let acquisition: SmsAcquisitionCampaign | null = null;
+  if (batch.acquisitionCampaignId && sentCount > 0) {
+    const acq = await getSmsAcquisitionCampaignById(batch.acquisitionCampaignId);
+    if (acq) {
+      const day = parisDayKey();
+      const sentToday = acq.lastSendDate === day ? acq.sentOnLastDate : 0;
+      acquisition = await updateSmsAcquisitionCampaign(acq.id, {
+        totalSent: acq.totalSent + sentCount,
+        lastSendDate: day,
+        sentOnLastDate: sentToday + sentCount,
+      });
+      const acceptedAfter = await acceptedCountForRequest(request);
+      if (acceptedAfter >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+        acquisition =
+          (await setSmsAcquisitionStatus(acq.id, "completed")) ?? acquisition;
+      }
+    }
+  }
+
+  return {
+    batch: updatedBatch ?? batch,
+    acquisition,
+    acceptedCount,
+  };
+}
+
+/** Annule les lots prévus pour aujourd’hui si 5/5 déjà atteint (cron matin). */
+export async function cancelPendingBatchesIfObjectivesMet(): Promise<{
+  cancelled: number;
+}> {
+  const pending = await getPendingReviewSmsCampaigns();
+  const today = parisDayKey();
+  let cancelled = 0;
+
+  for (const batch of pending) {
+    const scheduled =
+      batch.scheduledForDate ?? parisDayKey(new Date(batch.createdAt));
+    if (scheduled !== today) continue;
+
+    const request = await getWorkRequestById(batch.workRequestId);
+    if (!request?.auctionId) continue;
+    const accepted = await countAcceptedArtisansForAuction(request.auctionId);
+    if (accepted < MAX_ACCEPTED_ARTISANS_PER_AUCTION) continue;
+
+    await updateSmsCampaign(batch.id, {
+      status: "cancelled",
+      sentAt: new Date().toISOString(),
+    });
+    if (batch.acquisitionCampaignId) {
+      await setSmsAcquisitionStatus(batch.acquisitionCampaignId, "completed");
+    }
+    cancelled += 1;
+  }
+
+  return { cancelled };
+}
+
 export async function executeSmsCampaignToRecipients(
   request: WorkRequest,
   message: string,
   recipientSirets: string[],
-  options?: { demo?: boolean; trigger?: "manual" | "auto" }
+  options?: {
+    demo?: boolean;
+    trigger?: SmsCampaignTrigger;
+    acquisitionCampaignId?: string;
+    /** Force préparation sans OVH (ignore le réglage). */
+    pendingReviewOnly?: boolean;
+  }
 ): Promise<SmsCampaign> {
   const settings = await getSmsSettings();
-  // Pas de re-enrichissement Places à l’envoi : déjà fait en preview / auto.
+  const reviewOnly =
+    options?.pendingReviewOnly === true ||
+    (settings.requireReviewBeforeSend && !options?.demo);
+
+  if (reviewOnly) {
+    return preparePendingReviewBatch(request, message, recipientSirets, {
+      trigger: options?.trigger,
+      acquisitionCampaignId: options?.acquisitionCampaignId,
+      scheduledForDate: parisNextMarketingDayKey(),
+    });
+  }
+
+  // Pas de re-enrichissement Places à l’envoi : déjà fait en preview / tick.
   const preview = await previewSmsCampaignDetailed(request, {
-    campaignSize: recipientSirets.length || settings.defaultCampaignSize,
+    campaignSize: recipientSirets.length || settings.smsPerDay,
     fillPhonesViaPlaces: false,
   });
   const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
@@ -699,28 +982,258 @@ export async function executeSmsCampaignToRecipients(
     failedCount,
     recipients,
     trigger: options?.trigger ?? "manual",
+    acquisitionCampaignId: options?.acquisitionCampaignId,
     sentAt: new Date().toISOString(),
   };
 
   return addSmsCampaign(payload);
 }
 
-/** Ancienne API : envoie aux destinataires sélectionnés par défaut (mix). */
-export async function executeSmsCampaign(
-  request: WorkRequest,
-  message: string,
-  options?: { demo?: boolean }
-): Promise<Omit<SmsCampaign, "id" | "createdAt">> {
-  const preview = await previewSmsCampaignDetailed(request);
+export type AcquisitionTickResult = {
+  acquisition: SmsAcquisitionCampaign;
+  acceptedCount: number;
+  batch?: SmsCampaign;
+  skippedReason?: string;
+};
+
+async function acceptedCountForRequest(request: WorkRequest): Promise<number> {
+  if (!request.auctionId) return 0;
+  return countAcceptedArtisansForAuction(request.auctionId);
+}
+
+/**
+ * Envoie le lot du jour (jusqu’à smsPerDay) pour une campagne active.
+ * Stop si 5/5 contacts acceptés, budget jour déjà consommé, ou pool vide.
+ */
+export async function runAcquisitionCampaignTick(
+  acquisitionId: string,
+  options?: { demo?: boolean; message?: string }
+): Promise<AcquisitionTickResult> {
+  const acquisition = await getSmsAcquisitionCampaignById(acquisitionId);
+  if (!acquisition) {
+    throw new Error("Campagne d’acquisition introuvable.");
+  }
+
+  if (acquisition.status === "paused") {
+    return { acquisition, acceptedCount: 0, skippedReason: "paused" };
+  }
+  if (acquisition.status === "completed" || acquisition.status === "exhausted") {
+    return {
+      acquisition,
+      acceptedCount: 0,
+      skippedReason: acquisition.status,
+    };
+  }
+
+  const request = await getWorkRequestById(acquisition.workRequestId);
+  if (!request) {
+    const updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "exhausted")) ??
+      acquisition;
+    return {
+      acquisition: updated,
+      acceptedCount: 0,
+      skippedReason: "work_request_missing",
+    };
+  }
+
+  if (request.status !== "approved" || !request.auctionId) {
+    const updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "exhausted")) ??
+      acquisition;
+    return {
+      acquisition: updated,
+      acceptedCount: 0,
+      skippedReason: "request_not_approved",
+    };
+  }
+
+  const acceptedCount = await acceptedCountForRequest(request);
+  if (acceptedCount >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+    const updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "completed")) ??
+      acquisition;
+    return { acquisition: updated, acceptedCount, skippedReason: "slots_full" };
+  }
+
+  const settings = await getSmsSettings();
+  const reviewMode = settings.requireReviewBeforeSend && !options?.demo;
+
+  // Préparation revue : OK avant la fenêtre marketing. Envoi live : lun–sam 8h–20h.
+  if (!reviewMode && !options?.demo && !isMarketingSmsWindowOpen()) {
+    return {
+      acquisition,
+      acceptedCount,
+      skippedReason: "outside_marketing_window",
+    };
+  }
+
+  const today = parisDayKey();
+  // Mode revue : on prépare le lot pour le *prochain* jour marketing (la veille).
+  const targetDay = reviewMode ? parisNextMarketingDayKey() : today;
+
+  const existingPending = await getPendingReviewForAcquisition(
+    acquisition.id,
+    targetDay
+  );
+  if (existingPending) {
+    return {
+      acquisition,
+      acceptedCount,
+      batch: existingPending,
+      skippedReason: "pending_review_exists",
+    };
+  }
+
+  const sentOnTargetDay =
+    acquisition.lastSendDate === targetDay ? acquisition.sentOnLastDate : 0;
+  const remaining = acquisition.smsPerDay - sentOnTargetDay;
+  if (remaining <= 0) {
+    return {
+      acquisition,
+      acceptedCount,
+      skippedReason: "daily_budget_reached",
+    };
+  }
+
+  const preview = await previewSmsCampaignDetailed(request, {
+    campaignSize: remaining,
+    fillPhonesViaPlaces: true,
+  });
   const sirets = preview.candidates
     .filter((c) => c.selectedByDefault)
-    .map((c) => c.siret);
-  const campaign = await executeSmsCampaignToRecipients(request, message, sirets, {
-    ...options,
-    trigger: "manual",
+    .map((c) => c.siret)
+    .slice(0, remaining);
+
+  if (sirets.length === 0) {
+    const updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "exhausted")) ??
+      acquisition;
+    return {
+      acquisition: updated,
+      acceptedCount,
+      skippedReason: "no_recipients",
+    };
+  }
+
+  const message =
+    options?.message?.trim() ||
+    preview.defaultMessage ||
+    buildDefaultCampaignMessage(request);
+
+  const batch = await executeSmsCampaignToRecipients(request, message, sirets, {
+    demo: options?.demo,
+    trigger: acquisition.trigger,
+    acquisitionCampaignId: acquisition.id,
+    pendingReviewOnly: reviewMode,
   });
-  const { id: _id, createdAt: _c, ...rest } = campaign;
-  return rest;
+
+  // Lot en revue : pas encore compté dans totalSent (compte à la validation OVH).
+  if (batch.status === "pending_review") {
+    return {
+      acquisition,
+      acceptedCount,
+      batch,
+      skippedReason: "pending_review",
+    };
+  }
+
+  const nextSentToday = sentOnTargetDay + batch.sentCount;
+  let updated = await updateSmsAcquisitionCampaign(acquisition.id, {
+    totalSent: acquisition.totalSent + batch.sentCount,
+    lastSendDate: today,
+    sentOnLastDate: nextSentToday,
+  });
+
+  const acceptedAfter = await acceptedCountForRequest(request);
+  if (acceptedAfter >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+    updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "completed")) ?? updated;
+  } else if (batch.sentCount === 0) {
+    updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "exhausted")) ?? updated;
+  }
+
+  return {
+    acquisition: updated ?? acquisition,
+    acceptedCount: acceptedAfter,
+    batch,
+  };
+}
+
+/** Démarre une campagne multi-jours et envoie immédiatement le premier lot. */
+export async function startAcquisitionCampaign(
+  request: WorkRequest,
+  options?: {
+    demo?: boolean;
+    message?: string;
+    trigger?: SmsCampaignTrigger;
+    smsPerDay?: number;
+  }
+): Promise<AcquisitionTickResult> {
+  const existing = await getActiveSmsAcquisitionCampaign(request.id);
+  if (existing) {
+    if (existing.status === "paused") {
+      await setSmsAcquisitionStatus(existing.id, "active");
+    }
+    return runAcquisitionCampaignTick(existing.id, {
+      demo: options?.demo,
+      message: options?.message,
+    });
+  }
+
+  if (request.status !== "approved" || !request.auctionId) {
+    throw new Error(
+      "La demande doit être approuvée avec une enchère pour démarrer une campagne."
+    );
+  }
+
+  const settings = await getSmsSettings();
+  const smsPerDay = options?.smsPerDay ?? settings.smsPerDay;
+  const acquisition = await createSmsAcquisitionCampaign({
+    workRequestId: request.id,
+    smsPerDay,
+    trigger: options?.trigger ?? "manual",
+  });
+
+  return runAcquisitionCampaignTick(acquisition.id, {
+    demo: options?.demo,
+    message: options?.message,
+  });
+}
+
+export async function pauseAcquisitionCampaign(
+  acquisitionId: string
+): Promise<SmsAcquisitionCampaign | null> {
+  const current = await getSmsAcquisitionCampaignById(acquisitionId);
+  if (!current || current.status !== "active") return current;
+  return setSmsAcquisitionStatus(acquisitionId, "paused");
+}
+
+export async function resumeAcquisitionCampaign(
+  acquisitionId: string
+): Promise<SmsAcquisitionCampaign | null> {
+  const current = await getSmsAcquisitionCampaignById(acquisitionId);
+  if (!current || current.status !== "paused") return current;
+  return setSmsAcquisitionStatus(acquisitionId, "active");
+}
+
+/** Tick toutes les campagnes actives (cron quotidien). */
+export async function runAllActiveAcquisitionTicks(): Promise<{
+  processed: number;
+  results: AcquisitionTickResult[];
+}> {
+  const all = await getSmsAcquisitionCampaigns();
+  const active = all.filter((c) => c.status === "active");
+  const results: AcquisitionTickResult[] = [];
+  for (const campaign of active) {
+    try {
+      results.push(await runAcquisitionCampaignTick(campaign.id));
+    } catch (err) {
+      console.error("[sms-acquisition] tick", campaign.id, err);
+    }
+  }
+  return { processed: results.length, results };
 }
 
 export async function maybeAutoNotifyOnApprove(
@@ -729,19 +1242,15 @@ export async function maybeAutoNotifyOnApprove(
   const settings = await getSmsSettings();
   if (!settings.autoSendOnApprove) return;
 
-  const existing = await getSmsCampaignsForWorkRequest(request.id);
-  if (existing.some((c) => c.trigger === "auto")) return;
+  const existing = await getActiveSmsAcquisitionCampaign(request.id);
+  if (existing) return;
 
-  const preview = await previewSmsCampaignDetailed(request);
-  const sirets = preview.candidates
-    .filter((c) => c.selectedByDefault)
-    .map((c) => c.siret);
-  if (sirets.length === 0) return;
-
-  await executeSmsCampaignToRecipients(
-    request,
-    preview.defaultMessage,
-    sirets,
-    { trigger: "auto" }
+  const alreadyFinished = (await getSmsAcquisitionCampaigns()).some(
+    (c) =>
+      c.workRequestId === request.id &&
+      (c.status === "completed" || c.status === "exhausted")
   );
+  if (alreadyFinished) return;
+
+  await startAcquisitionCampaign(request, { trigger: "auto" });
 }
