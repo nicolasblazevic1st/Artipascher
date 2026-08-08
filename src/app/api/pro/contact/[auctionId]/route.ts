@@ -22,6 +22,7 @@ async function resolveClientContact(auctionId: string): Promise<ClientContact | 
     lastName: request.lastName,
     email: request.email,
     phone: request.phone?.trim() || "Non renseigné",
+    phoneVerified: Boolean(request.phoneVerifiedAt),
     address,
     postalCode,
     companyName: request.companyName,

@@ -479,7 +479,7 @@ export async function executeSmsCampaignToRecipients(
 
     const result = options?.demo
       ? { ok: true, demo: true }
-      : await sendSms(candidate.phone, message);
+      : await sendSms(candidate.phone, message, "marketing");
 
     if (result.demo) demo = true;
 

@@ -39,6 +39,8 @@ export default async function NouvelleDemandePage() {
             lastName: client?.lastName ?? session.lastName,
             email: client?.email ?? session.email,
             phone: client?.phone,
+            phoneVerifiedE164: client?.phoneVerifiedE164,
+            phoneVerifiedAt: client?.phoneVerifiedAt,
           }}
         />
       )}

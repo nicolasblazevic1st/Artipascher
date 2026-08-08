@@ -11,6 +11,7 @@ interface ClientContact {
   lastName: string;
   email: string;
   phone: string;
+  phoneVerified?: boolean;
   address: string;
   postalCode: string;
   companyName?: string;
@@ -175,7 +176,16 @@ export default function ClientContactPanel({
             </div>
             <div>
               <dt className="text-emerald-600">Téléphone</dt>
-              <dd className="font-medium text-emerald-900">{contact.phone}</dd>
+              <dd className="font-medium text-emerald-900">
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {contact.phone}
+                  {contact.phoneVerified && (
+                    <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+                      Vérifié SMS
+                    </span>
+                  )}
+                </span>
+              </dd>
             </div>
             <div>
               <dt className="text-emerald-600">Email</dt>

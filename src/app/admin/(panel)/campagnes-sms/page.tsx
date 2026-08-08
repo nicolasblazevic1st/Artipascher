@@ -684,6 +684,11 @@ export default function AdminSmsCampaignsPage() {
 
       <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold">Nouvelle campagne</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Conformité OVH / FR : SMS marketing avec STOP, uniquement lun–sam
+          8h–20h (heure de Paris). Les OTP et alertes client partent en
+          transactionnel (sans STOP), même expéditeur.
+        </p>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <div>

@@ -186,7 +186,10 @@ export default function AdminDemandesPage() {
                         : "activé — acceptation auto / 5 places"}
                     </div>
                     <div>{r.email}</div>
-                    <div>Tél : {r.phone?.trim() || "Non renseigné"}</div>
+                    <div>
+                      Tél : {r.phone?.trim() || "Non renseigné"}
+                      {r.phoneVerifiedAt ? " · vérifié SMS" : ""}
+                    </div>
                   </dl>
                   {r.auctionEndsAt && (
                     <p className="mt-2 text-xs text-emerald-600">

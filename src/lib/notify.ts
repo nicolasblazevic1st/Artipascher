@@ -93,7 +93,7 @@ export async function notifyClientContactInterest(params: {
     : `Artipascher : ${companyName} souhaite vous contacter pour ${workRequest.category} a ${workRequest.city}. ` +
       `Repondez sous 48h : ${url}`;
 
-  const result = await sendSms(phone, message);
+  const result = await sendSms(phone, message, "transactional");
   if (!result.ok) {
     console.error(
       "[notify] contact interest SMS failed",

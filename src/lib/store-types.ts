@@ -148,6 +148,10 @@ export interface ClientAccount {
   firstName: string;
   lastName: string;
   phone?: string;
+  /** Mobile vérifié par SMS (E.164, ex. +33612345678). */
+  phoneVerifiedE164?: string;
+  /** Horodatage de la dernière vérification SMS du mobile. */
+  phoneVerifiedAt?: string;
   /** Défaut individual pour les comptes existants. */
   kind?: ClientKind;
   companyName?: string;
@@ -172,6 +176,8 @@ export interface WorkRequest {
   email: string;
   /** Téléphone du client (obligatoire à la création). */
   phone?: string;
+  /** Horodatage de vérif SMS du mobile au moment de la création. */
+  phoneVerifiedAt?: string;
   clientId?: string;
   clientKind?: ClientKind;
   companyName?: string;
@@ -319,6 +325,17 @@ export interface EmailVerificationToken {
   expiresAt: string;
   createdAt: string;
   usedAt?: string;
+}
+
+/** Challenge OTP SMS pour vérifier le mobile d'un particulier. */
+export interface PhoneVerificationChallenge {
+  id: string;
+  clientId: string;
+  phoneE164: string;
+  codeHash: string;
+  expiresAt: string;
+  attempts: number;
+  createdAt: string;
 }
 
 export type SmsCampaignStatus = "demo" | "sent" | "failed";
@@ -486,6 +503,7 @@ export interface DataStore {
   proQuotes: ProQuote[];
   passwordResetTokens: PasswordResetToken[];
   emailVerificationTokens: EmailVerificationToken[];
+  phoneVerificationChallenges: PhoneVerificationChallenge[];
   smsCampaigns: SmsCampaign[];
   smsSettings?: SmsCampaignSettings;
   creditWallets: ProCreditWallet[];
@@ -504,6 +522,7 @@ export const EMPTY_STORE: DataStore = {
   proQuotes: [],
   passwordResetTokens: [],
   emailVerificationTokens: [],
+  phoneVerificationChallenges: [],
   smsCampaigns: [],
   smsSettings: { ...DEFAULT_SMS_SETTINGS },
   creditWallets: [],

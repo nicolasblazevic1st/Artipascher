@@ -16,6 +16,7 @@ import {
 import { createShareToken } from "./share";
 import { formatWorkRequestAddress } from "./client-address";
 import { getClientContact } from "./client-contacts";
+import { formatFrenchPhoneDisplay } from "./phone-format";
 import { getSampleQuotesForAuction } from "./sample-quotes";
 import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
 import { getNafCodesForCategory } from "./naf-codes";
@@ -43,6 +44,7 @@ import {
   type ProQuote,
   type PasswordResetToken,
   type PasswordResetUserType,
+  type PhoneVerificationChallenge,
   type ProDocument,
   type ProRegistration,
   type SmsCampaign,
@@ -92,6 +94,7 @@ export async function readStore(): Promise<DataStore> {
     proQuotes: parsed.proQuotes ?? [],
     passwordResetTokens: parsed.passwordResetTokens ?? [],
     emailVerificationTokens: parsed.emailVerificationTokens ?? [],
+    phoneVerificationChallenges: parsed.phoneVerificationChallenges ?? [],
     smsCampaigns: parsed.smsCampaigns ?? [],
     smsSettings: {
       ...DEFAULT_SMS_SETTINGS,
@@ -1411,6 +1414,160 @@ export async function resetPasswordWithToken(
   store.passwordResetTokens[index].usedAt = new Date().toISOString();
   await writeStore(store);
   return { success: true };
+}
+
+function purgeExpiredPhoneChallenges(store: DataStore): void {
+  const now = Date.now();
+  store.phoneVerificationChallenges = store.phoneVerificationChallenges.filter(
+    (c) => new Date(c.expiresAt).getTime() > now
+  );
+}
+
+export async function createPhoneVerificationChallenge(params: {
+  clientId: string;
+  phoneE164: string;
+  codeHash: string;
+  ttlMs: number;
+  cooldownMs: number;
+}): Promise<
+  | { challenge: PhoneVerificationChallenge }
+  | { error: string; status: number; cooldownSeconds?: number }
+> {
+  const store = await readStore();
+  purgeExpiredPhoneChallenges(store);
+
+  const recent = store.phoneVerificationChallenges
+    .filter(
+      (c) =>
+        c.clientId === params.clientId && c.phoneE164 === params.phoneE164
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )[0];
+
+  if (recent) {
+    const elapsed = Date.now() - new Date(recent.createdAt).getTime();
+    if (elapsed < params.cooldownMs) {
+      const cooldownSeconds = Math.ceil((params.cooldownMs - elapsed) / 1000);
+      return {
+        error: `Patientez ${cooldownSeconds} s avant de renvoyer un code.`,
+        status: 429,
+        cooldownSeconds,
+      };
+    }
+  }
+
+  // Un seul challenge actif par client+numéro.
+  store.phoneVerificationChallenges = store.phoneVerificationChallenges.filter(
+    (c) =>
+      !(c.clientId === params.clientId && c.phoneE164 === params.phoneE164)
+  );
+
+  const now = new Date();
+  const challenge: PhoneVerificationChallenge = {
+    id: newId("pver"),
+    clientId: params.clientId,
+    phoneE164: params.phoneE164,
+    codeHash: params.codeHash,
+    expiresAt: new Date(now.getTime() + params.ttlMs).toISOString(),
+    attempts: 0,
+    createdAt: now.toISOString(),
+  };
+  store.phoneVerificationChallenges.unshift(challenge);
+  await writeStore(store);
+  return { challenge };
+}
+
+/** Annule un challenge (ex. SMS non parti) pour ne pas bloquer le renvoi. */
+export async function deletePhoneVerificationChallenge(params: {
+  clientId: string;
+  phoneE164: string;
+}): Promise<void> {
+  const store = await readStore();
+  const before = store.phoneVerificationChallenges.length;
+  store.phoneVerificationChallenges = store.phoneVerificationChallenges.filter(
+    (c) =>
+      !(c.clientId === params.clientId && c.phoneE164 === params.phoneE164)
+  );
+  if (store.phoneVerificationChallenges.length !== before) {
+    await writeStore(store);
+  }
+}
+
+export async function verifyPhoneChallengeCode(params: {
+  clientId: string;
+  phoneE164: string;
+  codeHash: string;
+  maxAttempts: number;
+}): Promise<{ ok: true } | { error: string; status: number }> {
+  const store = await readStore();
+  purgeExpiredPhoneChallenges(store);
+
+  const index = store.phoneVerificationChallenges.findIndex(
+    (c) =>
+      c.clientId === params.clientId && c.phoneE164 === params.phoneE164
+  );
+  if (index === -1) {
+    return {
+      error: "Aucun code en cours. Demandez un nouveau SMS.",
+      status: 400,
+    };
+  }
+
+  const challenge = store.phoneVerificationChallenges[index];
+  if (new Date(challenge.expiresAt).getTime() <= Date.now()) {
+    store.phoneVerificationChallenges.splice(index, 1);
+    await writeStore(store);
+    return { error: "Code expiré. Demandez un nouveau SMS.", status: 400 };
+  }
+
+  if (challenge.attempts >= params.maxAttempts) {
+    store.phoneVerificationChallenges.splice(index, 1);
+    await writeStore(store);
+    return {
+      error: "Trop de tentatives. Demandez un nouveau SMS.",
+      status: 429,
+    };
+  }
+
+  if (challenge.codeHash !== params.codeHash) {
+    store.phoneVerificationChallenges[index].attempts += 1;
+    const left =
+      params.maxAttempts - store.phoneVerificationChallenges[index].attempts;
+    await writeStore(store);
+    return {
+      error:
+        left > 0
+          ? `Code incorrect. ${left} tentative${left > 1 ? "s" : ""} restante${left > 1 ? "s" : ""}.`
+          : "Trop de tentatives. Demandez un nouveau SMS.",
+      status: 400,
+    };
+  }
+
+  store.phoneVerificationChallenges.splice(index, 1);
+  await writeStore(store);
+  return { ok: true };
+}
+
+export async function markClientPhoneVerified(
+  clientId: string,
+  phoneE164: string
+): Promise<ClientAccount | null> {
+  const store = await readStore();
+  const index = store.clientAccounts.findIndex((c) => c.id === clientId);
+  if (index === -1) return null;
+
+  const verifiedAt = new Date().toISOString();
+
+  store.clientAccounts[index] = {
+    ...store.clientAccounts[index],
+    phone: formatFrenchPhoneDisplay(phoneE164),
+    phoneVerifiedE164: phoneE164,
+    phoneVerifiedAt: verifiedAt,
+  };
+  await writeStore(store);
+  return store.clientAccounts[index];
 }
 
 export async function getSmsCampaigns(): Promise<SmsCampaign[]> {

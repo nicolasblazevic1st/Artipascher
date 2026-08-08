@@ -111,7 +111,13 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
 
         {request.phone && (
           <p className="mt-2 text-sm text-slate-600">
-            <span className="font-medium text-slate-800">Téléphone :</span> {request.phone}
+            <span className="font-medium text-slate-800">Téléphone :</span>{" "}
+            {request.phone}
+            {request.phoneVerifiedAt && (
+              <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                Vérifié SMS
+              </span>
+            )}
           </p>
         )}
 

@@ -20,7 +20,11 @@ import {
 import { getClientSession } from "@/lib/client-auth";
 import { validateWorkRequestNafSelection } from "@/lib/naf-codes";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
-import { formatFrenchPhoneDisplay, normalizeFrenchPhone } from "@/lib/sms";
+import {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+} from "@/lib/phone-format";
+import { clientPhoneIsVerified } from "@/lib/phone-verification";
 import {
   addWorkRequest,
   getClientById,
@@ -119,12 +123,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const phoneNormalized = normalizeFrenchPhone(phoneRaw);
+    const phoneNormalized = normalizeFrenchMobile(phoneRaw);
     if (!phoneNormalized) {
       return NextResponse.json(
         {
           error:
-            "Indiquez un numéro de téléphone français valide (10 chiffres, ex. 06 12 34 56 78).",
+            "Indiquez un mobile français valide (06 ou 07), ex. 06 12 34 56 78.",
         },
         { status: 400 }
       );
@@ -248,11 +252,22 @@ export async function POST(request: NextRequest) {
     }
     const client = existing;
 
+    if (!clientPhoneIsVerified(client, phoneNormalized)) {
+      return NextResponse.json(
+        {
+          error:
+            "Vérifiez votre mobile par SMS avant d'envoyer la demande (bouton « Recevoir un code »).",
+        },
+        { status: 400 }
+      );
+    }
+
     const entry = await addWorkRequest({
       firstName,
       lastName,
       email,
       phone,
+      phoneVerifiedAt: client.phoneVerifiedAt,
       clientId: client.id,
       clientKind,
       companyName,

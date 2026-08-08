@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
@@ -28,6 +28,10 @@ import {
 } from "@/lib/naf-codes";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
 import {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+} from "@/lib/phone-format";
+import {
   isValidSiretFormat,
   normalizeSiret,
   type RcsVerificationResult,
@@ -38,6 +42,8 @@ export interface WorkRequestFormDefaults {
   lastName: string;
   email: string;
   phone?: string;
+  phoneVerifiedE164?: string;
+  phoneVerifiedAt?: string;
 }
 
 interface Props {
@@ -71,6 +77,15 @@ export default function WorkRequestForm({
   const [auctionDurationDays, setAuctionDurationDays] = useState(DEFAULT_AUCTION_DURATION_DAYS);
   const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
   const [smsContactAlertsEnabled, setSmsContactAlertsEnabled] = useState(true);
+  const [phone, setPhone] = useState(defaults?.phone ?? "");
+  const [phoneVerifiedE164, setPhoneVerifiedE164] = useState(
+    defaults?.phoneVerifiedE164 ?? ""
+  );
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpMessage, setOtpMessage] = useState<string | null>(null);
+  const [otpCooldown, setOtpCooldown] = useState(0);
   const [isCompany, setIsCompany] = useState(false);
   const [clientSiret, setClientSiret] = useState("");
   const [companyVerification, setCompanyVerification] =
@@ -83,12 +98,80 @@ export default function WorkRequestForm({
   const maxStartDate = maxRequestedWorkStartDate();
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
   const requiresNafChoice = nafOptions.length > 1;
+  const phoneE164 = normalizeFrenchMobile(phone);
+  const phoneVerified =
+    Boolean(phoneE164) &&
+    Boolean(phoneVerifiedE164) &&
+    phoneE164 === phoneVerifiedE164;
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const id = window.setInterval(() => {
+      setOtpCooldown((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [otpCooldown]);
 
   function handleCategoryChange(next: string) {
     setCategory(next);
     const options = getNafOptionsForCategory(next);
     setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
     setError(null);
+  }
+
+  function handlePhoneChange(value: string) {
+    setPhone(value);
+    setOtpMessage(null);
+    const next = normalizeFrenchMobile(value);
+    if (!next || next !== phoneVerifiedE164) {
+      // Ne pas effacer phoneVerifiedE164 du compte : on recalcule phoneVerified
+      // via la comparaison avec la saisie courante.
+    }
+  }
+
+  async function sendPhoneOtp() {
+    setOtpSending(true);
+    setOtpMessage(null);
+    setError(null);
+    const res = await fetch("/api/client/phone-verification/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+    setOtpSending(false);
+    if (!res.ok) {
+      if (typeof data.cooldownSeconds === "number") {
+        setOtpCooldown(data.cooldownSeconds);
+      }
+      setOtpMessage(data.error ?? "Envoi du SMS impossible.");
+      return;
+    }
+    if (typeof data.cooldownSeconds === "number") {
+      setOtpCooldown(data.cooldownSeconds);
+    }
+    setOtpMessage(data.message ?? "Code envoyé par SMS.");
+  }
+
+  async function verifyPhoneOtp() {
+    setOtpVerifying(true);
+    setOtpMessage(null);
+    setError(null);
+    const res = await fetch("/api/client/phone-verification/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, code: otpCode }),
+    });
+    const data = await res.json();
+    setOtpVerifying(false);
+    if (!res.ok) {
+      setOtpMessage(data.error ?? "Code incorrect.");
+      return;
+    }
+    setPhoneVerifiedE164(data.phoneVerifiedE164 ?? "");
+    if (data.phoneDisplay) setPhone(data.phoneDisplay);
+    setOtpCode("");
+    setOtpMessage("Mobile vérifié.");
   }
 
   function toggleNafCode(code: string) {
@@ -177,11 +260,19 @@ export default function WorkRequestForm({
       return;
     }
 
-    const phoneValue = String(
-      (form.elements.namedItem("phone") as HTMLInputElement | null)?.value ?? ""
-    ).trim();
+    const phoneValue = phone.trim();
     if (!phoneValue) {
       setError("Le numéro de téléphone est obligatoire.");
+      setStatus("error");
+      return;
+    }
+    if (!normalizeFrenchMobile(phoneValue)) {
+      setError("Indiquez un mobile français valide (06 ou 07).");
+      setStatus("error");
+      return;
+    }
+    if (!phoneVerified) {
+      setError("Vérifiez votre mobile par SMS avant d'envoyer la demande.");
       setStatus("error");
       return;
     }
@@ -229,6 +320,7 @@ export default function WorkRequestForm({
     formData.set("city", selectedAddress.city);
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
+    formData.set("phone", phoneValue);
     formData.set("auctionDurationDays", String(auctionDurationDays));
     formData.set(
       "preferEstablishedCompany",
@@ -448,20 +540,81 @@ export default function WorkRequestForm({
         defaultValue={defaults?.email ?? ""}
         readOnly
       />
-      <input
-        name="phone"
-        type="tel"
-        inputMode="tel"
-        placeholder="Téléphone (ex. 06 12 34 56 78)"
-        className={inputClass}
-        required
-        autoComplete="tel"
-        defaultValue={defaults?.phone ?? ""}
-      />
-      <p className="-mt-2 text-xs text-slate-500">
-        Numéro français obligatoire — communiqué aux artisans uniquement après acceptation et
-        déblocage.
-      </p>
+      <div>
+        <input
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          placeholder="Mobile (ex. 06 12 34 56 78)"
+          className={inputClass}
+          required
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => handlePhoneChange(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Mobile français obligatoire, vérifié par SMS — communiqué aux artisans
+          uniquement après déblocage (1 crédit).
+        </p>
+        {phoneVerified ? (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            ✓ Mobile vérifié
+            {phoneE164
+              ? ` — ${formatFrenchPhoneDisplay(phoneE164)}`
+              : ""}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void sendPhoneOtp()}
+                disabled={otpSending || otpCooldown > 0 || !phoneE164}
+                className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {otpSending
+                  ? "Envoi…"
+                  : otpCooldown > 0
+                    ? `Renvoyer (${otpCooldown}s)`
+                    : "Recevoir un code"}
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="Code à 6 chiffres"
+                value={otpCode}
+                onChange={(e) =>
+                  setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                className="min-w-[9rem] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => void verifyPhoneOtp()}
+                disabled={otpVerifying || otpCode.length !== 6}
+                className="rounded-lg border border-brand-600 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+              >
+                {otpVerifying ? "Vérif…" : "Vérifier"}
+              </button>
+            </div>
+            {otpMessage && (
+              <p
+                className={`text-xs ${
+                  otpMessage.includes("vérifié") ||
+                  otpMessage.includes("envoyé") ||
+                  otpMessage.includes("démo")
+                    ? "text-emerald-700"
+                    : "text-amber-800"
+                }`}
+              >
+                {otpMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       <BanAddressAutocomplete
         inputClass={inputClass}

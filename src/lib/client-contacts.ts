@@ -4,6 +4,8 @@ export interface ClientContact {
   lastName: string;
   email: string;
   phone: string;
+  /** Mobile vérifié par SMS à la création de la demande. */
+  phoneVerified?: boolean;
   address: string;
   postalCode: string;
   companyName?: string;
