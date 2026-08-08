@@ -1,11 +1,15 @@
 import { getArtisansNearWorkRequest } from "./artisans-nearby";
-import { upsertArtisan } from "./artisans-db";
+import { addEnrichmentJob, listArtisans, upsertArtisan } from "./artisans-db";
 import {
   findNearbyBusinesses,
   type NearbyBusiness,
 } from "./nearby-businesses";
 import { isGooglePlacesEnabled } from "./google-places";
-import { markArtisanPhoneInvalid } from "./places-quota";
+import {
+  enrichArtisanWithPlaces,
+  isPlacesPhoneTarget,
+  markArtisanPhoneInvalid,
+} from "./places-quota";
 import { normalizeFrenchMobile, sendSms } from "./sms";
 import { absoluteUrl } from "./share";
 import {
@@ -41,7 +45,23 @@ export interface SmsCandidate {
   source: "gouv" | "platform" | "import";
   proId?: string;
   selectedByDefault: boolean;
+  /** Distance chantier → artisan (km), si géolocalisé. */
+  distanceKm?: number;
 }
+
+type ProspectPoolRow = {
+  siret: string;
+  siren: string;
+  companyName: string;
+  city: string;
+  department: "59" | "62";
+  nafCode?: string;
+  source: "gouv" | "platform" | "import";
+  companyCreatedAt?: string;
+  phone?: string;
+  distanceKm?: number;
+  proId?: string;
+};
 
 export interface SmsCampaignPreviewDetailed {
   workRequestId: string;
@@ -68,27 +88,31 @@ export interface SmsCampaignPreviewDetailed {
     city: string;
     companyCreatedAt?: string;
     source: string;
+    distanceKm?: number;
   }>;
+  /** Remplissage Places pour atteindre N joignables. */
+  placesFill?: {
+    enabled: boolean;
+    targetPhones: number;
+    phonesBefore: number;
+    phonesAfter: number;
+    attempts: number;
+    phonesFound: number;
+    requestsUsed: number;
+  };
 }
+
+export type PreviewSmsCampaignOptions = {
+  campaignSize?: number;
+  /** Si true (défaut en preview), Places jusqu’à N joignables. */
+  fillPhonesViaPlaces?: boolean;
+};
 
 function isYoungCompany(createdAt?: string): boolean {
   if (!createdAt) return false;
   const t = new Date(createdAt).getTime();
   if (Number.isNaN(t)) return false;
   return Date.now() - t < TWO_YEARS_MS;
-}
-
-function shuffle<T>(items: T[]): T[] {
-  const arr = [...items];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function pickUpTo<T>(items: T[], n: number): T[] {
-  return shuffle(items).slice(0, Math.max(0, n));
 }
 
 export function buildDefaultCampaignMessage(request: WorkRequest): string {
@@ -111,8 +135,47 @@ function classifyCohort(
   return "new_established";
 }
 
+function cohortTargets(
+  campaignSize: number,
+  preferEstablishedCompany?: boolean
+): { young: number; established: number } {
+  if (preferEstablishedCompany) {
+    const young = Math.floor(campaignSize / 3);
+    return { young, established: campaignSize - young };
+  }
+  const young = Math.ceil(campaignSize / 2);
+  return { young, established: campaignSize - young };
+}
+
+function toCandidate(
+  row: ProspectPoolRow,
+  phone: string,
+  selectedByDefault: boolean
+): SmsCandidate {
+  return {
+    siret: row.siret,
+    siren: row.siren,
+    companyName: row.companyName,
+    city: row.city,
+    department: row.department,
+    nafCode: row.nafCode,
+    phone,
+    cohort: classifyCohort(undefined, row.companyCreatedAt),
+    companyCreatedAt: row.companyCreatedAt,
+    source: row.source,
+    proId: row.proId,
+    selectedByDefault,
+    distanceKm: row.distanceKm,
+  };
+}
+
 async function mergeProspectPool(
-  request: WorkRequest
+  request: WorkRequest,
+  options?: {
+    targetPhones?: number;
+    fillPhonesViaPlaces?: boolean;
+    preferEstablishedCompany?: boolean;
+  }
 ): Promise<{
   withPhone: SmsCandidate[];
   withoutPhone: SmsCampaignPreviewDetailed["withoutPhone"];
@@ -121,12 +184,20 @@ async function mergeProspectPool(
   gouvCount: number;
   platformCount: number;
   alreadyMarketedCount: number;
+  placesFill: NonNullable<SmsCampaignPreviewDetailed["placesFill"]>;
 }> {
-  // Base locale enrichie (rayon). Places production : seulement si activé explicitement.
+  const targetPhones = Math.max(1, Math.floor(options?.targetPhones ?? 10));
+  const fillPhonesViaPlaces = options?.fillPhonesViaPlaces !== false;
+  const preferEstablished = options?.preferEstablishedCompany === true;
+  const targets = cohortTargets(targetPhones, preferEstablished);
+
+  // Pas d’enrichissement aveugle : Places uniquement en marchant du plus proche au plus loin.
   const nearbyDb = await getArtisansNearWorkRequest(request, {
-    enrichProduction: isGooglePlacesEnabled(),
-    maxEnrich: 20,
+    enrichProduction: false,
   });
+  const distanceBySiret = new Map(
+    nearbyDb.artisans.map((a) => [a.siret, a.distanceKm])
+  );
 
   const { businesses, geoFound } = await findNearbyBusinesses({
     city: request.city,
@@ -189,11 +260,13 @@ async function mergeProspectPool(
     );
   }
 
-  const withPhone: SmsCandidate[] = [];
-  const withoutPhone: SmsCampaignPreviewDetailed["withoutPhone"] = [];
+  const pool: ProspectPoolRow[] = [];
   const seen = new Set<string>();
 
-  function pushBusiness(b: NearbyBusiness | ArtisanProspect) {
+  function pushBusiness(
+    b: NearbyBusiness | ArtisanProspect,
+    distanceKm?: number
+  ) {
     const siret = "siret" in b ? b.siret : "";
     if (!siret || seen.has(siret)) return;
     seen.add(siret);
@@ -204,11 +277,9 @@ async function mergeProspectPool(
     const source =
       ("source" in b ? b.source : undefined) ?? prospect?.source ?? "gouv";
     const proId = "proId" in b ? b.proId : undefined;
-    // Campagnes marketing = acquisition hors plateforme (pas les inscrits).
     if (source === "platform" || proId) return;
 
     const lastContactedAt = prospect?.lastContactedAt;
-    // Déjà contactés par SMS campagne → plus jamais de marketing.
     if (lastContactedAt || alreadyMarketed.has(siret)) {
       alreadyMarketedCount += 1;
       return;
@@ -230,58 +301,188 @@ async function mergeProspectPool(
       ("nafCode" in b ? b.nafCode : undefined) ?? prospect?.nafCode;
     const siren =
       ("siren" in b ? b.siren : undefined) ?? prospect?.siren ?? siret.slice(0, 9);
+    const dist = distanceKm ?? distanceBySiret.get(siret);
 
-    if (!phone) {
-      withoutPhone.push({
-        siret,
-        companyName,
-        city,
-        companyCreatedAt,
-        source,
-      });
-      return;
-    }
-
-    withPhone.push({
+    pool.push({
       siret,
       siren,
       companyName,
       city,
       department,
       nafCode,
-      phone,
-      cohort: classifyCohort(lastContactedAt, companyCreatedAt),
+      source: source === "import" ? "import" : "gouv",
       companyCreatedAt,
-      lastContactedAt,
-      source,
+      phone,
+      distanceKm: dist,
       proId,
-      selectedByDefault: false,
     });
   }
 
-  // Priorité : artisans géolocalisés + enrichis en base locale.
+  // Géolocalisés d’abord (distance connue), puis le reste SIRENE / prospects.
   for (const a of nearbyDb.artisans) {
-    pushBusiness({
-      siret: a.siret,
-      siren: a.siren,
-      name: a.companyName,
-      city: a.city,
-      department: a.department,
-      nafCode: a.nafCode,
-      source: a.source === "platform" ? "platform" : "gouv",
-      companyCreatedAt: a.companyCreatedAt,
-      phone: a.phone,
-    });
+    pushBusiness(
+      {
+        siret: a.siret,
+        siren: a.siren,
+        name: a.companyName,
+        city: a.city,
+        department: a.department,
+        nafCode: a.nafCode,
+        source: a.source === "platform" ? "platform" : "gouv",
+        companyCreatedAt: a.companyCreatedAt,
+        phone: a.phone,
+      },
+      a.distanceKm
+    );
   }
 
   for (const b of businesses) pushBusiness(b);
 
-  // Prospects already enriched for this dept even if not in this near_point page.
   for (const p of prospects) {
     if (p.department !== request.department) continue;
-    if (!p.phone) continue;
     pushBusiness(p);
   }
+
+  pool.sort((a, b) => {
+    const da = a.distanceKm ?? Number.POSITIVE_INFINITY;
+    const db = b.distanceKm ?? Number.POSITIVE_INFINITY;
+    if (da !== db) return da - db;
+    return a.companyName.localeCompare(b.companyName, "fr");
+  });
+
+  const artisanBySiret = new Map(
+    (await listArtisans({ status: "active" })).map((a) => [a.siret, a])
+  );
+  const placesEnabled = isGooglePlacesEnabled();
+  const maxAttempts = Math.min(80, Math.max(24, targetPhones * 6));
+  const phonesBefore = pool.filter((r) => Boolean(r.phone)).length;
+
+  let attempts = 0;
+  let phonesFound = 0;
+  let requestsUsed = 0;
+  const placesErrors: string[] = [];
+
+  const selectedSirets = new Set<string>();
+  let nYoung = 0;
+  let nEstablished = 0;
+  const withPhone: SmsCandidate[] = [];
+  const withoutPhone: SmsCampaignPreviewDetailed["withoutPhone"] = [];
+
+  async function tryPlacesPhone(row: ProspectPoolRow): Promise<string | undefined> {
+    if (!fillPhonesViaPlaces || !placesEnabled) return undefined;
+    if (attempts >= maxAttempts) return undefined;
+    const artisan = artisanBySiret.get(row.siret);
+    if (!artisan || !isPlacesPhoneTarget(artisan)) return undefined;
+
+    attempts += 1;
+    const res = await enrichArtisanWithPlaces(artisan, "production");
+    requestsUsed += res.requestsUsed;
+    if (res.error) placesErrors.push(`${row.siret}: ${res.error}`);
+    const phone = res.artisan?.phone?.trim();
+    if (!phone || !normalizeFrenchMobile(phone)) return undefined;
+
+    phonesFound += 1;
+    row.phone = phone;
+    artisanBySiret.set(row.siret, { ...artisan, ...res.artisan!, phone });
+    const prospect = prospectBySiret.get(row.siret);
+    if (prospect) {
+      await upsertArtisanProspect({ ...prospect, phone });
+      prospectBySiret.set(row.siret, { ...prospect, phone });
+    }
+    return phone;
+  }
+
+  function trySelect(row: ProspectPoolRow, phone: string, respectMix: boolean): boolean {
+    if (selectedSirets.has(row.siret)) return false;
+    if (selectedSirets.size >= targetPhones) return false;
+
+    const cohort = classifyCohort(undefined, row.companyCreatedAt);
+    if (respectMix) {
+      if (cohort === "new_young" && nYoung >= targets.young) return false;
+      if (cohort === "new_established" && nEstablished >= targets.established) {
+        return false;
+      }
+    }
+
+    selectedSirets.add(row.siret);
+    if (cohort === "new_young") nYoung += 1;
+    else nEstablished += 1;
+    withPhone.push(toCandidate(row, phone, true));
+    return true;
+  }
+
+  // 1) Du plus proche au plus loin : obtenir un tél (Places si besoin) et remplir N.
+  for (const row of pool) {
+    if (selectedSirets.size >= targetPhones) break;
+
+    let phone = row.phone;
+    if (!phone) {
+      phone = await tryPlacesPhone(row);
+    }
+    if (!phone) continue;
+    trySelect(row, phone, true);
+  }
+
+  // 2) Compléter N en ignorant le mix si besoin (toujours plus proche d’abord).
+  if (selectedSirets.size < targetPhones) {
+    for (const row of pool) {
+      if (selectedSirets.size >= targetPhones) break;
+      if (selectedSirets.has(row.siret)) continue;
+      let phone = row.phone;
+      if (!phone) phone = await tryPlacesPhone(row);
+      if (!phone) continue;
+      trySelect(row, phone, false);
+    }
+  }
+
+  // 3) Catalogue UI : autres joignables connus (plus loin) + sans tél restants.
+  for (const row of pool) {
+    if (selectedSirets.has(row.siret)) continue;
+    if (row.phone) {
+      withPhone.push(toCandidate(row, row.phone, false));
+    } else {
+      withoutPhone.push({
+        siret: row.siret,
+        companyName: row.companyName,
+        city: row.city,
+        companyCreatedAt: row.companyCreatedAt,
+        source: row.source,
+        distanceKm: row.distanceKm,
+      });
+    }
+  }
+
+  withPhone.sort((a, b) => {
+    const da = a.distanceKm ?? Number.POSITIVE_INFINITY;
+    const db = b.distanceKm ?? Number.POSITIVE_INFINITY;
+    if (da !== db) return da - db;
+    if (a.selectedByDefault !== b.selectedByDefault) {
+      return a.selectedByDefault ? -1 : 1;
+    }
+    return a.companyName.localeCompare(b.companyName, "fr");
+  });
+
+  if (attempts > 0) {
+    await addEnrichmentJob({
+      kind: "places_production",
+      ranAt: new Date().toISOString(),
+      requestsSpent: requestsUsed,
+      processed: attempts,
+      skipped: 0,
+      errors: placesErrors,
+      note: `Campagne proche→loin: ${phonesFound} tél. / cible ${targetPhones} (${attempts} tentatives)`,
+    });
+  }
+
+  const placesFill: NonNullable<SmsCampaignPreviewDetailed["placesFill"]> = {
+    enabled: placesEnabled && fillPhonesViaPlaces,
+    targetPhones,
+    phonesBefore,
+    phonesAfter: withPhone.filter((c) => c.selectedByDefault).length,
+    attempts,
+    phonesFound,
+    requestsUsed,
+  };
 
   return {
     withPhone,
@@ -291,94 +492,60 @@ async function mergeProspectPool(
     gouvCount,
     platformCount,
     alreadyMarketedCount,
+    placesFill,
   };
 }
 
-function applyMixSelection(
-  candidates: SmsCandidate[],
-  campaignSize: number,
-  options?: { preferEstablishedCompany?: boolean }
-): SmsCandidate[] {
-  // Marketing SMS : jamais les « returning » (déjà contactés exclus du pool).
-  const young = candidates.filter((c) => c.cohort === "new_young");
-  const established = candidates.filter((c) => c.cohort === "new_established");
-
-  // Préférence client « +2 ans » : 1/3 jeunes / 2/3 établis.
-  // Sinon : ~50/50 jeunes / établis.
-  let nYoung: number;
-  let nEstablished: number;
-  if (options?.preferEstablishedCompany) {
-    nYoung = Math.min(young.length, Math.floor(campaignSize / 3));
-    nEstablished = Math.min(established.length, campaignSize - nYoung);
-  } else {
-    nYoung = Math.min(young.length, Math.ceil(campaignSize / 2));
-    nEstablished = Math.min(established.length, campaignSize - nYoung);
+function resolvePreviewOptions(
+  campaignSizeOrOptions?: number | PreviewSmsCampaignOptions
+): PreviewSmsCampaignOptions {
+  if (typeof campaignSizeOrOptions === "number") {
+    return {
+      campaignSize: campaignSizeOrOptions,
+      fillPhonesViaPlaces: true,
+    };
   }
-
-  let rem = campaignSize - nYoung - nEstablished;
-  while (rem > 0) {
-    const preferEst =
-      options?.preferEstablishedCompany || nEstablished <= nYoung;
-    if (preferEst && nEstablished < established.length) {
-      nEstablished += 1;
-      rem -= 1;
-      continue;
-    }
-    if (nYoung < young.length) {
-      nYoung += 1;
-      rem -= 1;
-      continue;
-    }
-    if (nEstablished < established.length) {
-      nEstablished += 1;
-      rem -= 1;
-      continue;
-    }
-    break;
-  }
-
-  const selectedSirets = new Set([
-    ...pickUpTo(young, nYoung).map((c) => c.siret),
-    ...pickUpTo(established, nEstablished).map((c) => c.siret),
-  ]);
-
-  return candidates.map((c) => ({
-    ...c,
-    selectedByDefault: selectedSirets.has(c.siret),
-  }));
+  return {
+    campaignSize: campaignSizeOrOptions?.campaignSize,
+    fillPhonesViaPlaces: campaignSizeOrOptions?.fillPhonesViaPlaces !== false,
+  };
 }
 
 export async function previewSmsCampaignDetailed(
   request: WorkRequest,
-  campaignSizeOverride?: number
+  campaignSizeOrOptions?: number | PreviewSmsCampaignOptions
 ): Promise<SmsCampaignPreviewDetailed> {
   const settings = await getSmsSettings();
-  const campaignSize = campaignSizeOverride ?? settings.defaultCampaignSize;
+  const opts = resolvePreviewOptions(campaignSizeOrOptions);
+  const campaignSize = opts.campaignSize ?? settings.defaultCampaignSize;
+  const preferEstablishedCompany = request.preferEstablishedCompany === true;
   const {
-    withPhone,
+    withPhone: candidates,
     withoutPhone,
     geoFound,
     totalNearby,
     gouvCount,
     platformCount,
     alreadyMarketedCount,
-  } = await mergeProspectPool(request);
-
-  const preferEstablishedCompany = request.preferEstablishedCompany === true;
-  const candidates = applyMixSelection(withPhone, campaignSize, {
+    placesFill,
+  } = await mergeProspectPool(request, {
+    targetPhones: campaignSize,
+    fillPhonesViaPlaces: opts.fillPhonesViaPlaces,
     preferEstablishedCompany,
   });
 
   const cohortCounts: Record<SmsCohort, number> = {
     returning: 0,
-    new_young: withPhone.filter((c) => c.cohort === "new_young").length,
-    new_established: withPhone.filter((c) => c.cohort === "new_established").length,
+    new_young: candidates.filter((c) => c.cohort === "new_young").length,
+    new_established: candidates.filter((c) => c.cohort === "new_established")
+      .length,
   };
 
   const suggestedCounts: Record<SmsCohort, number> = {
     returning: 0,
-    new_young: candidates.filter((c) => c.selectedByDefault && c.cohort === "new_young")
-      .length,
+    new_young: candidates.filter(
+      (c) => c.selectedByDefault && c.cohort === "new_young"
+    ).length,
     new_established: candidates.filter(
       (c) => c.selectedByDefault && c.cohort === "new_established"
     ).length,
@@ -404,6 +571,7 @@ export async function previewSmsCampaignDetailed(
     suggestedCounts,
     candidates,
     withoutPhone,
+    placesFill,
   };
 }
 
@@ -442,7 +610,11 @@ export async function executeSmsCampaignToRecipients(
   options?: { demo?: boolean; trigger?: "manual" | "auto" }
 ): Promise<SmsCampaign> {
   const settings = await getSmsSettings();
-  const preview = await previewSmsCampaignDetailed(request, recipientSirets.length || undefined);
+  // Pas de re-enrichissement Places à l’envoi : déjà fait en preview / auto.
+  const preview = await previewSmsCampaignDetailed(request, {
+    campaignSize: recipientSirets.length || settings.defaultCampaignSize,
+    fillPhonesViaPlaces: false,
+  });
   const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
 
   const selected = recipientSirets

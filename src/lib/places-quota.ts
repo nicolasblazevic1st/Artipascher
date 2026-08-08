@@ -200,6 +200,12 @@ export async function enrichArtisanWithPlaces(
   return { artisan: updated, requestsUsed: result.requestsUsed };
 }
 
+export function isPlacesPhoneTarget(a: EnrichedArtisan): boolean {
+  if (a.status !== "active" || a.optedOut) return false;
+  if (a.enrichmentStatus === "no_match") return false;
+  return !a.phone?.trim() || a.enrichmentStatus === "invalid_phone";
+}
+
 /**
  * Enrichissement production : jamais bloqué par le plafond mensuel.
  * Enrichit les artisans du rayon sans téléphone (ou invalid_phone).
@@ -213,14 +219,7 @@ export async function enrichNearbyForProduction(
   errors: string[];
 }> {
   const max = options?.maxArtisans ?? 30;
-  const targets = artisans
-    .filter(
-      (a) =>
-        a.status === "active" &&
-        !a.optedOut &&
-        (!a.phone?.trim() || a.enrichmentStatus === "invalid_phone")
-    )
-    .slice(0, max);
+  const targets = artisans.filter(isPlacesPhoneTarget).slice(0, max);
 
   let requestsUsed = 0;
   let enriched = 0;
@@ -244,6 +243,69 @@ export async function enrichNearbyForProduction(
   });
 
   return { enriched, requestsUsed, errors };
+}
+
+/**
+ * Enrichit dans l’ordre fourni (ex. plus proches d’abord) jusqu’à trouver
+ * `targetNewPhones` numéros, ou atteindre `maxAttempts`.
+ */
+export async function enrichUntilPhoneTarget(
+  artisans: EnrichedArtisan[],
+  options: { targetNewPhones: number; maxAttempts?: number }
+): Promise<{
+  enriched: number;
+  attempts: number;
+  requestsUsed: number;
+  errors: string[];
+  phonesBySiret: Map<string, string>;
+}> {
+  const target = Math.max(0, Math.floor(options.targetNewPhones));
+  const maxAttempts = Math.max(
+    0,
+    Math.floor(options.maxAttempts ?? Math.min(80, Math.max(24, target * 6)))
+  );
+  const phonesBySiret = new Map<string, string>();
+
+  if (target <= 0 || maxAttempts <= 0 || !isGooglePlacesEnabled()) {
+    return {
+      enriched: 0,
+      attempts: 0,
+      requestsUsed: 0,
+      errors: [],
+      phonesBySiret,
+    };
+  }
+
+  const targets = artisans.filter(isPlacesPhoneTarget);
+  let requestsUsed = 0;
+  let enriched = 0;
+  let attempts = 0;
+  const errors: string[] = [];
+
+  for (const a of targets) {
+    if (enriched >= target || attempts >= maxAttempts) break;
+    attempts += 1;
+    const res = await enrichArtisanWithPlaces(a, "production");
+    requestsUsed += res.requestsUsed;
+    if (res.error) errors.push(`${a.siret}: ${res.error}`);
+    const phone = res.artisan?.phone?.trim();
+    if (phone) {
+      enriched += 1;
+      phonesBySiret.set(a.siret, phone);
+    }
+  }
+
+  await addEnrichmentJob({
+    kind: "places_production",
+    ranAt: new Date().toISOString(),
+    requestsSpent: requestsUsed,
+    processed: attempts,
+    skipped: 0,
+    errors,
+    note: `Cible campagne: ${enriched}/${target} tél. (${attempts} tentatives)`,
+  });
+
+  return { enriched, attempts, requestsUsed, errors, phonesBySiret };
 }
 
 /** Cron nocturne : consomme le budget journalier d'enrichissement. */

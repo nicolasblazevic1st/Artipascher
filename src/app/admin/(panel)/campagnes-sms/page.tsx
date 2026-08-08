@@ -56,7 +56,17 @@ interface Preview {
     city: string;
     companyCreatedAt?: string;
     source: string;
+    distanceKm?: number;
   }>;
+  placesFill?: {
+    enabled: boolean;
+    targetPhones: number;
+    phonesBefore: number;
+    phonesAfter: number;
+    attempts: number;
+    phonesFound: number;
+    requestsUsed: number;
+  };
 }
 
 type ListRow =
@@ -512,14 +522,13 @@ export default function AdminSmsCampaignsPage() {
         </h2>
         <p className="mt-1 text-xs text-slate-500">
           {artisanStats?.placesEnabled
-            ? "Places activé. Prévisualise une campagne pour enregistrer les SIRENE dans la base, puis lance l’enrichissement (consomme le quota)."
+            ? "Places activé. Prévisualisation : parcours du plus proche au plus loin ; Places seulement si pas de téléphone, jusqu’à N SMS."
             : <>
                 Places désactivé tant que{" "}
                 <code className="rounded bg-slate-100 px-1">GOOGLE_PLACES_ENABLED=true</code>{" "}
-                n&apos;est pas posé.
+                n&apos;est pas posé — seuls les numéros déjà en base partent en SMS.
               </>}
-          {" "}Les 67 « sans téléphone » de la preview ne sont enrichis qu&apos;après
-          enregistrement en base (preview ou Extraire SIRENE).
+          {" "}L’enrichissement nocturne / bouton ci-dessous continue de grossir la base hors campagne.
         </p>
         {artisanStats ? (
           <div className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
@@ -755,13 +764,15 @@ export default function AdminSmsCampaignsPage() {
               disabled={disableWhen(!selectedId || previewLoading || loading)}
               className="mt-3 block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
-              {previewLoading ? "Calcul SIRENE en cours…" : "Prévisualiser le mix & la liste"}
+              {previewLoading
+                ? "Recherche + Places jusqu’à N…"
+                : "Prévisualiser le mix & la liste"}
             </button>
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
             {previewLoading && (
-              <LoadingBar label="Recherche SIRENE + artisans plateforme + carnet prospects…" />
+              <LoadingBar label="Du plus proche au plus loin (+ Places si besoin)…" />
             )}
             {!previewLoading && !preview && (
               <p className="text-slate-500">
@@ -790,6 +801,13 @@ export default function AdminSmsCampaignsPage() {
                   marketing (exclus définitivement) · {preview.totalNearby} au total
                   {preview.geoFound ? "" : " (géo approximative / introuvable)"}
                 </p>
+                {preview.placesFill && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {preview.placesFill.enabled
+                      ? `Priorité distance → ${preview.placesFill.phonesAfter}/${preview.placesFill.targetPhones} SMS · Places : ${preview.placesFill.attempts} tentatives · ${preview.placesFill.phonesFound} tél. trouvés · ${preview.placesFill.requestsUsed} req. (${preview.placesFill.phonesBefore} tél. déjà en base dans le rayon)`
+                      : "Places non configuré : seuls les numéros déjà en base sont utilisables (toujours du plus proche au plus loin)."}
+                  </p>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
