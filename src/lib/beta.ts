@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
 /**
- * Préouverture / version bêta publique (prod).
+ * Préouverture / version bêta.
  *
- * Règle absolue : host `dev.artipascher.fr` → jamais en bêta.
- * Sinon : bêta ON par défaut, sauf BETA_MODE / NEXT_PUBLIC_BETA_MODE=false.
+ * Règle simple (inversée) :
+ * - bêta UNIQUEMENT sur artipascher.fr / www.artipascher.fr
+ * - partout ailleurs (dev.artipascher.fr, localhost, IP, staging) → ouvert
  */
 
 function envFlagFalse(value: string | undefined): boolean {
@@ -25,9 +26,22 @@ export function normalizeHost(host: string | null | undefined): string {
   return host.split(",")[0]?.trim().toLowerCase().split(":")[0] ?? "";
 }
 
+/** Domaine de production publique uniquement. */
+export function isProductionPublicHost(
+  host: string | null | undefined
+): boolean {
+  const h = normalizeHost(host);
+  return h === "artipascher.fr" || h === "www.artipascher.fr";
+}
+
 export function isDevStagingHost(host: string | null | undefined): boolean {
   const h = normalizeHost(host);
-  return h === "dev.artipascher.fr" || h.endsWith(".dev.artipascher.fr");
+  return (
+    h === "dev.artipascher.fr" ||
+    h.endsWith(".dev.artipascher.fr") ||
+    h === "localhost" ||
+    h === "127.0.0.1"
+  );
 }
 
 export function isStagingSite(): boolean {
@@ -42,12 +56,17 @@ export function isStagingSite(): boolean {
 }
 
 /**
- * Mode bêta pour une requête HTTP (host Nginx prioritaire).
- * À utiliser dans les API et composants serveur avec headers().
+ * Mode bêta pour une requête HTTP.
+ * Sans host reconnu comme prod → jamais de bêta.
  */
 export function isBetaModeForHost(host: string | null | undefined): boolean {
-  if (isDevStagingHost(host)) return false;
-  return isBetaMode();
+  // Staging / local / inconnu → ouvert
+  if (!isProductionPublicHost(host)) return false;
+
+  // Prod : bêta ON sauf désactivation explicite
+  if (envFlagFalse(process.env.BETA_MODE)) return false;
+  if (envFlagFalse(process.env.NEXT_PUBLIC_BETA_MODE)) return false;
+  return true;
 }
 
 /** Raccourci API Route : lit le Host de la requête. */
@@ -60,17 +79,14 @@ export function isBetaModeFromRequest(request: {
 }
 
 /**
- * Mode bêta (env / build). Sans host, le staging se détecte via
- * ARTIPASCHER_STAGING, PORT=3001 ou NEXT_PUBLIC_SITE_URL.
+ * Fallback sans host (build / scripts).
+ * Staging → ouvert. Sinon suit NEXT_PUBLIC_BETA_MODE (défaut ON).
  */
 export function isBetaMode(): boolean {
   if (envFlagFalse(process.env.BETA_MODE)) return false;
   if (envFlagTrue(process.env.ARTIPASCHER_STAGING)) return false;
   if (isStagingSite()) return false;
-
   if (envFlagFalse(process.env.NEXT_PUBLIC_BETA_MODE)) return false;
-
-  // Prod par défaut : bêta ON (préouverture légale)
   return true;
 }
 

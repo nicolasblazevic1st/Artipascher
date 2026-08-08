@@ -17,6 +17,7 @@ module.exports = {
         NEXT_PUBLIC_BETA_MODE: "false",
         NEXT_PUBLIC_ARTIPASCHER_STAGING: "1",
         NEXT_PUBLIC_SITE_URL: "https://dev.artipascher.fr",
+        ARTIPASCHER_BUILD_ID: process.env.ARTIPASCHER_BUILD_ID || "staging",
       },
     },
   ],
