@@ -43,7 +43,9 @@ if [ ! -f .env.local ]; then
   if [ -f "$PROD_DIR/.env.local" ]; then
     PROD_ADMIN=$(grep -E '^ADMIN_PASSWORD=' "$PROD_DIR/.env.local" | cut -d= -f2- || true)
     if [ -n "$PROD_ADMIN" ]; then
-      sed -i "s/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=${PROD_ADMIN}-staging/" .env.local
+      grep -v '^ADMIN_PASSWORD=' .env.local > .env.local.tmp
+      printf 'ADMIN_PASSWORD=%s-staging\n' "$PROD_ADMIN" >> .env.local.tmp
+      mv .env.local.tmp .env.local
     fi
   fi
   echo "⚠️  Vérifiez $STAGING_DIR/.env.local (ADMIN_PASSWORD staging)"
