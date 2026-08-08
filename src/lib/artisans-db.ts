@@ -9,6 +9,7 @@ import {
   type EnrichmentJobKind,
   type QuotaTracking,
 } from "./artisans-types";
+import { isMappedToPlatformCategory } from "./acquisition-naf";
 import { normalizeNafCode, getNafLabel } from "./naf-trade-groups";
 
 const DB_PATH = path.join(process.cwd(), "data", "artisans-enrichment.json");
@@ -317,6 +318,79 @@ export async function markArtisansClosed(
   });
 }
 
+/**
+ * Retire de la base les artisans dont le NAF principal n'est pas
+ * l'un des 22 codes des 16 métiers plateforme.
+ * - mode `close` : passe en closed (défaut)
+ * - mode `delete` : supprime la fiche
+ */
+export async function purgeArtisansOutsidePlatformNaf(options?: {
+  mode?: "close" | "delete";
+}): Promise<{
+  removed: number;
+  kept: number;
+  mode: "close" | "delete";
+  byNaf: Array<{ naf: string; count: number }>;
+}> {
+  const mode = options?.mode === "delete" ? "delete" : "close";
+  const now = new Date().toISOString();
+
+  return enqueueWrite(async () => {
+    const db = await readArtisansDb();
+    const before = db.artisans.length;
+    const removedByNaf = new Map<string, number>();
+
+    if (mode === "delete") {
+      const kept: EnrichedArtisan[] = [];
+      for (const a of db.artisans) {
+        if (isMappedToPlatformCategory(a.nafCode)) {
+          kept.push(a);
+        } else {
+          const naf = normalizeNafCode(a.nafCode) || "(vide)";
+          removedByNaf.set(naf, (removedByNaf.get(naf) ?? 0) + 1);
+        }
+      }
+      db.artisans = kept;
+    } else {
+      for (const a of db.artisans) {
+        if (a.status !== "active") continue;
+        if (isMappedToPlatformCategory(a.nafCode)) continue;
+        const naf = normalizeNafCode(a.nafCode) || "(vide)";
+        removedByNaf.set(naf, (removedByNaf.get(naf) ?? 0) + 1);
+        a.status = "closed";
+        a.closedAt = now;
+        a.updatedAt = now;
+      }
+    }
+
+    const removed = [...removedByNaf.values()].reduce((s, n) => s + n, 0);
+    if (removed > 0) {
+      db.jobs.unshift({
+        id: `job-${Date.now()}-${randomBytes(3).toString("hex")}`,
+        kind: "purge_unmapped_naf",
+        ranAt: now,
+        requestsSpent: 0,
+        processed: removed,
+        skipped: 0,
+        errors: [],
+        note: `${mode}: ${removed} hors 22 NAF métiers (avant ${before})`,
+      });
+      db.jobs = db.jobs.slice(0, 100);
+      await writeArtisansDb(db);
+    }
+
+    return {
+      removed,
+      kept: db.artisans.filter((a) => a.status === "active").length,
+      mode,
+      byNaf: [...removedByNaf.entries()]
+        .map(([naf, count]) => ({ naf, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 30),
+    };
+  });
+}
+
 export async function addEnrichmentJob(
   data: Omit<EnrichmentJob, "id"> & { id?: string }
 ): Promise<EnrichmentJob> {
@@ -451,7 +525,6 @@ export async function getArtisansStats() {
   const invalid = active.filter((a) => a.enrichmentStatus === "invalid_phone");
   const used = quota.requestsProduction + quota.requestsEnrichment;
 
-  const { isMappedToPlatformCategory } = await import("./acquisition-naf");
   const unmapped = active.filter((a) => !isMappedToPlatformCategory(a.nafCode));
   const byDepartment: Record<string, number> = { "59": 0, "62": 0 };
   const nafCounts = new Map<string, number>();

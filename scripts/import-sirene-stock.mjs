@@ -71,11 +71,8 @@ function normalizeNaf(code) {
     .toUpperCase();
 }
 
-function isSectionF(naf) {
-  return naf.startsWith("41.") || naf.startsWith("42.") || naf.startsWith("43.");
-}
-
 async function loadExtras() {
+  // Conservé pour compat CLI ; l'acquisition ignore les extras (22 NAF métiers seuls).
   try {
     const raw = await fs.readFile(EXTRAS_PATH, "utf-8");
     const parsed = JSON.parse(raw);
@@ -86,14 +83,9 @@ async function loadExtras() {
   }
 }
 
-function isAcquisitionNaf(naf, extras) {
-  const n = normalizeNaf(naf);
-  if (!n) return false;
-  if (isSectionF(n)) return true;
-  if (ADJACENT.has(n)) return true;
-  if (PLATFORM_CATEGORY_NAF.has(n)) return true;
-  if (extras.has(n)) return true;
-  return false;
+/** Uniquement les 22 NAF des 16 métiers plateforme. */
+function isAcquisitionNaf(naf, _extras) {
+  return PLATFORM_CATEGORY_NAF.has(normalizeNaf(naf));
 }
 
 function isMapped(naf) {

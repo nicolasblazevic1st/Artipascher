@@ -1,6 +1,6 @@
 /** Codes NAF (INSEE) associés aux catégories de travaux Artipascher. */
 
-import { normalizeNafCode } from "./naf-trade-groups";
+import { getNafLabel, normalizeNafCode } from "./naf-trade-groups";
 
 export const CATEGORY_NAF_CODES: Record<string, string[]> = {
   Peinture: ["43.34Z"],
@@ -24,8 +24,78 @@ export const CATEGORY_NAF_CODES: Record<string, string[]> = {
 /** Section NAF F = Construction (fallback large). */
 export const DEFAULT_CONSTRUCTION_NAF = ["43.99C"];
 
+export interface CategoryNafOption {
+  code: string;
+  label: string;
+}
+
+/** Les 22 codes NAF uniques liés aux 16 métiers plateforme. */
+export function listPlatformCategoryNafCodes(): string[] {
+  return [
+    ...new Set(
+      Object.values(CATEGORY_NAF_CODES)
+        .flat()
+        .map((c) => normalizeNafCode(c))
+        .filter(Boolean)
+    ),
+  ].sort();
+}
+
 export function getNafCodesForCategory(category: string): string[] {
-  return CATEGORY_NAF_CODES[category] ?? DEFAULT_CONSTRUCTION_NAF;
+  return (CATEGORY_NAF_CODES[category] ?? DEFAULT_CONSTRUCTION_NAF).map(
+    normalizeNafCode
+  );
+}
+
+/** Options NAF affichables pour un métier (code + libellé INSEE). */
+export function getNafOptionsForCategory(category: string): CategoryNafOption[] {
+  return getNafCodesForCategory(category).map((code) => ({
+    code,
+    label: getNafLabel(code),
+  }));
+}
+
+/**
+ * Valide la sélection NAF d'une demande.
+ * Si le métier a plusieurs NAF : au moins un choix obligatoire, tous dans la liste.
+ * Si un seul NAF : auto (sélection vide = ce code).
+ */
+export function validateWorkRequestNafSelection(
+  category: string,
+  selected: readonly string[] | undefined
+): { ok: true; nafCodes: string[] } | { ok: false; error: string } {
+  const allowed = getNafCodesForCategory(category);
+  if (allowed.length === 0) {
+    return { ok: false, error: "Catégorie de travaux invalide." };
+  }
+
+  const picked = [
+    ...new Set(
+      (selected ?? []).map((c) => normalizeNafCode(c)).filter(Boolean)
+    ),
+  ];
+
+  if (allowed.length === 1) {
+    return { ok: true, nafCodes: allowed };
+  }
+
+  if (picked.length === 0) {
+    return {
+      ok: false,
+      error:
+        "Ce type de travaux a plusieurs spécialités NAF : cochez au moins une activité.",
+    };
+  }
+
+  const forbidden = picked.filter((c) => !allowed.includes(c));
+  if (forbidden.length > 0) {
+    return {
+      ok: false,
+      error: `Code(s) NAF non autorisé(s) pour « ${category} » : ${forbidden.join(", ")}.`,
+    };
+  }
+
+  return { ok: true, nafCodes: picked };
 }
 
 /** NAF stockés sur l’annonce, sinon dérivés de la catégorie. */

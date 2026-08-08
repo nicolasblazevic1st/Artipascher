@@ -5,10 +5,6 @@ import {
   isMappedToPlatformCategory,
 } from "@/lib/acquisition-naf";
 import {
-  addAcquisitionNafExtra,
-  readAcquisitionNafExtras,
-} from "@/lib/acquisition-naf-extras";
-import {
   getArtisanBySiret,
   listArtisans,
   upsertArtisan,
@@ -143,9 +139,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Code NAF requis." }, { status: 400 });
   }
 
-  const extras = await readAcquisitionNafExtras();
-  if (!isAcquisitionNaf(nafCode, extras)) {
-    await addAcquisitionNafExtra(nafCode);
+  if (!isAcquisitionNaf(nafCode)) {
+    return NextResponse.json(
+      {
+        error:
+          "Code NAF hors des 16 métiers plateforme (22 codes autorisés). Choisissez un NAF mappé.",
+      },
+      { status: 400 }
+    );
   }
 
   const now = new Date().toISOString();

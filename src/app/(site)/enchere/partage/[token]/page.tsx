@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
+import AuctionCountdown from "@/components/AuctionCountdown";
 import BidPanelPublicCta from "@/components/BidPanelPublicCta";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
@@ -121,15 +122,15 @@ export default async function SharedAuctionPage({ params }: Props) {
           </span>
         </div>
 
+        <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
+
+        <ProjectPhotos photos={request.photos ?? []} showPublicNote />
+
         <ContactSlotsBanner
           accepted={acceptedArtisansCount}
           max={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
           className="mt-5"
         />
-
-        <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
-
-        <ProjectPhotos photos={request.photos ?? []} showPublicNote />
 
         {request.previousQuoteAmount != null && request.previousQuoteProofUrl && (
           <div className="mt-6">
@@ -141,7 +142,9 @@ export default async function SharedAuctionPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <AuctionCountdown endsAt={request.auctionEndsAt} className="mt-6" />
+
+        <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
@@ -178,8 +181,6 @@ export default async function SharedAuctionPage({ params }: Props) {
               auctionId={request.auctionId}
               publicLocation={formatPublicLocation(request)}
               requestedWorkStartDate={request.requestedWorkStartDate}
-              acceptedArtisansCount={acceptedArtisansCount}
-              maxAcceptedArtisans={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
             />
             <BidPanelPublicCta
               auctionId={request.auctionId}

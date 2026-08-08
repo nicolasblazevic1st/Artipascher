@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AuctionCountdown from "@/components/AuctionCountdown";
 import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
@@ -87,17 +88,19 @@ export default async function ProEnchereDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <ContactSlotsBanner
-        accepted={acceptedArtisansCount}
-        max={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
-        className="mt-4"
-      />
+      <AuctionCountdown endsAt={resolved.endsAt} className="mt-4" />
 
       <p className="mt-4 text-sm leading-relaxed text-slate-600">
         {resolved.description}
       </p>
 
       <ProjectPhotos photos={workRequest?.photos ?? []} showPublicNote />
+
+      <ContactSlotsBanner
+        accepted={acceptedArtisansCount}
+        max={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
+        className="mt-4"
+      />
 
       <ClientContactPanel
         auctionId={id}
@@ -107,8 +110,6 @@ export default async function ProEnchereDetailPage({ params }: Props) {
             : formatLocation(resolved.city, resolved.department)
         }
         requestedWorkStartDate={workRequest?.requestedWorkStartDate}
-        acceptedArtisansCount={acceptedArtisansCount}
-        maxAcceptedArtisans={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
       />
 
       <BidPanel

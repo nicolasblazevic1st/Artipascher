@@ -1,6 +1,7 @@
 import {
   formatAcceptedArtisanSlots,
   isAcceptSlotsFull,
+  isContactSlotsBannerEnabled,
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
   remainingAcceptSlots,
 } from "@/lib/contact-slots";
@@ -21,6 +22,7 @@ const TONE_CLASS: Record<Tone, string> = {
 
 /**
  * Bandeau visible : places de contact encore disponibles sur une enchère.
+ * Désactivable via `CONTACT_SLOTS_BANNER_ENABLED` ou `NEXT_PUBLIC_CONTACT_SLOTS_BANNER=false`.
  */
 export default function ContactSlotsBanner({
   accepted,
@@ -34,6 +36,8 @@ export default function ContactSlotsBanner({
   compact?: boolean;
   className?: string;
 }) {
+  if (!isContactSlotsBannerEnabled()) return null;
+
   const safeMax = max > 0 ? max : MAX_ACCEPTED_ARTISANS_PER_AUCTION;
   const remaining = remainingAcceptSlots(accepted, safeMax);
   const full = isAcceptSlotsFull(accepted, safeMax);

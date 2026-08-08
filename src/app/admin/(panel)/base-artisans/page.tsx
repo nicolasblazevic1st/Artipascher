@@ -196,6 +196,40 @@ export default function AdminBaseArtisansPage() {
     );
   }
 
+  async function purgeOutsidePlatformNaf() {
+    if (
+      !window.confirm(
+        "Fermer tous les artisans actifs hors des 22 codes NAF des 16 métiers ? Ils disparaîtront des listes actives (statut closed)."
+      )
+    ) {
+      return;
+    }
+    setBusy("purge-naf");
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/artisans/purge-unmapped-naf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "close" }),
+      });
+      const data = await readAdminJson<{
+        error?: string;
+        result?: { removed?: number; kept?: number };
+      }>(res);
+      if (!res.ok) throw new Error(data.error ?? "Purge impossible");
+      setSuccess(
+        `Purge NAF: ${data.result?.removed ?? 0} fermés · ${data.result?.kept ?? "?"} actifs restants (22 codes métiers)`
+      );
+      await loadStats();
+      await loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function runAction(
     kind: "sirene" | "sirene-full" | "places" | "geocode"
   ) {
@@ -383,6 +417,15 @@ export default function AdminBaseArtisansPage() {
             className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50"
           >
             Enrichir Places
+          </button>
+          <button
+            type="button"
+            disabled={Boolean(busy) || (stats?.unmappedCategory ?? 0) === 0}
+            onClick={() => void purgeOutsidePlatformNaf()}
+            className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-900 hover:bg-red-100 disabled:opacity-50"
+            title="Ferme les actifs hors des 22 NAF des 16 métiers"
+          >
+            Garder 22 NAF métiers
           </button>
           <button
             type="button"

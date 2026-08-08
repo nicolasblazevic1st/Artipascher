@@ -1,15 +1,11 @@
 import Link from "next/link";
-import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
-import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
 
 interface Props {
   auctionId: string;
   publicLocation: string;
   requestedWorkStartDate?: string;
-  acceptedArtisansCount?: number;
-  maxAcceptedArtisans?: number;
 }
 
 /**
@@ -20,8 +16,6 @@ export default function ClientContactPublicCta({
   auctionId,
   publicLocation,
   requestedWorkStartDate,
-  acceptedArtisansCount = 0,
-  maxAcceptedArtisans = MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 }: Props) {
   const href = `/pro/encheres/${encodeURIComponent(auctionId)}`;
 
@@ -33,12 +27,6 @@ export default function ClientContactPublicCta({
         d&apos;abord votre intérêt depuis votre espace pro. Après acceptation du client,
         vous pourrez débloquer les coordonnées pour 1 crédit ({UNLOCK_PRICE_EUR}&nbsp;€).
       </p>
-
-      <ContactSlotsBanner
-        accepted={acceptedArtisansCount}
-        max={maxAcceptedArtisans}
-        className="mt-4"
-      />
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
         <div className="flex justify-between border-b border-slate-100 py-2">

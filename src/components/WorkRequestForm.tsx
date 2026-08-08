@@ -22,6 +22,10 @@ import {
   AUCTION_DURATION_OPTIONS,
   DEFAULT_AUCTION_DURATION_DAYS,
 } from "@/lib/auction-duration";
+import {
+  getNafOptionsForCategory,
+  validateWorkRequestNafSelection,
+} from "@/lib/naf-codes";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
 import {
   isValidSiretFormat,
@@ -54,6 +58,7 @@ export default function WorkRequestForm({
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [category, setCategory] = useState("");
+  const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>([]);
   const [hasPreviousQuote, setHasPreviousQuote] = useState(false);
   const [previousQuoteAmount, setPreviousQuoteAmount] = useState("");
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
@@ -74,6 +79,22 @@ export default function WorkRequestForm({
   const photosOk = photoFiles.length >= 1;
   const minStartDate = minRequestedWorkStartDate(auctionDurationDays);
   const maxStartDate = maxRequestedWorkStartDate();
+  const nafOptions = category ? getNafOptionsForCategory(category) : [];
+  const requiresNafChoice = nafOptions.length > 1;
+
+  function handleCategoryChange(next: string) {
+    setCategory(next);
+    const options = getNafOptionsForCategory(next);
+    setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
+    setError(null);
+  }
+
+  function toggleNafCode(code: string) {
+    setSelectedNafCodes((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+    );
+    setError(null);
+  }
 
   function syncDescriptionLength(value: string) {
     setDescriptionLength(value.trim().length);
@@ -180,9 +201,26 @@ export default function WorkRequestForm({
       }
     }
 
+    if (!category) {
+      setError("Choisissez un type de travaux.");
+      setStatus("error");
+      return;
+    }
+
+    const nafCheck = validateWorkRequestNafSelection(category, selectedNafCodes);
+    if (!nafCheck.ok) {
+      setError(nafCheck.error);
+      setStatus("error");
+      return;
+    }
+
     setStatus("submitting");
 
     const formData = new FormData(form);
+    formData.delete("nafCodes");
+    for (const code of nafCheck.nafCodes) {
+      formData.append("nafCodes", code);
+    }
     formData.set("description", getDescriptionValue().trim());
     formData.set("addressLine", selectedAddress.addressLine);
     formData.set("postalCode", selectedAddress.postalCode);
@@ -525,7 +563,7 @@ export default function WorkRequestForm({
       <select
         name="category"
         value={category}
-        onChange={(e) => setCategory(e.target.value)}
+        onChange={(e) => handleCategoryChange(e.target.value)}
         className={`${inputClass} text-slate-600`}
         required
       >
@@ -538,6 +576,50 @@ export default function WorkRequestForm({
           </option>
         ))}
       </select>
+
+      {requiresNafChoice && (
+        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-900">
+            Spécialité NAF <span className="text-red-500">*</span>
+          </legend>
+          <p className="mt-1 text-xs text-slate-600">
+            Ce type de travaux couvre plusieurs activités. Cochez celles qui
+            correspondent à votre chantier (au moins une).
+          </p>
+          <ul className="mt-3 space-y-2">
+            {nafOptions.map((opt) => {
+              const checked = selectedNafCodes.includes(opt.code);
+              return (
+                <li key={opt.code}>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                    <input
+                      type="checkbox"
+                      name="nafCodes"
+                      value={opt.code}
+                      checked={checked}
+                      onChange={() => toggleNafCode(opt.code)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="font-medium text-slate-900">
+                        {opt.code}
+                      </span>
+                      <span className="mt-0.5 block text-slate-600">
+                        {opt.label}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          {selectedNafCodes.length === 0 && (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Sélection obligatoire pour continuer.
+            </p>
+          )}
+        </fieldset>
+      )}
 
       <ClientQualificationGuide selectedCategory={category} />
 

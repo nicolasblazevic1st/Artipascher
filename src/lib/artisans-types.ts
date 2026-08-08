@@ -69,7 +69,8 @@ export type EnrichmentJobKind =
   | "sirene_weekly"
   | "places_daily"
   | "places_production"
-  | "geocode_backfill";
+  | "geocode_backfill"
+  | "purge_unmapped_naf";
 
 export interface EnrichmentJob {
   id: string;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
+import AuctionCountdown from "@/components/AuctionCountdown";
 import BidPanelPublicCta from "@/components/BidPanelPublicCta";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
@@ -111,17 +112,17 @@ export default async function EnchereDetailPage({ params }: Props) {
           </span>
         </div>
 
-        <ContactSlotsBanner
-          accepted={acceptedArtisansCount}
-          max={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
-          className="mt-5"
-        />
-
         <p className="mt-6 leading-relaxed text-slate-600">{resolved.description}</p>
 
         <ProjectPhotos
           photos={workRequest?.photos ?? []}
           showPublicNote
+        />
+
+        <ContactSlotsBanner
+          accepted={acceptedArtisansCount}
+          max={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
+          className="mt-5"
         />
 
         {workRequest?.previousQuoteAmount != null && workRequest.previousQuoteProofUrl && (
@@ -134,7 +135,9 @@ export default async function EnchereDetailPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <AuctionCountdown endsAt={resolved.endsAt} className="mt-6" />
+
+        <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
@@ -181,8 +184,6 @@ export default async function EnchereDetailPage({ params }: Props) {
               : formatLocation(resolved.city, resolved.department)
           }
           requestedWorkStartDate={workRequest?.requestedWorkStartDate}
-          acceptedArtisansCount={acceptedArtisansCount}
-          maxAcceptedArtisans={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
         />
 
         <BidPanelPublicCta

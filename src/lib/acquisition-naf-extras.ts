@@ -1,6 +1,5 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { EXTRA_ACQUISITION_NAF_CODES } from "./acquisition-naf";
 import { normalizeNafCode } from "./naf-trade-groups";
 
 const EXTRAS_PATH = path.join(
@@ -9,19 +8,22 @@ const EXTRAS_PATH = path.join(
   "acquisition-naf-extras.json"
 );
 
+/**
+ * Fichier extras conservé pour compat, mais l’acquisition ne l’utilise plus
+ * (uniquement les 22 NAF des 16 métiers).
+ */
 export async function readAcquisitionNafExtras(): Promise<string[]> {
   try {
     const raw = await fs.readFile(EXTRAS_PATH, "utf-8");
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [...EXTRA_ACQUISITION_NAF_CODES];
-    const merged = new Set(
-      [...EXTRA_ACQUISITION_NAF_CODES, ...parsed]
-        .map((c) => normalizeNafCode(String(c)))
-        .filter(Boolean)
-    );
-    return [...merged].sort();
+    if (!Array.isArray(parsed)) return [];
+    return [
+      ...new Set(
+        parsed.map((c) => normalizeNafCode(String(c))).filter(Boolean)
+      ),
+    ].sort();
   } catch {
-    return [...EXTRA_ACQUISITION_NAF_CODES];
+    return [];
   }
 }
 

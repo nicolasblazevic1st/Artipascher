@@ -18,6 +18,7 @@ import {
   parseStartPriceMode,
 } from "@/lib/demandes-validation";
 import { getClientSession } from "@/lib/client-auth";
+import { validateWorkRequestNafSelection } from "@/lib/naf-codes";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
 import { formatFrenchPhoneDisplay, normalizeFrenchPhone } from "@/lib/sms";
 import {
@@ -65,6 +66,10 @@ export async function POST(request: NextRequest) {
       formData.get("requestedWorkStartDate") ?? ""
     ).trim();
     const category = String(formData.get("category") ?? "Autre").trim();
+    const nafCodesRaw = formData
+      .getAll("nafCodes")
+      .map((v) => String(v).trim())
+      .filter(Boolean);
     const description = String(formData.get("description") ?? "");
     const durationRaw = String(
       formData.get("auctionDurationDays") ?? DEFAULT_AUCTION_DURATION_DAYS
@@ -183,6 +188,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: descriptionError }, { status: 400 });
     }
 
+    const nafCheck = validateWorkRequestNafSelection(category, nafCodesRaw);
+    if (!nafCheck.ok) {
+      return NextResponse.json({ error: nafCheck.error }, { status: 400 });
+    }
+
     const photosError = validatePhotoFiles(photos);
     if (photosError) {
       return NextResponse.json({ error: photosError }, { status: 400 });
@@ -243,6 +253,7 @@ export async function POST(request: NextRequest) {
       addressVerifiedAt: new Date().toISOString(),
       requestedWorkStartDate,
       category,
+      nafCodes: nafCheck.nafCodes,
       description: description.trim(),
       auctionDurationDays,
       startPriceMode,

@@ -5,6 +5,7 @@ import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
 import {
+  isContactSlotsBannerEnabled,
   remainingAcceptSlots,
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 } from "@/lib/contact-slots";
@@ -21,6 +22,7 @@ export default async function ProEncheresPage() {
 
   const auctions = await getEnrichedAuctions(session.proId);
   const showDemoBanner = shouldShowDemoBannerForProSession(session);
+  const showContactSlots = isContactSlotsBannerEnabled();
 
   return (
     <div>
@@ -38,9 +40,11 @@ export default async function ProEncheresPage() {
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Lieu</th>
               <th className="px-4 py-3 font-medium">Prix actuel</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Offres</th>
-              <th className="hidden px-4 py-3 font-medium lg:table-cell">
-                Places contact
-              </th>
+              {showContactSlots && (
+                <th className="hidden px-4 py-3 font-medium lg:table-cell">
+                  Places contact
+                </th>
+              )}
               <th className="px-4 py-3 font-medium">Statut</th>
               <th className="px-4 py-3 font-medium"></th>
             </tr>
@@ -59,30 +63,31 @@ export default async function ProEncheresPage() {
                   <span className="mt-1 inline-block rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
                     {CATEGORY_LABELS[auction.category]}
                   </span>
-                  {(() => {
-                    const max =
-                      auction.maxAcceptedArtisans ??
-                      MAX_ACCEPTED_ARTISANS_PER_AUCTION;
-                    const left = remainingAcceptSlots(
-                      auction.acceptedArtisansCount ?? 0,
-                      max
-                    );
-                    return (
-                      <p
-                        className={`mt-1 text-xs font-semibold lg:hidden ${
-                          left === 0
-                            ? "text-slate-500"
-                            : left <= 1
-                              ? "text-amber-700"
-                              : "text-emerald-700"
-                        }`}
-                      >
-                        {left === 0
-                          ? "Plus de place contact"
-                          : `${left} place${left > 1 ? "s" : ""} contact`}
-                      </p>
-                    );
-                  })()}
+                  {showContactSlots &&
+                    (() => {
+                      const max =
+                        auction.maxAcceptedArtisans ??
+                        MAX_ACCEPTED_ARTISANS_PER_AUCTION;
+                      const left = remainingAcceptSlots(
+                        auction.acceptedArtisansCount ?? 0,
+                        max
+                      );
+                      return (
+                        <p
+                          className={`mt-1 text-xs font-semibold lg:hidden ${
+                            left === 0
+                              ? "text-slate-500"
+                              : left <= 1
+                                ? "text-amber-700"
+                                : "text-emerald-700"
+                          }`}
+                        >
+                          {left === 0
+                            ? "Plus de place contact"
+                            : `${left} place${left > 1 ? "s" : ""} contact`}
+                        </p>
+                      );
+                    })()}
                 </td>
                 <td className="hidden px-4 py-4 text-slate-600 sm:table-cell">
                   {formatLocation(auction.city, auction.department)}
@@ -98,30 +103,32 @@ export default async function ProEncheresPage() {
                 <td className="hidden px-4 py-4 text-slate-600 md:table-cell">
                   {auction.liveBidCount}
                 </td>
-                <td className="hidden px-4 py-4 lg:table-cell">
-                  {(() => {
-                    const max =
-                      auction.maxAcceptedArtisans ??
-                      MAX_ACCEPTED_ARTISANS_PER_AUCTION;
-                    const left = remainingAcceptSlots(
-                      auction.acceptedArtisansCount ?? 0,
-                      max
-                    );
-                    return (
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
-                          left === 0
-                            ? "bg-slate-100 text-slate-600"
-                            : left <= 1
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-emerald-100 text-emerald-800"
-                        }`}
-                      >
-                        {left === 0 ? "Complet" : `${left} / ${max} libres`}
-                      </span>
-                    );
-                  })()}
-                </td>
+                {showContactSlots && (
+                  <td className="hidden px-4 py-4 lg:table-cell">
+                    {(() => {
+                      const max =
+                        auction.maxAcceptedArtisans ??
+                        MAX_ACCEPTED_ARTISANS_PER_AUCTION;
+                      const left = remainingAcceptSlots(
+                        auction.acceptedArtisansCount ?? 0,
+                        max
+                      );
+                      return (
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${
+                            left === 0
+                              ? "bg-slate-100 text-slate-600"
+                              : left <= 1
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-emerald-100 text-emerald-800"
+                          }`}
+                        >
+                          {left === 0 ? "Complet" : `${left} / ${max} libres`}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                )}
                 <td className="px-4 py-4">
                   {auction.isWinning ? (
                     <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AuctionCountdown from "@/components/AuctionCountdown";
 import ClientContactRequestsPanel from "@/components/client/ClientContactRequestsPanel";
 import ClientDemandePhotosPanel from "@/components/client/ClientDemandePhotosPanel";
 import ClientSubmitQuotePanel from "@/components/client/ClientSubmitQuotePanel";
@@ -71,6 +72,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
                 ? ` · ${request.companyName}`
                 : ""}
             </p>
+            {request.nafCodes && request.nafCodes.length > 0 && (
+              <p className="mt-2 text-xs text-slate-600">
+                Spécialité NAF : {request.nafCodes.join(" · ")}
+              </p>
+            )}
           </div>
           {request.auctionId && request.status === "approved" && (
             <p className="text-xs text-slate-500">Enchère active</p>
@@ -161,10 +167,15 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
         </dl>
 
         {request.auctionEndsAt && (
-          <p className="mt-4 text-sm text-slate-600">
-            Fin de l&apos;enchère :{" "}
-            <strong>{new Date(request.auctionEndsAt).toLocaleString("fr-FR")}</strong>
-          </p>
+          <div className="mt-4 space-y-2">
+            <AuctionCountdown endsAt={request.auctionEndsAt} />
+            <p className="text-sm text-slate-600">
+              Fin de l&apos;enchère :{" "}
+              <strong>
+                {new Date(request.auctionEndsAt).toLocaleString("fr-FR")}
+              </strong>
+            </p>
+          </div>
         )}
 
         <section className="mt-10">
