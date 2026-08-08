@@ -39,5 +39,6 @@ sudo certbot --nginx -d dev.artipascher.fr
 | Places / SMS | selon `.env` prod | **désactivés** |
 | Paiement | stripe ou demo | **demo** |
 | Crons | actifs | **ne pas configurer** sur staging |
+| Admin | `ADMIN_PASSWORD` prod | **même mot de passe + `@`** |
 
 Données `data/` **séparées** (copie initiale depuis prod au setup, puis évolution indépendante).

@@ -44,11 +44,11 @@ if [ ! -f .env.local ]; then
     PROD_ADMIN=$(grep -E '^ADMIN_PASSWORD=' "$PROD_DIR/.env.local" | cut -d= -f2- || true)
     if [ -n "$PROD_ADMIN" ]; then
       grep -v '^ADMIN_PASSWORD=' .env.local > .env.local.tmp
-      printf 'ADMIN_PASSWORD=%s-staging\n' "$PROD_ADMIN" >> .env.local.tmp
+      printf 'ADMIN_PASSWORD=%s@\n' "$PROD_ADMIN" >> .env.local.tmp
       mv .env.local.tmp .env.local
     fi
   fi
-  echo "⚠️  Vérifiez $STAGING_DIR/.env.local (ADMIN_PASSWORD staging)"
+  echo "    Mot de passe admin staging = mot de passe prod + « @ »"
 fi
 
 mkdir -p data public/uploads
