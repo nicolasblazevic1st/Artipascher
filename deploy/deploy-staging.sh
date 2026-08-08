@@ -88,11 +88,37 @@ echo "   OK: runtime-info présent dans .next"
 
 echo "==> restart PM2 artipascher-dev (cwd forcé $STAGING_DIR)"
 pm2 delete artipascher-dev 2>/dev/null || true
-# Tuer tout ce qui écoute encore 3001
-if command -v fuser >/dev/null 2>&1; then
-  fuser -k 3001/tcp 2>/dev/null || true
-fi
-sleep 1
+
+# Libérer le port 3001 (zombies next-server hors PM2 = cause EADDRINUSE)
+free_port_3001() {
+  echo "==> libération du port 3001"
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k 3001/tcp 2>/dev/null || true
+  fi
+  # pkill des next-server liés au staging
+  pkill -f "/var/www/artipascher-dev/node_modules/next/dist/bin/next" 2>/dev/null || true
+  pkill -f "next-server.*3001" 2>/dev/null || true
+  # fallback : tuer le PID qui écoute 3001
+  local pids
+  pids="$(ss -lptn 'sport = :3001' 2>/dev/null | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | sort -u)"
+  if [ -z "$pids" ]; then
+    pids="$(lsof -ti :3001 2>/dev/null || true)"
+  fi
+  if [ -n "$pids" ]; then
+    echo "   kill PIDs: $pids"
+    # shellcheck disable=SC2086
+    kill -9 $pids 2>/dev/null || true
+  fi
+  sleep 2
+  if ss -lptn 'sport = :3001' 2>/dev/null | grep -q 3001; then
+    echo "ERREUR: le port 3001 est encore occupé :"
+    ss -lptn 'sport = :3001' || true
+    exit 1
+  fi
+  echo "   OK: port 3001 libre"
+}
+free_port_3001
+
 ARTIPASCHER_BUILD_ID="$BUILD_ID" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
 pm2 save
 
