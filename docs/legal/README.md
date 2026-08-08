@@ -1,7 +1,7 @@
 # Documents légaux Artipascher — brouillon
 
-**Version :** 1.0-brouillon  
-**Date :** 6 août 2026  
+**Version :** 1.1-brouillon  
+**Date :** 8 août 2026  
 
 > Documents opérationnels à faire relire par un avocat.  
 > Compléter l’identité de l’éditeur dans `src/lib/legal.ts` (SIRET, adresse, etc.).

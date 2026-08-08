@@ -24,9 +24,9 @@ export const LEGAL_PUBLISHER = {
   /** Site */
   siteUrl: "https://artipascher.fr",
   /** Date de dernière mise à jour des documents */
-  lastUpdated: "6 août 2026",
+  lastUpdated: "8 août 2026",
   /** Version des documents */
-  version: "1.0-brouillon",
+  version: "1.1-brouillon",
 } as const;
 
 /** Hébergeur (OVH) — données publiques usuelles */

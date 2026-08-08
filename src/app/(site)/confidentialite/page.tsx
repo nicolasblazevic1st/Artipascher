@@ -36,14 +36,21 @@ export default function ConfidentialitePage() {
         <p className="mt-3">Selon votre usage du Site, nous pouvons traiter :</p>
         <ul>
           <li>
-            <strong>Compte Client</strong> : identité, email, téléphone,
-            mot de passe (hashé), adresse de chantier, description et photos du
-            projet, éventuel SIRET (société) ;
+            <strong>Compte Client</strong> : identité, email, téléphone
+            (mobile), statut de vérification SMS, mot de passe (hashé), adresse
+            de chantier, description et photos du projet, préférences (ex.
+            ancienneté d&apos;entreprise souhaitée, alerte SMS contact),
+            éventuel SIRET (société) ;
           </li>
           <li>
             <strong>Compte Professionnel</strong> : raison sociale, SIRET/SIREN,
             email, téléphone, documents (KBIS, décennale, RC pro…), métiers,
             historique d&apos;enchères et de crédits ;
+          </li>
+          <li>
+            <strong>Prospects acquisition</strong> : données d&apos;entreprises
+            (SIRET, code NAF, ville, téléphone enrichi le cas échéant) utilisées
+            pour la prospection SMS ;
           </li>
           <li>
             <strong>Paiements</strong> : données de transaction via le
@@ -56,8 +63,9 @@ export default function ConfidentialitePage() {
             <Link href="/cookies">politique de cookies</Link>) ;
           </li>
           <li>
-            <strong>Communications</strong> : emails transactionnels, éventuels
-            SMS liés au service.
+            <strong>Communications</strong> : emails et SMS transactionnels
+            (code de vérification, alertes de contact) et SMS marketing
+            (invitation Professionnels / prospects).
           </li>
         </ul>
       </section>
@@ -67,11 +75,13 @@ export default function ConfidentialitePage() {
         <ul>
           <li>
             Exécution du contrat / mesures précontractuelles : création de
-            compte, mise en relation, gestion des enchères, vente de crédits ;
+            compte, vérification du mobile Client, mise en relation, gestion des
+            enchères, vente de crédits, alertes de contact ;
           </li>
           <li>
             Intérêt légitime : sécurité, prévention de la fraude, amélioration
-            du service, statistiques agrégées ;
+            du service, statistiques agrégées, prospection B2B d&apos;entreprises
+            (SMS marketing avec possibilité d&apos;opposition STOP) ;
           </li>
           <li>
             Obligation légale : conservation comptable / fiscale le cas échéant ;
@@ -83,7 +93,24 @@ export default function ConfidentialitePage() {
       </section>
 
       <section>
-        <h2>4. Destinataires</h2>
+        <h2>4. SMS</h2>
+        <ul>
+          <li>
+            <strong>Transactionnels (Clients)</strong> : code de vérification
+            du mobile ; alerte lorsqu&apos;un Artisan demande le contact —
+            prestataire SMS (OVH), même expéditeur lorsque possible ;
+          </li>
+          <li>
+            <strong>Marketing (Professionnels / prospects)</strong> :
+            information sur des chantiers et/ou invitation à s&apos;inscrire —
+            mention STOP, horaires applicables aux SMS commerciaux ; un SIRET
+            déjà contacté n&apos;est en principe plus relancé par ce canal.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. Destinataires</h2>
         <p className="mt-3">Les données peuvent être communiquées :</p>
         <ul>
           <li>
@@ -92,11 +119,10 @@ export default function ConfidentialitePage() {
           </li>
           <li>
             aux sous-traitants techniques : hébergeur ({LEGAL_HOST.name}),
-            email, SMS, paiement (Stripe), analytics (Google) si consentement ;
+            email, SMS (OVH), paiement (Stripe), analytics (Google) si
+            consentement ;
           </li>
-          <li>
-            aux autorités compétentes sur réquisition légale.
-          </li>
+          <li>aux autorités compétentes sur réquisition légale.</li>
         </ul>
         <p className="mt-3">
           Les données ne sont pas vendues à des tiers à des fins commerciales.
@@ -104,7 +130,7 @@ export default function ConfidentialitePage() {
       </section>
 
       <section>
-        <h2>5. Transferts hors UE</h2>
+        <h2>6. Transferts hors UE</h2>
         <p className="mt-3">
           L&apos;hébergement applicatif principal est situé en France (OVH).
           Certains sous-traitants (paiement, analytics) peuvent impliquer des
@@ -114,7 +140,7 @@ export default function ConfidentialitePage() {
       </section>
 
       <section>
-        <h2>6. Durées de conservation</h2>
+        <h2>7. Durées de conservation</h2>
         <ul>
           <li>
             Comptes actifs : pendant la durée d&apos;utilisation, puis archivage
@@ -123,6 +149,14 @@ export default function ConfidentialitePage() {
           <li>
             Comptes inactifs / clôture : suppression ou anonymisation dans un
             délai raisonnable, sous réserve d&apos;obligations légales ;
+          </li>
+          <li>
+            Codes OTP : conservation à courte durée, le temps de la
+            vérification ;
+          </li>
+          <li>
+            Historique de campagnes SMS et statut « déjà contacté » : durée
+            nécessaire pour éviter les relances marketing ;
           </li>
           <li>
             Facturation / paiements : durées légales comptables ;
@@ -135,16 +169,17 @@ export default function ConfidentialitePage() {
       </section>
 
       <section>
-        <h2>7. Sécurité</h2>
+        <h2>8. Sécurité</h2>
         <p className="mt-3">
           Des mesures techniques et organisationnelles raisonnables sont mises
-          en œuvre (contrôle d&apos;accès, mots de passe hashés, hébergement
-          sécurisé). Aucun système n&apos;est toutefois infaillible.
+          en œuvre (contrôle d&apos;accès, mots de passe hashés, hash des codes
+          OTP, hébergement sécurisé). Aucun système n&apos;est toutefois
+          infaillible.
         </p>
       </section>
 
       <section>
-        <h2>8. Vos droits</h2>
+        <h2>9. Vos droits</h2>
         <p className="mt-3">
           Conformément au RGPD, vous disposez des droits d&apos;accès,
           rectification, effacement, limitation, opposition, portabilité, et du
@@ -168,7 +203,7 @@ export default function ConfidentialitePage() {
       </section>
 
       <section>
-        <h2>9. Mineurs</h2>
+        <h2>10. Mineurs</h2>
         <p className="mt-3">
           Le Site n&apos;est pas destiné aux mineurs de moins de 15 ans. Si vous
           êtes parent et constatez une inscription, contactez-nous pour
@@ -177,7 +212,7 @@ export default function ConfidentialitePage() {
       </section>
 
       <section>
-        <h2>10. Documents associés</h2>
+        <h2>11. Documents associés</h2>
         <ul>
           <li>
             <Link href="/mentions-legales">Mentions légales</Link>

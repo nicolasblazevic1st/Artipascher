@@ -53,8 +53,11 @@ export default function CguPage() {
           <li>
             <strong>Crédits</strong> : unités prépayées permettant aux
             Professionnels d&apos;utiliser certains services payants de la
-            Plateforme (voir{" "}
-            <Link href="/cgv">CGV</Link>).
+            Plateforme (voir <Link href="/cgv">CGV</Link>).
+          </li>
+          <li>
+            <strong>Déblocage</strong> : accès payant (crédits) aux coordonnées
+            d&apos;un Client après autorisation de contact.
           </li>
         </ul>
       </section>
@@ -124,7 +127,45 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>6. Fonctionnement des enchères et de la mise en relation</h2>
+        <h2>6. Demandes de travaux (Clients)</h2>
+        <ul>
+          <li>
+            Une demande comporte notamment une description, des photos le cas
+            échéant, une adresse de chantier et un{" "}
+            <strong>numéro de mobile français</strong>.
+          </li>
+          <li>
+            Le mobile doit être{" "}
+            <strong>vérifié par code SMS</strong> avant la publication
+            d&apos;une demande.
+          </li>
+          <li>
+            Le Client peut indiquer une préférence d&apos;
+            <strong>ancienneté d&apos;entreprise</strong> (notamment ≥&nbsp;2
+            ans) : il s&apos;agit d&apos;un critère de ciblage / prospection,{" "}
+            <strong>sans garantie</strong> sur le profil final des Artisans
+            mis en relation.
+          </li>
+          <li>
+            Option (activée par défaut) :{" "}
+            <strong>alerte SMS</strong> lorsqu&apos;un Artisan souhaite le
+            contacter. Si cette option est activée, la demande de contact est{" "}
+            <strong>acceptée automatiquement</strong>, dans la limite de{" "}
+            <strong>5 Artisans</strong> par enchère ; le Client est informé
+            (SMS, email et/ou notification). Si l&apos;option est désactivée, le
+            Client accepte ou refuse manuellement sous 48&nbsp;h.
+          </li>
+          <li>
+            Les coordonnées du Client ne sont communiquées à un Professionnel
+            qu&apos;après autorisation de contact et{" "}
+            <strong>déblocage</strong> (crédits — voir{" "}
+            <Link href="/cgv">CGV</Link>).
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>7. Enchères et mise en relation</h2>
         <ul>
           <li>
             Une demande de travaux peut être validée par l&apos;équipe
@@ -136,19 +177,38 @@ export default function CguPage() {
             Professionnel prime en principe sur les estimations en ligne.
           </li>
           <li>
-            Le Client choisit librement l&apos;Artisan ; aucun attribution
+            Le Client choisit librement l&apos;Artisan ; aucune attribution
             automatique n&apos;est imposée.
           </li>
           <li>
-            Le déblocage des coordonnées et certaines actions professionnelles
-            peuvent être soumis à consommation de crédits (voir{" "}
+            Certaines actions professionnelles (déblocage, dépôt d&apos;enchère)
+            peuvent être soumises à consommation de crédits (voir{" "}
             <Link href="/cgv">CGV</Link>).
+          </li>
+          <li>
+            Le déblocage donne accès aux{" "}
+            <strong>coordonnées</strong> (identité, téléphone, email, adresse) :
+            il <strong>ne garantit pas</strong> une réponse du Client ni la
+            conclusion d&apos;un chantier.
           </li>
         </ul>
       </section>
 
       <section>
-        <h2>7. Obligations des Utilisateurs</h2>
+        <h2>8. Prospection SMS (Professionnels non inscrits)</h2>
+        <p className="mt-3">
+          L&apos;Éditeur peut envoyer des SMS d&apos;information / invitation à
+          des entreprises du bâtiment (sources publiques et/ou enrichissement)
+          pour signaler des chantiers ou inviter à s&apos;inscrire. Un numéro /
+          SIRET déjà contacté par SMS marketing n&apos;est en principe{" "}
+          <strong>pas relancé</strong> par ce canal. Les SMS transactionnels
+          adressés aux Clients (vérification du mobile, alertes de contact) sont
+          distincts des SMS marketing.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Obligations des Utilisateurs</h2>
         <p className="mt-3">Chaque Utilisateur s&apos;engage à :</p>
         <ul>
           <li>respecter les lois et règlements applicables ;</li>
@@ -162,13 +222,17 @@ export default function CguPage() {
           </li>
           <li>
             pour les Professionnels : respecter leurs obligations
-            professionnelles (assurances, règles de l&apos;art, devis, factures).
+            professionnelles (assurances, règles de l&apos;art, devis, factures) ;
+          </li>
+          <li>
+            pour les Clients : publier des projets de bonne foi et maintenir un
+            numéro de mobile joignable.
           </li>
         </ul>
       </section>
 
       <section>
-        <h2>8. Contenu publié par les Utilisateurs</h2>
+        <h2>10. Contenu publié par les Utilisateurs</h2>
         <p className="mt-3">
           Les Utilisateurs restent responsables des contenus qu&apos;ils
           publient (textes, photos, documents). Ils concèdent à l&apos;Éditeur
@@ -184,40 +248,41 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>9. Données personnelles</h2>
+        <h2>11. Données personnelles</h2>
         <p className="mt-3">
           Le traitement des données personnelles est effectué conformément au
           RGPD et à la loi Informatique et Libertés. Pour exercer vos droits
           (accès, rectification, effacement, opposition, etc.), contactez{" "}
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
           . Des informations complémentaires figurent dans la{" "}
-          <Link href="/cookies">politique de cookies</Link>. Une politique de
-          confidentialité dédiée pourra compléter ce dispositif.
+          <Link href="/confidentialite">politique de confidentialité</Link> et
+          la <Link href="/cookies">politique de cookies</Link>.
         </p>
       </section>
 
       <section>
-        <h2>10. Responsabilité</h2>
-        <h3>10.1 Intermédiaire</h3>
+        <h2>12. Responsabilité</h2>
+        <h3>12.1 Intermédiaire</h3>
         <p className="mt-3">
           L&apos;Éditeur ne garantit pas la conclusion d&apos;un contrat de
           travaux, ni la qualité, le délai ou le prix final des prestations
-          réalisées par les Artisans. Toute réclamation relative aux travaux
+          réalisées par les Artisans, ni le volume d&apos;offres disponibles
+          près d&apos;un Professionnel. Toute réclamation relative aux travaux
           doit être adressée à l&apos;Artisan concerné.
         </p>
-        <h3>10.2 Vérifications</h3>
+        <h3>12.2 Vérifications</h3>
         <p className="mt-3">
-          Les contrôles (SIRET, documents) visent à renforcer la confiance mais
-          ne constituent pas une garantie absolue. Le Client reste responsable
-          de ses vérifications avant engagement.
+          Les contrôles (SIRET, documents, vérification du téléphone) visent à
+          renforcer la confiance mais ne constituent pas une garantie absolue.
+          Le Client reste responsable de ses vérifications avant engagement.
         </p>
-        <h3>10.3 Disponibilité</h3>
+        <h3>12.3 Disponibilité</h3>
         <p className="mt-3">
           Le Site est fourni « en l&apos;état ». L&apos;Éditeur s&apos;efforce
           d&apos;assurer une disponibilité raisonnable sans obligation de
           résultat quant à une disponibilité ininterrompue.
         </p>
-        <h3>10.4 Limitation</h3>
+        <h3>12.4 Limitation</h3>
         <p className="mt-3">
           Dans les limites autorisées par la loi, la responsabilité de
           l&apos;Éditeur est limitée aux dommages directs prouvés résultant
@@ -227,7 +292,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>11. Propriété intellectuelle</h2>
+        <h2>13. Propriété intellectuelle</h2>
         <p className="mt-3">
           Les marques, logos, textes et éléments graphiques du Site sont la
           propriété de l&apos;Éditeur ou de ses partenaires. Toute utilisation
@@ -236,7 +301,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>12. Suspension et résiliation</h2>
+        <h2>14. Suspension et résiliation</h2>
         <p className="mt-3">
           L&apos;Éditeur peut suspendre ou clôturer un compte en cas de manquement
           aux CGU, de fraude, d&apos;atteinte à la sécurité ou sur demande de
@@ -247,7 +312,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>13. Modification des CGU</h2>
+        <h2>15. Modification des CGU</h2>
         <p className="mt-3">
           L&apos;Éditeur peut modifier les présentes CGU. La version applicable
           est celle publiée sur le Site à la date d&apos;utilisation. En cas de
@@ -257,7 +322,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>14. Droit applicable et litiges</h2>
+        <h2>16. Droit applicable et litiges</h2>
         <p className="mt-3">
           Les présentes CGU sont soumises au droit français. En cas de litige,
           et à défaut d&apos;accord amiable, les tribunaux compétents seront
@@ -272,13 +337,15 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>15. Contact</h2>
+        <h2>17. Contact</h2>
         <p className="mt-3">
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
           {" · "}
           <Link href="/mentions-legales">Mentions légales</Link>
           {" · "}
           <Link href="/cgv">CGV</Link>
+          {" · "}
+          <Link href="/confidentialite">Confidentialité</Link>
         </p>
       </section>
     </LegalDocument>

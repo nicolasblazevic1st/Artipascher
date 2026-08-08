@@ -76,6 +76,23 @@ export default function CgvPage() {
       </section>
 
       <section>
+        <h2>2 bis. Nature du service payant</h2>
+        <p className="mt-3">
+          Le crédit consommé pour un <strong>déblocage</strong> donne accès aux{" "}
+          <strong>coordonnées</strong> d&apos;un Client ayant autorisé le
+          contact (acceptation manuelle ou option d&apos;alerte SMS avec
+          acceptation automatique, dans la limite prévue aux CGU).
+        </p>
+        <p className="mt-3">
+          <strong>Ne sont pas garantis</strong> : une réponse du Client, un
+          devis signé, un chantier, ni un volume minimal d&apos;offres à
+          proximité du Professionnel. Les crédits permettent l&apos;accès à des
+          fonctionnalités de la Plateforme, non la vente d&apos;un résultat
+          commercial.
+        </p>
+      </section>
+
+      <section>
         <h2>3. Commande et paiement</h2>
         <p className="mt-3">
           La commande de crédits s&apos;effectue depuis l&apos;espace
@@ -134,10 +151,22 @@ export default function CgvPage() {
       <section>
         <h2>7. Remboursements</h2>
         <p className="mt-3">
-          Sauf dysfonctionnement imputable au Vendeur empêchant l&apos;usage des
-          crédits achetés, les crédits consommés ou non consommés ne donnent
-          lieu à aucun remboursement. En cas d&apos;erreur de paiement
-          manifeste, le Professionnel contacte{" "}
+          Les crédits ne donnent lieu à aucun remboursement, sauf{" "}
+          <strong>dysfonctionnement imputable au Vendeur</strong> (par exemple
+          impossibilité technique d&apos;accéder aux coordonnées après
+          déblocage, ou coordonnées manifestement invalides du fait de la
+          Plateforme).
+        </p>
+        <p className="mt-3">
+          L&apos;absence de réponse du Client, l&apos;absence d&apos;offres dans
+          une zone géographique, ou le refus ultérieur de travaux{" "}
+          <strong>ne constituent pas</strong> un motif de remboursement.
+        </p>
+        <p className="mt-3">
+          Le Vendeur peut, à titre commercial et sans obligation générale,
+          recréditer un crédit dans certains cas (ex. désengagement du Client
+          après déblocage). En cas d&apos;erreur de paiement manifeste, le
+          Professionnel contacte{" "}
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>{" "}
           avec les justificatifs.
         </p>
@@ -162,7 +191,8 @@ export default function CgvPage() {
           montant des crédits concernés par le litige, hors dommages indirects,
           dans les limites autorisées par la loi. Le Vendeur n&apos;est pas
           responsable des litiges relatifs aux travaux réalisés entre Client et
-          Artisan.
+          Artisan, ni du volume d&apos;opportunités disponibles pour un
+          Professionnel.
         </p>
       </section>
 
