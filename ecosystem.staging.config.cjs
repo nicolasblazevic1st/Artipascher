@@ -1,4 +1,4 @@
-/** PM2 — environnement dev/staging sur le VPS (port 3001). */
+/** PM2 — environnement dev/staging sur le VPS (port 3002). */
 const path = require("path");
 
 const STAGING_DIR = "/var/www/artipascher-dev";
@@ -7,7 +7,6 @@ module.exports = {
   apps: [
     {
       name: "artipascher-dev",
-      // Wrapper : libère le port 3001 puis lance next start
       script: path.join(STAGING_DIR, "deploy/start-staging.sh"),
       cwd: STAGING_DIR,
       interpreter: "bash",
@@ -20,7 +19,7 @@ module.exports = {
       max_memory_restart: "768M",
       env: {
         NODE_ENV: "production",
-        PORT: "3001",
+        PORT: "3002",
         ARTIPASCHER_STAGING: "1",
         BETA_MODE: "false",
         NEXT_PUBLIC_BETA_MODE: "false",

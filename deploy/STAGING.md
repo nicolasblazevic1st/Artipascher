@@ -1,6 +1,6 @@
 # Environnement dev / staging (VPS)
 
-Développement sur **`dev.artipascher.fr`** (port 3001), production inchangée sur **`artipascher.fr`** (port 3000).
+Développement sur **`dev.artipascher.fr`** (port 3002), production inchangée sur **`artipascher.fr`** (port 3000).
 
 ## DNS (OVH)
 
@@ -35,7 +35,7 @@ sudo certbot --nginx -d dev.artipascher.fr
 |---|------|---------|
 | Dossier | `/var/www/artipascher` | `/var/www/artipascher-dev` |
 | Branche | `master` | `dev` |
-| PM2 | `artipascher` :3000 | `artipascher-dev` :3001 |
+| PM2 | `artipascher` :3000 | `artipascher-dev` :3002 |
 | Places / SMS | selon `.env` prod | **désactivés** |
 | Paiement | stripe ou demo | **demo** |
 | Mode bêta | bordereau + blocages | **désactivé** (`NEXT_PUBLIC_BETA_MODE=false`) |

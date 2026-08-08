@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Libère un port TCP en tuant UNIQUEMENT le PID qui écoute (pas de pkill -f).
+# Libère un port TCP : tue le process qui écoute + son parent (process group).
 # Usage: bash deploy/free-port.sh 3001
 set -euo pipefail
 
@@ -15,41 +15,56 @@ pids_listening() {
   if [ -z "${found// /}" ] && command -v lsof >/dev/null 2>&1; then
     found="$(lsof -ti ":${PORT}" 2>/dev/null | sort -u | tr '\n' ' ' || true)"
   fi
-  if [ -z "${found// /}" ] && command -v fuser >/dev/null 2>&1; then
-    found="$(fuser "${PORT}/tcp" 2>/dev/null | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u | tr '\n' ' ' || true)"
-  fi
-  echo "$found"
+  echo "$found" | xargs echo 2>/dev/null || true
 }
 
-for attempt in 1 2 3 4 5; do
-  PIDS="$(pids_listening)"
-  PIDS="${PIDS// /}"
-  # recompute with spaces for kill
-  PIDS="$(pids_listening | xargs echo 2>/dev/null || true)"
+kill_tree() {
+  local pid="$1"
+  [ -n "$pid" ] || return 0
+  local ppid
+  ppid="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ' || true)"
+  # Tuer le parent d'abord s'il ressemble à next / bash start-staging / node
+  if [ -n "$ppid" ] && [ "$ppid" != "1" ]; then
+    local pcmd
+    pcmd="$(ps -o cmd= -p "$ppid" 2>/dev/null || true)"
+    if echo "$pcmd" | grep -Eqi 'next|start-staging|node|npm'; then
+      echo "   kill parent $ppid ($pcmd)"
+      kill -9 "$ppid" 2>/dev/null || sudo kill -9 "$ppid" 2>/dev/null || true
+    fi
+  fi
+  echo "   kill $pid"
+  kill -9 "$pid" 2>/dev/null || sudo kill -9 "$pid" 2>/dev/null || true
+}
 
+for attempt in 1 2 3 4 5 6 7 8; do
+  PIDS="$(pids_listening)"
   if [ -z "${PIDS// /}" ]; then
     echo "   OK: port $PORT libre"
     exit 0
   fi
 
-  echo "   try $attempt — kill PIDs: $PIDS"
-  # shellcheck disable=SC2086
-  kill -9 $PIDS 2>/dev/null || true
-  # shellcheck disable=SC2086
-  sudo kill -9 $PIDS 2>/dev/null || true
+  echo "   try $attempt — PIDs: $PIDS"
+  for pid in $PIDS; do
+    ps -fp "$pid" 2>/dev/null || true
+    kill_tree "$pid"
+  done
 
   if command -v fuser >/dev/null 2>&1; then
     sudo fuser -k "${PORT}/tcp" 2>/dev/null || fuser -k "${PORT}/tcp" 2>/dev/null || true
   fi
-
   sleep 1
 done
 
-PIDS="$(pids_listening | xargs echo 2>/dev/null || true)"
+PIDS="$(pids_listening)"
 if [ -n "${PIDS// /}" ]; then
   echo "ERREUR: port $PORT encore occupé par: $PIDS"
   ss -lptn "sport = :${PORT}" 2>/dev/null || true
-  ps -fp $PIDS 2>/dev/null || true
+  for pid in $PIDS; do
+    ps -fp "$pid" 2>/dev/null || true
+    pstree -ap "$pid" 2>/dev/null || true
+  done
+  echo "==> pm2 list :"
+  pm2 list 2>/dev/null || true
   exit 1
 fi
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Remise en route rapide du staging SANS rebuild.
+# Remise en route rapide du staging SANS rebuild (port 3002).
 # Usage: cd /var/www/artipascher-dev && bash deploy/fix-staging-now.sh
 set -euo pipefail
 
 STAGING_DIR="/var/www/artipascher-dev"
+PORT=3002
 cd "$STAGING_DIR"
 
 if [ ! -d .next ]; then
@@ -19,11 +20,14 @@ pm2 delete artipascher-dev 2>/dev/null || true
 sleep 1
 
 chmod +x deploy/free-port.sh deploy/start-staging.sh
-bash deploy/free-port.sh 3001
+bash deploy/free-port.sh "$PORT"
 
-echo "==> start PM2 (build $BUILD_ID)"
-ARTIPASCHER_BUILD_ID="$BUILD_ID" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
+echo "==> start PM2 sur port $PORT (build $BUILD_ID)"
+ARTIPASCHER_BUILD_ID="$BUILD_ID" PORT="$PORT" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
 pm2 save
+
+echo "==> Nginx → 127.0.0.1:$PORT"
+bash deploy/apply-dev-ip-lock.sh
 
 echo "==> attente démarrage…"
 STABLE=0
@@ -49,17 +53,18 @@ done
 if [ "$STABLE" != "1" ]; then
   echo "ERREUR: process instable"
   pm2 logs artipascher-dev --err --lines 40 --nostream || true
-  ss -lptn 'sport = :3001' || true
+  ss -lptn "sport = :${PORT}" || true
   exit 1
 fi
 
-echo "==> vérifs"
-TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
-RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/api/runtime-info" || true)"
-BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/build-id.txt" || true)"
+echo "==> vérifs (port $PORT)"
+TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${PORT}/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${PORT}/api/runtime-info" || true)"
+BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${PORT}/build-id.txt" || true)"
 echo "   title: ${TITLE:-'(vide)'}"
 echo "   runtime-info: $RUNTIME"
 echo "   build-id: ${BUILD_TXT:-'(vide)'}"
+echo "   note: un zombie peut encore occuper :3001 — Nginx pointe maintenant sur :$PORT"
 
 if echo "$TITLE" | grep -q "Bêta ·"; then
   echo "ERREUR: titre encore en bêta"
@@ -70,4 +75,4 @@ if ! echo "$RUNTIME" | grep -q '"beta":false'; then
   exit 1
 fi
 
-echo "✅ Staging OK — https://dev.artipascher.fr"
+echo "✅ Staging OK — https://dev.artipascher.fr (backend :$PORT)"

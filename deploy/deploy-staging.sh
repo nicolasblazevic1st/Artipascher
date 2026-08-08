@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Déploiement staging (branche dev) — /var/www/artipascher-dev, port 3001
+# Déploiement staging (branche dev) — /var/www/artipascher-dev, port 3002
 # Usage sur le VPS : cd /var/www/artipascher-dev && bash deploy/deploy-staging.sh
 
 set -euo pipefail
@@ -89,9 +89,10 @@ echo "   OK: runtime-info présent dans .next"
 echo "==> restart PM2 artipascher-dev (cwd forcé $STAGING_DIR)"
 pm2 delete artipascher-dev 2>/dev/null || true
 chmod +x deploy/free-port.sh deploy/start-staging.sh deploy/fix-staging-now.sh
-bash deploy/free-port.sh 3001
+STAGING_PORT=3002
+bash deploy/free-port.sh "$STAGING_PORT"
 
-ARTIPASCHER_BUILD_ID="$BUILD_ID" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
+ARTIPASCHER_BUILD_ID="$BUILD_ID" PORT="$STAGING_PORT" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
 pm2 save
 
 echo "==> PM2 exec cwd :"
@@ -129,24 +130,24 @@ fi
 echo "==> Nginx dev.artipascher.fr (accès IP uniquement)"
 bash deploy/apply-dev-ip-lock.sh
 
-echo "==> vérif proxy local"
-TITLE_3001="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+echo "==> vérif proxy local (port ${STAGING_PORT})"
+TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${STAGING_PORT}/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
 TITLE_3000="$(curl -s -H "Host: artipascher.fr" "http://127.0.0.1:3000/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
-echo "   :3001 title: ${TITLE_3001:-'(vide)'}"
+echo "   :${STAGING_PORT} title: ${TITLE:-'(vide)'}"
 echo "   :3000 title: ${TITLE_3000:-'(vide)'}"
 
-RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/api/runtime-info" || true)"
+RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${STAGING_PORT}/api/runtime-info" || true)"
 echo "   runtime-info: $RUNTIME"
 
-BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/build-id.txt" || true)"
+BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${STAGING_PORT}/build-id.txt" || true)"
 echo "   build-id.txt: $BUILD_TXT"
 
-if echo "$TITLE_3001" | grep -q "Bêta ·"; then
+if echo "$TITLE" | grep -q "Bêta ·"; then
   echo ""
-  echo "ERREUR: :3001 sert encore l'ancien titre bêta."
+  echo "ERREUR: :${STAGING_PORT} sert encore l'ancien titre bêta."
   echo "Diagnostic :"
   pm2 show artipascher-dev | sed -n '1,40p'
-  ss -lptn 'sport = :3001' || netstat -lptn | grep 3001 || true
+  ss -lptn "sport = :${STAGING_PORT}" || true
   exit 1
 fi
 
@@ -157,4 +158,4 @@ if ! echo "$RUNTIME" | grep -q '"beta":false'; then
   exit 1
 fi
 
-echo "✅ Staging OK (dev.artipascher.fr:3001) — commit $BUILD_ID — $(date -Iseconds)"
+echo "✅ Staging OK (dev.artipascher.fr → :${STAGING_PORT}) — commit $BUILD_ID — $(date -Iseconds)"

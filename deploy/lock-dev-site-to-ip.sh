@@ -22,7 +22,8 @@ DOMAIN="dev.artipascher.fr"
 CERT="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 KEY="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
 WEBROOT="/var/www/html"
-PROXY_COMMON="        proxy_pass http://127.0.0.1:3001;
+# Staging Next écoute sur 3002 (3001 souvent bloqué par un zombie next-server)
+PROXY_COMMON="        proxy_pass http://127.0.0.1:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection \"upgrade\";

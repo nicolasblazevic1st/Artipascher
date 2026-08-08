@@ -14,7 +14,7 @@ NGINX_SITE="/etc/nginx/sites-available/artipascher-dev"
 echo "==> Environnement staging Artipascher"
 echo "    Dossier : $STAGING_DIR"
 echo "    Branche : $BRANCH"
-echo "    Port    : 3001"
+echo "    Port    : 3002"
 
 sudo mkdir -p /var/www
 
@@ -74,7 +74,7 @@ echo "==> npm ci + build"
 npm ci
 npm run build
 
-echo "==> PM2 artipascher-dev (port 3001)"
+echo "==> PM2 artipascher-dev (port 3002)"
 pm2 delete artipascher-dev 2>/dev/null || true
 pm2 start ecosystem.staging.config.cjs
 pm2 save
@@ -84,7 +84,7 @@ bash deploy/apply-dev-ip-lock.sh
 
 echo ""
 echo "✅ Staging prêt"
-echo "   App      : http://127.0.0.1:3001 (local VPS)"
+echo "   App      : http://127.0.0.1:3002 (local VPS)"
 echo "   Accès    : https://dev.artipascher.fr (IP allowlist deploy/allowed-dev-ip)"
 echo "   Deploy   : cd $STAGING_DIR && bash deploy/deploy-staging.sh"
 echo "   Branche  : $BRANCH"
