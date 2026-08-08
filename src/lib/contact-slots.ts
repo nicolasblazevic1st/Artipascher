@@ -9,6 +9,13 @@ export function formatAcceptedArtisanSlots(
   return `${n} / ${max}`;
 }
 
+export function remainingAcceptSlots(
+  accepted: number,
+  max: number = MAX_ACCEPTED_ARTISANS_PER_AUCTION
+): number {
+  return Math.max(0, max - Math.max(0, accepted));
+}
+
 export function isAcceptSlotsFull(
   accepted: number,
   max: number = MAX_ACCEPTED_ARTISANS_PER_AUCTION

@@ -4,16 +4,14 @@ import { notFound } from "next/navigation";
 import ApprovedQuotesList from "@/components/ApprovedQuotesList";
 import BidPanelPublicCta from "@/components/BidPanelPublicCta";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
+import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
-import {
-  formatAcceptedArtisanSlots,
-  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
-} from "@/lib/contact-slots";
+import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
 import { formatPrice } from "@/lib/data";
 import {
   buildShareText,
@@ -123,6 +121,12 @@ export default async function SharedAuctionPage({ params }: Props) {
           </span>
         </div>
 
+        <ContactSlotsBanner
+          accepted={acceptedArtisansCount}
+          max={MAX_ACCEPTED_ARTISANS_PER_AUCTION}
+          className="mt-5"
+        />
+
         <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
 
         <ProjectPhotos photos={request.photos ?? []} showPublicNote />
@@ -137,7 +141,7 @@ export default async function SharedAuctionPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Prix de départ</dt>
             <dd className="mt-1 text-xl font-semibold">
@@ -155,15 +159,6 @@ export default async function SharedAuctionPage({ params }: Props) {
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Devis validés</dt>
             <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4 text-center">
-            <dt className="text-xs text-slate-500">Artisans acceptés</dt>
-            <dd className="mt-1 text-xl font-semibold tabular-nums">
-              {formatAcceptedArtisanSlots(
-                acceptedArtisansCount,
-                MAX_ACCEPTED_ARTISANS_PER_AUCTION
-              )}
-            </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4 text-center">
             <dt className="text-xs text-slate-500">Fin</dt>

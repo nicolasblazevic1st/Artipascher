@@ -1,12 +1,13 @@
 import Link from "next/link";
+import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import TestBanner from "@/components/TestBanner";
-import { formatAcceptedArtisanSlots } from "@/lib/contact-slots";
 import {
   Auction,
   CATEGORY_LABELS,
   formatLocation,
   formatPrice,
 } from "@/lib/data";
+import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
 
 export default function AuctionCard({
   auction,
@@ -26,6 +27,12 @@ export default function AuctionCard({
           className="h-40 w-full object-cover"
         />
       )}
+      <ContactSlotsBanner
+        accepted={auction.acceptedArtisansCount ?? 0}
+        max={auction.maxAcceptedArtisans ?? MAX_ACCEPTED_ARTISANS_PER_AUCTION}
+        compact
+        className="rounded-none border-x-0 border-t-0"
+      />
       <div className="flex flex-1 flex-col p-5">
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -47,7 +54,7 @@ export default function AuctionCard({
         {auction.description}
       </p>
 
-      <dl className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-center sm:grid-cols-4">
+      <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
         <div>
           <dt className="text-xs text-slate-500">Départ</dt>
           <dd className="text-sm font-semibold text-slate-700">
@@ -64,15 +71,6 @@ export default function AuctionCard({
           <dt className="text-xs text-slate-500">Offres</dt>
           <dd className="text-sm font-semibold text-slate-700">
             {auction.bidCount}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-slate-500">Artisans acceptés</dt>
-          <dd className="text-sm font-semibold text-slate-700 tabular-nums">
-            {formatAcceptedArtisanSlots(
-              auction.acceptedArtisansCount ?? 0,
-              auction.maxAcceptedArtisans
-            )}
           </dd>
         </div>
       </dl>

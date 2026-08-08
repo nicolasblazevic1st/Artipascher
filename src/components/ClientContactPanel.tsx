@@ -3,13 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
 import ProSubmitQuoteForm from "@/components/pro/ProSubmitQuoteForm";
+import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
-import {
-  formatAcceptedArtisanSlots,
-  isAcceptSlotsFull,
-  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
-} from "@/lib/contact-slots";
+import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
 
 interface ClientContact {
   firstName: string;
@@ -215,19 +212,13 @@ export default function ClientContactPanel({
         les coordonnées pour 1 crédit ({UNLOCK_PRICE_EUR}&nbsp;€).
       </p>
 
+      <ContactSlotsBanner
+        accepted={acceptedArtisansCount}
+        max={maxAcceptedArtisans}
+        className="mt-4"
+      />
+
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
-        <div className="flex justify-between border-b border-slate-100 py-2">
-          <dt className="text-slate-500">Artisans acceptés</dt>
-          <dd
-            className={`font-semibold tabular-nums ${
-              isAcceptSlotsFull(acceptedArtisansCount, maxAcceptedArtisans)
-                ? "text-amber-800"
-                : "text-slate-900"
-            }`}
-          >
-            {formatAcceptedArtisanSlots(acceptedArtisansCount, maxAcceptedArtisans)}
-          </dd>
-        </div>
         <div className="flex justify-between border-b border-slate-100 py-2">
           <dt className="text-slate-500">Localisation</dt>
           <dd className="font-medium">{publicLocation}</dd>
