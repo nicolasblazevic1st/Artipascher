@@ -40,3 +40,28 @@ export function computeAuctionEndsAt(from: Date, durationDays: number): Date {
   ends.setDate(ends.getDate() + durationDays);
   return ends;
 }
+
+/**
+ * Date de fin affichée / utilisée pour le compteur.
+ * Priorité : auctionEndsAt stockée, sinon createdAt/reviewedAt + durée.
+ */
+export function resolveAuctionEndsAt(input: {
+  auctionEndsAt?: string | null;
+  auctionDurationDays?: number | null;
+  from?: string | null;
+}): string | undefined {
+  if (input.auctionEndsAt) {
+    const t = new Date(input.auctionEndsAt).getTime();
+    if (Number.isFinite(t)) return new Date(t).toISOString();
+  }
+  const days =
+    typeof input.auctionDurationDays === "number" &&
+    Number.isFinite(input.auctionDurationDays) &&
+    input.auctionDurationDays > 0
+      ? Math.floor(input.auctionDurationDays)
+      : DEFAULT_AUCTION_DURATION_DAYS;
+  if (!input.from) return undefined;
+  const from = new Date(input.from);
+  if (!Number.isFinite(from.getTime())) return undefined;
+  return computeAuctionEndsAt(from, days).toISOString();
+}

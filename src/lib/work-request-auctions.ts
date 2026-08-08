@@ -1,3 +1,4 @@
+import { resolveAuctionEndsAt } from "./auction-duration";
 import { computeCurrentPrice } from "./auctions";
 import {
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
@@ -12,6 +13,14 @@ import { isAuctionStillActive } from "./share";
 import { countAcceptedArtisansForAuction, getBidsForAuction, readStore } from "./store";
 import type { WorkRequest } from "./store-types";
 import { TRADE_CATEGORY_TO_WORK, WORK_TO_TRADE_CATEGORY } from "./work-categories";
+
+function endsAtForRequest(request: WorkRequest): string | undefined {
+  return resolveAuctionEndsAt({
+    auctionEndsAt: request.auctionEndsAt,
+    auctionDurationDays: request.auctionDurationDays,
+    from: request.reviewedAt ?? request.createdAt,
+  });
+}
 
 export interface ResolvedAuction {
   id: string;
@@ -34,7 +43,8 @@ export function getWorkRequestStartPrice(request: WorkRequest): number | undefin
 function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
   if (request.status !== "approved" || !request.auctionId) return null;
 
-  const active = isAuctionStillActive(request.auctionEndsAt);
+  const endsAt = endsAtForRequest(request);
+  const active = isAuctionStillActive(endsAt);
   return {
     id: request.auctionId,
     title: `${request.category} · ${request.city}`,
@@ -43,7 +53,7 @@ function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
     department: request.department,
     startPrice: request.startPrice,
     status: active ? "active" : "ended",
-    endsAt: request.auctionEndsAt,
+    endsAt,
     shareToken: request.shareToken,
     source: "workRequest",
     isTest: request.isTest === true,
@@ -77,7 +87,8 @@ export async function workRequestToAuctionCard(
   options?: { activeOnly?: boolean }
 ): Promise<Auction | null> {
   if (request.status !== "approved" || !request.auctionId) return null;
-  const active = isAuctionStillActive(request.auctionEndsAt);
+  const endsAt = endsAtForRequest(request);
+  const active = isAuctionStillActive(endsAt);
   if (options?.activeOnly !== false && !active) return null;
 
   const startPrice = request.startPrice ?? request.previousQuoteAmount ?? 0;
@@ -108,7 +119,7 @@ export async function workRequestToAuctionCard(
     acceptedArtisansCount,
     maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
     status: active ? "active" : "ended",
-    endsAt: request.auctionEndsAt ?? new Date().toISOString(),
+    endsAt: endsAt ?? new Date().toISOString(),
     isTest: request.isTest === true,
     coverPhotoUrl: request.photos?.[0],
     latitude,
@@ -180,7 +191,8 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
   for (const request of store.workRequests) {
     if (request.status !== "approved" || !request.auctionId) continue;
 
-    const active = isAuctionStillActive(request.auctionEndsAt);
+    const endsAt = endsAtForRequest(request);
+    const active = isAuctionStillActive(endsAt);
     const bids = await getBidsForAuction(request.auctionId);
     const acceptedArtisansCount = await countAcceptedArtisansForAuction(
       request.auctionId
@@ -204,7 +216,7 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
       startPrice,
       currentPrice,
       status: active ? "active" : "ended",
-      endsAt: request.auctionEndsAt,
+      endsAt,
       createdAt: request.createdAt,
       bidCount: bids.length,
       acceptedArtisansCount,
@@ -301,7 +313,7 @@ export async function getActiveWorkCategories(): Promise<Set<string>> {
     if (
       request.status === "approved" &&
       request.auctionId &&
-      isAuctionStillActive(request.auctionEndsAt)
+      isAuctionStillActive(endsAtForRequest(request))
     ) {
       active.add(request.category);
     }

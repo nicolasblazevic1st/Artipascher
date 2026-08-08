@@ -10,6 +10,7 @@ import ProjectPhotos from "@/components/ProjectPhotos";
 import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
+import { resolveAuctionEndsAt } from "@/lib/auction-duration";
 import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
 import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
@@ -78,14 +79,19 @@ export default async function SharedAuctionPage({ params }: Props) {
     request.startPrice,
     bids.map((b) => b.amount)
   );
-  const active = isAuctionStillActive(request.auctionEndsAt);
+  const auctionEndsAt = resolveAuctionEndsAt({
+    auctionEndsAt: request.auctionEndsAt,
+    auctionDurationDays: request.auctionDurationDays,
+    from: request.reviewedAt ?? request.createdAt,
+  });
+  const active = isAuctionStillActive(auctionEndsAt);
   const savings =
     request.startPrice != null && currentPrice != null
       ? request.startPrice - currentPrice
       : 0;
 
-  const endsAt = request.auctionEndsAt
-    ? new Date(request.auctionEndsAt).toLocaleDateString("fr-FR", {
+  const endsAt = auctionEndsAt
+    ? new Date(auctionEndsAt).toLocaleDateString("fr-FR", {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -122,6 +128,8 @@ export default async function SharedAuctionPage({ params }: Props) {
           </span>
         </div>
 
+        <AuctionCountdown endsAt={auctionEndsAt} className="mt-5" />
+
         <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
 
         <ProjectPhotos photos={request.photos ?? []} showPublicNote />
@@ -141,8 +149,6 @@ export default async function SharedAuctionPage({ params }: Props) {
             />
           </div>
         )}
-
-        <AuctionCountdown endsAt={request.auctionEndsAt} className="mt-6" />
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">

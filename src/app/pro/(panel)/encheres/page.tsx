@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AuctionCountdown from "@/components/AuctionCountdown";
 import TestBanner from "@/components/TestBanner";
 import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
@@ -40,6 +41,7 @@ export default async function ProEncheresPage() {
               <th className="hidden px-4 py-3 font-medium sm:table-cell">Lieu</th>
               <th className="px-4 py-3 font-medium">Prix actuel</th>
               <th className="hidden px-4 py-3 font-medium md:table-cell">Offres</th>
+              <th className="hidden px-4 py-3 font-medium sm:table-cell">Fin</th>
               {showContactSlots && (
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">
                   Places contact
@@ -63,6 +65,9 @@ export default async function ProEncheresPage() {
                   <span className="mt-1 inline-block rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">
                     {CATEGORY_LABELS[auction.category]}
                   </span>
+                  <div className="mt-1 sm:hidden">
+                    <AuctionCountdown endsAt={auction.endsAt} compact />
+                  </div>
                   {showContactSlots &&
                     (() => {
                       const max =
@@ -102,6 +107,9 @@ export default async function ProEncheresPage() {
                 </td>
                 <td className="hidden px-4 py-4 text-slate-600 md:table-cell">
                   {auction.liveBidCount}
+                </td>
+                <td className="hidden px-4 py-4 sm:table-cell">
+                  <AuctionCountdown endsAt={auction.endsAt} compact />
                 </td>
                 {showContactSlots && (
                   <td className="hidden px-4 py-4 lg:table-cell">

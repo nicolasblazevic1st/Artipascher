@@ -43,7 +43,18 @@ export default function AuctionCountdown({
     return () => window.clearInterval(id);
   }, [valid, endsAt]);
 
-  if (!valid) return null;
+  if (!valid) {
+    return (
+      <div
+        className={`rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 ${className}`}
+      >
+        <p className="text-xs font-medium uppercase tracking-wide opacity-80">
+          Temps restant
+        </p>
+        <p className="mt-1 text-sm font-semibold">Date de fin non disponible</p>
+      </div>
+    );
+  }
 
   const remaining = endMs - now;
   const ended = remaining <= 0;
@@ -53,12 +64,12 @@ export default function AuctionCountdown({
   if (compact) {
     return (
       <p
-        className={`text-xs font-semibold tabular-nums ${
+        className={`text-sm font-bold tabular-nums ${
           ended
             ? "text-slate-500"
             : urgent
               ? "text-amber-700"
-              : "text-brand-700"
+              : "text-emerald-700"
         } ${className}`}
         role="timer"
         aria-live="polite"
@@ -74,18 +85,18 @@ export default function AuctionCountdown({
 
   return (
     <div
-      className={`rounded-xl border-2 px-4 py-3 ${
+      className={`rounded-xl border-2 px-4 py-3 shadow-sm ${
         ended
-          ? "border-slate-200 bg-slate-50 text-slate-700"
+          ? "border-slate-300 bg-slate-50 text-slate-700"
           : urgent
-            ? "border-amber-300 bg-amber-50 text-amber-950"
-            : "border-brand-200 bg-brand-50 text-brand-950"
+            ? "border-amber-400 bg-amber-50 text-amber-950"
+            : "border-emerald-400 bg-emerald-50 text-emerald-950"
       } ${className}`}
       role="timer"
       aria-live="polite"
     >
-      <p className="text-xs font-medium uppercase tracking-wide opacity-80">
-        {ended ? "Enchère terminée" : "Temps restant"}
+      <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+        {ended ? "Enchère terminée" : "Compte à rebours — temps restant"}
       </p>
       {ended ? (
         <p className="mt-1 text-sm font-semibold">
@@ -98,7 +109,7 @@ export default function AuctionCountdown({
           })}
         </p>
       ) : (
-        <div className="mt-2 flex flex-wrap items-end gap-3 tabular-nums">
+        <div className="mt-2 flex flex-wrap items-end gap-3 tabular-nums sm:gap-4">
           {days > 0 && (
             <Unit value={days} label={days > 1 ? "jours" : "jour"} />
           )}

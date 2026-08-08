@@ -8,7 +8,10 @@ import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatPublicLocation, formatWorkRequestAddress } from "@/lib/client-address";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import {
+  formatAuctionDurationDays,
+  resolveAuctionEndsAt,
+} from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatPrice } from "@/lib/data";
 import { getClientSession } from "@/lib/client-auth";
@@ -166,15 +169,23 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           </div>
         </dl>
 
-        {request.auctionEndsAt && (
+        {request.status === "approved" && (
           <div className="mt-4 space-y-2">
-            <AuctionCountdown endsAt={request.auctionEndsAt} />
-            <p className="text-sm text-slate-600">
-              Fin de l&apos;enchère :{" "}
-              <strong>
-                {new Date(request.auctionEndsAt).toLocaleString("fr-FR")}
-              </strong>
-            </p>
+            <AuctionCountdown
+              endsAt={resolveAuctionEndsAt({
+                auctionEndsAt: request.auctionEndsAt,
+                auctionDurationDays: request.auctionDurationDays,
+                from: request.reviewedAt ?? request.createdAt,
+              })}
+            />
+            {request.auctionEndsAt && (
+              <p className="text-sm text-slate-600">
+                Fin de l&apos;enchère :{" "}
+                <strong>
+                  {new Date(request.auctionEndsAt).toLocaleString("fr-FR")}
+                </strong>
+              </p>
+            )}
           </div>
         )}
 

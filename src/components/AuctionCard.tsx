@@ -68,11 +68,7 @@ export default function AuctionCard({
           {auction.description}
         </p>
 
-        <AuctionCountdown
-          endsAt={auction.endsAt}
-          compact
-          className="mt-3"
-        />
+        <AuctionCountdown endsAt={auction.endsAt} className="mt-3" />
 
         <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
           <div>

@@ -112,6 +112,8 @@ export default async function EnchereDetailPage({ params }: Props) {
           </span>
         </div>
 
+        <AuctionCountdown endsAt={resolved.endsAt} className="mt-5" />
+
         <p className="mt-6 leading-relaxed text-slate-600">{resolved.description}</p>
 
         <ProjectPhotos
@@ -134,8 +136,6 @@ export default async function EnchereDetailPage({ params }: Props) {
             />
           </div>
         )}
-
-        <AuctionCountdown endsAt={resolved.endsAt} className="mt-6" />
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-4 text-center">
