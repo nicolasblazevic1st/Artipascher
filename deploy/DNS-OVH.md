@@ -8,6 +8,9 @@ Dans [OVH Manager](https://www.ovh.com/manager/) → **Noms de domaine** → **a
 |--------------|------|-------|-----|
 | `@` (ou vide) | **A** | `IP_DE_TON_VPS` | 3600 |
 | `www` | **A** | `IP_DE_TON_VPS` | 3600 |
+| `dev` | **A** | `IP_DE_TON_VPS` | 3600 |
+
+Le sous-domaine **`dev`** sert l’environnement de développement (`dev.artipascher.fr` → port 3001). Voir `deploy/STAGING.md`.
 
 Remplace `IP_DE_TON_VPS` par l’IPv4 de ton serveur OVH (ex. `51.xxx.xxx.xxx`).
 
