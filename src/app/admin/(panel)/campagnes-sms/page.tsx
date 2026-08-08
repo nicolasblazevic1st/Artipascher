@@ -41,6 +41,7 @@ interface Preview {
   auctionUrl: string;
   defaultMessage: string;
   campaignSize: number;
+  preferEstablishedCompany?: boolean;
   geoFound: boolean;
   totalNearby: number;
   gouvCount: number;
@@ -759,7 +760,11 @@ export default function AdminSmsCampaignsPage() {
                   {selectedCount} SMS sélectionné{selectedCount > 1 ? "s" : ""}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Proposition mix : {preview.suggestedCounts.returning} déjà /{" "}
+                  Proposition mix
+                  {preview.preferEstablishedCompany
+                    ? " (préférence client ≥2 ans → 2/3 établis / 1/3 jeunes)"
+                    : ""}{" "}
+                  : {preview.suggestedCounts.returning} déjà /{" "}
                   {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
                   {preview.suggestedCounts.new_established} ≥2 ans · sélection actuelle :{" "}
                   {selectedByCohort.returning} / {selectedByCohort.new_young} /{" "}

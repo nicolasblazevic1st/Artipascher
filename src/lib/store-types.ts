@@ -213,6 +213,11 @@ export interface WorkRequest {
   startPriceQuoteId?: string;
   /** Durée souhaitée de l'enchère en jours (max. 90). */
   auctionDurationDays: number;
+  /**
+   * Si true : le particulier préfère une entreprise créée il y a plus de 2 ans.
+   * Influence le mix SMS (2/3 ≥2 ans, 1/3 &lt;2 ans).
+   */
+  preferEstablishedCompany?: boolean;
   photos: string[];
   status: AdminReviewStatus;
   createdAt: string;

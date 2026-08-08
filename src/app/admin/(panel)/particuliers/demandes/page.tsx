@@ -173,6 +173,12 @@ export default function AdminDemandesPage() {
                       Durée enchère :{" "}
                       {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}
                     </div>
+                    <div>
+                      Ancienneté :{" "}
+                      {r.preferEstablishedCompany
+                        ? "préfère +2 ans (mix SMS 2/3)"
+                        : "peu importe"}
+                    </div>
                     <div>{r.email}</div>
                     <div>Tél : {r.phone?.trim() || "Non renseigné"}</div>
                   </dl>

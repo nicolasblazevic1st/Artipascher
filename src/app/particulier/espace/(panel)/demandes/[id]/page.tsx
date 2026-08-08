@@ -164,6 +164,14 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Ancienneté souhaitée</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              {request.preferEstablishedCompany
+                ? "Entreprise +2 ans (prioritaire)"
+                : "Peu importe"}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Devis validés</dt>
             <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>

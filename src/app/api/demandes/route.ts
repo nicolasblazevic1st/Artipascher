@@ -74,6 +74,13 @@ export async function POST(request: NextRequest) {
     const durationRaw = String(
       formData.get("auctionDurationDays") ?? DEFAULT_AUCTION_DURATION_DAYS
     );
+    const preferEstablishedRaw = String(
+      formData.get("preferEstablishedCompany") ?? "false"
+    ).toLowerCase();
+    const preferEstablishedCompany =
+      preferEstablishedRaw === "true" ||
+      preferEstablishedRaw === "1" ||
+      preferEstablishedRaw === "on";
     const previousQuoteAmountRaw = String(formData.get("previousQuoteAmount") ?? "").trim();
     const previousQuoteNote = String(formData.get("previousQuoteNote") ?? "").trim();
     const startPriceMode = parseStartPriceMode(formData.get("startPriceMode"));
@@ -256,6 +263,7 @@ export async function POST(request: NextRequest) {
       nafCodes: nafCheck.nafCodes,
       description: description.trim(),
       auctionDurationDays,
+      preferEstablishedCompany,
       startPriceMode,
       startPrice: clientStartPrice,
       photos: [],

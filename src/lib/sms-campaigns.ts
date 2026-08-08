@@ -50,6 +50,8 @@ export interface SmsCampaignPreviewDetailed {
   auctionUrl: string;
   defaultMessage: string;
   campaignSize: number;
+  /** Préférence client : favoriser entreprises ≥ 2 ans (mix SMS 2/3–1/3). */
+  preferEstablishedCompany: boolean;
   geoFound: boolean;
   totalNearby: number;
   gouvCount: number;
@@ -278,11 +280,44 @@ async function mergeProspectPool(
 
 function applyMixSelection(
   candidates: SmsCandidate[],
-  campaignSize: number
+  campaignSize: number,
+  options?: { preferEstablishedCompany?: boolean }
 ): SmsCandidate[] {
   const returning = candidates.filter((c) => c.cohort === "returning");
   const young = candidates.filter((c) => c.cohort === "new_young");
   const established = candidates.filter((c) => c.cohort === "new_established");
+
+  // Préférence client « +2 ans » : mix SMS acquisition 1/3 jeunes / 2/3 établis.
+  // Les déjà contactés partent en notification (futur), pas en SMS.
+  if (options?.preferEstablishedCompany) {
+    let nYoung = Math.min(young.length, Math.floor(campaignSize / 3));
+    let nEstablished = Math.min(established.length, campaignSize - nYoung);
+    let rem = campaignSize - nYoung - nEstablished;
+
+    while (rem > 0) {
+      if (nEstablished < established.length) {
+        nEstablished += 1;
+        rem -= 1;
+        continue;
+      }
+      if (nYoung < young.length) {
+        nYoung += 1;
+        rem -= 1;
+        continue;
+      }
+      break;
+    }
+
+    const selectedSirets = new Set([
+      ...pickUpTo(young, nYoung).map((c) => c.siret),
+      ...pickUpTo(established, nEstablished).map((c) => c.siret),
+    ]);
+
+    return candidates.map((c) => ({
+      ...c,
+      selectedByDefault: selectedSirets.has(c.siret),
+    }));
+  }
 
   const base = Math.floor(campaignSize / 3);
   let rem = campaignSize - base * 3;
@@ -340,7 +375,10 @@ export async function previewSmsCampaignDetailed(
   const { withPhone, withoutPhone, geoFound, totalNearby, gouvCount, platformCount } =
     await mergeProspectPool(request);
 
-  const candidates = applyMixSelection(withPhone, campaignSize);
+  const preferEstablishedCompany = request.preferEstablishedCompany === true;
+  const candidates = applyMixSelection(withPhone, campaignSize, {
+    preferEstablishedCompany,
+  });
 
   const cohortCounts: Record<SmsCohort, number> = {
     returning: withPhone.filter((c) => c.cohort === "returning").length,
@@ -368,6 +406,7 @@ export async function previewSmsCampaignDetailed(
     ),
     defaultMessage: buildDefaultCampaignMessage(request),
     campaignSize,
+    preferEstablishedCompany,
     geoFound,
     totalNearby,
     gouvCount,

@@ -69,6 +69,7 @@ export default function WorkRequestForm({
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
   const [auctionDurationDays, setAuctionDurationDays] = useState(DEFAULT_AUCTION_DURATION_DAYS);
+  const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
   const [isCompany, setIsCompany] = useState(false);
   const [clientSiret, setClientSiret] = useState("");
   const [companyVerification, setCompanyVerification] =
@@ -228,6 +229,10 @@ export default function WorkRequestForm({
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
     formData.set("auctionDurationDays", String(auctionDurationDays));
+    formData.set(
+      "preferEstablishedCompany",
+      preferEstablishedCompany ? "true" : "false"
+    );
     formData.set("startPriceMode", startPriceMode);
     if (startPriceMode === "client") {
       formData.set("clientStartPrice", clientStartPrice.trim());
@@ -559,6 +564,61 @@ export default function WorkRequestForm({
           </p>
         </div>
       </div>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-slate-700">
+          Ancienneté de l&apos;entreprise <span className="text-red-500">*</span>
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+              !preferEstablishedCompany
+                ? "border-brand-500 bg-brand-50"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            <input
+              type="radio"
+              name="preferEstablishedCompany"
+              value="false"
+              checked={!preferEstablishedCompany}
+              onChange={() => setPreferEstablishedCompany(false)}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-semibold text-slate-900">Peu importe</span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Tous les artisans éligibles peuvent être contactés.
+              </span>
+            </span>
+          </label>
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+              preferEstablishedCompany
+                ? "border-brand-500 bg-brand-50"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            <input
+              type="radio"
+              name="preferEstablishedCompany"
+              value="true"
+              checked={preferEstablishedCompany}
+              onChange={() => setPreferEstablishedCompany(true)}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-semibold text-slate-900">
+                Plus de 2 ans d&apos;existence
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                On priorise les entreprises créées il y a plus de 2 ans
+                (environ 2/3 des contacts).
+              </span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
 
       <select
         name="category"
