@@ -7,7 +7,8 @@ STAGING_DIR="/var/www/artipascher-dev"
 PORT="${PORT:-3001}"
 cd "$STAGING_DIR"
 
-bash "$STAGING_DIR/deploy/free-port.sh" "$PORT"
+# Ne pas rappeler free-port ici avec pkill large : PM2 gère le restart.
+# Le port doit déjà être libre (fix-staging-now / deploy-staging).
 
 export NODE_ENV=production
 export PORT

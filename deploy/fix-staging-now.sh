@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Remise en route rapide du staging SANS rebuild.
-# Usage sur le VPS :
-#   cd /var/www/artipascher-dev && bash deploy/fix-staging-now.sh
+# Usage: cd /var/www/artipascher-dev && bash deploy/fix-staging-now.sh
 set -euo pipefail
 
 STAGING_DIR="/var/www/artipascher-dev"
@@ -15,36 +14,58 @@ fi
 BUILD_ID="$(cat public/build-id.txt 2>/dev/null || git rev-parse --short HEAD)"
 
 echo "==> stop PM2 artipascher-dev"
+pm2 stop artipascher-dev 2>/dev/null || true
 pm2 delete artipascher-dev 2>/dev/null || true
+sleep 1
 
-bash "$STAGING_DIR/deploy/free-port.sh" 3001
+chmod +x deploy/free-port.sh deploy/start-staging.sh
+bash deploy/free-port.sh 3001
 
 echo "==> start PM2 (build $BUILD_ID)"
 ARTIPASCHER_BUILD_ID="$BUILD_ID" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
 pm2 save
 
-echo "==> attente 5s…"
-sleep 5
+echo "==> attente démarrage…"
+STABLE=0
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  sleep 2
+  STATUS="$(pm2 jlist | node -e "
+    const apps=JSON.parse(require('fs').readFileSync(0,'utf8'));
+    const a=apps.find(x=>x.name==='artipascher-dev');
+    if(!a){console.log('missing 0 0'); process.exit(0)}
+    const secs=Math.floor((Date.now()-(a.pm2_env.pm_uptime||Date.now()))/1000);
+    console.log([a.pm2_env.status, a.pm2_env.unstable_restarts||0, secs].join(' '));
+  " 2>/dev/null || echo 'missing 0 0')"
+  echo "   try $i: $STATUS"
+  ST="$(echo "$STATUS" | awk '{print $1}')"
+  UN="$(echo "$STATUS" | awk '{print $2}')"
+  SE="$(echo "$STATUS" | awk '{print $3}')"
+  if [ "$ST" = "online" ] && [ "${UN:-9}" -lt 3 ] && [ "${SE:-0}" -ge 4 ]; then
+    STABLE=1
+    break
+  fi
+done
 
-echo "==> vérifs"
-pm2 show artipascher-dev | grep -iE 'status|restarts|uptime|script path|cwd' || true
-echo -n "title: "
-curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/" | grep -o '<title>[^<]*</title>' | head -1 || echo "(échec)"
-echo -n "runtime-info: "
-curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/api/runtime-info" || echo "(échec)"
-echo
-echo -n "build-id: "
-curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/build-id.txt" || echo "(échec)"
-echo
-
-TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
-if echo "$TITLE" | grep -q "Bêta ·"; then
-  echo "ERREUR: titre encore en bêta — logs :"
+if [ "$STABLE" != "1" ]; then
+  echo "ERREUR: process instable"
   pm2 logs artipascher-dev --err --lines 40 --nostream || true
+  ss -lptn 'sport = :3001' || true
   exit 1
 fi
 
-if ! curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/api/runtime-info" | grep -q '"beta":false'; then
+echo "==> vérifs"
+TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/api/runtime-info" || true)"
+BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:3001/build-id.txt" || true)"
+echo "   title: ${TITLE:-'(vide)'}"
+echo "   runtime-info: $RUNTIME"
+echo "   build-id: ${BUILD_TXT:-'(vide)'}"
+
+if echo "$TITLE" | grep -q "Bêta ·"; then
+  echo "ERREUR: titre encore en bêta"
+  exit 1
+fi
+if ! echo "$RUNTIME" | grep -q '"beta":false'; then
   echo "ERREUR: runtime-info sans beta:false"
   exit 1
 fi
