@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { sendContactInterestEmailToClient } from "@/lib/email";
 import { notifyClientContactInterest } from "@/lib/notify";
 import { formatProTradeSelections } from "@/lib/pro-trades";
@@ -21,7 +21,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   const session = await getProSession();
   if (!session) {

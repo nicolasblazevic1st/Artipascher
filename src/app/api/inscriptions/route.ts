@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import type { TradeCategory } from "@/lib/data";
 import {
   PRO_REGISTRATION_DOCUMENTS,
@@ -54,7 +54,7 @@ function parseTradeSelections(raw: string): ProTradeSelection[] | null {
 }
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   try {
     const formData = await request.formData();

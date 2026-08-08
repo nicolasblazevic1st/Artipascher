@@ -1,10 +1,10 @@
 import Link from "next/link";
 import ManageCookiesButton from "@/components/ManageCookiesButton";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
-import { isBetaMode } from "@/lib/beta";
+import { getIsBetaMode } from "@/lib/beta-server";
 
-export default function Footer() {
-  const beta = isBetaMode();
+export default async function Footer() {
+  const beta = await getIsBetaMode();
   return (
     <footer className="border-t border-brand-900 bg-brand-950 text-brand-100">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">

@@ -6,7 +6,7 @@ import ProRegistrationForm from "@/components/ProRegistrationForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
-import { isBetaMode } from "@/lib/beta";
+import { getIsBetaMode } from "@/lib/beta-server";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import {
   REFERRAL_REWARD_CREDITS,
@@ -81,7 +81,8 @@ const STEPS = [
   },
 ];
 
-export default function ProfessionnelPage() {
+export default async function ProfessionnelPage() {
+  const beta = await getIsBetaMode();
   return (
     <>
       <section className="bg-gradient-to-br from-slate-900 to-slate-800 py-16 text-white">
@@ -203,7 +204,7 @@ export default function ProfessionnelPage() {
             parrainage optionnel
           </p>
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
-            {isBetaMode() ? (
+            {beta ? (
               <BetaClosedNotice title="Inscriptions professionnelles fermées" />
             ) : (
               <ProRegistrationForm />

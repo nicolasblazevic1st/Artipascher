@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { isBetaMode } from "@/lib/beta";
+import { useBetaMode } from "@/components/BetaModeProvider";
 
 export default function ClientLoginForm() {
+  const beta = useBetaMode();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromParam = searchParams.get("from");
@@ -165,7 +166,7 @@ export default function ClientLoginForm() {
       </button>
 
       <p className="text-center text-sm text-slate-500">
-        {isBetaMode() ? (
+        {beta ? (
           <>Inscriptions fermées — version bêta (préouverture).</>
         ) : (
           <>

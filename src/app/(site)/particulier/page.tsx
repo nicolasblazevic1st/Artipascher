@@ -3,7 +3,7 @@ import Link from "next/link";
 import BetaClosedNotice from "@/components/BetaClosedNotice";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
-import { isBetaMode } from "@/lib/beta";
+import { getIsBetaMode } from "@/lib/beta-server";
 
 export const metadata: Metadata = {
   title: "Particulier — Réalisez vos travaux au meilleur prix",
@@ -67,7 +67,8 @@ const STEPS = [
   },
 ];
 
-export default function ParticulierPage() {
+export default async function ParticulierPage() {
+  const beta = await getIsBetaMode();
   return (
     <>
       <section className="bg-gradient-to-br from-brand-800 to-brand-600 py-16 text-white">
@@ -145,7 +146,7 @@ export default function ParticulierPage() {
           <p className="mt-2 text-sm text-slate-600">
             Gratuit pour vous · Aucun % sur les travaux · Les pros paient 1&nbsp;€ pour vous contacter · 59 / 62
           </p>
-          {isBetaMode() ? (
+          {beta ? (
             <div className="mt-8 text-left">
               <BetaClosedNotice title="Demandes de travaux non ouvertes" />
             </div>

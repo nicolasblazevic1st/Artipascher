@@ -16,15 +16,23 @@ if [ -f "$ENRICHMENT" ] && ! git diff --quiet "$ENRICHMENT" 2>/dev/null; then
   echo "==> sauvegarde $ENRICHMENT (modifs locales staging)"
 fi
 
-echo "==> git fetch + reset origin/$BRANCH"
-git fetch origin "$BRANCH"
-git checkout "$BRANCH"
-git reset --hard "origin/$BRANCH"
+if [ "${ARTIPASCHER_STAGING_REEXEC:-}" != "1" ]; then
+  echo "==> git fetch + reset origin/$BRANCH"
+  git fetch origin "$BRANCH"
+  git checkout "$BRANCH"
+  git reset --hard "origin/$BRANCH"
+  # Re-exécute le script à jour (évite de continuer l’ancienne version en mémoire)
+  export ARTIPASCHER_STAGING_REEXEC=1
+  if [ -n "$BACKUP" ] && [ -f "$BACKUP" ]; then
+    export ARTIPASCHER_STAGING_ENRICHMENT_BACKUP="$BACKUP"
+  fi
+  exec bash "$0"
+fi
 
-if [ -n "$BACKUP" ] && [ -f "$BACKUP" ]; then
+if [ -n "${ARTIPASCHER_STAGING_ENRICHMENT_BACKUP:-}" ] && [ -f "$ARTIPASCHER_STAGING_ENRICHMENT_BACKUP" ]; then
   echo "==> fusion enrichissements locaux (staging)"
-  node scripts/merge-artisans-enrichment.mjs "$BACKUP" "$ENRICHMENT"
-  rm -f "$BACKUP"
+  node scripts/merge-artisans-enrichment.mjs "$ARTIPASCHER_STAGING_ENRICHMENT_BACKUP" "$ENRICHMENT"
+  rm -f "$ARTIPASCHER_STAGING_ENRICHMENT_BACKUP"
 fi
 
 bash deploy/staging-env.sh .env.local

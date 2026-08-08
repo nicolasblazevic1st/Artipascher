@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
-import { isBetaMode } from "@/lib/beta";
+import { useBetaMode } from "@/components/BetaModeProvider";
 
 type Props = {
   href: ComponentProps<typeof Link>["href"];
@@ -24,7 +24,9 @@ export default function BetaAwareLink({
   onClick,
   disabledClassName,
 }: Props) {
-  if (isBetaMode()) {
+  const beta = useBetaMode();
+
+  if (beta) {
     return (
       <span
         role="button"

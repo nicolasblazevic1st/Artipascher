@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import {
   verifyBanAddress,
   banFeatureToStoredAddress,
@@ -31,7 +31,7 @@ import type { ClientKind } from "@/lib/store-types";
 import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   try {
     const session = await getClientSession();

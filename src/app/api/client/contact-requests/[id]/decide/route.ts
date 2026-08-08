@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { getClientSession } from "@/lib/client-auth";
 import { sendContactDecisionEmailToPro } from "@/lib/email";
 import { notifyProContactDecision } from "@/lib/notify";
@@ -12,7 +12,7 @@ import {
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, context: RouteContext) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   const session = await getClientSession();
   if (!session) {

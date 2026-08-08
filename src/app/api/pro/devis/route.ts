@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { checkDecennaleForWorkCategory } from "@/lib/decennale-verification";
 import { validateProQuote } from "@/lib/devis-validation";
 import { notifyClientQuoteSubmitted } from "@/lib/notify";
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   const session = await getProSession();
   if (!session) {
