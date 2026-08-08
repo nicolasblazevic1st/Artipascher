@@ -21,6 +21,17 @@ interface ClientContact {
 
 type InterestStatus = "none" | "pending" | "accepted" | "refused" | "expired";
 
+type ClaimStatus = "none" | "pending" | "approved" | "rejected";
+
+interface UnlockClaimInfo {
+  canClaim: boolean;
+  claimBlockedReason: string | null;
+  claimStatus: ClaimStatus;
+  refundedAt: string | null;
+  autoEligible: boolean;
+  hasQuote: boolean;
+}
+
 interface Props {
   auctionId: string;
   publicLocation: string;
@@ -42,6 +53,29 @@ export default function ClientContactPanel({
   const [interestStatus, setInterestStatus] = useState<InterestStatus>("none");
   const [error, setError] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [claimInfo, setClaimInfo] = useState<UnlockClaimInfo | null>(null);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimMessage, setClaimMessage] = useState<string | null>(null);
+
+  const fetchClaimInfo = useCallback(async () => {
+    const res = await fetch(
+      `/api/pro/unlock-refund-claim?auctionId=${encodeURIComponent(auctionId)}`
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.unlocked) {
+      setClaimInfo(null);
+      return;
+    }
+    setClaimInfo({
+      canClaim: data.canClaim === true,
+      claimBlockedReason: data.claimBlockedReason ?? null,
+      claimStatus: (data.claimStatus as ClaimStatus) ?? "none",
+      refundedAt: data.refundedAt ?? null,
+      autoEligible: data.autoEligible === true,
+      hasQuote: data.hasQuote === true,
+    });
+  }, [auctionId]);
 
   const fetchContact = useCallback(async () => {
     const res = await fetch(`/api/pro/contact/${auctionId}`);
@@ -49,8 +83,9 @@ export default function ClientContactPanel({
       const data = await res.json();
       setUnlocked(true);
       setContact(data.contact);
+      await fetchClaimInfo();
     }
-  }, [auctionId]);
+  }, [auctionId, fetchClaimInfo]);
 
   const fetchInterest = useCallback(async () => {
     const res = await fetch("/api/pro/contact-requests");
@@ -126,6 +161,25 @@ export default function ClientContactPanel({
     setError(data.error ?? "Paiement impossible.");
   }
 
+  async function handleClaimRefund() {
+    setClaimLoading(true);
+    setError(null);
+    setClaimMessage(null);
+    const res = await fetch("/api/pro/unlock-refund-claim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auctionId }),
+    });
+    const data = await res.json();
+    setClaimLoading(false);
+    if (!res.ok) {
+      setError(data.error ?? "Signalement impossible.");
+      return;
+    }
+    setClaimMessage(data.message ?? "Signalement enregistré.");
+    await fetchClaimInfo();
+  }
+
   async function handleLogout() {
     await fetch("/api/pro/logout", { method: "POST" });
     setProLoggedIn(false);
@@ -133,6 +187,8 @@ export default function ClientContactPanel({
     setContact(null);
     setCompanyName("");
     setInterestStatus("none");
+    setClaimInfo(null);
+    setClaimMessage(null);
   }
 
   if (loading) {
@@ -205,6 +261,60 @@ export default function ClientContactPanel({
           >
             Se déconnecter
           </button>
+
+          {claimInfo && (
+            <div className="mt-5 border-t border-emerald-200 pt-4">
+              <p className="text-sm font-medium text-emerald-900">
+                Client injoignable ?
+              </p>
+              <p className="mt-1 text-xs text-emerald-800">
+                Après 7 jours (et jusqu’à 30 jours), vous pouvez demander le
+                recréditage d’1 crédit si le client ne donne plus suite. Ce n’est
+                pas un remboursement automatique si vous avez déjà déposé un devis
+                ou si un autre artisan a été choisi.
+              </p>
+              {claimMessage && (
+                <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-sm text-emerald-900">
+                  {claimMessage}
+                </p>
+              )}
+              {error && (
+                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </p>
+              )}
+              {claimInfo.claimStatus === "approved" || claimInfo.refundedAt ? (
+                <p className="mt-2 text-sm text-emerald-800">
+                  1 crédit a été recrédité pour ce contact.
+                </p>
+              ) : claimInfo.claimStatus === "pending" ? (
+                <p className="mt-2 text-sm text-amber-800">
+                  Signalement en cours d’examen.
+                </p>
+              ) : claimInfo.claimStatus === "rejected" ? (
+                <p className="mt-2 text-sm text-slate-700">
+                  Signalement refusé.
+                </p>
+              ) : claimInfo.canClaim ? (
+                <button
+                  type="button"
+                  onClick={() => void handleClaimRefund()}
+                  disabled={claimLoading}
+                  className="mt-3 rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
+                >
+                  {claimLoading
+                    ? "Envoi…"
+                    : claimInfo.autoEligible
+                      ? "Demander le recréditage (1 crédit)"
+                      : "Signaler un désengagement (examen)"}
+                </button>
+              ) : claimInfo.claimBlockedReason ? (
+                <p className="mt-2 text-xs text-emerald-700">
+                  {claimInfo.claimBlockedReason}
+                </p>
+              ) : null}
+            </div>
+          )}
         </section>
         <ProSubmitQuoteForm auctionId={auctionId} />
       </>

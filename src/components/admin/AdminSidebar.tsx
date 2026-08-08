@@ -30,6 +30,7 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/particuliers/comptes", label: "Comptes" },
       { href: "/admin/particuliers/demandes", label: "Demandes travaux" },
       { href: "/admin/particuliers/encheres", label: "Enchères" },
+      { href: "/admin/unlock-claims", label: "Anti-churn" },
     ],
   },
   {

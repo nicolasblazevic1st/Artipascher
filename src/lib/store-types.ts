@@ -166,6 +166,12 @@ export interface ClientAccount {
   emailVerifiedAt?: string;
   /** Compte de démonstration (présentation / tests). */
   isTestAccount?: boolean;
+  /** Claims « client injoignable » validés (anti-churn). */
+  ghostClaimsUpheld?: number;
+  /** Client bloqué : plus de nouvelles demandes de contact / auto-accept. */
+  blockedFromContact?: boolean;
+  blockedAt?: string;
+  adminNote?: string;
   createdAt: string;
 }
 
@@ -296,13 +302,27 @@ export interface Bid {
   fromQuoteId?: string;
 }
 
+export type UnlockClaimStatus =
+  | "none"
+  | "pending"
+  | "approved"
+  | "rejected";
+
 export interface ContactUnlock {
   id: string;
   proId: string;
   auctionId: string;
+  workRequestId?: string;
   amountEur: number;
   paidAt: string;
   stripeSessionId?: string;
+  /** Recréditage anti-churn effectué. */
+  refundedAt?: string;
+  refundTxnId?: string;
+  claimStatus?: UnlockClaimStatus;
+  claimedAt?: string;
+  claimReason?: string;
+  claimResolvedAt?: string;
 }
 
 export type PasswordResetUserType = "client" | "pro";

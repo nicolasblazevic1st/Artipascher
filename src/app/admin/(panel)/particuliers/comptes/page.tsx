@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminImpersonateClientButton from "@/components/admin/AdminImpersonateClientButton";
 
-type KindFilter = "all" | "individual" | "company" | "email_unverified" | "with_requests";
+type KindFilter =
+  | "all"
+  | "individual"
+  | "company"
+  | "email_unverified"
+  | "with_requests"
+  | "blocked";
 
 interface ClientAccountRow {
   id: string;
@@ -19,6 +25,10 @@ interface ClientAccountRow {
   emailVerified: boolean;
   emailVerifiedAt?: string;
   createdAt: string;
+  ghostClaimsUpheld: number;
+  blockedFromContact: boolean;
+  blockedAt?: string;
+  adminNote?: string;
   requestsCount: number;
   pendingRequests: number;
   activeAuctions: number;
@@ -33,10 +43,12 @@ export default function AdminComptesParticuliersPage() {
     companies: 0,
     emailUnverified: 0,
     withRequests: 0,
+    blocked: 0,
   });
   const [filter, setFilter] = useState<KindFilter>("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/comptes-particuliers");
@@ -49,6 +61,7 @@ export default function AdminComptesParticuliersPage() {
         companies: 0,
         emailUnverified: 0,
         withRequests: 0,
+        blocked: 0,
       }
     );
     setLoading(false);
@@ -65,6 +78,7 @@ export default function AdminComptesParticuliersPage() {
       if (filter === "company" && a.kind !== "company") return false;
       if (filter === "email_unverified" && a.emailVerified) return false;
       if (filter === "with_requests" && a.requestsCount === 0) return false;
+      if (filter === "blocked" && !a.blockedFromContact) return false;
       if (!q) return true;
       return (
         a.firstName.toLowerCase().includes(q) ||
@@ -84,12 +98,13 @@ export default function AdminComptesParticuliersPage() {
         Suivi de tous les comptes clients — particuliers et entreprises, demandes liées.
       </p>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <MiniStat label="Total" value={stats.total} />
         <MiniStat label="Particuliers" value={stats.individuals} />
         <MiniStat label="Entreprises" value={stats.companies} />
         <MiniStat label="Avec demandes" value={stats.withRequests} />
         <MiniStat label="Email non vérifié" value={stats.emailUnverified} />
+        <MiniStat label="Blacklist contact" value={stats.blocked} />
       </div>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -101,6 +116,7 @@ export default function AdminComptesParticuliersPage() {
               ["company", "Entreprises"],
               ["with_requests", "Avec demandes"],
               ["email_unverified", "Email non vérifié"],
+              ["blocked", "Blacklist"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -163,6 +179,11 @@ export default function AdminComptesParticuliersPage() {
                     >
                       {a.emailVerified ? "Email OK" : "Email à vérifier"}
                     </span>
+                    {a.blockedFromContact && (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800">
+                        Blacklist contact
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {a.email}
@@ -177,6 +198,35 @@ export default function AdminComptesParticuliersPage() {
                     clientId={a.id}
                     label={`${a.firstName} ${a.lastName}`}
                   />
+                  <button
+                    type="button"
+                    disabled={busyId === a.id}
+                    onClick={async () => {
+                      setBusyId(a.id);
+                      await fetch("/api/admin/comptes-particuliers", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          clientId: a.id,
+                          blocked: !a.blockedFromContact,
+                          adminNote: a.blockedFromContact
+                            ? "Déblocage contact manuel admin."
+                            : "Blacklist contact manuelle admin.",
+                        }),
+                      });
+                      setBusyId(null);
+                      await load();
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                      a.blockedFromContact
+                        ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                        : "bg-red-50 text-red-800 ring-1 ring-red-200"
+                    } disabled:opacity-50`}
+                  >
+                    {a.blockedFromContact
+                      ? "Lever la blacklist"
+                      : "Blacklister (contact)"}
+                  </button>
                 </div>
               </div>
 
@@ -195,6 +245,10 @@ export default function AdminComptesParticuliersPage() {
                 <Row label="En attente" value={String(a.pendingRequests)} />
                 <Row label="Enchères créées" value={String(a.activeAuctions)} />
                 <Row
+                  label="Ghost claims"
+                  value={String(a.ghostClaimsUpheld ?? 0)}
+                />
+                <Row
                   label="Dernière demande"
                   value={
                     a.lastRequestAt
@@ -203,6 +257,11 @@ export default function AdminComptesParticuliersPage() {
                   }
                 />
               </dl>
+              {a.adminNote && (
+                <p className="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  {a.adminNote}
+                </p>
+              )}
             </li>
           ))}
         </ul>

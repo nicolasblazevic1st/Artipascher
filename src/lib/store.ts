@@ -21,6 +21,13 @@ import { getSampleQuotesForAuction } from "./sample-quotes";
 import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
 import { getNafCodesForCategory } from "./naf-codes";
 import {
+  CLIENT_GHOST_BLACKLIST_THRESHOLD,
+  evaluateUnlockClaimWindow,
+  monthKeyParis,
+  UNLOCK_CLAIM_REASON_DEFAULT,
+  UNLOCK_REFUND_MONTHLY_CAP,
+} from "./unlock-refund";
+import {
   DEFAULT_SMS_SETTINGS,
   EMPTY_STORE,
   REFERRAL_REWARD_CREDITS,
@@ -535,10 +542,30 @@ export async function hasContactUnlock(
   );
 }
 
+export async function getContactUnlock(
+  proId: string,
+  auctionId: string
+): Promise<ContactUnlock | null> {
+  const store = await readStore();
+  return (
+    store.contactUnlocks.find(
+      (u) => u.proId === proId && u.auctionId === auctionId
+    ) ?? null
+  );
+}
+
+export async function getContactUnlockById(
+  id: string
+): Promise<ContactUnlock | null> {
+  const store = await readStore();
+  return store.contactUnlocks.find((u) => u.id === id) ?? null;
+}
+
 export async function addContactUnlock(data: {
   proId: string;
   auctionId: string;
   amountEur: number;
+  workRequestId?: string;
   stripeSessionId?: string;
 }) {
   const store = await readStore();
@@ -547,14 +574,414 @@ export async function addContactUnlock(data: {
   );
   if (existing) return existing;
 
-  const entry = {
+  const entry: ContactUnlock = {
     id: newId("unlock"),
     ...data,
     paidAt: new Date().toISOString(),
+    claimStatus: "none",
   };
   store.contactUnlocks.push(entry);
   await writeStore(store);
   return entry;
+}
+
+function findClientForWorkRequestInStore(
+  store: DataStore,
+  workRequest: WorkRequest | undefined
+): ClientAccount | null {
+  if (!workRequest) return null;
+  if (workRequest.clientId) {
+    return store.clientAccounts.find((c) => c.id === workRequest.clientId) ?? null;
+  }
+  const email = workRequest.email.toLowerCase();
+  return (
+    store.clientAccounts.find((c) => c.email.toLowerCase() === email) ?? null
+  );
+}
+
+function countApprovedUnlockRefundsInMonth(
+  store: DataStore,
+  proId: string,
+  monthKey: string
+): number {
+  return store.contactUnlocks.filter((u) => {
+    if (u.proId !== proId) return false;
+    if (u.claimStatus !== "approved" || !u.refundedAt) return false;
+    return monthKeyParis(new Date(u.refundedAt)) === monthKey;
+  }).length;
+}
+
+function hasSpendUnlockForAuction(
+  store: DataStore,
+  proId: string,
+  auctionId: string
+): boolean {
+  return store.creditTransactions.some(
+    (t) =>
+      t.proId === proId &&
+      t.auctionId === auctionId &&
+      t.type === "spend_unlock" &&
+      t.amount < 0
+  );
+}
+
+async function applyUnlockRefundInStore(
+  store: DataStore,
+  unlock: ContactUnlock,
+  note: string
+): Promise<
+  { balance: number; transaction: ProCreditTransaction } | { error: string }
+> {
+  if (unlock.refundedAt) {
+    return { error: "Ce contact a déjà été recrédité." };
+  }
+  if (!hasSpendUnlockForAuction(store, unlock.proId, unlock.auctionId)) {
+    return {
+      error:
+        "Aucun crédit dépensé pour ce déblocage (mode démo ou déjà régularisé).",
+    };
+  }
+
+  const credit = await applyCreditDelta(store, {
+    proId: unlock.proId,
+    type: "refund_unlock",
+    amount: 1,
+    auctionId: unlock.auctionId,
+    workRequestId: unlock.workRequestId,
+    note,
+  });
+  if ("error" in credit) return credit;
+
+  unlock.refundedAt = new Date().toISOString();
+  unlock.refundTxnId = credit.transaction.id;
+  unlock.claimStatus = "approved";
+  unlock.claimResolvedAt = unlock.refundedAt;
+  return credit;
+}
+
+function bumpClientGhostReputationInStore(
+  store: DataStore,
+  client: ClientAccount | null
+): { ghostClaimsUpheld: number; blocked: boolean } {
+  if (!client) return { ghostClaimsUpheld: 0, blocked: false };
+  const next = (client.ghostClaimsUpheld ?? 0) + 1;
+  client.ghostClaimsUpheld = next;
+  if (next >= CLIENT_GHOST_BLACKLIST_THRESHOLD && !client.blockedFromContact) {
+    client.blockedFromContact = true;
+    client.blockedAt = new Date().toISOString();
+    client.adminNote = [
+      client.adminNote,
+      `Blacklist contact auto — ${next} signalements « client injoignable » validés.`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  return {
+    ghostClaimsUpheld: next,
+    blocked: Boolean(client.blockedFromContact),
+  };
+}
+
+export type UnlockClaimView = {
+  unlock: ContactUnlock;
+  canClaim: boolean;
+  claimBlockedReason?: string;
+  autoEligible: boolean;
+  hasQuote: boolean;
+};
+
+export async function getUnlockClaimViewForPro(
+  proId: string,
+  auctionId: string
+): Promise<UnlockClaimView | null> {
+  const store = await readStore();
+  const unlock = store.contactUnlocks.find(
+    (u) => u.proId === proId && u.auctionId === auctionId
+  );
+  if (!unlock) return null;
+
+  const hasQuote = store.proQuotes.some(
+    (q) => q.proId === proId && q.auctionId === auctionId
+  );
+  const status = unlock.claimStatus ?? "none";
+
+  if (unlock.refundedAt || status === "approved") {
+    return {
+      unlock,
+      canClaim: false,
+      claimBlockedReason: "Crédit déjà recrédité pour ce contact.",
+      autoEligible: false,
+      hasQuote,
+    };
+  }
+  if (status === "pending") {
+    return {
+      unlock,
+      canClaim: false,
+      claimBlockedReason: "Signalement en cours d’examen.",
+      autoEligible: false,
+      hasQuote,
+    };
+  }
+  if (status === "rejected") {
+    return {
+      unlock,
+      canClaim: false,
+      claimBlockedReason: "Signalement refusé.",
+      autoEligible: false,
+      hasQuote,
+    };
+  }
+  if (!hasSpendUnlockForAuction(store, proId, auctionId)) {
+    return {
+      unlock,
+      canClaim: false,
+      claimBlockedReason: "Aucun crédit dépensé pour ce déblocage.",
+      autoEligible: false,
+      hasQuote,
+    };
+  }
+
+  const window = evaluateUnlockClaimWindow(unlock.paidAt);
+  if (!window.ok) {
+    return {
+      unlock,
+      canClaim: false,
+      claimBlockedReason: window.reason,
+      autoEligible: false,
+      hasQuote,
+    };
+  }
+
+  const monthCount = countApprovedUnlockRefundsInMonth(
+    store,
+    proId,
+    monthKeyParis()
+  );
+  const autoEligible = !hasQuote && monthCount < UNLOCK_REFUND_MONTHLY_CAP;
+
+  return {
+    unlock,
+    canClaim: true,
+    autoEligible,
+    hasQuote,
+  };
+}
+
+export async function claimUnlockRefund(data: {
+  proId: string;
+  auctionId: string;
+  reason?: string;
+}): Promise<
+  | {
+      unlock: ContactUnlock;
+      autoApproved: boolean;
+      balance?: number;
+      ghostClaimsUpheld?: number;
+      clientBlocked?: boolean;
+    }
+  | { error: string }
+> {
+  const store = await readStore();
+  const unlock = store.contactUnlocks.find(
+    (u) => u.proId === data.proId && u.auctionId === data.auctionId
+  );
+  if (!unlock) return { error: "Déblocage introuvable." };
+
+  const status = unlock.claimStatus ?? "none";
+  if (unlock.refundedAt || status === "approved") {
+    return { error: "Crédit déjà recrédité pour ce contact." };
+  }
+  if (status === "pending") {
+    return { error: "Un signalement est déjà en cours d’examen." };
+  }
+  if (status === "rejected") {
+    return { error: "Ce signalement a déjà été refusé." };
+  }
+  if (!hasSpendUnlockForAuction(store, data.proId, data.auctionId)) {
+    return {
+      error: "Aucun crédit dépensé pour ce déblocage (mode démo).",
+    };
+  }
+
+  const window = evaluateUnlockClaimWindow(unlock.paidAt);
+  if (!window.ok) return { error: window.reason };
+
+  const hasQuote = store.proQuotes.some(
+    (q) => q.proId === data.proId && q.auctionId === data.auctionId
+  );
+  const monthCount = countApprovedUnlockRefundsInMonth(
+    store,
+    data.proId,
+    monthKeyParis()
+  );
+  const autoApprove = !hasQuote && monthCount < UNLOCK_REFUND_MONTHLY_CAP;
+  const reason =
+    data.reason?.trim() || UNLOCK_CLAIM_REASON_DEFAULT;
+
+  unlock.claimedAt = new Date().toISOString();
+  unlock.claimReason = reason;
+
+  if (!autoApprove) {
+    unlock.claimStatus = "pending";
+    await writeStore(store);
+    return { unlock, autoApproved: false };
+  }
+
+  const refunded = await applyUnlockRefundInStore(
+    store,
+    unlock,
+    `Recrédit anti-churn — ${reason}`
+  );
+  if ("error" in refunded) return refunded;
+
+  const workRequest =
+    (unlock.workRequestId
+      ? store.workRequests.find((w) => w.id === unlock.workRequestId)
+      : undefined) ??
+    store.workRequests.find((w) => w.auctionId === unlock.auctionId);
+  const client = findClientForWorkRequestInStore(store, workRequest);
+  const reputation = bumpClientGhostReputationInStore(store, client);
+
+  await writeStore(store);
+  return {
+    unlock,
+    autoApproved: true,
+    balance: refunded.balance,
+    ghostClaimsUpheld: reputation.ghostClaimsUpheld,
+    clientBlocked: reputation.blocked,
+  };
+}
+
+export async function listPendingUnlockClaims(): Promise<
+  Array<{
+    unlock: ContactUnlock;
+    proCompanyName: string;
+    proEmail: string;
+    clientLabel: string;
+    clientId?: string;
+    category?: string;
+    city?: string;
+    hasQuote: boolean;
+  }>
+> {
+  const store = await readStore();
+  const pending = store.contactUnlocks
+    .filter((u) => (u.claimStatus ?? "none") === "pending")
+    .sort(
+      (a, b) =>
+        new Date(b.claimedAt ?? b.paidAt).getTime() -
+        new Date(a.claimedAt ?? a.paidAt).getTime()
+    );
+
+  return pending.map((unlock) => {
+    const pro = store.proRegistrations.find((p) => p.id === unlock.proId);
+    const workRequest =
+      (unlock.workRequestId
+        ? store.workRequests.find((w) => w.id === unlock.workRequestId)
+        : undefined) ??
+      store.workRequests.find((w) => w.auctionId === unlock.auctionId);
+    const client = findClientForWorkRequestInStore(store, workRequest);
+    const clientLabel = workRequest
+      ? `${workRequest.firstName} ${workRequest.lastName}`.trim()
+      : "Client inconnu";
+    return {
+      unlock,
+      proCompanyName: pro?.companyName ?? unlock.proId,
+      proEmail: pro?.email ?? "",
+      clientLabel,
+      clientId: client?.id,
+      category: workRequest?.category,
+      city: workRequest?.city,
+      hasQuote: store.proQuotes.some(
+        (q) => q.proId === unlock.proId && q.auctionId === unlock.auctionId
+      ),
+    };
+  });
+}
+
+export async function resolveUnlockClaim(data: {
+  unlockId: string;
+  decision: "approved" | "rejected";
+  adminNote?: string;
+}): Promise<
+  | {
+      unlock: ContactUnlock;
+      balance?: number;
+      ghostClaimsUpheld?: number;
+      clientBlocked?: boolean;
+    }
+  | { error: string }
+> {
+  const store = await readStore();
+  const unlock = store.contactUnlocks.find((u) => u.id === data.unlockId);
+  if (!unlock) return { error: "Signalement introuvable." };
+  if ((unlock.claimStatus ?? "none") !== "pending") {
+    return { error: "Ce signalement n’est pas en attente." };
+  }
+
+  if (data.decision === "rejected") {
+    unlock.claimStatus = "rejected";
+    unlock.claimResolvedAt = new Date().toISOString();
+    if (data.adminNote?.trim()) {
+      unlock.claimReason = [
+        unlock.claimReason,
+        `Admin: ${data.adminNote.trim()}`,
+      ]
+        .filter(Boolean)
+        .join(" — ");
+    }
+    await writeStore(store);
+    return { unlock };
+  }
+
+  const refunded = await applyUnlockRefundInStore(
+    store,
+    unlock,
+    data.adminNote?.trim()
+      ? `Recrédit anti-churn (admin) — ${data.adminNote.trim()}`
+      : `Recrédit anti-churn — ${unlock.claimReason ?? UNLOCK_CLAIM_REASON_DEFAULT}`
+  );
+  if ("error" in refunded) return refunded;
+
+  const workRequest =
+    (unlock.workRequestId
+      ? store.workRequests.find((w) => w.id === unlock.workRequestId)
+      : undefined) ??
+    store.workRequests.find((w) => w.auctionId === unlock.auctionId);
+  const client = findClientForWorkRequestInStore(store, workRequest);
+  const reputation = bumpClientGhostReputationInStore(store, client);
+
+  await writeStore(store);
+  return {
+    unlock,
+    balance: refunded.balance,
+    ghostClaimsUpheld: reputation.ghostClaimsUpheld,
+    clientBlocked: reputation.blocked,
+  };
+}
+
+export async function setClientContactBlock(data: {
+  clientId: string;
+  blocked: boolean;
+  adminNote?: string;
+}): Promise<ClientAccount | { error: string }> {
+  const store = await readStore();
+  const client = store.clientAccounts.find((c) => c.id === data.clientId);
+  if (!client) return { error: "Compte client introuvable." };
+
+  client.blockedFromContact = data.blocked;
+  client.blockedAt = data.blocked ? new Date().toISOString() : undefined;
+  if (data.adminNote?.trim()) {
+    client.adminNote = [
+      client.adminNote,
+      data.adminNote.trim(),
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  await writeStore(store);
+  return client;
 }
 
 export async function getBidsForAuction(auctionId: string): Promise<Bid[]> {
@@ -1801,6 +2228,14 @@ export async function createContactRequest(data: {
     return { error: "Demande introuvable." };
   }
 
+  const clientAccount = findClientForWorkRequestInStore(store, workRequest);
+  if (clientAccount?.blockedFromContact) {
+    return {
+      error:
+        "Ce client n’accepte plus de nouvelles demandes de contact (compte restreint).",
+    };
+  }
+
   const acceptedPros = new Set<string>();
   for (const r of store.contactRequests) {
     if (r.auctionId === data.auctionId && r.status === "accepted") {
@@ -1814,7 +2249,10 @@ export async function createContactRequest(data: {
   }
 
   // Option client « M'alerter » (défaut) : acceptation auto + compte dans le plafond 5.
-  const autoAccepted = isSmsContactAlertsEnabled(workRequest);
+  // Clients blacklistés : jamais d’auto-accept (défense en profondeur).
+  const autoAccepted =
+    !clientAccount?.blockedFromContact &&
+    isSmsContactAlertsEnabled(workRequest);
   const now = new Date();
   const request: ContactRequest = {
     id: newId("creq"),

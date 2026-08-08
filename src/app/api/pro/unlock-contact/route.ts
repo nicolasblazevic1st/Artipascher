@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
     proId: session.proId,
     auctionId,
     amountEur: UNLOCK_PRICE_EUR,
+    workRequestId: workRequest?.id,
   });
 
   const newBalance = await getProCreditBalance(session.proId);
