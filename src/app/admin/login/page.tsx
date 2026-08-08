@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
           <AdminLoginForm />
         </div>
         <p className="mt-6 text-center text-xs text-slate-400">
-          Mot de passe : variable <code>ADMIN_PASSWORD</code> dans .env.local
+          Accès réservé aux administrateurs Artipascher.
         </p>
       </div>
     </div>

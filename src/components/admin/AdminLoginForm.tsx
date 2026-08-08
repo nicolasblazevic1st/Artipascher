@@ -21,7 +21,12 @@ export default function AdminLoginForm() {
     });
 
     if (!res.ok) {
-      setError("Mot de passe incorrect.");
+      const data = await res.json().catch(() => ({}));
+      setError(
+        typeof data.error === "string"
+          ? data.error
+          : "Mot de passe incorrect."
+      );
       setLoading(false);
       return;
     }

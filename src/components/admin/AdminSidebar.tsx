@@ -10,7 +10,10 @@ type NavSection = { title: string; items: NavLink[] };
 const SECTIONS: NavSection[] = [
   {
     title: "Général",
-    items: [{ href: "/admin", label: "Tableau de bord" }],
+    items: [
+      { href: "/admin", label: "Tableau de bord" },
+      { href: "/admin/securite", label: "Sécurité" },
+    ],
   },
   {
     title: "Artisans",
