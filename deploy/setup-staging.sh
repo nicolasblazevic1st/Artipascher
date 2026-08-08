@@ -51,6 +51,8 @@ if [ ! -f .env.local ]; then
   echo "    Mot de passe admin staging = mot de passe prod + « @ »"
 fi
 
+bash deploy/staging-env.sh .env.local
+
 mkdir -p data public/uploads
 chmod -R u+rwX data public/uploads 2>/dev/null || true
 
@@ -77,25 +79,12 @@ pm2 delete artipascher-dev 2>/dev/null || true
 pm2 start ecosystem.staging.config.cjs
 pm2 save
 
-if [ -f deploy/nginx-staging.conf.example ]; then
-  echo "==> Nginx dev.artipascher.fr"
-  sudo cp deploy/nginx-staging.conf.example "$NGINX_SITE"
-  sudo ln -sf "$NGINX_SITE" /etc/nginx/sites-enabled/artipascher-dev
-  sudo nginx -t
-  sudo systemctl reload nginx
-  echo "    DNS requis : dev.artipascher.fr → IP du VPS (A record)"
-  echo "    HTTPS      : sudo certbot --nginx -d dev.artipascher.fr"
-  if [ -n "${ARTIPASCHER_DEV_ALLOW_IP:-}" ]; then
-    echo "==> Restriction IP dev.artipascher.fr → ${ARTIPASCHER_DEV_ALLOW_IP}"
-    sudo bash deploy/lock-dev-site-to-ip.sh "$ARTIPASCHER_DEV_ALLOW_IP"
-  else
-    echo "    IP dev     : sudo bash deploy/lock-dev-site-to-ip.sh VOTRE_IP (recommandé)"
-  fi
-fi
+echo "==> Nginx dev.artipascher.fr (accès IP uniquement — jamais public)"
+bash deploy/apply-dev-ip-lock.sh
 
 echo ""
 echo "✅ Staging prêt"
-echo "   App      : http://127.0.0.1:3001"
-echo "   Public   : https://dev.artipascher.fr (après DNS + certbot)"
+echo "   App      : http://127.0.0.1:3001 (local VPS)"
+echo "   Accès    : https://dev.artipascher.fr (IP allowlist deploy/allowed-dev-ip)"
 echo "   Deploy   : cd $STAGING_DIR && bash deploy/deploy-staging.sh"
-echo "   Branche  : $BRANCH (push → deploy-staging sur le VPS)"
+echo "   Branche  : $BRANCH"

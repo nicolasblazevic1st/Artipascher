@@ -38,18 +38,23 @@ sudo certbot --nginx -d dev.artipascher.fr
 | PM2 | `artipascher` :3000 | `artipascher-dev` :3001 |
 | Places / SMS | selon `.env` prod | **désactivés** |
 | Paiement | stripe ou demo | **demo** |
+| Mode bêta | bordereau + blocages | **désactivé** (`NEXT_PUBLIC_BETA_MODE=false`) |
 | Crons | actifs | **ne pas configurer** sur staging |
 | Admin | `ADMIN_PASSWORD` prod | **même mot de passe + `@`** |
 | Accès web dev | public | **IP allowlist Nginx** (voir ci-dessous) |
 
 Données `data/` **séparées** (copie initiale depuis prod au setup, puis évolution indépendante).
 
-## Restreindre dev.artipascher.fr à ton IP
+## Restreindre dev.artipascher.fr à ton IP (obligatoire)
+
+Le staging **n’est jamais public**. Au premier setup :
 
 ```bash
-sudo bash deploy/lock-dev-site-to-ip.sh 109.30.111.204
+cp deploy/allowed-dev-ip.example deploy/allowed-dev-ip
+nano deploy/allowed-dev-ip   # ton IP publique
+bash deploy/apply-dev-ip-lock.sh
 ```
 
-Plusieurs IP : `sudo bash deploy/lock-dev-site-to-ip.sh 109.30.111.204 82.x.x.x`
+Chaque `deploy-staging.sh` réapplique cette allowlist.
 
-La **prod** (`artipascher.fr`) reste publique. Seul le sous-domaine **dev** est filtré.
+La **prod** (`artipascher.fr`) reste publique.

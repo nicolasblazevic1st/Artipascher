@@ -2,18 +2,24 @@ import type { Metadata } from "next";
 import BetaBanner from "@/components/BetaBanner";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import { isBetaMode } from "@/lib/beta";
 import "./globals.css";
+
+const beta = isBetaMode();
 
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
   ),
   title: {
-    default: "Artipascher — Bêta · Enchères inversées travaux Nord 59/62",
+    default: beta
+      ? "Artipascher — Bêta · Enchères inversées travaux Nord 59/62"
+      : "Artipascher — Enchères inversées travaux Nord 59/62",
     template: "%s | Artipascher",
   },
-  description:
-    "Version bêta (préouverture). Plateforme d'enchères inversées pour vos travaux dans le Nord-Pas-de-Calais.",
+  description: beta
+    ? "Version bêta (préouverture). Plateforme d'enchères inversées pour vos travaux dans le Nord-Pas-de-Calais."
+    : "Plateforme d'enchères inversées pour vos travaux dans le Nord-Pas-de-Calais.",
   icons: {
     icon: [
       { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },

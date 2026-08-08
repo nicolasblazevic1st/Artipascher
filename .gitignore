@@ -38,6 +38,7 @@ yarn-error.log*
 # local data store (inscriptions / demandes)
 data/store.json
 data/admin-login-log.json
+deploy/allowed-dev-ip
 data/sirene/
 data/acquisition-naf-extras.json
 data/exports/

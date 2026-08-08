@@ -1,8 +1,10 @@
 import Link from "next/link";
 import ManageCookiesButton from "@/components/ManageCookiesButton";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
+import { isBetaMode } from "@/lib/beta";
 
 export default function Footer() {
+  const beta = isBetaMode();
   return (
     <footer className="border-t border-brand-900 bg-brand-950 text-brand-100">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
@@ -81,8 +83,9 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-brand-900 py-4 text-center text-xs text-brand-300">
-        © {new Date().getFullYear()} Artipascher — Version bêta (préouverture) —
-        Enchères inversées travaux Nord-Pas-de-Calais
+        © {new Date().getFullYear()} Artipascher
+        {beta ? " — Version bêta (préouverture)" : ""} — Enchères inversées
+        travaux Nord-Pas-de-Calais
       </div>
     </footer>
   );

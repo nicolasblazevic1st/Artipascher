@@ -27,6 +27,8 @@ if [ -n "$BACKUP" ] && [ -f "$BACKUP" ]; then
   rm -f "$BACKUP"
 fi
 
+bash deploy/staging-env.sh .env.local
+
 echo "==> npm ci + build (staging)"
 npm ci
 npm run build
@@ -36,5 +38,8 @@ mkdir -p data public/uploads
 echo "==> restart PM2 artipascher-dev"
 pm2 restart artipascher-dev || pm2 start ecosystem.staging.config.cjs
 pm2 save
+
+echo "==> Nginx dev.artipascher.fr (accès IP uniquement)"
+bash deploy/apply-dev-ip-lock.sh
 
 echo "✅ Staging déployé (dev.artipascher.fr:3001) — $(date -Iseconds)"
