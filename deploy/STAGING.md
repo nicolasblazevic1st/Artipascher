@@ -40,5 +40,16 @@ sudo certbot --nginx -d dev.artipascher.fr
 | Paiement | stripe ou demo | **demo** |
 | Crons | actifs | **ne pas configurer** sur staging |
 | Admin | `ADMIN_PASSWORD` prod | **même mot de passe + `@`** |
+| Accès web dev | public | **IP allowlist Nginx** (voir ci-dessous) |
 
 Données `data/` **séparées** (copie initiale depuis prod au setup, puis évolution indépendante).
+
+## Restreindre dev.artipascher.fr à ton IP
+
+```bash
+sudo bash deploy/lock-dev-site-to-ip.sh 109.30.111.204
+```
+
+Plusieurs IP : `sudo bash deploy/lock-dev-site-to-ip.sh 109.30.111.204 82.x.x.x`
+
+La **prod** (`artipascher.fr`) reste publique. Seul le sous-domaine **dev** est filtré.

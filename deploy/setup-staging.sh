@@ -85,6 +85,12 @@ if [ -f deploy/nginx-staging.conf.example ]; then
   sudo systemctl reload nginx
   echo "    DNS requis : dev.artipascher.fr → IP du VPS (A record)"
   echo "    HTTPS      : sudo certbot --nginx -d dev.artipascher.fr"
+  if [ -n "${ARTIPASCHER_DEV_ALLOW_IP:-}" ]; then
+    echo "==> Restriction IP dev.artipascher.fr → ${ARTIPASCHER_DEV_ALLOW_IP}"
+    sudo bash deploy/lock-dev-site-to-ip.sh "$ARTIPASCHER_DEV_ALLOW_IP"
+  else
+    echo "    IP dev     : sudo bash deploy/lock-dev-site-to-ip.sh VOTRE_IP (recommandé)"
+  fi
 fi
 
 echo ""
