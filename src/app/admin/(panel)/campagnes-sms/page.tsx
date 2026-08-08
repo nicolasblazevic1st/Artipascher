@@ -573,9 +573,9 @@ export default function AdminSmsCampaignsPage() {
     <div>
       <h1 className="text-2xl font-bold">Campagnes SMS</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Campagne multi-jours : budget SMS/jour, plus proches d&apos;abord (Places si
-        besoin), jusqu&apos;à 5/5 contacts acceptés. SIRENE sans téléphone →
-        enrichissement Places ou saisie manuelle.
+        Campagne multi-jours : budget SMS/jour, plus proches d&apos;abord (59+62,
+        sans filtre dept chantier), jusqu&apos;à 5/5. SIRENE sans tél → Places ou
+        saisie manuelle.
       </p>
 
       {loading && (
@@ -829,8 +829,8 @@ export default function AdminSmsCampaignsPage() {
         <h2 className="text-lg font-semibold">Nouvelle campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
           Campagne multi-jours : chaque jour jusqu&apos;à « SMS / jour », du plus
-          proche au plus loin, jusqu&apos;à 5/5 contacts acceptés. STOP + lun–sam
-          8h–20h Paris. 1 SMS marketing / SIRET. Cron quotidien recommandé. Voir{" "}
+          proche au plus loin (59 et 62 dans le rayon), jusqu&apos;à 5/5. STOP +
+          lun–sam 8h–20h Paris. 1 SMS / SIRET. Voir{" "}
           <Link
             href="/admin/conversions-sms"
             className="font-medium text-brand-700 underline"

@@ -354,8 +354,9 @@ async function mergeProspectPool(
 
   for (const b of businesses) pushBusiness(b);
 
+  // Prospects 59+62 (pas de filtre = dept du chantier).
   for (const p of prospects) {
-    if (p.department !== request.department) continue;
+    if (p.department !== "59" && p.department !== "62") continue;
     pushBusiness(p);
   }
 
