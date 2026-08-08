@@ -46,6 +46,7 @@ interface Preview {
   totalNearby: number;
   gouvCount: number;
   platformCount: number;
+  alreadyMarketedCount?: number;
   cohortCounts: Record<SmsCohort, number>;
   suggestedCounts: Record<SmsCohort, number>;
   candidates: Candidate[];
@@ -686,8 +687,17 @@ export default function AdminSmsCampaignsPage() {
         <h2 className="text-lg font-semibold">Nouvelle campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
           Conformité OVH / FR : SMS marketing avec STOP, uniquement lun–sam
-          8h–20h (heure de Paris). Les OTP et alertes client partent en
-          transactionnel (sans STOP), même expéditeur.
+          8h–20h (heure de Paris). Un SIRET déjà contacté par campagne n&apos;est
+          plus jamais retargeté en marketing. Les inscrits plateforme sont exclus
+          (acquisition uniquement). OTP / alertes client = transactionnel, même
+          expéditeur.           Voir aussi{" "}
+          <Link
+            href="/admin/conversions-sms"
+            className="font-medium text-brand-700 underline"
+          >
+            Conversions SMS → comptes
+          </Link>
+          .
         </p>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -765,20 +775,19 @@ export default function AdminSmsCampaignsPage() {
                   {selectedCount} SMS sélectionné{selectedCount > 1 ? "s" : ""}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
-                  Proposition mix
+                  Proposition mix acquisition (jamais de re-SMS marketing)
                   {preview.preferEstablishedCompany
-                    ? " (préférence client ≥2 ans → 2/3 établis / 1/3 jeunes)"
-                    : ""}{" "}
-                  : {preview.suggestedCounts.returning} déjà /{" "}
-                  {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
-                  {preview.suggestedCounts.new_established} ≥2 ans · sélection actuelle :{" "}
-                  {selectedByCohort.returning} / {selectedByCohort.new_young} /{" "}
-                  {selectedByCohort.new_established}
+                    ? " — préférence client ≥2 ans → 2/3 établis / 1/3 jeunes"
+                    : " — ~50/50 &lt;2 ans / ≥2 ans"}{" "}
+                  : {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
+                  {preview.suggestedCounts.new_established} ≥2 ans · sélection :{" "}
+                  {selectedByCohort.new_young} / {selectedByCohort.new_established}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   {preview.candidates.length} joignables · {preview.withoutPhone.length}{" "}
                   sans téléphone · {preview.gouvCount} SIRENE · {preview.platformCount}{" "}
-                  plateforme · {preview.totalNearby} au total
+                  plateforme (exclus) · {preview.alreadyMarketedCount ?? 0} déjà SMS
+                  marketing (exclus définitivement) · {preview.totalNearby} au total
                   {preview.geoFound ? "" : " (géo approximative / introuvable)"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">

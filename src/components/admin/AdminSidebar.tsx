@@ -37,6 +37,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/base-artisans", label: "Base artisans NPC" },
       { href: "/admin/campagnes-sms", label: "Campagnes SMS" },
+      { href: "/admin/conversions-sms", label: "Conversions SMS" },
     ],
   },
 ];

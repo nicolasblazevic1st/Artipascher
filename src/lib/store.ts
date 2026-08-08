@@ -1871,20 +1871,71 @@ export async function upsertArtisanProspect(
   return store.artisanProspects[index];
 }
 
-export async function markProspectsContacted(sirets: string[]): Promise<void> {
-  if (sirets.length === 0) return;
+/**
+ * SIRET déjà touchés par un SMS marketing (prospect ou historique campagnes).
+ * Ces artisans ne doivent plus être ciblés en prospection.
+ */
+export async function getMarketingSmsContactedSirets(): Promise<Set<string>> {
   const store = await readStore();
-  const now = new Date().toISOString();
-  const set = new Set(sirets);
-  let changed = false;
+  const set = new Set<string>();
   for (const p of store.artisanProspects) {
-    if (set.has(p.siret)) {
-      p.lastContactedAt = now;
-      p.updatedAt = now;
-      changed = true;
+    if (p.lastContactedAt) set.add(p.siret);
+  }
+  for (const campaign of store.smsCampaigns) {
+    for (const r of campaign.recipients) {
+      if (r.status === "sent" && r.siret) set.add(r.siret);
     }
   }
-  if (changed) await writeStore(store);
+  return set;
+}
+
+/** Enregistre un envoi marketing réussi — exclusion définitive du canal SMS campagne. */
+export async function markProspectsContacted(
+  entries: Array<{
+    siret: string;
+    siren?: string;
+    companyName: string;
+    phone?: string;
+    city?: string;
+    department?: "59" | "62";
+    nafCode?: string;
+    source?: ArtisanProspect["source"];
+  }>
+): Promise<void> {
+  if (entries.length === 0) return;
+  const store = await readStore();
+  const now = new Date().toISOString();
+
+  for (const entry of entries) {
+    const siret = entry.siret.trim();
+    if (!/^\d{14}$/.test(siret)) continue;
+    const index = store.artisanProspects.findIndex((p) => p.siret === siret);
+    if (index === -1) {
+      store.artisanProspects.push({
+        siret,
+        siren: entry.siren ?? siret.slice(0, 9),
+        companyName: entry.companyName || "Entreprise",
+        city: entry.city ?? "",
+        department: entry.department ?? "59",
+        nafCode: entry.nafCode,
+        phone: entry.phone,
+        source: entry.source ?? "gouv",
+        lastContactedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      store.artisanProspects[index] = {
+        ...store.artisanProspects[index],
+        lastContactedAt: now,
+        phone: entry.phone ?? store.artisanProspects[index].phone,
+        companyName:
+          entry.companyName || store.artisanProspects[index].companyName,
+        updatedAt: now,
+      };
+    }
+  }
+  await writeStore(store);
 }
 
 export async function getProCreditBalance(proId: string): Promise<number> {

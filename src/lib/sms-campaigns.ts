@@ -11,6 +11,7 @@ import { absoluteUrl } from "./share";
 import {
   addSmsCampaign,
   getArtisanProspects,
+  getMarketingSmsContactedSirets,
   getSmsCampaignsForWorkRequest,
   getSmsSettings,
   markProspectsContacted,
@@ -56,6 +57,8 @@ export interface SmsCampaignPreviewDetailed {
   totalNearby: number;
   gouvCount: number;
   platformCount: number;
+  /** Déjà contactés par SMS marketing — exclus définitivement. */
+  alreadyMarketedCount: number;
   cohortCounts: Record<SmsCohort, number>;
   suggestedCounts: Record<SmsCohort, number>;
   candidates: SmsCandidate[];
@@ -117,6 +120,7 @@ async function mergeProspectPool(
   totalNearby: number;
   gouvCount: number;
   platformCount: number;
+  alreadyMarketedCount: number;
 }> {
   // Base locale enrichie (rayon). Places production : seulement si activé explicitement.
   const nearbyDb = await getArtisansNearWorkRequest(request, {
@@ -137,6 +141,8 @@ async function mergeProspectPool(
 
   const prospects = await getArtisanProspects();
   const prospectBySiret = new Map(prospects.map((p) => [p.siret, p]));
+  const alreadyMarketed = await getMarketingSmsContactedSirets();
+  let alreadyMarketedCount = 0;
 
   // Sync SIRENE discoveries into prospect carnet + base enrichissement Places.
   for (const b of businesses) {
@@ -195,13 +201,25 @@ async function mergeProspectPool(
     const prospect = prospectBySiret.get(siret);
     if (prospect?.optedOut) return;
 
+    const source =
+      ("source" in b ? b.source : undefined) ?? prospect?.source ?? "gouv";
+    const proId = "proId" in b ? b.proId : undefined;
+    // Campagnes marketing = acquisition hors plateforme (pas les inscrits).
+    if (source === "platform" || proId) return;
+
+    const lastContactedAt = prospect?.lastContactedAt;
+    // Déjà contactés par SMS campagne → plus jamais de marketing.
+    if (lastContactedAt || alreadyMarketed.has(siret)) {
+      alreadyMarketedCount += 1;
+      return;
+    }
+
     const phoneRaw =
       ("phone" in b ? b.phone : undefined) ?? prospect?.phone ?? undefined;
     const phone = phoneRaw && normalizeFrenchMobile(phoneRaw) ? phoneRaw : undefined;
     const companyCreatedAt =
       ("companyCreatedAt" in b ? b.companyCreatedAt : undefined) ??
       prospect?.companyCreatedAt;
-    const lastContactedAt = prospect?.lastContactedAt;
     const companyName =
       ("name" in b ? b.name : undefined) ??
       ("companyName" in b ? b.companyName : undefined) ??
@@ -210,9 +228,6 @@ async function mergeProspectPool(
     const department = b.department;
     const nafCode =
       ("nafCode" in b ? b.nafCode : undefined) ?? prospect?.nafCode;
-    const source =
-      ("source" in b ? b.source : undefined) ?? prospect?.source ?? "gouv";
-    const proId = "proId" in b ? b.proId : undefined;
     const siren =
       ("siren" in b ? b.siren : undefined) ?? prospect?.siren ?? siret.slice(0, 9);
 
@@ -275,6 +290,7 @@ async function mergeProspectPool(
     totalNearby: Math.max(businesses.length, nearbyDb.artisans.length),
     gouvCount,
     platformCount,
+    alreadyMarketedCount,
   };
 }
 
@@ -283,59 +299,31 @@ function applyMixSelection(
   campaignSize: number,
   options?: { preferEstablishedCompany?: boolean }
 ): SmsCandidate[] {
-  const returning = candidates.filter((c) => c.cohort === "returning");
+  // Marketing SMS : jamais les « returning » (déjà contactés exclus du pool).
   const young = candidates.filter((c) => c.cohort === "new_young");
   const established = candidates.filter((c) => c.cohort === "new_established");
 
-  // Préférence client « +2 ans » : mix SMS acquisition 1/3 jeunes / 2/3 établis.
-  // Les déjà contactés partent en notification (futur), pas en SMS.
+  // Préférence client « +2 ans » : 1/3 jeunes / 2/3 établis.
+  // Sinon : ~50/50 jeunes / établis.
+  let nYoung: number;
+  let nEstablished: number;
   if (options?.preferEstablishedCompany) {
-    let nYoung = Math.min(young.length, Math.floor(campaignSize / 3));
-    let nEstablished = Math.min(established.length, campaignSize - nYoung);
-    let rem = campaignSize - nYoung - nEstablished;
-
-    while (rem > 0) {
-      if (nEstablished < established.length) {
-        nEstablished += 1;
-        rem -= 1;
-        continue;
-      }
-      if (nYoung < young.length) {
-        nYoung += 1;
-        rem -= 1;
-        continue;
-      }
-      break;
-    }
-
-    const selectedSirets = new Set([
-      ...pickUpTo(young, nYoung).map((c) => c.siret),
-      ...pickUpTo(established, nEstablished).map((c) => c.siret),
-    ]);
-
-    return candidates.map((c) => ({
-      ...c,
-      selectedByDefault: selectedSirets.has(c.siret),
-    }));
+    nYoung = Math.min(young.length, Math.floor(campaignSize / 3));
+    nEstablished = Math.min(established.length, campaignSize - nYoung);
+  } else {
+    nYoung = Math.min(young.length, Math.ceil(campaignSize / 2));
+    nEstablished = Math.min(established.length, campaignSize - nYoung);
   }
 
-  const base = Math.floor(campaignSize / 3);
-  let rem = campaignSize - base * 3;
-
-  let nReturning = Math.min(returning.length, base);
-  let nYoung = Math.min(young.length, base);
-  let nEstablished = Math.min(established.length, base);
-
-  // Cold start: empty returning → split remainder to young/established.
-  const unusedReturning = base - nReturning;
-  if (unusedReturning > 0) {
-    const extraYoung = Math.ceil(unusedReturning / 2);
-    const extraEst = unusedReturning - extraYoung;
-    nYoung = Math.min(young.length, nYoung + extraYoung);
-    nEstablished = Math.min(established.length, nEstablished + extraEst);
-  }
-
+  let rem = campaignSize - nYoung - nEstablished;
   while (rem > 0) {
+    const preferEst =
+      options?.preferEstablishedCompany || nEstablished <= nYoung;
+    if (preferEst && nEstablished < established.length) {
+      nEstablished += 1;
+      rem -= 1;
+      continue;
+    }
     if (nYoung < young.length) {
       nYoung += 1;
       rem -= 1;
@@ -346,16 +334,10 @@ function applyMixSelection(
       rem -= 1;
       continue;
     }
-    if (nReturning < returning.length) {
-      nReturning += 1;
-      rem -= 1;
-      continue;
-    }
     break;
   }
 
   const selectedSirets = new Set([
-    ...pickUpTo(returning, nReturning).map((c) => c.siret),
     ...pickUpTo(young, nYoung).map((c) => c.siret),
     ...pickUpTo(established, nEstablished).map((c) => c.siret),
   ]);
@@ -372,8 +354,15 @@ export async function previewSmsCampaignDetailed(
 ): Promise<SmsCampaignPreviewDetailed> {
   const settings = await getSmsSettings();
   const campaignSize = campaignSizeOverride ?? settings.defaultCampaignSize;
-  const { withPhone, withoutPhone, geoFound, totalNearby, gouvCount, platformCount } =
-    await mergeProspectPool(request);
+  const {
+    withPhone,
+    withoutPhone,
+    geoFound,
+    totalNearby,
+    gouvCount,
+    platformCount,
+    alreadyMarketedCount,
+  } = await mergeProspectPool(request);
 
   const preferEstablishedCompany = request.preferEstablishedCompany === true;
   const candidates = applyMixSelection(withPhone, campaignSize, {
@@ -381,14 +370,13 @@ export async function previewSmsCampaignDetailed(
   });
 
   const cohortCounts: Record<SmsCohort, number> = {
-    returning: withPhone.filter((c) => c.cohort === "returning").length,
+    returning: 0,
     new_young: withPhone.filter((c) => c.cohort === "new_young").length,
     new_established: withPhone.filter((c) => c.cohort === "new_established").length,
   };
 
   const suggestedCounts: Record<SmsCohort, number> = {
-    returning: candidates.filter((c) => c.selectedByDefault && c.cohort === "returning")
-      .length,
+    returning: 0,
     new_young: candidates.filter((c) => c.selectedByDefault && c.cohort === "new_young")
       .length,
     new_established: candidates.filter(
@@ -411,6 +399,7 @@ export async function previewSmsCampaignDetailed(
     totalNearby,
     gouvCount,
     platformCount,
+    alreadyMarketedCount,
     cohortCounts,
     suggestedCounts,
     candidates,
@@ -511,7 +500,19 @@ export async function executeSmsCampaignToRecipients(
 
   const contacted = recipients
     .filter((r) => r.status === "sent" && r.siret)
-    .map((r) => r.siret!);
+    .map((r) => {
+      const candidate = selected.find((c) => c.siret === r.siret);
+      return {
+        siret: r.siret!,
+        siren: candidate?.siren,
+        companyName: r.companyName,
+        phone: r.phone,
+        city: candidate?.city,
+        department: candidate?.department,
+        nafCode: candidate?.nafCode,
+        source: candidate?.source,
+      };
+    });
   await markProspectsContacted(contacted);
 
   const payload: Omit<SmsCampaign, "id" | "createdAt"> = {

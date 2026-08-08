@@ -405,6 +405,10 @@ export interface ArtisanProspect {
   phone?: string;
   source: "gouv" | "import" | "platform";
   optedOut?: boolean;
+  /**
+   * Dernier SMS marketing campagne envoyé avec succès.
+   * Si renseigné → plus jamais de SMS marketing (acquisition).
+   */
   lastContactedAt?: string;
   notes?: string;
   createdAt: string;
