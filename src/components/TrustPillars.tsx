@@ -4,12 +4,12 @@ export const TRUST_PILLARS = [
   {
     id: "decennale",
     label: "Garantie décennale",
-    detail: "Attestation PDF contrôlée",
+    detail: "Pour la garantie de vos travaux",
   },
   {
     id: "rc",
     label: "Assurance pro",
-    detail: "Responsabilité civile à jour",
+    detail: "Assurance lors des travaux",
   },
   {
     id: "google",
@@ -18,13 +18,14 @@ export const TRUST_PILLARS = [
   },
   {
     id: "age",
-    label: "Ancienneté d'entreprise",
-    detail: "Moins de 2 ans ou plus de 2 ans selon votre choix",
+    label: "Ancienneté",
+    detail:
+      "Donnez sa chance à un jeune artisan ou choisissez la sérénité",
   },
   {
     id: "bodacc",
-    label: "Procédures collectives",
-    detail: "Contrôle BODACC à l'inscription",
+    label: "Procédure collective",
+    detail: "Assurez-vous que l'entreprise est pérenne",
   },
 ] as const;
 
