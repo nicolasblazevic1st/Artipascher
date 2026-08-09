@@ -39,5 +39,5 @@ npx tsx scripts/verify-verifiable-docs.mts
 ## Upload inscription staging
 
 1. SIRET : `61712011800170` (doit passer registre + zone 59)
-2. Documents : `rc-pro.pdf` + `decennale.pdf` (+ optionnel `kbis-ou-avis-sirene.pdf`)
+2. Documents : `rc-pro.pdf` + `decennale.pdf` (pas de Kbis — registre + BODACC suffisent)
 3. Après paiement test : contrôler le badge nom CB en admin

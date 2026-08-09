@@ -64,6 +64,27 @@ export function getLevel1Checks(pro: ProRegistration): Level1CheckItem[] {
     automatic: true,
   });
 
+  const bodacc = pro.level1Audit?.bodacc;
+  checks.push({
+    id: "bodacc",
+    label: "BODACC (procédures collectives)",
+    status: !bodacc
+      ? "pending"
+      : bodacc.status === "clear"
+        ? "ok"
+        : bodacc.status === "active_procedure"
+          ? "rejected"
+          : "pending",
+    detail: !bodacc
+      ? "Pas encore contrôlé"
+      : bodacc.status === "clear"
+        ? "Aucune procédure collective active"
+        : bodacc.status === "active_procedure"
+          ? bodacc.nature ?? "Procédure collective détectée"
+          : bodacc.error ?? "API BODACC indisponible",
+    automatic: true,
+  });
+
   const rcDoc = pro.documents?.find(isRcDocument);
   const rcStatus = documentStatus(rcDoc);
   checks.push({

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
-import { proNeedsKbisPurchaseGate } from "@/lib/kbis-purchase";
 import {
   createCreditPackCheckout,
   isDemoPaymentAllowed,
@@ -10,7 +9,6 @@ import { getProSession } from "@/lib/pro-auth";
 import {
   CREDIT_PACKS,
   CREDIT_PRICE_EUR,
-  KBIS_VERIFICATION_FEE_EUR,
   getCreditPack,
   type CreditPackSize,
 } from "@/lib/store-types";
@@ -19,7 +17,6 @@ import {
   getApprovedProById,
   getProCreditBalance,
   getProCreditTransactions,
-  getProRegistrationById,
 } from "@/lib/store";
 import { UNLOCK_CREDITS_COST, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { getSiteOrigin } from "@/lib/share";
@@ -30,13 +27,10 @@ export async function GET() {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });
   }
 
-  const [balance, transactions, pro] = await Promise.all([
+  const [balance, transactions] = await Promise.all([
     getProCreditBalance(session.proId),
     getProCreditTransactions(session.proId),
-    getProRegistrationById(session.proId),
   ]);
-
-  const identityGatePending = pro ? proNeedsKbisPurchaseGate(pro) : true;
 
   return NextResponse.json({
     balance,
@@ -47,9 +41,6 @@ export async function GET() {
     transactions: transactions.slice(0, 50),
     demoAllowed: isDemoPaymentAllowed(),
     stripeConfigured: isStripeConfigured(),
-    kbisVerificationFeeEur: KBIS_VERIFICATION_FEE_EUR,
-    identityGatePending,
-    kbisPurchaseVerification: pro?.kbisPurchaseVerification ?? null,
   });
 }
 
@@ -122,7 +113,6 @@ export async function POST(request: NextRequest) {
     packSize: pack.credits,
     successUrl: compteUrl,
     cancelUrl: compteUrl,
-    identityVerificationPending: proNeedsKbisPurchaseGate(pro),
   });
 
   if (!checkout) {

@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
-import {
-  buildKbisVerificationRecord,
-  proNeedsKbisPurchaseGate,
-  purchaseAndVerifyKbis,
-} from "@/lib/kbis-purchase";
 import { evaluatePaymentNameCheck } from "@/lib/payment-identity";
-import {
-  getStripe,
-  paymentIntentIdFromCheckoutSession,
-  refundCreditPurchaseKeepingVerificationFee,
-} from "@/lib/payments";
-import { KBIS_VERIFICATION_FEE_CENTS } from "@/lib/store-types";
+import { getStripe } from "@/lib/payments";
 import {
   addBid,
   addContactUnlock,
@@ -56,92 +46,8 @@ export async function POST(request: NextRequest) {
       const priceEur = Number(session.metadata.priceEur);
       if (Number.isFinite(packSize) && packSize > 0) {
         const proId = session.metadata.proId;
-        const pro = await getProRegistrationById(proId);
 
-        // Idempotence : session déjà traitée en échec Kbis → ne pas re-rembourser / créditer.
-        if (
-          pro?.kbisPurchaseVerification?.stripeSessionId === session.id &&
-          pro.kbisPurchaseVerification.status === "failed"
-        ) {
-          console.info("[stripe] kbis gate already failed for session", session.id);
-          return NextResponse.json({ received: true });
-        }
-
-        const needsGate = !pro || proNeedsKbisPurchaseGate(pro);
-
-        if (needsGate && pro) {
-          // Session déjà passée OK sur ce même paiement (retry webhook).
-          const alreadyPassedThisSession =
-            pro.kbisPurchaseVerification?.stripeSessionId === session.id &&
-            pro.kbisPurchaseVerification.status === "passed";
-
-          if (!alreadyPassedThisSession) {
-            const verify = await purchaseAndVerifyKbis(pro);
-
-            if (!verify.ok) {
-              const amountTotalCents =
-                session.amount_total ??
-                (Number.isFinite(priceEur) ? Math.round(priceEur * 100) : 0);
-              const paymentIntentId = paymentIntentIdFromCheckoutSession(session);
-
-              let refundedCents: number | undefined;
-              let stripeRefundId: string | undefined;
-              let failReason = verify.reason ?? "Vérification d'identité refusée.";
-
-              if (!paymentIntentId || amountTotalCents < KBIS_VERIFICATION_FEE_CENTS) {
-                failReason = `${failReason} (remboursement automatique impossible — contacter le support)`;
-                console.error(
-                  "[stripe] kbis fail without refundable payment",
-                  session.id,
-                  paymentIntentId,
-                  amountTotalCents
-                );
-              } else {
-                const refund = await refundCreditPurchaseKeepingVerificationFee({
-                  paymentIntentId,
-                  amountTotalCents,
-                  feeCents: KBIS_VERIFICATION_FEE_CENTS,
-                  stripeSessionId: session.id,
-                  proId,
-                });
-                if ("error" in refund) {
-                  failReason = `${failReason} (remboursement Stripe en échec : ${refund.error})`;
-                  console.error("[stripe] kbis refund error", session.id, refund.error);
-                } else {
-                  refundedCents = refund.refundedCents;
-                  stripeRefundId = refund.refundId;
-                  console.warn(
-                    "[stripe] kbis verification failed — partial refund",
-                    proId,
-                    refundedCents,
-                    "cents"
-                  );
-                }
-              }
-
-              await updateProRegistration(proId, {
-                kbisPurchaseVerification: buildKbisVerificationRecord({
-                  result: { ...verify, reason: failReason },
-                  stripeSessionId: session.id,
-                  feeRetainedCents: KBIS_VERIFICATION_FEE_CENTS,
-                  refundedCents,
-                  stripeRefundId,
-                }),
-              });
-
-              // Pas de crédits.
-              return NextResponse.json({ received: true });
-            }
-
-            await updateProRegistration(proId, {
-              kbisPurchaseVerification: buildKbisVerificationRecord({
-                result: verify,
-                stripeSessionId: session.id,
-              }),
-            });
-          }
-        }
-
+        // Identité / BODACC / RC-décennale : contrôlés à l'inscription (gratuit).
         await creditProWallet({
           proId,
           type: "purchase",
@@ -156,7 +62,7 @@ export async function POST(request: NextRequest) {
           note: `Achat pack ${packSize} crédits`,
         });
 
-        // Suite de la vérif d'inscription : cohérence nom CB ↔ dirigeants / entreprise.
+        // Soft-check nom CB ↔ dirigeants / entreprise (non bloquant).
         try {
           const fresh = await getProRegistrationById(proId);
           if (fresh) {

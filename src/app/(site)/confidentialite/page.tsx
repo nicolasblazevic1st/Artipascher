@@ -44,7 +44,7 @@ export default function ConfidentialitePage() {
           </li>
           <li>
             <strong>Compte Professionnel</strong> : raison sociale, SIRET/SIREN,
-            email, téléphone, documents (KBIS, décennale, RC pro…), métiers,
+            email, téléphone, documents (décennale, RC pro…), métiers,
             historique de déblocages et de crédits ;
           </li>
           <li>

@@ -5,7 +5,7 @@ import { useId, useRef } from "react";
 /** PDF uniquement (attestation assureur originale). */
 export const PRO_DOCUMENT_PDF_ACCEPT = ".pdf,application/pdf";
 
-/** Fichiers (PDF + images) — documents non critiques (ex. KBIS optionnel). */
+/** Fichiers (PDF + images) — documents non critiques. */
 export const PRO_DOCUMENT_FILE_ACCEPT =
   ".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf";
 
@@ -18,7 +18,7 @@ type Props = {
   className?: string;
   /**
    * RC / décennale : uniquement le PDF original de l’assureur.
-   * Sinon : PDF (ou fichier image déjà enregistré pour le KBIS).
+   * Sinon : PDF ou fichier image.
    */
   originalPdfOnly?: boolean;
 };

@@ -41,7 +41,7 @@ Ouvrir [http://localhost:3000](http://localhost:3000).
 3. Mot de passe par défaut : `artipascher2026` (modifiable via `ADMIN_PASSWORD`)
 
 Fonctions admin :
-- Approuver / refuser les **inscriptions artisans** (après vérif RCS + KBIS)
+- Approuver / refuser les **inscriptions artisans** (après vérif RCS + BODACC + docs)
 - Valider les **demandes travaux** des particuliers (création d'enchère)
 - Modérer les **devis** déposés après visite sur chantier
 - Suivre les **enchères actives**

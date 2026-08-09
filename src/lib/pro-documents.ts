@@ -11,16 +11,9 @@ export interface ProRegistrationDocumentType {
 
 export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
   {
-    id: "kbis",
-    label: "KBIS / extrait RCS (< 3 mois)",
-    help: "Optionnel : le SIRET est déjà vérifié en direct au registre (RNE). Préférez le PDF Infogreffe / INSEE.",
-    required: false,
-    qualificationLevel: 1,
-  },
-  {
     id: "rc",
     label: "Assurance responsabilité civile professionnelle",
-    help: "PDF original de l’attestation envoyée par votre assureur (e-mail / espace client) — sans photo ni modification.",
+    help: "PDF original de l’attestation envoyée par votre assureur (e-mail / espace client) — sans photo ni modification. Le SIRET est déjà contrôlé au registre + BODACC (pas de Kbis).",
     required: true,
     qualificationLevel: 1,
     requireOriginalPdf: true,
@@ -62,7 +55,7 @@ export const PRO_REGISTRATION_COMPARTMENTS: ProRegistrationDocumentCompartment[]
     title: "Documents obligatoires",
     summary:
       "Documents vérifiés pour accéder aux offres et débloquer les contacts clients.",
-    documentIds: ["rc", "kbis"],
+    documentIds: ["rc"],
     includesDecennale: true,
   },
 ];

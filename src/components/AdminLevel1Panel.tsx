@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  bodaccAnnouncementUrl,
+  bodaccCollectiveSearchUrl,
+} from "@/lib/bodacc";
+import {
   DOCUMENT_STATUS_LABELS,
   getLevel1Checks,
   getLevel1ConsistencyIssues,
@@ -24,6 +28,14 @@ export default function AdminLevel1Panel({ registration }: Props) {
   const issues = getLevel1ConsistencyIssues(registration);
   const rcDoc = registration.documents?.find((d) => d.id === "rc");
   const certified = isLevel1Certified(registration);
+  const bodacc = registration.level1Audit?.bodacc;
+  const bodaccSearchUrl = bodaccCollectiveSearchUrl(registration.siren);
+  const bodaccDetailUrl = bodacc
+    ? bodaccAnnouncementUrl({
+        url: bodacc.url,
+        announcementId: bodacc.announcementId,
+      })
+    : null;
 
   return (
     <div className="mt-4 rounded-xl border border-brand-200 bg-brand-50/40 p-4">
@@ -33,7 +45,7 @@ export default function AdminLevel1Panel({ registration }: Props) {
             Certification niveau 1 — automatique
           </p>
           <p className="mt-1 text-xs text-slate-600">
-            RCS, zone, OCR et cohérence · sans validation manuelle admin
+            RCS, BODACC, PDF RC/décennale · sans Kbis · auto
           </p>
         </div>
         {certified && registration.level1CertifiedAt && (
@@ -125,73 +137,92 @@ export default function AdminLevel1Panel({ registration }: Props) {
         </div>
       )}
 
-      {registration.kbisPurchaseVerification ? (
-        <div
-          className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
-            registration.kbisPurchaseVerification.status === "passed"
+      <div
+        className={`mt-3 rounded-lg border px-3 py-3 text-xs ${
+          !bodacc
+            ? "border-slate-200 bg-white text-slate-700"
+            : bodacc.status === "clear"
               ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-              : "border-red-200 bg-red-50 text-red-900"
-          }`}
-        >
-          <p className="font-semibold">
-            {registration.kbisPurchaseVerification.status === "passed"
-              ? "Identité achat crédits : OK"
-              : "Identité achat crédits : refusée"}
-          </p>
-          <p className="mt-0.5 opacity-90">
-            Provider : {registration.kbisPurchaseVerification.provider}
-            {registration.kbisPurchaseVerification.companyNameAtCheck
-              ? ` · ${registration.kbisPurchaseVerification.companyNameAtCheck}`
-              : ""}
-          </p>
-          {registration.kbisPurchaseVerification.reason && (
-            <p className="mt-0.5 opacity-90">
-              {registration.kbisPurchaseVerification.reason}
-            </p>
-          )}
-          {registration.kbisPurchaseVerification.status === "failed" && (
-            <p className="mt-0.5 opacity-80">
-              Frais retenus :{" "}
-              {(registration.kbisPurchaseVerification.feeRetainedCents / 100)
-                .toFixed(2)
-                .replace(".", ",")}{" "}
-              €
-              {typeof registration.kbisPurchaseVerification.refundedCents ===
-                "number" && (
-                <>
-                  {" "}
-                  · remboursé :{" "}
-                  {(registration.kbisPurchaseVerification.refundedCents / 100)
-                    .toFixed(2)
-                    .replace(".", ",")}{" "}
-                  €
-                </>
-              )}
-            </p>
-          )}
-          <p className="mt-0.5 opacity-70">
-            {new Date(
-              registration.kbisPurchaseVerification.checkedAt
-            ).toLocaleString("fr-FR")}
-          </p>
-        </div>
-      ) : (
-        <p className="mt-3 text-xs text-slate-500">
-          Identité achat crédits : pas encore contrôlée (prochain paiement Stripe).
+              : bodacc.status === "active_procedure"
+                ? "border-red-200 bg-red-50 text-red-900"
+                : "border-amber-200 bg-amber-50 text-amber-950"
+        }`}
+      >
+        <p className="font-semibold">
+          {!bodacc
+            ? "BODACC : pas encore contrôlé à l'inscription"
+            : bodacc.status === "clear"
+              ? "BODACC : aucune procédure collective active"
+              : bodacc.status === "active_procedure"
+                ? "BODACC : procédure collective détectée"
+                : "BODACC : contrôle indisponible"}
         </p>
-      )}
+        {bodacc?.nature && (
+          <p className="mt-0.5 opacity-90">
+            {bodacc.nature}
+            {bodacc.dateParution ? ` · ${bodacc.dateParution}` : ""}
+          </p>
+        )}
+        {bodacc?.error && (
+          <p className="mt-0.5 opacity-80">{bodacc.error}</p>
+        )}
+        <div className="mt-2 flex flex-wrap gap-2">
+          {bodaccDetailUrl ? (
+            <a
+              href={bodaccDetailUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+            >
+              Ouvrir l&apos;annonce signalée
+            </a>
+          ) : null}
+          <a
+            href={bodaccSearchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Consulter BODACC (SIREN {registration.siren})
+          </a>
+        </div>
+        {bodacc && (
+          <p className="mt-2 opacity-70">
+            Contrôle du {new Date(bodacc.checkedAt).toLocaleString("fr-FR")}
+          </p>
+        )}
+      </div>
 
       {rcDoc && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
-          <p className="text-sm font-medium text-slate-900">RC professionnelle</p>
-          <span
-            className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
-              DOCUMENT_STATUS_LABELS[rcDoc.verificationStatus ?? "en_attente_verification"]
-                .className
-            }`}
-          >
-            {DOCUMENT_STATUS_LABELS[rcDoc.verificationStatus ?? "en_attente_verification"].text}
-          </span>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium text-slate-900">
+                RC professionnelle
+              </p>
+              <span
+                className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                  DOCUMENT_STATUS_LABELS[
+                    rcDoc.verificationStatus ?? "en_attente_verification"
+                  ].className
+                }`}
+              >
+                {
+                  DOCUMENT_STATUS_LABELS[
+                    rcDoc.verificationStatus ?? "en_attente_verification"
+                  ].text
+                }
+              </span>
+            </div>
+            <a
+              href={rcDoc.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-800"
+            >
+              Ouvrir le PDF RC
+            </a>
+          </div>
           {rcDoc.ocrHints?.rawSnippet && (
             <p className="mt-2 rounded bg-slate-50 p-2 text-xs text-slate-600">
               OCR : {rcDoc.ocrHints.rawSnippet}

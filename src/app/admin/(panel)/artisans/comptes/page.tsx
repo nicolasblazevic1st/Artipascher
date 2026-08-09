@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminImpersonateProButton from "@/components/admin/AdminImpersonateProButton";
+import {
+  bodaccAnnouncementUrl,
+  bodaccCollectiveSearchUrl,
+} from "@/lib/bodacc";
+import type { BodaccVerificationSnapshot } from "@/lib/store-types";
 
 type StatusFilter = "all" | "approved" | "pending" | "rejected" | "email_unverified";
 
@@ -35,6 +40,9 @@ interface ArtisanAccount {
     cardName?: string;
     matchedAgainst?: string;
     checkedAt: string;
+  };
+  level1Audit?: {
+    bodacc?: BodaccVerificationSnapshot;
   };
 }
 
@@ -203,6 +211,16 @@ export default function AdminComptesArtisansPage() {
                         Nom CB ≠ dirigeants
                       </span>
                     )}
+                    {a.level1Audit?.bodacc?.status === "clear" && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        BODACC OK
+                      </span>
+                    )}
+                    {a.level1Audit?.bodacc?.status === "active_procedure" && (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800">
+                        BODACC procédure
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {a.email} · {a.phone}
@@ -265,6 +283,41 @@ export default function AdminComptesArtisansPage() {
                   />
                 )}
               </dl>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(() => {
+                  const detail = a.level1Audit?.bodacc
+                    ? bodaccAnnouncementUrl({
+                        url: a.level1Audit.bodacc.url,
+                        announcementId: a.level1Audit.bodacc.announcementId,
+                      })
+                    : null;
+                  return detail ? (
+                    <a
+                      href={detail}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                    >
+                      Annonce BODACC signalée
+                    </a>
+                  ) : null;
+                })()}
+                <a
+                  href={bodaccCollectiveSearchUrl(a.siren)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  Consulter BODACC
+                </a>
+                <Link
+                  href="/admin/artisans/certification"
+                  className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-800 hover:bg-brand-100"
+                >
+                  Voir dossier / PDFs
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

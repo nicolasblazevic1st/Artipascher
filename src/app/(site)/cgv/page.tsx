@@ -9,7 +9,6 @@ import { LEGAL_PUBLISHER } from "@/lib/legal";
 import {
   CREDIT_PACKS,
   CREDIT_PRICE_EUR,
-  KBIS_VERIFICATION_FEE_EUR,
   creditPackUnitPriceEur,
 } from "@/lib/store-types";
 
@@ -111,35 +110,12 @@ export default function CgvPage() {
           utiliser le moyen de paiement choisi.
         </p>
         <p className="mt-3">
-          La vente est ferme dès confirmation du paiement réussi,{" "}
-          <strong>sous réserve</strong> de la vérification d&apos;identité
-          prévue à l&apos;article 3 bis, puis crédit du solde sur le compte
-          Professionnel. Une confirmation peut être adressée par email et/ou
-          affichée dans l&apos;espace compte.
-        </p>
-      </section>
-
-      <section>
-        <h2>3 bis. Vérification d&apos;identité à l&apos;achat</h2>
-        <p className="mt-3">
-          Lors de l&apos;achat de crédits, tant que l&apos;identité de
-          l&apos;entreprise n&apos;a pas été validée, le Vendeur procède à une{" "}
-          <strong>vérification d&apos;identité</strong> (notamment via le
-          registre public et/ou un extrait Kbis ou équivalent).
-        </p>
-        <p className="mt-3">
-          Si la vérification est <strong>concluante</strong>, les crédits sont
-          portés au solde du Professionnel.
-        </p>
-        <p className="mt-3">
-          Si la vérification est <strong>refusée</strong> (entreprise inactive,
-          incohérence d&apos;identité, zone non couverte, etc.),{" "}
-          <strong>aucun crédit n&apos;est délivré</strong>. Le Vendeur
-          rembourse le montant payé{" "}
-          <strong>déduction faite de {KBIS_VERIFICATION_FEE_EUR}&nbsp;€ TTC</strong>{" "}
-          de frais de vérification d&apos;identité, non remboursables. Ces frais
-          couvrent le coût de la vérification (y compris, le cas échéant,
-          l&apos;achat d&apos;un extrait officiel).
+          La vente est ferme dès confirmation du paiement réussi et crédit du
+          solde sur le compte Professionnel. Une confirmation peut être adressée
+          par email et/ou affichée dans l&apos;espace compte. L&apos;accès à
+          l&apos;achat de crédits suppose un compte Professionnel{" "}
+          <strong>préalablement vérifié</strong> à l&apos;inscription (registre,
+          BODACC, attestations RC pro et décennale — voir CGU).
         </p>
       </section>
 
@@ -191,10 +167,7 @@ export default function CgvPage() {
           <strong>dysfonctionnement imputable au Vendeur</strong> (par exemple
           impossibilité technique d&apos;accéder aux coordonnées après
           déblocage, ou coordonnées manifestement invalides du fait de la
-          Plateforme), et sauf le cas de{" "}
-          <strong>refus de vérification d&apos;identité</strong> prévu à
-          l&apos;article 3 bis (remboursement partiel, frais de{" "}
-          {KBIS_VERIFICATION_FEE_EUR}&nbsp;€ retenus).
+          Plateforme).
         </p>
         <p className="mt-3">
           L&apos;absence de réponse du Client, l&apos;absence d&apos;offres dans

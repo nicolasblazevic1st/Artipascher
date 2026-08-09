@@ -115,10 +115,14 @@ export default function CguPage() {
           L&apos;accès aux fonctionnalités professionnelles est réservé aux
           entreprises actives dont le SIRET est vérifié, avec siège ou
           établissement dans le périmètre géographique indiqué sur le Site
-          (notamment départements 59 et 62), et justifiant des documents
-          demandés (attestation décennale, RC pro, etc.). L&apos;Éditeur peut
-          refuser, suspendre ou retirer un compte en cas d&apos;informations
-          inexactes, de non-conformité documentaire ou d&apos;usage abusif.
+          (notamment départements 59 et 62), justifiant des documents demandés
+          (attestation décennale et RC professionnelle en PDF original), et
+          sans procédure collective active publiée au BODACC (données ouvertes
+          DILA, licence ouverte 2.0). Ces contrôles sont effectués{" "}
+          <strong>à l&apos;inscription</strong>, lors du dépôt des documents.
+          L&apos;Éditeur peut refuser, suspendre ou retirer un compte en cas
+          d&apos;informations inexactes, de non-conformité documentaire ou
+          d&apos;usage abusif.
         </p>
         <h3>5.3 Clients</h3>
         <p className="mt-3">

@@ -9,7 +9,7 @@ export type DecennaleVerificationStatus =
   | "validé"
   | "non_couvert";
 
-/** Vérification KBIS / RC pro (niveau 1). */
+/** Vérification documents niveau 1 (RC pro, etc.). */
 export type DocumentVerificationStatus =
   | "en_attente_verification"
   | "validé"
@@ -30,6 +30,18 @@ export interface Level1ConsistencyIssue {
   severity: "warning" | "error";
 }
 
+/** Snapshot BODACC (procédures collectives — API DILA, Licence Ouverte 2.0). */
+export interface BodaccVerificationSnapshot {
+  status: "clear" | "active_procedure" | "unavailable";
+  checkedAt: string;
+  hasActiveProcedure: boolean;
+  nature?: string;
+  dateParution?: string;
+  announcementId?: string;
+  url?: string;
+  error?: string;
+}
+
 export interface ProLevel1Audit {
   rcsVerifiedAt?: string;
   geoVerified: boolean;
@@ -37,6 +49,8 @@ export interface ProLevel1Audit {
   consistencyCheckedAt?: string;
   autoValidatedAt?: string;
   globalIssues?: Level1ConsistencyIssue[];
+  /** Contrôle BODACC (procédures collectives) à l'inscription / revalidation docs. */
+  bodacc?: BodaccVerificationSnapshot;
 }
 
 export type Level1CheckStatus =
@@ -104,26 +118,30 @@ export interface PaymentNameCheck {
   stripeSessionId?: string;
 }
 
-/** Frais retenus si la vérif d'identité (Kbis) échoue au 1er achat de crédits. */
+/** @deprecated Ancien gate payant à l'achat de crédits — remplacé par BODACC à l'inscription. */
 export const KBIS_VERIFICATION_FEE_EUR = 3;
+/** @deprecated */
 export const KBIS_VERIFICATION_FEE_CENTS = KBIS_VERIFICATION_FEE_EUR * 100;
 
 export type KbisPurchaseVerificationStatus = "passed" | "failed" | "error";
 
 export type KbisPurchaseProvider = "registry" | "mock" | "infogreffe";
 
-/** Contrôle identité déclenché à l'achat de crédits (achat Kbis / registre). */
+/**
+ * @deprecated Ancien contrôle à l'achat de crédits (frais 3 €).
+ * La vérif passe désormais par registre + BODACC + PDF RC/décennale à l'inscription.
+ */
 export interface KbisPurchaseVerification {
   status: KbisPurchaseVerificationStatus;
   checkedAt: string;
   stripeSessionId: string;
   provider: KbisPurchaseProvider;
-  /** Centimes retenus en cas d'échec (défaut 300). */
   feeRetainedCents: number;
   refundedCents?: number;
   stripeRefundId?: string;
   reason?: string;
   companyNameAtCheck?: string;
+  bodacc?: BodaccVerificationSnapshot;
 }
 
 export interface ProRegistration {
@@ -164,7 +182,7 @@ export interface ProRegistration {
   level1CertifiedAt?: string;
   /** Certification (0 = retirée, 1 = certifié ; 2/3 legacy encore tolérés en lecture). */
   qualificationLevel?: QualificationLevel;
-  /** Documents transmis à l'inscription (KBIS, assurances…). */
+  /** Documents transmis à l'inscription (RC pro, etc.). */
   documents?: ProDocument[];
   passwordHash: string;
   status: AdminReviewStatus;

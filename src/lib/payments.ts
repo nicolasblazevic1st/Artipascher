@@ -1,12 +1,7 @@
 import Stripe from "stripe";
 import { BID_FEE_EUR } from "./auctions";
 import { UNLOCK_PRICE_EUR } from "./client-contacts";
-import {
-  CREDIT_PRICE_EUR,
-  KBIS_VERIFICATION_FEE_CENTS,
-  KBIS_VERIFICATION_FEE_EUR,
-  getCreditPack,
-} from "./store-types";
+import { CREDIT_PRICE_EUR, getCreditPack } from "./store-types";
 
 export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
@@ -110,8 +105,6 @@ export async function createCreditPackCheckout(params: {
   packSize: number;
   successUrl: string;
   cancelUrl: string;
-  /** 1er achat / identité non validée : mention frais de vérif Kbis. */
-  identityVerificationPending?: boolean;
 }): Promise<{ url: string; sessionId: string } | null> {
   const stripe = getStripe();
   if (!stripe) return null;
@@ -119,10 +112,6 @@ export async function createCreditPackCheckout(params: {
   const pack = getCreditPack(params.packSize);
   if (!pack) return null;
   const unit = Math.round((pack.priceEur / pack.credits) * 100) / 100;
-
-  const identityNote = params.identityVerificationPending
-    ? ` · Vérif. identité à l’achat : si refus, remboursement moins ${KBIS_VERIFICATION_FEE_EUR} € de frais`
-    : "";
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -136,7 +125,7 @@ export async function createCreditPackCheckout(params: {
           unit_amount: pack.priceEur * 100,
           product_data: {
             name: `${pack.credits} crédit${pack.credits > 1 ? "s" : ""} Artipascher`,
-            description: `Tarif dégressif · ${unit} € / crédit (réf. ${CREDIT_PRICE_EUR} €) — 1 crédit = 1 mise en contact${identityNote}`,
+            description: `Tarif dégressif · ${unit} € / crédit (réf. ${CREDIT_PRICE_EUR} €) — 1 crédit = 1 mise en contact`,
           },
         },
         quantity: 1,
@@ -147,7 +136,6 @@ export async function createCreditPackCheckout(params: {
       proId: params.proId,
       packSize: String(pack.credits),
       priceEur: String(pack.priceEur),
-      identityGate: params.identityVerificationPending ? "1" : "0",
     },
     success_url: `${params.successUrl}?credits=1`,
     cancel_url: params.cancelUrl,
@@ -155,65 +143,4 @@ export async function createCreditPackCheckout(params: {
 
   if (!session.url) return null;
   return { url: session.url, sessionId: session.id };
-}
-
-/**
- * Rembourse un paiement Checkout en retenant les frais de vérif Kbis (3 €).
- */
-export async function refundCreditPurchaseKeepingVerificationFee(params: {
-  paymentIntentId: string;
-  amountTotalCents: number;
-  feeCents?: number;
-  stripeSessionId?: string;
-  proId?: string;
-}): Promise<
-  | { refundedCents: number; feeRetainedCents: number; refundId: string }
-  | { error: string }
-> {
-  const stripe = getStripe();
-  if (!stripe) return { error: "Stripe non configuré." };
-
-  const feeCents = params.feeCents ?? KBIS_VERIFICATION_FEE_CENTS;
-  const refundedCents = Math.max(0, params.amountTotalCents - feeCents);
-  if (refundedCents <= 0) {
-    return { error: "Montant insuffisant pour un remboursement partiel." };
-  }
-
-  try {
-    const refund = await stripe.refunds.create({
-      payment_intent: params.paymentIntentId,
-      amount: refundedCents,
-      reason: "requested_by_customer",
-      metadata: {
-        type: "kbis_verification_failed",
-        feeRetainedCents: String(feeCents),
-        stripeSessionId: params.stripeSessionId ?? "",
-        proId: params.proId ?? "",
-      },
-    });
-    return {
-      refundedCents,
-      feeRetainedCents: feeCents,
-      refundId: refund.id,
-    };
-  } catch (err) {
-    console.error("[stripe] partial refund failed", err);
-    return {
-      error:
-        err instanceof Error
-          ? err.message
-          : "Échec du remboursement partiel Stripe.",
-    };
-  }
-}
-
-export function paymentIntentIdFromCheckoutSession(
-  session: Stripe.Checkout.Session
-): string | null {
-  const pi = session.payment_intent;
-  if (typeof pi === "string" && pi) return pi;
-  if (pi && typeof pi === "object" && "id" in pi && typeof pi.id === "string") {
-    return pi.id;
-  }
-  return null;
 }
