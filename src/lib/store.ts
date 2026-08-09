@@ -395,17 +395,25 @@ export async function updateProRegistration(
       | "documents"
       | "tradeSelections"
       | "level1Audit"
+      | "legalRepresentatives"
+      | "paymentNameCheck"
     >
   >
 ): Promise<ProRegistration | null> {
   const store = await readStore();
   const index = store.proRegistrations.findIndex((p) => p.id === id);
   if (index === -1) return null;
-  store.proRegistrations[index] = {
+  const next = {
     ...store.proRegistrations[index],
     ...patch,
-    reviewedAt: patch.reviewedAt ?? new Date().toISOString(),
   };
+  // Ne pas écraser reviewedAt pour un simple patch (ex. contrôle nom CB).
+  if (patch.reviewedAt !== undefined) {
+    next.reviewedAt = patch.reviewedAt;
+  } else if (patch.status !== undefined) {
+    next.reviewedAt = new Date().toISOString();
+  }
+  store.proRegistrations[index] = next;
   await writeStore(store);
   return store.proRegistrations[index];
 }

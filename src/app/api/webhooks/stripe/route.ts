@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
+import { evaluatePaymentNameCheck } from "@/lib/payment-identity";
 import { getStripe } from "@/lib/payments";
 import {
   addBid,
@@ -8,6 +9,8 @@ import {
   countProBidsForAuction,
   creditProWallet,
   getApprovedProById,
+  getProRegistrationById,
+  updateProRegistration,
 } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
@@ -42,8 +45,9 @@ export async function POST(request: NextRequest) {
       const packSize = Number(session.metadata.packSize);
       const priceEur = Number(session.metadata.priceEur);
       if (Number.isFinite(packSize) && packSize > 0) {
+        const proId = session.metadata.proId;
         await creditProWallet({
-          proId: session.metadata.proId,
+          proId,
           type: "purchase",
           amount: packSize,
           amountEur:
@@ -55,6 +59,30 @@ export async function POST(request: NextRequest) {
           stripeSessionId: session.id,
           note: `Achat pack ${packSize} crédits`,
         });
+
+        // Suite de la vérif d'inscription : cohérence nom CB ↔ dirigeants / entreprise.
+        try {
+          const pro = await getProRegistrationById(proId);
+          if (pro) {
+            const cardName = session.customer_details?.name ?? undefined;
+            const paymentNameCheck = evaluatePaymentNameCheck({
+              cardName: cardName ?? undefined,
+              companyName: pro.companyName,
+              legalRepresentatives: pro.legalRepresentatives,
+            });
+            paymentNameCheck.stripeSessionId = session.id;
+            await updateProRegistration(proId, { paymentNameCheck });
+            if (paymentNameCheck.status === "mismatch") {
+              console.warn(
+                "[stripe] payment name mismatch",
+                proId,
+                paymentNameCheck.cardName
+              );
+            }
+          }
+        } catch (err) {
+          console.error("[stripe] payment name check failed", err);
+        }
       }
     }
 

@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
       qualibatJobId: primary.qualibatJobId,
       qualibatJobLabel: primary.qualibatJobLabel,
       rcsVerified: true,
+      legalRepresentatives: registry.legalRepresentatives ?? [],
       level1Audit,
       passwordHash: hashPassword(password),
       documents: [],

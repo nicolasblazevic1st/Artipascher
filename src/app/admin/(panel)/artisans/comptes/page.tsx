@@ -29,6 +29,13 @@ interface ArtisanAccount {
   bidsCount: number;
   unlocksCount: number;
   referralsCount: number;
+  legalRepresentatives?: Array<{ fullName: string; role?: string }>;
+  paymentNameCheck?: {
+    status: "match" | "mismatch" | "unavailable";
+    cardName?: string;
+    matchedAgainst?: string;
+    checkedAt: string;
+  };
 }
 
 const STATUS_LABELS = {
@@ -186,6 +193,16 @@ export default function AdminComptesArtisansPage() {
                     >
                       {a.emailVerified ? "Email OK" : "Email à vérifier"}
                     </span>
+                    {a.paymentNameCheck?.status === "match" && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        Nom CB OK
+                      </span>
+                    )}
+                    {a.paymentNameCheck?.status === "mismatch" && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900">
+                        Nom CB ≠ dirigeants
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {a.email} · {a.phone}
@@ -223,6 +240,30 @@ export default function AdminComptesArtisansPage() {
                 />
                 <Row label="Parrainage" value={a.referralCode || "—"} />
                 <Row label="Filleuls" value={String(a.referralsCount)} />
+                <Row
+                  label="Dirigeants"
+                  value={
+                    a.legalRepresentatives?.length
+                      ? a.legalRepresentatives
+                          .map((r) =>
+                            r.role ? `${r.fullName} (${r.role})` : r.fullName
+                          )
+                          .join(" · ")
+                      : "—"
+                  }
+                />
+                {a.paymentNameCheck && (
+                  <Row
+                    label="Dernier paiement CB"
+                    value={
+                      a.paymentNameCheck.status === "match"
+                        ? `Cohérent${a.paymentNameCheck.cardName ? ` (${a.paymentNameCheck.cardName})` : ""}`
+                        : a.paymentNameCheck.status === "mismatch"
+                          ? `À surveiller${a.paymentNameCheck.cardName ? ` — ${a.paymentNameCheck.cardName}` : ""}`
+                          : "Nom non disponible"
+                    }
+                  />
+                )}
               </dl>
             </li>
           ))}

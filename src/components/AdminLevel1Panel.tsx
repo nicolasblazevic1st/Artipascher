@@ -66,6 +66,65 @@ export default function AdminLevel1Panel({ registration }: Props) {
         })}
       </ul>
 
+      <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+        <p className="text-sm font-medium text-slate-900">
+          Dirigeants (registre)
+        </p>
+        {registration.legalRepresentatives &&
+        registration.legalRepresentatives.length > 0 ? (
+          <ul className="mt-2 space-y-1 text-xs text-slate-700">
+            {registration.legalRepresentatives.map((rep) => (
+              <li key={`${rep.fullName}-${rep.role ?? ""}`}>
+                <span className="font-medium">{rep.fullName}</span>
+                {rep.role ? (
+                  <span className="text-slate-500"> — {rep.role}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-xs text-slate-500">
+            Aucun dirigeant renvoyé par le registre pour ce SIRET.
+          </p>
+        )}
+      </div>
+
+      {registration.paymentNameCheck && (
+        <div
+          className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+            registration.paymentNameCheck.status === "match"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : registration.paymentNameCheck.status === "mismatch"
+                ? "border-amber-200 bg-amber-50 text-amber-950"
+                : "border-slate-200 bg-slate-50 text-slate-700"
+          }`}
+        >
+          <p className="font-semibold">
+            {registration.paymentNameCheck.status === "match"
+              ? "Nom CB cohérent"
+              : registration.paymentNameCheck.status === "mismatch"
+                ? "Nom CB différent des dirigeants — à surveiller"
+                : "Nom CB non disponible pour contrôle"}
+          </p>
+          {registration.paymentNameCheck.cardName && (
+            <p className="mt-0.5 opacity-90">
+              Carte / facturation : {registration.paymentNameCheck.cardName}
+            </p>
+          )}
+          {registration.paymentNameCheck.matchedAgainst && (
+            <p className="mt-0.5 opacity-80">
+              Correspond à : {registration.paymentNameCheck.matchedAgainst}
+            </p>
+          )}
+          <p className="mt-0.5 opacity-70">
+            Contrôle du{" "}
+            {new Date(
+              registration.paymentNameCheck.checkedAt
+            ).toLocaleString("fr-FR")}
+          </p>
+        </div>
+      )}
+
       {rcDoc && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
           <p className="text-sm font-medium text-slate-900">RC professionnelle</p>

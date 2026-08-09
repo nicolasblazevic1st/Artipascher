@@ -116,6 +116,8 @@ export async function createCreditPackCheckout(params: {
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: params.proEmail,
+    // Favorise la collecte du nom de facturation (comparaison dirigeants).
+    billing_address_collection: "auto",
     line_items: [
       {
         price_data: {

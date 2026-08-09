@@ -85,6 +85,25 @@ export interface ProDocument {
   consistencyIssues?: Level1ConsistencyIssue[];
 }
 
+/** Dirigeant / représentant légal issu du registre (API gouv). */
+export interface LegalRepresentative {
+  fullName: string;
+  role?: string;
+  /** personne physique | personne morale */
+  kind?: "personne_physique" | "personne_morale";
+}
+
+export type PaymentNameCheckStatus = "match" | "mismatch" | "unavailable";
+
+/** Contrôle de cohérence nom CB ↔ dirigeants / entreprise (non bloquant). */
+export interface PaymentNameCheck {
+  status: PaymentNameCheckStatus;
+  cardName?: string;
+  matchedAgainst?: string;
+  checkedAt: string;
+  stripeSessionId?: string;
+}
+
 export interface ProRegistration {
   id: string;
   companyName: string;
@@ -108,6 +127,10 @@ export interface ProRegistration {
   /** @deprecated */
   qualibatJobLabel?: string;
   rcsVerified: boolean;
+  /** Dirigeants connus au registre au moment de la vérif SIRET. */
+  legalRepresentatives?: LegalRepresentative[];
+  /** Dernier contrôle nom CB vs dirigeants / raison sociale. */
+  paymentNameCheck?: PaymentNameCheck;
   /** Audit automatique niveau 1 (RCS, géo, cohérence OCR). */
   level1Audit?: ProLevel1Audit;
   /** Date de certification niveau 1 par l'admin. */
