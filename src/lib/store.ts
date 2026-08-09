@@ -2723,7 +2723,10 @@ async function applyCreditDelta(
     stripeSessionId?: string;
     note?: string;
   }
-): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
+): Promise<
+  | { balance: number; transaction: ProCreditTransaction; alreadyApplied: boolean }
+  | { error: string }
+> {
   if (data.amount === 0) return { error: "Montant invalide." };
 
   let wallet = store.creditWallets.find((w) => w.proId === data.proId);
@@ -2746,7 +2749,11 @@ async function applyCreditDelta(
       (t) => t.stripeSessionId === data.stripeSessionId
     );
     if (dup) {
-      return { balance: wallet.balance, transaction: dup };
+      return {
+        balance: wallet.balance,
+        transaction: dup,
+        alreadyApplied: true,
+      };
     }
   }
 
@@ -2767,7 +2774,7 @@ async function applyCreditDelta(
     createdAt: new Date().toISOString(),
   };
   store.creditTransactions.unshift(transaction);
-  return { balance: next, transaction };
+  return { balance: next, transaction, alreadyApplied: false };
 }
 
 export async function creditProWallet(data: {
@@ -2779,7 +2786,10 @@ export async function creditProWallet(data: {
   workRequestId?: string;
   stripeSessionId?: string;
   note?: string;
-}): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
+}): Promise<
+  | { balance: number; transaction: ProCreditTransaction; alreadyApplied: boolean }
+  | { error: string }
+> {
   if (data.amount <= 0) return { error: "Le crédit doit être positif." };
   const store = await readStore();
   const result = await applyCreditDelta(store, data);

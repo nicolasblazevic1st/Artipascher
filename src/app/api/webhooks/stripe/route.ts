@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
-import { evaluatePaymentNameCheck } from "@/lib/payment-identity";
+import { fulfillCreditPurchaseSession } from "@/lib/credit-purchase";
 import { getStripe } from "@/lib/payments";
 import {
   addBid,
   addContactUnlock,
   countProBidsForAuction,
-  creditProWallet,
   getApprovedProById,
-  getProRegistrationById,
-  updateProRegistration,
 } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
@@ -37,54 +34,11 @@ export async function POST(request: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
-    if (
-      session.metadata?.type === "credit_purchase" &&
-      session.metadata.proId &&
-      session.metadata.packSize
-    ) {
-      const packSize = Number(session.metadata.packSize);
-      const priceEur = Number(session.metadata.priceEur);
-      if (Number.isFinite(packSize) && packSize > 0) {
-        const proId = session.metadata.proId;
-
-        // Identité / BODACC / RC-décennale : contrôlés à l'inscription (gratuit).
-        await creditProWallet({
-          proId,
-          type: "purchase",
-          amount: packSize,
-          amountEur:
-            Number.isFinite(priceEur) && priceEur > 0
-              ? priceEur
-              : session.amount_total != null
-                ? session.amount_total / 100
-                : undefined,
-          stripeSessionId: session.id,
-          note: `Achat pack ${packSize} crédits`,
-        });
-
-        // Soft-check nom CB ↔ dirigeants / entreprise (non bloquant).
-        try {
-          const fresh = await getProRegistrationById(proId);
-          if (fresh) {
-            const cardName = session.customer_details?.name ?? undefined;
-            const paymentNameCheck = evaluatePaymentNameCheck({
-              cardName: cardName ?? undefined,
-              companyName: fresh.companyName,
-              legalRepresentatives: fresh.legalRepresentatives,
-            });
-            paymentNameCheck.stripeSessionId = session.id;
-            await updateProRegistration(proId, { paymentNameCheck });
-            if (paymentNameCheck.status === "mismatch") {
-              console.warn(
-                "[stripe] payment name mismatch",
-                proId,
-                paymentNameCheck.cardName
-              );
-            }
-          }
-        } catch (err) {
-          console.error("[stripe] payment name check failed", err);
-        }
+    if (session.metadata?.type === "credit_purchase") {
+      // Identité / BODACC / RC-décennale : contrôlés à l'inscription (gratuit).
+      const result = await fulfillCreditPurchaseSession(session);
+      if (!result.ok) {
+        console.error("[stripe] credit_purchase fulfill failed", result.error);
       }
     }
 

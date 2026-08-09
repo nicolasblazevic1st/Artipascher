@@ -49,6 +49,13 @@ done
 mkdir -p "$WEBROOT"
 
 write_proxy_location() {
+  # Stripe doit pouvoir POSTer les webhooks (sinon les crédits ne sont jamais crédités).
+  printf '%s\n' "    location = /api/webhooks/stripe {"
+  printf '%s\n' "        allow all;"
+  printf '%s\n' ""
+  printf '%s\n' "$PROXY_COMMON"
+  printf '%s\n' "    }"
+  printf '%s\n' ""
   printf '%s\n' "    location / {"
   printf '%s' "$ALLOW_LINES"
   printf '%s\n' "        deny all;"

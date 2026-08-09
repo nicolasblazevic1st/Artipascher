@@ -137,7 +137,7 @@ export async function createCreditPackCheckout(params: {
       packSize: String(pack.credits),
       priceEur: String(pack.priceEur),
     },
-    success_url: `${params.successUrl}?credits=1`,
+    success_url: `${params.successUrl}?credits=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: params.cancelUrl,
   });
 

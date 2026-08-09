@@ -56,9 +56,36 @@ export default function ProCreditsPanel() {
     load();
     const params = new URLSearchParams(window.location.search);
     if (params.get("credits") === "1") {
-      setSuccess("Paiement reçu — vos crédits seront crédités sous peu.");
-      window.history.replaceState({}, "", window.location.pathname);
-      setTimeout(() => load(), 1500);
+      const sessionId = params.get("session_id");
+      setSuccess("Paiement reçu — confirmation des crédits…");
+      window.history.replaceState({}, "", window.location.pathname + "#credits");
+
+      void (async () => {
+        if (sessionId) {
+          try {
+            const res = await fetch("/api/pro/credits/confirm", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+              setBalance(data.balance ?? 0);
+              setSuccess(
+                data.alreadyApplied
+                  ? "Paiement déjà pris en compte — solde à jour."
+                  : `${data.credited} crédit(s) ajouté(s).`
+              );
+              await load();
+              return;
+            }
+          } catch {
+            /* fallback poll ci-dessous */
+          }
+        }
+        setTimeout(() => load(), 1500);
+        setTimeout(() => load(), 5000);
+      })();
     }
   }, [load]);
 
