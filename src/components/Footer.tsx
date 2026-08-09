@@ -30,7 +30,7 @@ export default async function Footer() {
             </li>
             <li>
               <Link href="/encheres" className="hover:text-white">
-                Enchères actives
+                Offres
               </Link>
             </li>
             <li>

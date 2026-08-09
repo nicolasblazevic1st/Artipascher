@@ -554,7 +554,7 @@ export default function WorkRequestForm({
         />
         <p className="mt-1 text-xs text-slate-500">
           Mobile français obligatoire, vérifié par SMS — communiqué aux artisans
-          uniquement après déblocage (1 crédit).
+          uniquement après déblocage (5 crédits).
         </p>
         {phoneVerified ? (
           <p className="mt-2 text-sm font-medium text-emerald-700">
@@ -925,10 +925,10 @@ export default function WorkRequestForm({
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-medium text-slate-800">
-          Prix de départ de l&apos;enchère
+          Budget / prix de référence (optionnel)
         </p>
         <p className="mt-0.5 text-xs text-slate-500">
-          Choisissez comment démarrer l&apos;enchère inversée.
+          Indiquez un ordre de grandeur pour aider les artisans à se positionner.
         </p>
         <fieldset className="mt-3 space-y-3">
           <label className="flex cursor-pointer items-start gap-3">

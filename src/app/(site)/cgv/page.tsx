@@ -59,7 +59,7 @@ export default function CgvPage() {
             <ul>
               <li>
                 déblocage des coordonnées d&apos;un Client :{" "}
-                {UNLOCK_PRICE_EUR}&nbsp;€ / {UNLOCK_PRICE_EUR} crédit ;
+                {UNLOCK_PRICE_EUR}&nbsp;€ / {UNLOCK_PRICE_EUR} crédits ;
               </li>
               <li>
                 dépôt d&apos;une enchère : {BID_FEE_EUR}&nbsp;€ / {BID_FEE_EUR}{" "}
@@ -163,10 +163,10 @@ export default function CgvPage() {
           <strong>ne constituent pas</strong> un motif de remboursement.
         </p>
         <p className="mt-3">
-          Le Vendeur peut, à titre commercial et sans obligation générale,
-          recréditer un crédit dans certains cas (ex. désengagement du Client
-          après déblocage). En cas d&apos;erreur de paiement manifeste, le
-          Professionnel contacte{" "}
+          Le déblocage des coordonnées constitue le service livré : l&apos;absence
+          de suite donnée par le Client n&apos;ouvre pas de droit à recrédit
+          automatique. En cas d&apos;erreur de paiement manifeste ou de
+          dysfonctionnement technique, le Professionnel contacte{" "}
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>{" "}
           avec les justificatifs.
         </p>

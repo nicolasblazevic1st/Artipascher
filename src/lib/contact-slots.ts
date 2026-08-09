@@ -1,12 +1,18 @@
 import type { WorkRequest } from "@/lib/store-types";
 
-/** Nombre max d’artisans acceptés par le client pour une même enchère. */
-export const MAX_ACCEPTED_ARTISANS_PER_AUCTION = 5;
+/** Max d’artisans ayant débloqué (payé) les coordonnées pour une même demande. */
+export const MAX_CONTACT_UNLOCKS_PER_REQUEST = 5;
+
+/**
+ * @deprecated Alias historique — préférer MAX_CONTACT_UNLOCKS_PER_REQUEST.
+ * Conservé pour les imports existants (SMS, bannières).
+ */
+export const MAX_ACCEPTED_ARTISANS_PER_AUCTION = MAX_CONTACT_UNLOCKS_PER_REQUEST;
 
 /**
  * Option « M'alerter par SMS » (défaut ON).
- * Si active : un artisan qui manifeste son intérêt est accepté automatiquement
- * et occupe une place de contact (sur 5).
+ * Historiquement : auto-accept des intérêts. En contact-only : informe le client
+ * qu’un artisan a débloqué / qu’il reste des places (SMS acquisition).
  */
 export function isSmsContactAlertsEnabled(request: WorkRequest): boolean {
   return request.smsContactAlertsEnabled !== false;

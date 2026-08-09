@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkBidEligibility } from "@/lib/bid-eligibility";
+import {
+  AUCTIONS_RETIRED_MESSAGE,
+  CONTACT_ONLY_MODE,
+  retiredFeatureJson,
+} from "@/lib/product-features";
 import { getProSession } from "@/lib/pro-auth";
 
 export async function GET(request: NextRequest) {
+  if (CONTACT_ONLY_MODE) {
+    return NextResponse.json(retiredFeatureJson(AUCTIONS_RETIRED_MESSAGE), {
+      status: 410,
+    });
+  }
+
   const session = await getProSession();
   if (!session) {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });

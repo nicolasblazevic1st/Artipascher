@@ -21,7 +21,6 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/artisans/certification", label: "Certification" },
       { href: "/admin/artisans/comptes", label: "Comptes" },
       { href: "/admin/artisans/documents", label: "Documents" },
-      { href: "/admin/artisans/devis", label: "Devis" },
     ],
   },
   {
@@ -29,8 +28,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/particuliers/comptes", label: "Comptes" },
       { href: "/admin/particuliers/demandes", label: "Demandes travaux" },
-      { href: "/admin/particuliers/encheres", label: "Enchères" },
-      { href: "/admin/unlock-claims", label: "Anti-churn" },
+      { href: "/admin/particuliers/encheres", label: "Offres publiées" },
     ],
   },
   {

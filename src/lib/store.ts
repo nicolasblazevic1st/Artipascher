@@ -542,6 +542,20 @@ export async function hasContactUnlock(
   );
 }
 
+/** Places de contact occupées = unlocks non recrédités. */
+export async function countContactUnlocksForAuction(
+  auctionId: string
+): Promise<number> {
+  const store = await readStore();
+  const pros = new Set<string>();
+  for (const u of store.contactUnlocks) {
+    if (u.auctionId === auctionId && !u.refundedAt) {
+      pros.add(u.proId);
+    }
+  }
+  return pros.size;
+}
+
 export async function getContactUnlock(
   proId: string,
   auctionId: string
@@ -567,12 +581,24 @@ export async function addContactUnlock(data: {
   amountEur: number;
   workRequestId?: string;
   stripeSessionId?: string;
-}) {
+}): Promise<ContactUnlock | { error: string }> {
   const store = await readStore();
   const existing = store.contactUnlocks.find(
     (u) => u.proId === data.proId && u.auctionId === data.auctionId
   );
   if (existing) return existing;
+
+  const occupied = new Set<string>();
+  for (const u of store.contactUnlocks) {
+    if (u.auctionId === data.auctionId && !u.refundedAt) {
+      occupied.add(u.proId);
+    }
+  }
+  if (isAcceptSlotsFull(occupied.size)) {
+    return {
+      error: `Les ${MAX_ACCEPTED_ARTISANS_PER_AUCTION} places de contact sont déjà prises pour cette demande.`,
+    };
+  }
 
   const entry: ContactUnlock = {
     id: newId("unlock"),
@@ -642,10 +668,11 @@ async function applyUnlockRefundInStore(
     };
   }
 
+  const refundCredits = Math.max(1, Math.round(unlock.amountEur || 1));
   const credit = await applyCreditDelta(store, {
     proId: unlock.proId,
     type: "refund_unlock",
-    amount: 1,
+    amount: refundCredits,
     auctionId: unlock.auctionId,
     workRequestId: unlock.workRequestId,
     note,
@@ -687,6 +714,7 @@ export type UnlockClaimView = {
   canClaim: boolean;
   claimBlockedReason?: string;
   autoEligible: boolean;
+  /** @deprecated Devis plateforme retiré — toujours false. */
   hasQuote: boolean;
 };
 
@@ -700,16 +728,14 @@ export async function getUnlockClaimViewForPro(
   );
   if (!unlock) return null;
 
-  const hasQuote = store.proQuotes.some(
-    (q) => q.proId === proId && q.auctionId === auctionId
-  );
+  const hasQuote = false;
   const status = unlock.claimStatus ?? "none";
 
   if (unlock.refundedAt || status === "approved") {
     return {
       unlock,
       canClaim: false,
-      claimBlockedReason: "Crédit déjà recrédité pour ce contact.",
+      claimBlockedReason: "Crédits déjà recrédités pour ce contact.",
       autoEligible: false,
       hasQuote,
     };
@@ -758,7 +784,7 @@ export async function getUnlockClaimViewForPro(
     proId,
     monthKeyParis()
   );
-  const autoEligible = !hasQuote && monthCount < UNLOCK_REFUND_MONTHLY_CAP;
+  const autoEligible = monthCount < UNLOCK_REFUND_MONTHLY_CAP;
 
   return {
     unlock,
@@ -790,7 +816,7 @@ export async function claimUnlockRefund(data: {
 
   const status = unlock.claimStatus ?? "none";
   if (unlock.refundedAt || status === "approved") {
-    return { error: "Crédit déjà recrédité pour ce contact." };
+    return { error: "Crédits déjà recrédités pour ce contact." };
   }
   if (status === "pending") {
     return { error: "Un signalement est déjà en cours d’examen." };
@@ -807,15 +833,12 @@ export async function claimUnlockRefund(data: {
   const window = evaluateUnlockClaimWindow(unlock.paidAt);
   if (!window.ok) return { error: window.reason };
 
-  const hasQuote = store.proQuotes.some(
-    (q) => q.proId === data.proId && q.auctionId === data.auctionId
-  );
   const monthCount = countApprovedUnlockRefundsInMonth(
     store,
     data.proId,
     monthKeyParis()
   );
-  const autoApprove = !hasQuote && monthCount < UNLOCK_REFUND_MONTHLY_CAP;
+  const autoApprove = monthCount < UNLOCK_REFUND_MONTHLY_CAP;
   const reason =
     data.reason?.trim() || UNLOCK_CLAIM_REASON_DEFAULT;
 
@@ -893,9 +916,7 @@ export async function listPendingUnlockClaims(): Promise<
       clientId: client?.id,
       category: workRequest?.category,
       city: workRequest?.city,
-      hasQuote: store.proQuotes.some(
-        (q) => q.proId === unlock.proId && q.auctionId === unlock.auctionId
-      ),
+      hasQuote: false,
     };
   });
 }
@@ -2682,14 +2703,21 @@ export async function creditProWallet(data: {
 export async function spendProCredit(data: {
   proId: string;
   type: "spend_unlock" | "spend_bid";
+  /** Nombre de crédits à débiter (défaut 1). */
+  credits?: number;
   auctionId?: string;
   workRequestId?: string;
   note?: string;
 }): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
+  const credits = Math.max(1, Math.round(data.credits ?? 1));
   const store = await readStore();
   const result = await applyCreditDelta(store, {
-    ...data,
-    amount: -1,
+    proId: data.proId,
+    type: data.type,
+    auctionId: data.auctionId,
+    workRequestId: data.workRequestId,
+    note: data.note,
+    amount: -credits,
   });
   if ("error" in result) return result;
   await maybeGrantReferralRewardInStore(store, data.proId);

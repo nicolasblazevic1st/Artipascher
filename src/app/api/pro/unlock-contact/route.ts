@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { SAMPLE_AUCTIONS } from "@/lib/data";
-import { getClientContact, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import {
+  getClientContact,
+  UNLOCK_CREDITS_COST,
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
+import { evaluateProContactMatch } from "@/lib/contact-match";
+import {
+  isAcceptSlotsFull,
+  MAX_CONTACT_UNLOCKS_PER_REQUEST,
+} from "@/lib/contact-slots";
 import { canUnlockContacts } from "@/lib/level1-certification";
 import { getProSession } from "@/lib/pro-auth";
 import { isDemoPaymentAllowed } from "@/lib/payments";
 import {
   addContactUnlock,
-  getAcceptedContactRequest,
+  countContactUnlocksForAuction,
+  creditProWallet,
   getApprovedProById,
   getProCreditBalance,
   hasContactUnlock,
+  readStore,
   spendProCredit,
 } from "@/lib/store";
 import { getWorkRequestByAuctionId } from "@/lib/work-request-auctions";
@@ -42,7 +53,7 @@ export async function POST(request: NextRequest) {
   const workRequest = await getWorkRequestByAuctionId(auctionId);
 
   if ((!sampleAuction || !sampleContact) && !workRequest) {
-    return NextResponse.json({ error: "Enchère introuvable." }, { status: 404 });
+    return NextResponse.json({ error: "Chantier introuvable." }, { status: 404 });
   }
 
   const pro = await getApprovedProById(session.proId);
@@ -62,45 +73,70 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ alreadyUnlocked: true });
   }
 
-  if (workRequest && !sampleAuction) {
-    const accepted = await getAcceptedContactRequest(session.proId, auctionId);
-    if (!accepted) {
+  if (workRequest) {
+    const store = await readStore();
+    const client =
+      (workRequest.clientId
+        ? store.clientAccounts.find((c) => c.id === workRequest.clientId)
+        : undefined) ??
+      store.clientAccounts.find(
+        (c) => c.email.toLowerCase() === workRequest.email.toLowerCase()
+      );
+    if (client?.blockedFromContact) {
       return NextResponse.json(
         {
           error:
-            "Le client doit d'abord accepter votre demande « Je suis intéressé » avant le déblocage des coordonnées.",
-          needsInterestAcceptance: true,
+            "Ce client n’accepte plus de nouveaux contacts (compte restreint).",
         },
+        { status: 403 }
+      );
+    }
+
+    const match = await evaluateProContactMatch(pro, workRequest);
+    if (!match.ok) {
+      return NextResponse.json(
+        { error: match.reason, needsMatch: true },
         { status: 403 }
       );
     }
   }
 
-  const balance = await getProCreditBalance(session.proId);
-  if (balance < 1) {
-    if (demo && isDemoPaymentAllowed()) {
-      // Mode démo : on laisse passer sans crédit pour faciliter les tests locaux
-      // uniquement si explicitement demandé — sinon demander d'acheter.
-    } else {
-      return NextResponse.json(
-        {
-          error:
-            "Solde insuffisant. Achetez des crédits (1 crédit = 1 €) dans Mon compte.",
-          needsCredits: true,
-          balance,
-        },
-        { status: 402 }
-      );
-    }
+  const unlockCount = await countContactUnlocksForAuction(auctionId);
+  if (isAcceptSlotsFull(unlockCount)) {
+    return NextResponse.json(
+      {
+        error: `Les ${MAX_CONTACT_UNLOCKS_PER_REQUEST} places de contact sont déjà prises pour cette demande.`,
+        slotsFull: true,
+        unlockCount,
+        maxUnlocks: MAX_CONTACT_UNLOCKS_PER_REQUEST,
+      },
+      { status: 409 }
+    );
   }
 
-  if (balance >= 1) {
+  const balance = await getProCreditBalance(session.proId);
+  const needsCredits = balance < UNLOCK_CREDITS_COST;
+  if (needsCredits && !(demo && isDemoPaymentAllowed())) {
+    return NextResponse.json(
+      {
+        error: `Solde insuffisant. Il faut ${UNLOCK_CREDITS_COST} crédits (1 crédit = 1 €) pour débloquer ce contact.`,
+        needsCredits: true,
+        balance,
+        requiredCredits: UNLOCK_CREDITS_COST,
+      },
+      { status: 402 }
+    );
+  }
+
+  let spentCredits = 0;
+  if (!needsCredits) {
     const spent = await spendProCredit({
       proId: session.proId,
       type: "spend_unlock",
+      credits: UNLOCK_CREDITS_COST,
       auctionId,
       workRequestId: workRequest?.id,
-      note: "Déblocage coordonnées client",
+      note: `Déblocage coordonnées client (${UNLOCK_CREDITS_COST} crédits)`,
     });
     if ("error" in spent) {
       return NextResponse.json(
@@ -108,29 +144,38 @@ export async function POST(request: NextRequest) {
         { status: 402 }
       );
     }
-  } else if (!(demo && isDemoPaymentAllowed())) {
-    return NextResponse.json(
-      {
-        error: "Solde insuffisant. Achetez des crédits dans Mon compte.",
-        needsCredits: true,
-        balance,
-      },
-      { status: 402 }
-    );
+    spentCredits = UNLOCK_CREDITS_COST;
   }
 
-  await addContactUnlock({
+  const unlock = await addContactUnlock({
     proId: session.proId,
     auctionId,
     amountEur: UNLOCK_PRICE_EUR,
     workRequestId: workRequest?.id,
   });
 
+  if ("error" in unlock) {
+    if (spentCredits > 0) {
+      await creditProWallet({
+        proId: session.proId,
+        type: "refund_unlock",
+        amount: spentCredits,
+        auctionId,
+        workRequestId: workRequest?.id,
+        note: "Remboursement — places de contact déjà prises",
+      });
+    }
+    return NextResponse.json(
+      { error: unlock.error, slotsFull: true },
+      { status: 409 }
+    );
+  }
+
   const newBalance = await getProCreditBalance(session.proId);
   return NextResponse.json({
     unlocked: true,
-    creditsSpent: balance >= 1 ? 1 : 0,
+    creditsSpent: spentCredits,
     balance: newBalance,
-    demo: demo && balance < 1,
+    demo: demo && needsCredits,
   });
 }

@@ -45,7 +45,11 @@ export async function GET(
 
   if (!unlocked) {
     return NextResponse.json(
-      { error: "Accès non débloqué. Payez 1 € pour voir les coordonnées.", unlocked: false },
+      {
+        error:
+          "Accès non débloqué. Dépensez 5 crédits pour voir les coordonnées.",
+        unlocked: false,
+      },
       { status: 403 }
     );
   }

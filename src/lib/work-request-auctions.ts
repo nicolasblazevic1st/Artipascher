@@ -10,7 +10,11 @@ import {
   type TradeCategory,
 } from "./data";
 import { isAuctionStillActive } from "./share";
-import { countAcceptedArtisansForAuction, getBidsForAuction, readStore } from "./store";
+import {
+  countContactUnlocksForAuction,
+  getBidsForAuction,
+  readStore,
+} from "./store";
 import type { WorkRequest } from "./store-types";
 import { TRADE_CATEGORY_TO_WORK, WORK_TO_TRADE_CATEGORY } from "./work-categories";
 
@@ -93,7 +97,7 @@ export async function workRequestToAuctionCard(
 
   const startPrice = request.startPrice ?? request.previousQuoteAmount ?? 0;
   const bids = await getBidsForAuction(request.auctionId);
-  const acceptedArtisansCount = await countAcceptedArtisansForAuction(
+  const acceptedArtisansCount = await countContactUnlocksForAuction(
     request.auctionId
   );
   const currentPrice =
@@ -194,7 +198,7 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
     const endsAt = endsAtForRequest(request);
     const active = isAuctionStillActive(endsAt);
     const bids = await getBidsForAuction(request.auctionId);
-    const acceptedArtisansCount = await countAcceptedArtisansForAuction(
+    const acceptedArtisansCount = await countContactUnlocksForAuction(
       request.auctionId
     );
     const startPrice = request.startPrice ?? request.previousQuoteAmount;
@@ -241,7 +245,7 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
   for (const auction of SAMPLE_AUCTIONS) {
     if (storeIds.has(auction.id)) continue;
     const bids = await getBidsForAuction(auction.id);
-    const acceptedArtisansCount = await countAcceptedArtisansForAuction(auction.id);
+    const acceptedArtisansCount = await countContactUnlocksForAuction(auction.id);
     views.push({
       id: auction.id,
       title: auction.title,

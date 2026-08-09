@@ -26,6 +26,14 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
+  const { CONTACT_ONLY_MODE, INTEREST_RETIRED_MESSAGE, retiredFeatureJson } =
+    await import("@/lib/product-features");
+  if (CONTACT_ONLY_MODE) {
+    return NextResponse.json(retiredFeatureJson(INTEREST_RETIRED_MESSAGE), {
+      status: 410,
+    });
+  }
+
   const session = await getProSession();
   if (!session) {
     return NextResponse.json({ error: "Non connecté." }, { status: 401 });

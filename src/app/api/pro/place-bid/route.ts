@@ -105,6 +105,14 @@ async function parsePlaceBidRequest(request: NextRequest): Promise<
 export async function POST(request: NextRequest) {
   if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
+  const { CONTACT_ONLY_MODE, AUCTIONS_RETIRED_MESSAGE, retiredFeatureJson } =
+    await import("@/lib/product-features");
+  if (CONTACT_ONLY_MODE) {
+    return NextResponse.json(retiredFeatureJson(AUCTIONS_RETIRED_MESSAGE), {
+      status: 410,
+    });
+  }
+
   const session = await getProSession();
   if (!session) {
     return NextResponse.json(

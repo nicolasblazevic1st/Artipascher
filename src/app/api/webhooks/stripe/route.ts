@@ -57,12 +57,15 @@ export async function POST(request: NextRequest) {
       session.metadata.proId &&
       session.metadata.auctionId
     ) {
-      await addContactUnlock({
+      const unlock = await addContactUnlock({
         proId: session.metadata.proId,
         auctionId: session.metadata.auctionId,
         amountEur: UNLOCK_PRICE_EUR,
         stripeSessionId: session.id,
       });
+      if ("error" in unlock) {
+        console.error("[stripe] contact_unlock slot full", unlock.error);
+      }
     }
 
     if (

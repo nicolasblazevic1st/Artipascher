@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default function LegacyAdminDevisRedirect() {
-  redirect("/admin/artisans/devis");
+/** Devis plateforme retiré. */
+export default function AdminDevisRetiredPage() {
+  redirect("/admin/particuliers/demandes");
 }

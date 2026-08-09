@@ -497,7 +497,7 @@ export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
   throttleMs: 150,
 };
 
-/** 1 crédit = 1 € — polyvalent (contact ou enchère). */
+/** 1 crédit = 1 € — usage principal : déblocage contact. */
 export const CREDIT_PRICE_EUR = 1;
 
 export const CREDIT_PACKS = [1, 5, 10, 20] as const;

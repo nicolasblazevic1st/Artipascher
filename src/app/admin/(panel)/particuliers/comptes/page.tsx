@@ -243,11 +243,7 @@ export default function AdminComptesParticuliersPage() {
                 )}
                 <Row label="Demandes" value={String(a.requestsCount)} />
                 <Row label="En attente" value={String(a.pendingRequests)} />
-                <Row label="Enchères créées" value={String(a.activeAuctions)} />
-                <Row
-                  label="Ghost claims"
-                  value={String(a.ghostClaimsUpheld ?? 0)}
-                />
+                <Row label="Offres publiées" value={String(a.activeAuctions)} />
                 <Row
                   label="Dernière demande"
                   value={

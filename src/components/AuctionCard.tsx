@@ -101,7 +101,7 @@ export default function AuctionCard({
           href={`/encheres/${auction.id}`}
           className="mt-4 rounded-lg bg-brand-600 py-2.5 text-center text-sm font-medium text-white transition hover:bg-brand-700"
         >
-          Voir l&apos;enchère
+          Voir le chantier
         </Link>
       </div>
     </article>

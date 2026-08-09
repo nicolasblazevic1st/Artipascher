@@ -15,7 +15,7 @@ import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "./contact-slots";
 import { isMarketingSmsWindowOpen, normalizeFrenchMobile, sendSms } from "./sms";
 import {
   addSmsCampaign,
-  countAcceptedArtisansForAuction,
+  countContactUnlocksForAuction,
   createSmsAcquisitionCampaign,
   getActiveSmsAcquisitionCampaign,
   getArtisanProspects,
@@ -693,7 +693,7 @@ export async function approvePendingReviewBatch(
   if (!request) throw new Error("Demande introuvable.");
 
   const acceptedCount = request.auctionId
-    ? await countAcceptedArtisansForAuction(request.auctionId)
+    ? await countContactUnlocksForAuction(request.auctionId)
     : 0;
 
   // Objectif atteint entre la veille et maintenant → annuler, pas d’OVH.
@@ -853,7 +853,7 @@ export async function cancelPendingBatchesIfObjectivesMet(): Promise<{
 
     const request = await getWorkRequestById(batch.workRequestId);
     if (!request?.auctionId) continue;
-    const accepted = await countAcceptedArtisansForAuction(request.auctionId);
+    const accepted = await countContactUnlocksForAuction(request.auctionId);
     if (accepted < MAX_ACCEPTED_ARTISANS_PER_AUCTION) continue;
 
     await updateSmsCampaign(batch.id, {
@@ -999,7 +999,7 @@ export type AcquisitionTickResult = {
 
 async function acceptedCountForRequest(request: WorkRequest): Promise<number> {
   if (!request.auctionId) return 0;
-  return countAcceptedArtisansForAuction(request.auctionId);
+  return countContactUnlocksForAuction(request.auctionId);
 }
 
 /**

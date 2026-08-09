@@ -5,9 +5,11 @@ import BetaClosedNotice from "@/components/BetaClosedNotice";
 import ProRegistrationForm from "@/components/ProRegistrationForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
-import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
 import { getIsBetaMode } from "@/lib/beta-server";
-import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import {
+  UNLOCK_CREDITS_COST,
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
 import {
   REFERRAL_REWARD_CREDITS,
   REFERRAL_SPEND_THRESHOLD,
@@ -16,13 +18,13 @@ import {
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
   description:
-    "Rejoignez Artipascher, enchères inversées travaux Nord. Clients qualifiés 59/62, enchérissez sur les chantiers locaux.",
+    "Rejoignez Artipascher : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées avec des crédits.",
 };
 
 const FEATURES = [
   {
     title: "Clients qualifiés",
-    description: "Budget défini, demande validée. Prospects sérieux du Nord-Pas-de-Calais.",
+    description: "Demande validée, projet clair. Prospects sérieux du Nord-Pas-de-Calais.",
   },
   {
     title: "Marché local",
@@ -33,17 +35,17 @@ const FEATURES = [
     description: "Fini la prospection. Les clients viennent avec des projets clairs.",
   },
   {
-    title: "Concurrence équitable",
+    title: "Matching métier",
     description:
-      "Proposez votre meilleur prix. Le client compare les offres et choisit librement l'artisan retenu.",
+      "Vous ne voyez que les demandes alignées avec votre activité, votre département et les attentes client.",
   },
   {
-    title: "Transparence",
-    description: "Prix actuel, historique et temps restant visibles en temps réel.",
+    title: "Places limitées",
+    description: "Maximum 5 artisans par chantier — moins de concurrence inutile.",
   },
   {
     title: "Notifications",
-    description: "Alertes pour nouvelles enchères et surenchères sur vos projets.",
+    description: "Alertes pour les nouveaux chantiers dans votre zone.",
   },
   {
     title: "Parrainage",
@@ -53,13 +55,9 @@ const FEATURES = [
 
 const PRICING = [
   {
-    title: `Consulter le chantier · ${UNLOCK_PRICE_EUR} €`,
+    title: `Déblocage contact · ${UNLOCK_CREDITS_COST} crédits (${UNLOCK_PRICE_EUR} €)`,
     description:
-      "Débloquez les coordonnées du particulier pour visiter le chantier et établir votre devis gratuit sur place.",
-  },
-  {
-    title: `Enchérir · ${BID_FEE_EUR} € par enchère`,
-    description: `Placez une offre sur un projet. Maximum ${MAX_BIDS_PER_AUCTION} enchères par chantier. Paiement avant validation de l'offre.`,
+      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis directement.",
   },
 ];
 
@@ -67,17 +65,17 @@ const STEPS = [
   {
     title: "Inscription rapide",
     description:
-      "Niveau 1 instantané : SIRET contrôlé au registre du commerce, attestation décennale et RC pro obligatoires par métier.",
+      "Niveau 1 : SIRET contrôlé au registre du commerce, attestation décennale et RC pro obligatoires par métier.",
   },
   {
-    title: "Consultez et enchérissez",
+    title: "Débloquez les contacts",
     description:
-      "Parcourez les enchères actives, contactez un client et faites-lui un devis, de préférence inférieur au prix actuel.",
+      "Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (5 crédits, max. 5 artisans).",
   },
   {
-    title: "Soyez retenu par le client",
+    title: "Concluez hors plateforme",
     description:
-      "Le particulier compare les offres et choisit l'artisan qui lui convient. Devis conforme à votre enchère.",
+      "Appelez le client, visitez le chantier et envoyez votre devis — Artipascher ne prend aucune commission sur vos travaux.",
   },
 ];
 
@@ -91,9 +89,9 @@ export default async function ProfessionnelPage() {
             Développez votre activité dans le Nord-Pas-de-Calais
           </h1>
           <p className="mt-4 text-lg text-slate-300">
-            Rejoignez Artipascher : clients qualifiés en 59 et 62, enchères
-            inversées. Accès réservé aux entreprises inscrites au registre du
-            commerce.
+            Rejoignez Artipascher : clients qualifiés en 59 et 62, mise en
+            relation ciblée. Accès réservé aux entreprises inscrites au registre
+            du commerce.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <BetaAwareLink
@@ -112,7 +110,7 @@ export default async function ProfessionnelPage() {
               href="/encheres"
               className="rounded-xl border border-slate-600 px-8 py-3 font-semibold hover:bg-slate-800"
             >
-              Voir les enchères
+              Voir les chantiers
             </Link>
           </div>
         </div>

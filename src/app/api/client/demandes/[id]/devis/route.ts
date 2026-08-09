@@ -68,6 +68,14 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  const { CONTACT_ONLY_MODE, DEVIS_RETIRED_MESSAGE, retiredFeatureJson } =
+    await import("@/lib/product-features");
+  if (CONTACT_ONLY_MODE) {
+    return NextResponse.json(retiredFeatureJson(DEVIS_RETIRED_MESSAGE), {
+      status: 410,
+    });
+  }
+
   const session = await getClientSession();
   if (!session) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });

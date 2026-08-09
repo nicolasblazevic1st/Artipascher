@@ -91,8 +91,7 @@ export default function ProCreditsPanel() {
         <div>
           <h2 className="font-semibold text-slate-900">Crédits</h2>
           <p className="mt-1 text-sm text-slate-600">
-            1 crédit = {CREDIT_PRICE_EUR}&nbsp;€ — utilisable pour débloquer un contact ou
-            enchérir.
+            1 crédit = {CREDIT_PRICE_EUR}&nbsp;€ — déblocage contact = 5 crédits.
           </p>
         </div>
         <p className="rounded-full bg-brand-50 px-4 py-2 text-lg font-bold text-brand-800">

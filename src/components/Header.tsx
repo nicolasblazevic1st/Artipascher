@@ -8,7 +8,7 @@ import SiteLogo from "@/components/SiteLogo";
 const NAV_LINKS = [
   { href: "/particulier", label: "Particulier" },
   { href: "/professionnel", label: "Professionnel" },
-  { href: "/encheres", label: "Enchères" },
+  { href: "/encheres", label: "Offres" },
   { href: "/comment-ca-marche", label: "Présentation" },
   { href: "/faq", label: "FAQ" },
 ];

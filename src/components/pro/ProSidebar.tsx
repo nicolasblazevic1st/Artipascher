@@ -4,9 +4,7 @@ import ProLogoutButton from "./ProLogoutButton";
 
 const NAV = [
   { href: "/pro", label: "Tableau de bord", icon: "📊" },
-  { href: "/pro/encheres", label: "Enchères actives", icon: "🔨" },
-  { href: "/pro/mes-encheres", label: "Mes offres", icon: "📋" },
-  { href: "/pro/mes-devis", label: "Mes devis", icon: "📄" },
+  { href: "/pro/encheres", label: "Offres", icon: "🔨" },
   { href: "/pro/contacts", label: "Contacts", icon: "📞" },
   { href: "/pro/compte", label: "Mon compte", icon: "🏢" },
 ];
@@ -18,7 +16,7 @@ export default function ProSidebar({
   companyName: string;
   creditBalance: number;
 }) {
-  const low = creditBalance < 2;
+  const low = creditBalance < 5;
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100">
@@ -65,7 +63,7 @@ export default function ProSidebar({
           href="/encheres"
           className="block rounded-lg px-3 py-2 text-sm hover:bg-brand-700 hover:text-white"
         >
-          Voir le site public
+          Voir les chantiers publics
         </Link>
         <ProLogoutButton />
       </div>

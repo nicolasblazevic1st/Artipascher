@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
-import ProSubmitQuoteForm from "@/components/pro/ProSubmitQuoteForm";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
-import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import {
+  UNLOCK_CREDITS_COST,
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
 
 interface ClientContact {
   firstName: string;
@@ -17,19 +19,6 @@ interface ClientContact {
   companyName?: string;
   clientSiret?: string;
   clientKind?: "individual" | "company";
-}
-
-type InterestStatus = "none" | "pending" | "accepted" | "refused" | "expired";
-
-type ClaimStatus = "none" | "pending" | "approved" | "rejected";
-
-interface UnlockClaimInfo {
-  canClaim: boolean;
-  claimBlockedReason: string | null;
-  claimStatus: ClaimStatus;
-  refundedAt: string | null;
-  autoEligible: boolean;
-  hasQuote: boolean;
 }
 
 interface Props {
@@ -49,33 +38,8 @@ export default function ClientContactPanel({
   const [contact, setContact] = useState<ClientContact | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [interestLoading, setInterestLoading] = useState(false);
-  const [interestStatus, setInterestStatus] = useState<InterestStatus>("none");
   const [error, setError] = useState<string | null>(null);
   const [showLogin, setShowLogin] = useState(false);
-  const [claimInfo, setClaimInfo] = useState<UnlockClaimInfo | null>(null);
-  const [claimLoading, setClaimLoading] = useState(false);
-  const [claimMessage, setClaimMessage] = useState<string | null>(null);
-
-  const fetchClaimInfo = useCallback(async () => {
-    const res = await fetch(
-      `/api/pro/unlock-refund-claim?auctionId=${encodeURIComponent(auctionId)}`
-    );
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.unlocked) {
-      setClaimInfo(null);
-      return;
-    }
-    setClaimInfo({
-      canClaim: data.canClaim === true,
-      claimBlockedReason: data.claimBlockedReason ?? null,
-      claimStatus: (data.claimStatus as ClaimStatus) ?? "none",
-      refundedAt: data.refundedAt ?? null,
-      autoEligible: data.autoEligible === true,
-      hasQuote: data.hasQuote === true,
-    });
-  }, [auctionId]);
 
   const fetchContact = useCallback(async () => {
     const res = await fetch(`/api/pro/contact/${auctionId}`);
@@ -83,18 +47,7 @@ export default function ClientContactPanel({
       const data = await res.json();
       setUnlocked(true);
       setContact(data.contact);
-      await fetchClaimInfo();
     }
-  }, [auctionId, fetchClaimInfo]);
-
-  const fetchInterest = useCallback(async () => {
-    const res = await fetch("/api/pro/contact-requests");
-    if (!res.ok) return;
-    const data = await res.json();
-    const match = (data.requests ?? []).find(
-      (r: { auctionId: string; status: string }) => r.auctionId === auctionId
-    );
-    setInterestStatus(match ? (match.status as InterestStatus) : "none");
   }, [auctionId]);
 
   useEffect(() => {
@@ -105,7 +58,7 @@ export default function ClientContactPanel({
       if (session.companyName) setCompanyName(session.companyName);
 
       if (session.authenticated) {
-        await Promise.all([fetchContact(), fetchInterest()]);
+        await fetchContact();
       }
       setLoading(false);
 
@@ -116,28 +69,7 @@ export default function ClientContactPanel({
       }
     }
     init();
-  }, [auctionId, fetchContact, fetchInterest]);
-
-  async function handleInterest() {
-    setInterestLoading(true);
-    setError(null);
-    const res = await fetch("/api/pro/contact-requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId }),
-    });
-    const data = await res.json();
-    setInterestLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Impossible d'envoyer la demande.");
-      return;
-    }
-    const status =
-      data.request?.status === "accepted" || data.autoAccepted === true
-        ? "accepted"
-        : "pending";
-    setInterestStatus(status);
-  }
+  }, [auctionId, fetchContact]);
 
   async function handleUnlock(demo = false) {
     setPaying(true);
@@ -161,34 +93,12 @@ export default function ClientContactPanel({
     setError(data.error ?? "Paiement impossible.");
   }
 
-  async function handleClaimRefund() {
-    setClaimLoading(true);
-    setError(null);
-    setClaimMessage(null);
-    const res = await fetch("/api/pro/unlock-refund-claim", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId }),
-    });
-    const data = await res.json();
-    setClaimLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Signalement impossible.");
-      return;
-    }
-    setClaimMessage(data.message ?? "Signalement enregistré.");
-    await fetchClaimInfo();
-  }
-
   async function handleLogout() {
     await fetch("/api/pro/logout", { method: "POST" });
     setProLoggedIn(false);
     setUnlocked(false);
     setContact(null);
     setCompanyName("");
-    setInterestStatus("none");
-    setClaimInfo(null);
-    setClaimMessage(null);
   }
 
   if (loading) {
@@ -201,123 +111,71 @@ export default function ClientContactPanel({
 
   if (unlocked && contact) {
     return (
-      <>
-        <section id="contact" className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 className="text-lg font-semibold text-emerald-900">
-              Coordonnées client débloquées
-            </h2>
-            <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
-            Accès · 1 crédit
-            </span>
-          </div>
-          <p className="mt-1 text-xs text-emerald-700">
-            Connecté en tant que {companyName}
-          </p>
-          <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-            {contact.clientKind === "company" && contact.companyName && (
-              <div className="sm:col-span-2">
-                <dt className="text-emerald-600">Entreprise</dt>
-                <dd className="font-medium text-emerald-900">
-                  {contact.companyName}
-                  {contact.clientSiret ? ` · SIRET ${contact.clientSiret}` : ""}
-                </dd>
-              </div>
-            )}
-            <div>
-              <dt className="text-emerald-600">Contact</dt>
+      <section id="contact" className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold text-emerald-900">
+            Coordonnées client débloquées
+          </h2>
+          <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
+            Accès · {UNLOCK_CREDITS_COST} crédits
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-emerald-700">
+          Connecté en tant que {companyName}
+        </p>
+        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+          {contact.clientKind === "company" && contact.companyName && (
+            <div className="sm:col-span-2">
+              <dt className="text-emerald-600">Entreprise</dt>
               <dd className="font-medium text-emerald-900">
-                {contact.firstName} {contact.lastName}
+                {contact.companyName}
+                {contact.clientSiret ? ` · SIRET ${contact.clientSiret}` : ""}
               </dd>
-            </div>
-            <div>
-              <dt className="text-emerald-600">Téléphone</dt>
-              <dd className="font-medium text-emerald-900">
-                <span className="inline-flex flex-wrap items-center gap-2">
-                  {contact.phone}
-                  {contact.phoneVerified && (
-                    <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
-                      Vérifié SMS
-                    </span>
-                  )}
-                </span>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-emerald-600">Email</dt>
-              <dd className="font-medium text-emerald-900">{contact.email}</dd>
-            </div>
-            <div>
-              <dt className="text-emerald-600">Adresse</dt>
-              <dd className="font-medium text-emerald-900">
-                {contact.address}, {contact.postalCode}
-              </dd>
-            </div>
-          </dl>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-4 text-xs text-emerald-700 underline"
-          >
-            Se déconnecter
-          </button>
-
-          {claimInfo && (
-            <div className="mt-5 border-t border-emerald-200 pt-4">
-              <p className="text-sm font-medium text-emerald-900">
-                Client injoignable ?
-              </p>
-              <p className="mt-1 text-xs text-emerald-800">
-                Après 7 jours (et jusqu’à 30 jours), vous pouvez demander le
-                recréditage d’1 crédit si le client ne donne plus suite. Ce n’est
-                pas un remboursement automatique si vous avez déjà déposé un devis
-                ou si un autre artisan a été choisi.
-              </p>
-              {claimMessage && (
-                <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-sm text-emerald-900">
-                  {claimMessage}
-                </p>
-              )}
-              {error && (
-                <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                  {error}
-                </p>
-              )}
-              {claimInfo.claimStatus === "approved" || claimInfo.refundedAt ? (
-                <p className="mt-2 text-sm text-emerald-800">
-                  1 crédit a été recrédité pour ce contact.
-                </p>
-              ) : claimInfo.claimStatus === "pending" ? (
-                <p className="mt-2 text-sm text-amber-800">
-                  Signalement en cours d’examen.
-                </p>
-              ) : claimInfo.claimStatus === "rejected" ? (
-                <p className="mt-2 text-sm text-slate-700">
-                  Signalement refusé.
-                </p>
-              ) : claimInfo.canClaim ? (
-                <button
-                  type="button"
-                  onClick={() => void handleClaimRefund()}
-                  disabled={claimLoading}
-                  className="mt-3 rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-medium text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
-                >
-                  {claimLoading
-                    ? "Envoi…"
-                    : claimInfo.autoEligible
-                      ? "Demander le recréditage (1 crédit)"
-                      : "Signaler un désengagement (examen)"}
-                </button>
-              ) : claimInfo.claimBlockedReason ? (
-                <p className="mt-2 text-xs text-emerald-700">
-                  {claimInfo.claimBlockedReason}
-                </p>
-              ) : null}
             </div>
           )}
-        </section>
-        <ProSubmitQuoteForm auctionId={auctionId} />
-      </>
+          <div>
+            <dt className="text-emerald-600">Contact</dt>
+            <dd className="font-medium text-emerald-900">
+              {contact.firstName} {contact.lastName}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-emerald-600">Téléphone</dt>
+            <dd className="font-medium text-emerald-900">
+              <span className="inline-flex flex-wrap items-center gap-2">
+                {contact.phone}
+                {contact.phoneVerified && (
+                  <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+                    Vérifié SMS
+                  </span>
+                )}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-emerald-600">Email</dt>
+            <dd className="font-medium text-emerald-900">{contact.email}</dd>
+          </div>
+          <div>
+            <dt className="text-emerald-600">Adresse</dt>
+            <dd className="font-medium text-emerald-900">
+              {contact.address}, {contact.postalCode}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-4 text-xs text-emerald-800">
+          Service livré : vous disposez des coordonnées. Contactez le client,
+          convenez d’une visite et envoyez votre devis directement (hors
+          plateforme).
+        </p>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mt-4 text-xs text-emerald-700 underline"
+        >
+          Se déconnecter
+        </button>
+      </section>
     );
   }
 
@@ -325,11 +183,10 @@ export default function ClientContactPanel({
     <section id="contact" className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6">
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Les photos du projet restent visibles librement (sans crédit). Manifestez
-        votre intérêt (gratuit). Si le client a activé l&apos;alerte SMS (défaut),
-        votre demande est acceptée automatiquement (dans la limite de 5 artisans) et
-        vous pouvez débloquer les coordonnées pour 1 crédit ({UNLOCK_PRICE_EUR}
-        &nbsp;€). Sinon, le client a 48&nbsp;h pour répondre.
+        Les photos du projet restent visibles librement. Si votre activité
+        correspond aux attentes du client et qu’il reste une place (max. 5
+        artisans), débloquez les coordonnées pour {UNLOCK_CREDITS_COST} crédits (
+        {UNLOCK_PRICE_EUR}&nbsp;€).
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -381,7 +238,7 @@ export default function ClientContactPanel({
                   setProLoggedIn(true);
                   setCompanyName(name);
                   setShowLogin(false);
-                  await Promise.all([fetchContact(), fetchInterest()]);
+                  await fetchContact();
                 }}
               />
               <button
@@ -399,71 +256,32 @@ export default function ClientContactPanel({
           <p className="text-sm text-slate-600">
             Connecté : <strong>{companyName}</strong>
           </p>
-
-          {interestStatus === "none" && (
+          <button
+            type="button"
+            onClick={() => handleUnlock(false)}
+            disabled={paying}
+            className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
+          >
+            {paying
+              ? "Traitement…"
+              : `Débloquer · ${UNLOCK_CREDITS_COST} crédits (${UNLOCK_PRICE_EUR} €)`}
+          </button>
+          {process.env.NODE_ENV === "development" && (
             <button
               type="button"
-              onClick={handleInterest}
-              disabled={interestLoading}
-              className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
+              onClick={() => handleUnlock(true)}
+              disabled={paying}
+              className="block text-xs text-slate-500 underline"
             >
-              {interestLoading ? "Envoi…" : "Je suis intéressé (gratuit)"}
+              Mode démo (dev) — débloquer sans crédit
             </button>
           )}
-
-          {interestStatus === "pending" && (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Demande envoyée — en attente de la réponse du client (48&nbsp;h).
-            </p>
-          )}
-
-          {interestStatus === "refused" && (
-            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
-              Le client a décliné votre demande de contact.
-            </p>
-          )}
-
-          {interestStatus === "expired" && (
-            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
-              Votre demande a expiré sans réponse du client.
-            </p>
-          )}
-
-          {interestStatus === "accepted" && (
-            <>
-              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                Contact autorisé (acceptation client ou alerte SMS). Vous pouvez
-                débloquer les coordonnées.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleUnlock(false)}
-                disabled={paying}
-                className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
-              >
-                {paying
-                  ? "Traitement…"
-                  : `Débloquer · 1 crédit (${UNLOCK_PRICE_EUR} €)`}
-              </button>
-              {process.env.NODE_ENV === "development" && (
-                <button
-                  type="button"
-                  onClick={() => handleUnlock(true)}
-                  disabled={paying}
-                  className="block text-xs text-slate-500 underline"
-                >
-                  Mode démo (dev) — débloquer sans crédit
-                </button>
-              )}
-              <a
-                href="/pro/compte#credits"
-                className="block text-xs font-medium text-brand-700 underline"
-              >
-                Acheter des crédits
-              </a>
-            </>
-          )}
-
+          <a
+            href="/pro/compte#credits"
+            className="block text-xs font-medium text-brand-700 underline"
+          >
+            Acheter des crédits
+          </a>
           <button
             type="button"
             onClick={handleLogout}

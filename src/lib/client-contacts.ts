@@ -13,7 +13,7 @@ export interface ClientContact {
   clientKind?: "individual" | "company";
 }
 
-/** Données privées — jamais exposées sans paiement 1 € par un pro approuvé. */
+/** Données privées — jamais exposées sans paiement (crédits) par un pro approuvé. */
 export const CLIENT_CONTACTS: Record<string, ClientContact> = {
   "1": {
     auctionId: "1",
@@ -89,4 +89,7 @@ export function maskName(first: string, last: string): string {
   return `${first.charAt(0)}. ${last.charAt(0)}***`;
 }
 
-export const UNLOCK_PRICE_EUR = 1;
+/** Crédits consommés pour débloquer les coordonnées (1 crédit = 1 €). */
+export const UNLOCK_CREDITS_COST = 5;
+/** Montant TTC équivalent au déblocage contact. */
+export const UNLOCK_PRICE_EUR = UNLOCK_CREDITS_COST;

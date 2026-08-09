@@ -35,6 +35,14 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
+  const { CONTACT_ONLY_MODE, DEVIS_RETIRED_MESSAGE, retiredFeatureJson } =
+    await import("@/lib/product-features");
+  if (CONTACT_ONLY_MODE) {
+    return NextResponse.json(retiredFeatureJson(DEVIS_RETIRED_MESSAGE), {
+      status: 410,
+    });
+  }
+
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
