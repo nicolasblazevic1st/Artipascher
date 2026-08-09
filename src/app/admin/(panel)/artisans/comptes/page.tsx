@@ -209,7 +209,11 @@ export default function AdminComptesArtisansPage() {
                 <Row
                   label="Niveau"
                   value={
-                    a.qualificationLevel != null ? `N${a.qualificationLevel}` : "—"
+                    a.qualificationLevel === 0
+                      ? "Non certifié"
+                      : a.qualificationLevel != null
+                        ? "Certifié"
+                        : "—"
                   }
                 />
                 <Row label="Crédits" value={`${a.creditBalance} (dépensés ${a.spentCredits})`} />

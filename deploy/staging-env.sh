@@ -28,7 +28,8 @@ set_env NEXT_PUBLIC_BETA_MODE "false"
 set_env NEXT_PUBLIC_ARTIPASCHER_STAGING "1"
 set_env ARTIPASCHER_STAGING "1"
 set_env BETA_MODE "false"
-set_env PAYMENT_MODE "demo"
+# Stripe test (sandbox) — pas de clés live sur le staging
+set_env PAYMENT_MODE "stripe"
 set_env GOOGLE_PLACES_ENABLED "false"
 set_env OVH_SMS_ENABLED "false"
 

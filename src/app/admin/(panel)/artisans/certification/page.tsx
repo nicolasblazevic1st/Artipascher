@@ -15,14 +15,13 @@ import type { ProRegistration } from "@/lib/store-types";
 const STATUS_LABELS = {
   pending: { text: "En attente", className: "bg-amber-100 text-amber-800" },
   approved: { text: "Certifié", className: "bg-emerald-100 text-emerald-800" },
-  rejected: { text: "Niveau 0 / Refusé", className: "bg-red-100 text-red-800" },
+  rejected: { text: "Non certifié / Refusé", className: "bg-red-100 text-red-800" },
 };
 
 export default function AdminProfessionnelsPage() {
   const [registrations, setRegistrations] = useState<ProRegistration[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("approved");
   const [loading, setLoading] = useState(true);
-  const [pendingLevels, setPendingLevels] = useState<Record<string, QualificationLevel>>({});
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/professionnels");
@@ -150,29 +149,10 @@ export default function AdminProfessionnelsPage() {
                 {r.status === "pending" && (
                   <div className="flex flex-col items-end gap-2">
                     <p className="text-xs text-amber-700">Dossier legacy en attente</p>
-                    <label className="text-xs text-slate-500">
-                      Niveau affiché
-                      <select
-                        value={pendingLevels[r.id] ?? 1}
-                        onChange={(e) =>
-                          setPendingLevels((prev) => ({
-                            ...prev,
-                            [r.id]: Number(e.target.value) as QualificationLevel,
-                          }))
-                        }
-                        className="mt-1 block rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                      >
-                        <option value={1}>1 — Certifié</option>
-                        <option value={2}>2 — Qualifié</option>
-                        <option value={3}>3 — Premium</option>
-                      </select>
-                    </label>
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          handleReview(r.id, "approved", pendingLevels[r.id] ?? 1)
-                        }
+                        onClick={() => handleReview(r.id, "approved", 1)}
                         className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                       >
                         Approuver

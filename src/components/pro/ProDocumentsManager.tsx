@@ -141,7 +141,8 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {PRO_REGISTRATION_COMPARTMENTS.map((compartment) => {
+      {PRO_REGISTRATION_COMPARTMENTS.filter((c) => c.level === 1).map(
+        (compartment) => {
         const docs = compartment.documentIds
           .map((id) => PRO_REGISTRATION_DOCUMENTS.find((doc) => doc.id === id))
           .filter((doc): doc is ProRegistrationDocumentType => doc != null);
@@ -200,7 +201,7 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
             {isLevel1 && tradeSelections.length > 0 && (
               <div className="border-t border-brand-100 px-4 py-3">
                 <p className="text-xs font-semibold text-slate-900">
-                  Attestations décennale (niveau 1)
+                  Attestations décennale
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Une attestation par corps de métier déclaré.

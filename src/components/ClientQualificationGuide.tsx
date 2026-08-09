@@ -1,117 +1,58 @@
 "use client";
 
-import { useMemo } from "react";
 import HelpTooltip from "@/components/HelpTooltip";
-import {
-  QUALIFICATION_TIERS,
-  getRecommendedLevelForCategory,
-  type QualificationLevel,
-} from "@/lib/qualification-tiers";
+import { QUALIFICATION_TIERS } from "@/lib/qualification-tiers";
 
-const LEVEL_STYLES: Record<
-  Exclude<QualificationLevel, 0>,
-  { ring: string; badge: string; header: string }
-> = {
-  1: {
-    ring: "border-slate-200",
-    badge: "bg-slate-100 text-slate-700",
-    header: "bg-slate-50",
-  },
-  2: {
-    ring: "border-brand-200",
-    badge: "bg-brand-100 text-brand-800",
-    header: "bg-brand-50",
-  },
-  3: {
-    ring: "border-amber-200",
-    badge: "bg-amber-100 text-amber-900",
-    header: "bg-amber-50",
-  },
-};
+const LEVEL1 = QUALIFICATION_TIERS.find((t) => t.level === 1)!;
 
 interface Props {
-  /** Catégorie travaux sélectionnée dans le formulaire (optionnel) */
+  /** Conservé pour compatibilité avec le formulaire (non utilisé pour des niveaux). */
   selectedCategory?: string;
 }
 
-export default function ClientQualificationGuide({ selectedCategory = "" }: Props) {
-  const recommendedLevel = useMemo(
-    () => (selectedCategory ? getRecommendedLevelForCategory(selectedCategory) : 1),
-    [selectedCategory]
-  );
-
+export default function ClientQualificationGuide(_props: Props) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-base font-semibold text-slate-900">
         Documents vérifiés chez nos artisans
       </h3>
       <p className="mt-1 text-sm text-slate-600">
-        Chaque artisan affiche son niveau de qualification sur son profil. Aucune entreprise
-        n&apos;est refusée pour son niveau — vous comparez librement prix et profils. Survolez
+        Chaque artisan mis en relation a ses documents de base vérifiés. Survolez
         le{" "}
         <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600">
           ?
         </span>{" "}
-        pour comprendre chaque document.
+        pour comprendre chaque contrôle.
       </p>
 
-      {selectedCategory && (
-        <p className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
-          Pour <strong>{selectedCategory}</strong>, nous recommandons de privilégier les artisans{" "}
-          <strong>niveau {recommendedLevel}</strong> ou plus
-          {recommendedLevel >= 2 ? " (qualifications renforcées)" : ""} — sans obligation.
-        </p>
-      )}
-
-      <div className="mt-4 space-y-3">
-        {QUALIFICATION_TIERS.filter((tier) => tier.level > 0).map((tier) => {
-          const styles = LEVEL_STYLES[tier.level as Exclude<QualificationLevel, 0>];
-          const isRecommended =
-            selectedCategory !== "" && tier.level === recommendedLevel;
-
-          return (
-            <details
-              key={tier.level}
-              open={tier.level === 1 || isRecommended}
-              className={`rounded-xl border ${styles.ring}`}
+      <div className="mt-4 rounded-xl border border-slate-200">
+        <div className="rounded-t-xl bg-slate-50 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+              {LEVEL1.badge}
+            </span>
+            <span className="text-sm font-medium text-slate-900">
+              Documents obligatoires
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">{LEVEL1.summary}</p>
+        </div>
+        <ul className="divide-y divide-slate-100 rounded-b-xl bg-white px-4 py-2">
+          {LEVEL1.documents.map((doc) => (
+            <li
+              key={doc.id}
+              className="flex items-start gap-1 py-2.5 text-sm text-slate-700"
             >
-              <summary
-                className={`cursor-pointer list-none rounded-t-xl px-4 py-3 ${styles.header} [&::-webkit-details-marker]:hidden`}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles.badge}`}
-                  >
-                    {tier.badge}
-                  </span>
-                  <span className="text-sm font-medium text-slate-900">{tier.title}</span>
-                  {isRecommended && (
-                    <span className="text-xs font-medium text-brand-700">
-                      · particulièrement adapté à votre projet
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-slate-500">{tier.summary}</p>
-              </summary>
-              <ul className="divide-y divide-slate-100 rounded-b-xl border-t border-slate-100 bg-white px-4 py-2">
-                {tier.documents.map((doc) => (
-                  <li
-                    key={doc.id}
-                    className="flex items-start gap-1 py-2.5 text-sm text-slate-700"
-                  >
-                    <span className="mt-0.5 text-brand-600" aria-hidden>
-                      ✓
-                    </span>
-                    <span>
-                      {doc.label}
-                      <HelpTooltip label={doc.label} content={doc.help} />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          );
-        })}
+              <span className="mt-0.5 text-brand-600" aria-hidden>
+                ✓
+              </span>
+              <span>
+                {doc.label}
+                <HelpTooltip label={doc.label} content={doc.help} />
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

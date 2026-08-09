@@ -112,7 +112,7 @@ export interface ProRegistration {
   level1Audit?: ProLevel1Audit;
   /** Date de certification niveau 1 par l'admin. */
   level1CertifiedAt?: string;
-  /** Niveau affiché (0 = démoté / non certifié, 1 = Certifié, 2 = Qualifié, 3 = Premium). */
+  /** Certification (0 = retirée, 1 = certifié ; 2/3 legacy encore tolérés en lecture). */
   qualificationLevel?: QualificationLevel;
   /** Documents transmis à l'inscription (KBIS, assurances…). */
   documents?: ProDocument[];

@@ -56,33 +56,11 @@ export const PRO_REGISTRATION_COMPARTMENTS: ProRegistrationDocumentCompartment[]
   {
     level: 1,
     badge: "Certifié",
-    title: "Niveau 1 — Inscription rapide",
+    title: "Documents obligatoires",
     summary:
-      "Documents obligatoires pour une certification instantanée et accéder aux enchères.",
+      "Documents vérifiés pour accéder aux offres et débloquer les contacts clients.",
     documentIds: ["rc", "kbis"],
     includesDecennale: true,
-  },
-  {
-    level: 2,
-    badge: "Qualifié",
-    title: "Niveau 2 — Qualifié",
-    summary:
-      "Optionnel à l'inscription — recommandé pour la rénovation énergétique et les chantiers techniques.",
-    documentIds: ["rge", "qualibat"],
-  },
-  {
-    level: 3,
-    badge: "Premium",
-    title: "Niveau 3 — Premium (en développement)",
-    summary:
-      "Réservé aux partenaires de confiance — parcours complété avec notre équipe (fonctionnalité en cours de déploiement).",
-    documentIds: [],
-    infoOnly: true,
-    infoItems: [
-      "Charte qualité Artipascher signée",
-      "Références chantiers vérifiées dans le Nord",
-      "Entretien de validation avec notre équipe",
-    ],
   },
 ];
 

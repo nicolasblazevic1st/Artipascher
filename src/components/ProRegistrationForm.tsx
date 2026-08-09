@@ -354,7 +354,7 @@ export default function ProRegistrationForm() {
       {!fieldsEnabled && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
           Vérifiez votre SIRET pour débloquer la suite : coordonnées, métiers,
-          documents par niveau de qualification et mot de passe.
+          documents obligatoires et mot de passe.
         </p>
       )}
 
@@ -483,7 +483,7 @@ export default function ProRegistrationForm() {
       <section className={`space-y-4 ${!fieldsEnabled ? "opacity-60" : ""}`}>
         <div>
           <h3 className="text-sm font-semibold text-slate-900">
-            Documents par niveau de qualification
+            Documents obligatoires
           </h3>
           <p className="mt-1 text-xs text-slate-500">
             JPG, PNG, WebP ou PDF · max 10 Mo par fichier.
@@ -495,7 +495,8 @@ export default function ProRegistrationForm() {
           </p>
         </div>
 
-        {PRO_REGISTRATION_COMPARTMENTS.map((compartment) => {
+        {PRO_REGISTRATION_COMPARTMENTS.filter((c) => c.level === 1).map(
+          (compartment) => {
           const docs = PRO_REGISTRATION_DOCUMENTS.filter((doc) =>
             compartment.documentIds.includes(doc.id)
           );
@@ -725,7 +726,7 @@ export default function ProRegistrationForm() {
 
       {status === "success" && (
         <div className="space-y-2 text-center text-sm text-emerald-700">
-          <p className="font-semibold">Certification niveau 1 obtenue.</p>
+          <p className="font-semibold">Certification obtenue.</p>
           <p>
             Un email de confirmation vient de vous être envoyé. Validez votre adresse
             puis{" "}

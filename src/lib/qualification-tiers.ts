@@ -1,5 +1,5 @@
 export type QualificationLevel = 0 | 1 | 2 | 3;
-/** Niveaux affichés aux clients / sur les enchères (hors démotion). */
+/** Niveaux actifs (legacy 2/3 encore acceptés en base, affichés comme certifié). */
 export type ActiveQualificationLevel = Exclude<QualificationLevel, 0>;
 
 export interface QualificationDocument {
@@ -19,16 +19,16 @@ export interface QualificationTier {
 export const QUALIFICATION_TIERS: QualificationTier[] = [
   {
     level: 0,
-    badge: "Niveau 0",
-    title: "Niveau 0 — Non certifié",
+    badge: "Non certifié",
+    title: "Non certifié",
     summary:
-      "Certification retirée (fraude ou non-conformité). Compte refusé, plus d'accès aux enchères ni aux clients.",
+      "Certification retirée (fraude ou non-conformité). Compte refusé, plus d'accès aux offres ni aux clients.",
     documents: [],
   },
   {
     level: 1,
     badge: "Certifié",
-    title: "Niveau 1 — Essentiel",
+    title: "Documents vérifiés",
     summary: "Documents de base vérifiés pour les travaux courants.",
     documents: [
       {
@@ -53,74 +53,14 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
       },
     ],
   },
-  {
-    level: 2,
-    badge: "Qualifié",
-    title: "Niveau 2 — Qualifié",
-    summary: "Profil renforcé pour la rénovation énergétique et les chantiers techniques.",
-    documents: [
-      {
-        id: "rge",
-        label: "Label RGE (Reconnu Garant de l'Environnement)",
-        help: "Certification officielle pour l'isolation, le chauffage, les fenêtres… Condition pour toucher MaPrimeRénov' et certaines aides publiques.",
-      },
-      {
-        id: "qualibat",
-        label: "Qualibat ou qualification métier reconnue",
-        help: "Atteste les compétences réelles du corps de métier (peinture, électricité, gros œuvre…). Au-delà du simple SIRET.",
-      },
-      {
-        id: "anciennete",
-        label: "Ancienneté minimale (2 ans d'activité)",
-        help: "Réduit le risque d'entreprises éphémères. Une structure installée depuis plusieurs années inspire plus confiance.",
-      },
-    ],
-  },
-  {
-    level: 3,
-    badge: "Premium",
-    title: "Niveau 3 — Premium (en développement)",
-    summary: "Partenaires de confiance pour les gros chantiers et rénovations globales (en développement).",
-    documents: [
-      {
-        id: "charte",
-        label: "Charte qualité Artipascher signée",
-        help: "L'entreprise s'engage sur les délais, la propreté du chantier, un devis détaillé et un interlocuteur identifié.",
-      },
-      {
-        id: "references",
-        label: "Références chantiers vérifiées dans le Nord",
-        help: "Photos avant/après et chantiers réels dans votre région. Vous savez que d'autres clients ont déjà fait confiance.",
-      },
-      {
-        id: "entretien",
-        label: "Entretien de validation avec notre équipe",
-        help: "Contrôle humain complémentaire : sérieux, capacité à absorber votre projet, adéquation budget / prestation.",
-      },
-    ],
-  },
 ];
 
-/** Travaux pour lesquels un niveau 2+ est particulièrement pertinent (informatif). */
-export const LEVEL_2_CATEGORIES = [
-  "Rénovation énergétique",
-  "Isolation",
-  "Chauffage / Pompe à chaleur",
-  "Menuiserie (fenêtres, portes, volets)",
-] as const;
+/** @deprecated Plus de paliers par catégorie — toujours le niveau certifié. */
+export const LEVEL_2_CATEGORIES = [] as const;
 
 export function getRecommendedLevelForCategory(
-  category: string
+  _category: string
 ): ActiveQualificationLevel {
-  if (category === "Rénovation complète") return 3;
-  if (
-    category === "Rénovation énergétique" ||
-    category === "Isolation" ||
-    category === "Chauffage / Pompe à chaleur" ||
-    category === "Menuiserie (fenêtres, portes, volets)"
-  ) {
-    return 2;
-  }
   return 1;
 }
 
@@ -128,10 +68,10 @@ export function getRecommendedLevelForCategory(
 export const getMinimumLevelForCategory = getRecommendedLevelForCategory;
 
 export function getQualificationTier(level: QualificationLevel = 1) {
-  return (
-    QUALIFICATION_TIERS.find((t) => t.level === level) ??
-    QUALIFICATION_TIERS.find((t) => t.level === 1)!
-  );
+  if (level === 0) {
+    return QUALIFICATION_TIERS.find((t) => t.level === 0)!;
+  }
+  return QUALIFICATION_TIERS.find((t) => t.level === 1)!;
 }
 
 export function isActiveQualificationLevel(

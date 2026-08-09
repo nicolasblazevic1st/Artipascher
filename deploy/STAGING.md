@@ -37,7 +37,7 @@ sudo certbot --nginx -d dev.artipascher.fr
 | Branche | `master` | `dev` |
 | PM2 | `artipascher` :3000 | `artipascher-dev` :3002 |
 | Places / SMS | selon `.env` prod | **désactivés** |
-| Paiement | stripe ou demo | **demo** |
+| Paiement | stripe (live) | **stripe test** (`sk_test`) |
 | Mode bêta | bordereau + blocages | **désactivé** (`NEXT_PUBLIC_BETA_MODE=false`) |
 | Crons | actifs | **ne pas configurer** sur staging |
 | Admin | `ADMIN_PASSWORD` prod | **même mot de passe + `@`** |
