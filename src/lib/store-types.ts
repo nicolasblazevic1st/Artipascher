@@ -576,6 +576,8 @@ export interface ProCreditTransaction {
   /** +N à l'achat, -1 à la dépense. */
   amount: number;
   balanceAfter: number;
+  /** Montant payé en euros (achats Stripe). */
+  amountEur?: number;
   auctionId?: string;
   workRequestId?: string;
   stripeSessionId?: string;

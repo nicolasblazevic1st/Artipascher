@@ -19,6 +19,7 @@ import {
   getProCreditTransactions,
 } from "@/lib/store";
 import { UNLOCK_CREDITS_COST, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import { getSiteOrigin } from "@/lib/share";
 
 export async function GET() {
   const session = await getProSession();
@@ -104,8 +105,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const origin = request.nextUrl.origin;
-  const compteUrl = `${origin}/pro/compte`;
+  const compteUrl = `${getSiteOrigin(request)}/pro/compte`;
 
   const checkout = await createCreditPackCheckout({
     proId: session.proId,

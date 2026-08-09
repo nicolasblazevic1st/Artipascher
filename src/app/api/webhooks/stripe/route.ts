@@ -40,11 +40,18 @@ export async function POST(request: NextRequest) {
       session.metadata.packSize
     ) {
       const packSize = Number(session.metadata.packSize);
+      const priceEur = Number(session.metadata.priceEur);
       if (Number.isFinite(packSize) && packSize > 0) {
         await creditProWallet({
           proId: session.metadata.proId,
           type: "purchase",
           amount: packSize,
+          amountEur:
+            Number.isFinite(priceEur) && priceEur > 0
+              ? priceEur
+              : session.amount_total != null
+                ? session.amount_total / 100
+                : undefined,
           stripeSessionId: session.id,
           note: `Achat pack ${packSize} crédits`,
         });

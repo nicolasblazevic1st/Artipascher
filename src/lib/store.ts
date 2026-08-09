@@ -2708,6 +2708,7 @@ async function applyCreditDelta(
     proId: string;
     type: CreditTxnType;
     amount: number;
+    amountEur?: number;
     auctionId?: string;
     workRequestId?: string;
     stripeSessionId?: string;
@@ -2748,6 +2749,7 @@ async function applyCreditDelta(
     proId: data.proId,
     type: data.type,
     amount: data.amount,
+    amountEur: data.amountEur,
     balanceAfter: next,
     auctionId: data.auctionId,
     workRequestId: data.workRequestId,
@@ -2763,6 +2765,7 @@ export async function creditProWallet(data: {
   proId: string;
   type: CreditTxnType;
   amount: number;
+  amountEur?: number;
   auctionId?: string;
   workRequestId?: string;
   stripeSessionId?: string;
