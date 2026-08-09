@@ -35,6 +35,7 @@ const SECTIONS: NavSection[] = [
     title: "Acquisition",
     items: [
       { href: "/admin/base-artisans", label: "Base artisans NPC" },
+      { href: "/admin/bodacc", label: "BODACC procédures" },
       { href: "/admin/campagnes-sms", label: "Campagnes SMS" },
       { href: "/admin/conversions-sms", label: "Conversions SMS" },
     ],

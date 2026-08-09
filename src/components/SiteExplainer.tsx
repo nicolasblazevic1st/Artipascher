@@ -188,7 +188,7 @@ function SlideCriteres() {
           <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <span className="font-semibold text-slate-900">Ancienneté</span>
             <span className="mt-0.5 block text-[10px] text-slate-500">
-              Optionnel · ex. entreprise créée il y a plus de 2 ans
+              Ex. uniquement −2 ans ou uniquement +2 ans
             </span>
           </li>
           <li className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">

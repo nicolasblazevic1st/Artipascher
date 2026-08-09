@@ -87,8 +87,8 @@ export interface SmsCampaignPreviewDetailed {
   auctionUrl: string;
   defaultMessage: string;
   campaignSize: number;
-  /** Préférence client : favoriser entreprises ≥ 2 ans (mix SMS 2/3–1/3). */
-  preferEstablishedCompany: boolean;
+  /** Pref. client : true = ≥ 2 ans, false = &lt; 2 ans, undefined = mix (historique). */
+  preferEstablishedCompany?: boolean;
   geoFound: boolean;
   totalNearby: number;
   gouvCount: number;
@@ -155,9 +155,12 @@ function cohortTargets(
   campaignSize: number,
   preferEstablishedCompany?: boolean
 ): { young: number; established: number } {
-  if (preferEstablishedCompany) {
-    const young = Math.floor(campaignSize / 3);
-    return { young, established: campaignSize - young };
+  // Filtres exclusifs selon le choix client (plus de mix 50/50 ou 2/3).
+  if (preferEstablishedCompany === true) {
+    return { young: 0, established: campaignSize };
+  }
+  if (preferEstablishedCompany === false) {
+    return { young: campaignSize, established: 0 };
   }
   const young = Math.ceil(campaignSize / 2);
   return { young, established: campaignSize - young };
@@ -204,8 +207,10 @@ async function mergeProspectPool(
 }> {
   const targetPhones = Math.max(1, Math.floor(options?.targetPhones ?? 10));
   const fillPhonesViaPlaces = options?.fillPhonesViaPlaces !== false;
-  const preferEstablished = options?.preferEstablishedCompany === true;
-  const targets = cohortTargets(targetPhones, preferEstablished);
+  const targets = cohortTargets(
+    targetPhones,
+    options?.preferEstablishedCompany
+  );
 
   // Pas d’enrichissement aveugle : Places uniquement en marchant du plus proche au plus loin.
   const nearbyDb = await getArtisansNearWorkRequest(request, {
@@ -535,7 +540,7 @@ export async function previewSmsCampaignDetailed(
   const settings = await getSmsSettings();
   const opts = resolvePreviewOptions(campaignSizeOrOptions);
   const campaignSize = opts.campaignSize ?? settings.smsPerDay;
-  const preferEstablishedCompany = request.preferEstablishedCompany === true;
+  const preferEstablishedCompany = request.preferEstablishedCompany;
   const {
     withPhone: candidates,
     withoutPhone,

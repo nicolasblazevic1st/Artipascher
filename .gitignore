@@ -46,6 +46,8 @@ data/sirene/
 data/acquisition-naf-extras.json
 data/exports/
 data/*.tmp
+data/bodacc-scan-progress.json
+data/bodacc-active-procedures.json
 tmp/
 
 # uploads particuliers

@@ -918,9 +918,11 @@ export default function AdminSmsCampaignsPage() {
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
                   Proposition mix acquisition (jamais de re-SMS marketing)
-                  {preview.preferEstablishedCompany
-                    ? " — préférence client ≥2 ans → 2/3 établis / 1/3 jeunes"
-                    : " — ~50/50 &lt;2 ans / ≥2 ans"}{" "}
+                  {preview.preferEstablishedCompany === true
+                    ? " — préférence client → uniquement ≥2 ans"
+                    : preview.preferEstablishedCompany === false
+                      ? " — préférence client → uniquement &lt;2 ans"
+                      : " — mix ~50/50 &lt;2 ans / ≥2 ans"}{" "}
                   : {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
                   {preview.suggestedCounts.new_established} ≥2 ans · sélection :{" "}
                   {selectedByCohort.new_young} / {selectedByCohort.new_established}

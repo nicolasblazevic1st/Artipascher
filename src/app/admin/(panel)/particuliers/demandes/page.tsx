@@ -154,9 +154,11 @@ export default function AdminDemandesPage() {
                     </div>
                     <div>
                       Ancienneté :{" "}
-                      {r.preferEstablishedCompany
-                        ? "préfère +2 ans (mix SMS 2/3)"
-                        : "peu importe"}
+                      {r.preferEstablishedCompany === true
+                        ? "uniquement +2 ans"
+                        : r.preferEstablishedCompany === false
+                          ? "uniquement −2 ans"
+                          : "âge non précisé"}
                     </div>
                     <div>
                       Note Google :{" "}

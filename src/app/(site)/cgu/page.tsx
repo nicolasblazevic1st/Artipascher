@@ -149,10 +149,9 @@ export default function CguPage() {
           </li>
           <li>
             Le Client peut indiquer une préférence d&apos;
-            <strong>ancienneté d&apos;entreprise</strong> (notamment ≥&nbsp;2
-            ans) : il s&apos;agit d&apos;un critère de ciblage / prospection,{" "}
-            <strong>sans garantie</strong> sur le profil final des Artisans
-            mis en relation.
+            <strong>ancienneté d&apos;entreprise</strong> (&lt;&nbsp;2&nbsp;ans
+            ou ≥&nbsp;2&nbsp;ans) : ce critère filtre les Artisans qui peuvent
+            le contacter / être prospectés.
           </li>
           <li>
             Option (activée par défaut) :{" "}

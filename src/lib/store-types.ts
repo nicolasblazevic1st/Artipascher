@@ -294,8 +294,10 @@ export interface WorkRequest {
   /** Durée d'annonce / mise en contact en jours (max. 90). */
   auctionDurationDays: number;
   /**
-   * Si true : le particulier préfère une entreprise créée il y a plus de 2 ans.
-   * Influence le mix SMS (2/3 ≥2 ans, 1/3 &lt;2 ans).
+   * Ancienneté d'entreprise exigée pour les contacts / SMS :
+   * - true : uniquement ≥ 2 ans
+   * - false : uniquement &lt; 2 ans (accepte les jeunes entreprises)
+   * - undefined (historique) : pas de filtre d'âge
    */
   preferEstablishedCompany?: boolean;
   /**

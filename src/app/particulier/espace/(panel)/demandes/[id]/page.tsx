@@ -151,9 +151,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Ancienneté souhaitée</dt>
             <dd className="mt-1 text-sm font-semibold">
-              {request.preferEstablishedCompany
-                ? "Entreprise +2 ans (prioritaire)"
-                : "Peu importe"}
+              {request.preferEstablishedCompany === true
+                ? "Uniquement +2 ans"
+                : request.preferEstablishedCompany === false
+                  ? "Uniquement −2 ans"
+                  : "Peu importe"}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">

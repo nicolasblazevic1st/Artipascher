@@ -772,9 +772,11 @@ export default function WorkRequestForm({
               className="mt-1"
             />
             <span>
-              <span className="font-semibold text-slate-900">Peu importe</span>
+              <span className="font-semibold text-slate-900">
+                Moins de 2 ans d&apos;existence
+              </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Tous les artisans éligibles peuvent vous contacter.
+                Uniquement des entreprises créées il y a moins de 2 ans.
               </span>
             </span>
           </label>
@@ -798,8 +800,7 @@ export default function WorkRequestForm({
                 Plus de 2 ans d&apos;existence
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                On priorise les entreprises créées il y a plus de 2 ans
-                (environ 2/3 des contacts).
+                Uniquement des entreprises créées il y a plus de 2 ans.
               </span>
             </span>
           </label>

@@ -10,7 +10,8 @@
     "fixtures:docs": "node scripts/generate-test-documents.mjs",
     "fixtures:docs:verifiable": "node scripts/fetch-verifiable-test-docs.mjs",
     "fixtures:docs:verify": "npx tsx scripts/verify-verifiable-docs.mts",
-    "fixtures:bodacc": "npx tsx scripts/verify-bodacc.mts"
+    "fixtures:bodacc": "npx tsx scripts/verify-bodacc.mts",
+    "scan:bodacc": "npx tsx scripts/scan-bodacc-procedures.mts"
   },
   "dependencies": {
     "next": "^16.2.12",

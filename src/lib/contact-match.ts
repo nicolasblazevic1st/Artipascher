@@ -79,9 +79,9 @@ async function resolveProGoogleRating(
 }
 
 /**
- * Vérifie métier/NAF, zone (département), préférence « entreprise ≥ 2 ans »
- * et note Google minimale. Les annonces démo sans critères NAF restent
- * ouvertes aux pros approuvés.
+ * Vérifie métier/NAF, zone (département), préférence d'ancienneté
+ * (&lt; 2 ans ou ≥ 2 ans exclusif) et note Google minimale.
+ * Les annonces démo sans critères NAF restent ouvertes aux pros approuvés.
  */
 export async function evaluateProContactMatch(
   pro: ProRegistration,
@@ -131,6 +131,15 @@ export async function evaluateProContactMatch(
         ok: false,
         reason:
           "Le client souhaite une entreprise créée il y a plus de 2 ans.",
+      };
+    }
+  } else if (request.preferEstablishedCompany === false) {
+    const createdAt = await resolveProCompanyCreatedAt(pro);
+    if (!createdAt || companyAgeCohort(createdAt) !== "young") {
+      return {
+        ok: false,
+        reason:
+          "Le client souhaite une entreprise créée il y a moins de 2 ans.",
       };
     }
   }
