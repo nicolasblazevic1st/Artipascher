@@ -3,6 +3,7 @@ import AuctionCard from "@/components/AuctionCard";
 import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
+import TrustPillars from "@/components/TrustPillars";
 import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
 import { FAQ_ITEMS } from "@/lib/data";
 import {
@@ -22,9 +23,9 @@ const STEPS = [
       "Décrivez votre projet (ville 59 ou 62, photos, détails). Aucun compte obligatoire. Notre équipe valide puis publie l’annonce.",
   },
   {
-    title: "Les artisans vous contactent",
+    title: "Jusqu’à 5 artisans vous contactent",
     description:
-      "Les professionnels vérifiés correspondant à votre besoin débloquent vos coordonnées et vous joignent pour un devis sur place.",
+      "Des professionnels vérifiés de la région débloquent vos coordonnées et vous joignent pour un devis sur place.",
   },
   {
     title: "Comparez leurs propositions",
@@ -46,15 +47,15 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_50%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <p className="mb-4 inline-block rounded-full bg-white/10 px-4 py-1 text-sm font-medium backdrop-blur">
-            Spécialiste Nord-Pas-de-Calais · Nord 59 · Pas-de-Calais 62
+            Artipascher · 100&nbsp;% Nord-Pas-de-Calais · 59 / 62
           </p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Trouvez un artisan vérifié pour vos travaux dans le Nord-Pas-de-Calais
+            Jusqu&apos;à 5 artisans vérifiés pour vos travaux
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-brand-100">
-            Publiez votre demande gratuitement. Des artisans locaux inscrits au
-            registre du commerce débloquent vos coordonnées pour vous contacter
-            et établir un devis sur place.
+            Gratuit pour vous — l&apos;artisan paie le contact. Vous êtes mis en
+            relation avec des professionnels locaux contrôlés (décennale, RC
+            pro, avis Google, ancienneté, procédures collectives).
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <BetaAwareLink
@@ -73,11 +74,14 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <TrustPillars />
+
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-slate-900">Comment ça marche ?</h2>
           <p className="mt-2 text-slate-600">
-            Une demande, des artisans vérifiés, une mise en relation claire
+            Une demande, jusqu&apos;à 5 artisans vérifiés, une mise en relation
+            claire
           </p>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
@@ -203,7 +207,8 @@ export default async function HomePage() {
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-bold">Prêt à lancer votre projet ?</h2>
           <p className="mt-4 text-brand-100">
-            Gratuit pour les particuliers. Artisans vérifiés du Nord-Pas-de-Calais.
+            Gratuit pour vous — l&apos;artisan paie le contact. Jusqu&apos;à 5
+            artisans vérifiés du Nord-Pas-de-Calais.
           </p>
           <BetaAwareLink
             href="/particulier"

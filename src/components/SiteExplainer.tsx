@@ -56,13 +56,13 @@ function SlideIntro() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_50%)]" />
       <div className="relative">
         <p className="inline-block rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur">
-          Nord 59 · Pas-de-Calais 62
+          Artipascher · 100&nbsp;% Nord-Pas-de-Calais · 59 / 62
         </p>
         <h3 className="mt-4 text-xl font-bold sm:text-2xl">
-          Des artisans vérifiés pour vos travaux
+          Jusqu&apos;à 5 artisans vérifiés pour vos travaux
         </h3>
         <p className="mt-2 text-sm text-brand-100 sm:text-base">
-          Publiez · Filtrez · Ils vous contactent
+          Gratuit pour vous — l&apos;artisan paie le contact
         </p>
         <WorkTradesIconRow className="mt-4 justify-start" tone="onDark" maxItems={5} />
         <p className="mt-3 text-xs text-brand-200/90">{DATA_HOSTING_NOTICE}</p>
@@ -140,6 +140,12 @@ function SlideContact() {
   return (
     <MockBrowserChrome>
       <div className="explainer-enter space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+            Place 3 / 5 · vérifié
+          </span>
+          <span className="text-[10px] text-slate-500">Max. 5 artisans</span>
+        </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-xs font-semibold text-emerald-900">
             Coordonnées client débloquées · 20 €
@@ -155,6 +161,11 @@ function SlideContact() {
             </div>
           </dl>
         </div>
+        <ul className="grid grid-cols-2 gap-1.5 text-[10px] text-slate-600 sm:grid-cols-3">
+          <li className="rounded bg-slate-50 px-2 py-1">Décennale</li>
+          <li className="rounded bg-slate-50 px-2 py-1">RC pro</li>
+          <li className="rounded bg-slate-50 px-2 py-1">BODACC</li>
+        </ul>
         <div className="rounded-lg border border-dashed border-brand-300 bg-brand-50 p-3">
           <p className="text-xs text-brand-800">
             L&apos;artisan vous appelle, visite le chantier et envoie son devis
@@ -179,27 +190,27 @@ function SlideCriteres() {
         <ul className="space-y-2 text-xs text-slate-700">
           <li className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
             <span className="font-semibold text-emerald-950">
-              Obligatoire · statut &amp; assurances
+              Obligatoire · assurances &amp; juridique
             </span>
             <span className="mt-0.5 block text-[10px] text-emerald-800">
-              Entreprise active · décennale + RC pro à jour
+              Décennale · RC pro · pas de procédure collective active (BODACC)
             </span>
           </li>
           <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <span className="font-semibold text-slate-900">Ancienneté</span>
             <span className="mt-0.5 block text-[10px] text-slate-500">
-              Ex. uniquement −2 ans ou uniquement +2 ans
+              Uniquement −2 ans ou uniquement +2 ans
             </span>
           </li>
           <li className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-            <span className="font-semibold text-amber-950">Note Google</span>
+            <span className="font-semibold text-amber-950">Avis Google</span>
             <span className="mt-0.5 block text-[10px] text-amber-800">
-              Optionnel · ex. ≥ 4,0 / 5
+              Optionnel · filtre selon note connue (ex. ≥ 4,0 / 5)
             </span>
           </li>
         </ul>
         <p className="text-center text-[10px] text-slate-500">
-          Ce sont les artisans qui vous appellent — pas l&apos;inverse
+          Jusqu&apos;à 5 artisans vérifiés vous appellent — pas l&apos;inverse
         </p>
       </div>
     </MockBrowserChrome>
@@ -211,7 +222,7 @@ function SlideCta() {
     <div className="explainer-enter rounded-xl bg-brand-800 p-6 text-center text-white sm:p-8">
       <h3 className="text-lg font-bold sm:text-xl">Prêt à lancer votre projet ?</h3>
       <p className="mt-2 text-sm text-brand-100">
-        Gratuit pour les particuliers · Artisans vérifiés 59/62
+        Gratuit pour vous · jusqu&apos;à 5 artisans vérifiés 59/62
       </p>
       <span className="mt-4 inline-block rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-semibold">
         Demander des travaux

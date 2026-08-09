@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildReferralUrl } from "@/lib/referral";
 import { getProSession } from "@/lib/pro-auth";
+import { getSiteOrigin } from "@/lib/share";
 import {
   applyReferralCodeToPro,
   ensureProReferralCode,
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   await ensureProReferralCode(session.proId);
   const stats = await getProReferralStats(session.proId);
-  const origin = request.nextUrl.origin;
+  const origin = getSiteOrigin(request);
 
   return NextResponse.json({
     ...stats,
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   }
 
   const stats = await getProReferralStats(session.proId);
-  const origin = request.nextUrl.origin;
+  const origin = getSiteOrigin(request);
 
   return NextResponse.json({
     success: true,
