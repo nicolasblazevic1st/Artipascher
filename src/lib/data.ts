@@ -22,13 +22,13 @@ export interface Auction {
   startPrice: number;
   currentPrice: number;
   bidCount: number;
-  /** Artisans acceptés par le client (demandes de contact). */
+  /** Artisans ayant débloqué le contact. */
   acceptedArtisansCount: number;
-  /** Plafond d’artisans acceptés pour cette enchère. */
+  /** Plafond de déblocages pour cette annonce. */
   maxAcceptedArtisans: number;
   status: AuctionStatus;
   endsAt: string;
-  /** Enchère de démonstration (bande de démonstration). */
+  /** Annonce de démonstration (bande de démonstration). */
   isTest?: boolean;
   /** Première photo projet (visible sans crédit). */
   coverPhotoUrl?: string;
@@ -105,7 +105,7 @@ export function coordinatesForCity(city: string): { lat: number; lon: number } |
   return null;
 }
 
-/** Ancien catalogue démo hardcodé — vidé (fausses enchères sans photo / hors TEST). */
+/** Ancien catalogue démo hardcodé — vidé. */
 export const SAMPLE_AUCTIONS: Auction[] = [];
 
 /** Mention affichée sur la présentation et les pages de confiance. */
@@ -116,12 +116,12 @@ export const FAQ_ITEMS = [
   {
     question: "Le service est-il gratuit pour les particuliers ?",
     answer:
-      "Oui, la publication de votre projet est gratuite et sans engagement. Artipascher ne prend rien : aucun frais, aucune commission, aucun pourcentage sur vos travaux.",
+      "Oui. Publier une demande de travaux est gratuit et sans engagement. Artipascher ne prend aucune commission ni pourcentage sur vos travaux.",
   },
   {
-    question: "Comment fonctionnent les enchères inversées ?",
+    question: "Comment fonctionne Artipascher ?",
     answer:
-      "Les enchères inversées fonctionnent à l'inverse des enchères classiques. Le prix de départ est fixé au premier devis validé, puis les professionnels du Nord-Pas-de-Calais proposent des prix de plus en plus bas. À la clôture, vous comparez les offres et choisissez vous-même l'artisan retenu.",
+      "Vous publiez une annonce décrivant vos travaux. Les artisans vérifiés du Nord-Pas-de-Calais qui correspondent à votre besoin peuvent débloquer vos coordonnées (crédits) pour vous contacter, visiter le chantier et vous envoyer un devis directement. Vous choisissez librement l’artisan retenu.",
   },
   {
     question: "Artipascher couvre quelles zones ?",
@@ -131,37 +131,37 @@ export const FAQ_ITEMS = [
   {
     question: "Comment demander des travaux ?",
     answer:
-      "Créez d'abord un compte particulier (gratuit), confirmez votre email, puis publiez votre demande depuis votre espace : description d'au moins 100 caractères, au minimum 1 photo, et votre ville (59/62). Une fois validée par notre équipe, une enchère est créée ; le prix de départ sera fixé au premier devis validé.",
+      "Remplissez le formulaire de demande (description d’au moins 100 caractères, au minimum 1 photo, ville en 59/62) et vérifiez votre mobile par SMS. Aucun compte n’est obligatoire pour publier. Créer un compte ensuite vous permet de retrouver et suivre vos demandes. Après validation par notre équipe, l’annonce est publiée pour les artisans correspondants.",
   },
   {
     question: "Comment s'inscrire comme artisan ?",
     answer:
-      "Inscrivez-vous avec votre numéro SIRET. Nous vérifions obligatoirement votre inscription au registre du commerce (RCS) : entreprise active, établissement en 59 ou 62. KBIS et assurance complémentaires. Validation sous 24 à 48 h.",
+      "Inscrivez-vous avec votre numéro SIRET. Nous vérifions obligatoirement votre inscription au registre du commerce (RCS) : entreprise active, établissement en 59 ou 62. Documents professionnels (attestation décennale, RC pro) selon le métier. Validation sous 24 à 48 h.",
   },
   {
     question: "Pourquoi seuls les artisans inscrits au RCS sont visibles ?",
     answer:
-      "Artipascher ne met en relation qu'avec des entreprises du bâtiment inscrites au registre du commerce. Chaque SIRET est contrôlé en direct auprès du registre national. Les auto-entrepreneurs et sociétés non immatriculées ne peuvent pas enchérir.",
+      "Artipascher ne met en relation qu’avec des entreprises du bâtiment inscrites au registre du commerce. Chaque SIRET est contrôlé auprès du registre national. Les structures non immatriculées ne peuvent pas débloquer de contacts.",
   },
   {
-    question: "Combien de temps dure une enchère ?",
+    question: "Combien de temps reste visible une annonce ?",
     answer:
-      "Vous choisissez la durée lors de votre demande : de 7 jours à 3 mois maximum. Un compteur en temps réel indique le temps restant sur chaque fiche projet une fois l'enchère lancée.",
+      "Vous choisissez la durée lors de votre demande : de 7 jours à 3 mois maximum. Un compteur indique le temps restant sur chaque fiche une fois l’annonce publiée.",
   },
   {
-    question: "Combien coûte une enchère pour le professionnel ?",
+    question: "Combien coûte le déblocage pour le professionnel ?",
     answer:
-      "Chaque enchère coûte 1 € au professionnel inscrit et approuvé. Le paiement est obligatoire avant l'enregistrement de l'offre. Chaque offre doit être strictement inférieure au prix actuel, sans montant minimal imposé.",
+      "Une mise en contact coûte 1 crédit (20 € au tarif unitaire). Des packs à tarif dégressif sont proposés (ex. 10 crédits à 15 € / crédit). Chaque demande est limitée à 5 mises en contact maximum.",
   },
   {
     question: "Les coordonnées du client sont-elles visibles par tous ?",
     answer:
-      "Non. Nom, téléphone, email et adresse exacte sont masqués. Seuls les artisans inscrits au RCS, approuvés par l'admin, peuvent débloquer les coordonnées d'un chantier moyennant 1 € par enchère.",
+      "Non. Nom, téléphone, email et adresse exacte restent masqués. Seuls les artisans inscrits au RCS, approuvés, et correspondant au besoin peuvent débloquer les coordonnées (1 crédit · 20 €).",
   },
   {
-    question: "Comment choisir mon artisan à la fin de l'enchère ?",
+    question: "Comment choisir mon artisan ?",
     answer:
-      "Une fois l'enchère terminée, vous recevez la liste des offres des artisans vérifiés. Vous comparez les prix, les profils et les qualifications, puis vous sélectionnez librement l'artisan avec lequel vous souhaitez travailler. Le moins-disant n'est jamais imposé.",
+      "Les artisans intéressés vous contactent après avoir débloqué vos coordonnées. Vous échangez (visite, devis hors plateforme) et sélectionnez librement celui qui vous convient. Aucune attribution automatique.",
   },
   {
     question: "Où sont hébergées mes données personnelles ?",

@@ -185,9 +185,13 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
         )}
 
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-slate-900">Devis des artisans</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Artisans &amp; propositions
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Devis formalisés après visite sur site, validés par Artipascher.
+            Les devis se font directement avec les artisans qui vous contactent
+            après déblocage. L&apos;historique ci-dessous peut encore afficher
+            d&apos;anciennes propositions.
           </p>
           <div className="mt-4">
             <SelectArtisanPanel

@@ -39,16 +39,17 @@ export default function CguPage() {
           <li>
             <strong>Professionnel / Artisan</strong> : entreprise du bâtiment
             inscrite au registre du commerce, vérifiée (SIRET, documents),
-            autorisée à enchérir et à contacter des Clients.
+            autorisée à consulter les annonces et à débloquer le contact des
+            Clients.
           </li>
           <li>
             <strong>Utilisateur</strong> : toute personne accédant au Site
             (visiteur, Client ou Professionnel).
           </li>
           <li>
-            <strong>Enchère inversée</strong> : mécanisme par lequel des
-            Professionnels proposent des montants décroissants sur un projet de
-            travaux publié.
+            <strong>Annonce / offre</strong> : publication d&apos;une demande de
+            travaux validée, visible par les Professionnels correspondants
+            pendant la durée choisie par le Client.
           </li>
           <li>
             <strong>Crédits</strong> : unités prépayées permettant aux
@@ -71,7 +72,8 @@ export default function CguPage() {
         <ul>
           <li>aux Clients de décrire un projet de travaux ;</li>
           <li>
-            aux Professionnels de formuler des propositions (enchères / devis) ;
+            aux Professionnels de débloquer les coordonnées d&apos;un Client
+            pour le contacter et établir un devis hors Plateforme ;
           </li>
           <li>
             au Client de choisir librement l&apos;artisan avec lequel il
@@ -120,8 +122,10 @@ export default function CguPage() {
         </p>
         <h3>5.3 Clients</h3>
         <p className="mt-3">
-          Les Clients s&apos;engagent à décrire leurs projets de bonne foi
-          (localisation, photos, description) et à ne publier aucun contenu
+          La publication d&apos;une demande peut se faire sans compte ; la
+          création d&apos;un compte Client est recommandée pour suivre les
+          demandes. Les Clients s&apos;engagent à décrire leurs projets de bonne
+          foi (localisation, photos, description) et à ne publier aucun contenu
           illicite, trompeur ou portant atteinte aux tiers.
         </p>
       </section>
@@ -151,7 +155,7 @@ export default function CguPage() {
             <strong>alerte SMS</strong> lorsqu&apos;un Artisan souhaite le
             contacter. Si cette option est activée, la demande de contact est{" "}
             <strong>acceptée automatiquement</strong>, dans la limite de{" "}
-            <strong>5 Artisans</strong> par enchère ; le Client est informé
+            <strong>5 Artisans</strong> par annonce ; le Client est informé
             (SMS, email et/ou notification). Si l&apos;option est désactivée, le
             Client accepte ou refuse manuellement sous 48&nbsp;h.
           </li>
@@ -165,25 +169,25 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>7. Enchères et mise en relation</h2>
+        <h2>7. Annonces et mise en relation</h2>
         <ul>
           <li>
             Une demande de travaux peut être validée par l&apos;équipe
-            Artipascher avant ouverture d&apos;une enchère.
+            Artipascher avant publication de l&apos;annonce.
           </li>
           <li>
-            Les montants proposés sur la Plateforme constituent des{" "}
-            <strong>indications</strong> ; le devis formalisé après visite du
-            Professionnel prime en principe sur les estimations en ligne.
+            Les devis sont établis{" "}
+            <strong>directement entre le Client et l&apos;Artisan</strong>{" "}
+            (visite, échange hors Plateforme). Artipascher ne centralise pas de
+            devis concurrentiels.
           </li>
           <li>
             Le Client choisit librement l&apos;Artisan ; aucune attribution
             automatique n&apos;est imposée.
           </li>
           <li>
-            Certaines actions professionnelles (déblocage, dépôt d&apos;enchère)
-            peuvent être soumises à consommation de crédits (voir{" "}
-            <Link href="/cgv">CGV</Link>).
+            Le déblocage des coordonnées est soumis à consommation de crédits
+            (voir <Link href="/cgv">CGV</Link>).
           </li>
           <li>
             Le déblocage donne accès aux{" "}

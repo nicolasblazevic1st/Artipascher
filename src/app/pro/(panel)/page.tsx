@@ -3,7 +3,10 @@ import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
 import { CATEGORY_LABELS, formatLocation } from "@/lib/data";
 import { getProDashboardStats, getProForSession, hasContactUnlock } from "@/lib/store";
-import { UNLOCK_CREDITS_COST } from "@/lib/client-contacts";
+import {
+  UNLOCK_CREDITS_COST,
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
 import {
   MAX_CONTACT_UNLOCKS_PER_REQUEST,
   remainingAcceptSlots,
@@ -46,8 +49,8 @@ export default async function ProDashboardPage() {
           href="/pro/contacts"
         />
         <StatCard
-          label="Crédits / contact"
-          value={UNLOCK_CREDITS_COST}
+          label="€ / contact"
+          value={UNLOCK_PRICE_EUR}
           href="/pro/compte#credits"
         />
       </div>
@@ -61,7 +64,8 @@ export default async function ProDashboardPage() {
             </Link>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Matching + {UNLOCK_CREDITS_COST} crédits pour débloquer les coordonnées
+            Matching + {UNLOCK_CREDITS_COST} crédit ({UNLOCK_PRICE_EUR}&nbsp;€)
+            pour une mise en contact
           </p>
           {available.length === 0 ? (
             <p className="mt-4 text-sm text-slate-500">
@@ -98,8 +102,9 @@ export default async function ProDashboardPage() {
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-600">
             <li>Parcourez les offres qui matchent votre métier et votre zone.</li>
             <li>
-              Débloquez les coordonnées ({UNLOCK_CREDITS_COST} crédits) tant qu’il
-              reste une place (max. 5 artisans).
+              Mise en contact ({UNLOCK_CREDITS_COST} crédit ·{" "}
+              {UNLOCK_PRICE_EUR}&nbsp;€) tant qu’il reste une place (max. 5
+              artisans).
             </li>
             <li>
               Contactez le client, visitez le chantier et envoyez votre devis

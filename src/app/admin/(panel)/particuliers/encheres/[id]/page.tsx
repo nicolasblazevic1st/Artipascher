@@ -4,7 +4,10 @@ import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
-import { UNLOCK_CREDITS_COST } from "@/lib/client-contacts";
+import {
+  UNLOCK_CREDITS_COST,
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { formatNafList } from "@/lib/naf-trade-groups";
 import {
@@ -85,7 +88,8 @@ export default async function AdminOffreDetailPage({ params }: Props) {
             {activeUnlocks.length}/{auction.maxAcceptedArtisans}
           </p>
           <p className="text-xs text-slate-400">
-            {UNLOCK_CREDITS_COST} crédits / déblocage
+            {UNLOCK_CREDITS_COST} crédit · {UNLOCK_PRICE_EUR}&nbsp;€ / mise en
+            contact
           </p>
         </div>
       </div>

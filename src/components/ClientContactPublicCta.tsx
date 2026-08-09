@@ -28,7 +28,7 @@ export default function ClientContactPublicCta({
       <p className="mt-2 text-sm text-slate-600">
         Les photos restent visibles librement. Depuis votre espace pro, débloquez
         les coordonnées si vous correspondez aux attentes du client (max. 5
-        artisans) pour {UNLOCK_CREDITS_COST} crédits ({UNLOCK_PRICE_EUR}&nbsp;€).
+        artisans) pour {UNLOCK_PRICE_EUR}&nbsp;€ ({UNLOCK_CREDITS_COST} crédit).
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">

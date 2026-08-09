@@ -19,6 +19,10 @@ import {
 import { primaryTradeCategory } from "@/lib/pro-trades";
 import { applyRcsActivitiesToTradeSelection } from "@/lib/naf-trade-groups";
 import { isValidSiretFormat, normalizeSiret, type RcsVerificationResult } from "@/lib/rcs";
+import {
+  REFERRAL_REWARD_CREDITS,
+  REFERRAL_SPEND_THRESHOLD,
+} from "@/lib/store-types";
 
 type FormStatus = "idle" | "verifying" | "verified" | "submitting" | "success" | "error";
 
@@ -269,7 +273,8 @@ export default function ProRegistrationForm() {
         <p className="font-semibold">Accès réservé aux entreprises inscrites au RCS</p>
         <p className="mt-1 text-amber-800">
           Seules les entreprises vérifiées au registre du commerce (SIRET valide,
-          établissement actif, siège en 59 ou 62) peuvent s&apos;inscrire et enchérir.
+          établissement actif, siège en 59 ou 62) peuvent s&apos;inscrire et
+          débloquer des contacts.
           Joignez vos documents dès l&apos;inscription pour accélérer la validation.
         </p>
       </div>
@@ -659,7 +664,8 @@ export default function ProRegistrationForm() {
         />
         <p className="mt-1 text-xs text-slate-500">
           Si une entreprise vérifiée vous a invité, saisissez son code. Après{" "}
-          5 crédits dépensés, votre parrain reçoit 5 crédits.
+          {REFERRAL_SPEND_THRESHOLD} crédit dépensé, votre parrain reçoit{" "}
+          {REFERRAL_REWARD_CREDITS} crédit.
         </p>
       </div>
 

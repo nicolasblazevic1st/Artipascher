@@ -1,6 +1,5 @@
 import { randomBytes } from "crypto";
 import type { WorkRequest } from "./store-types";
-import { formatPrice } from "./data";
 
 export function getSiteOrigin(): string {
   const url = process.env.NEXT_PUBLIC_SITE_URL;
@@ -27,17 +26,14 @@ export function getPublicShareUrl(shareToken: string): string {
 }
 
 export function buildShareTitle(request: Pick<WorkRequest, "category" | "city" | "department">): string {
-  return `Enchère inversée : ${request.category} à ${request.city} (${request.department})`;
+  return `Offre travaux : ${request.category} à ${request.city} (${request.department})`;
 }
 
 export function buildShareText(
   request: Pick<WorkRequest, "category" | "city" | "department" | "startPrice">
 ): string {
   const title = buildShareTitle(request);
-  if (request.startPrice != null) {
-    return `${title} — prix de départ ${formatPrice(request.startPrice)}. Artisans du Nord-Pas-de-Calais, enchérissez sur Artipascher !`;
-  }
-  return `${title}. Artisans du Nord-Pas-de-Calais, déposez votre devis sur Artipascher !`;
+  return `${title}. Artisans du Nord-Pas-de-Calais : débloquez le contact sur Artipascher pour joindre le client.`;
 }
 
 export function buildFacebookShareUrl(pageUrl: string): string {

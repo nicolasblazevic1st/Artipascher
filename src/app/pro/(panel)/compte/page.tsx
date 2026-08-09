@@ -65,7 +65,7 @@ export default async function ProComptePage() {
             />
             <Row label="Métiers Qualibat" value={formatProTradeSelections(pro)} />
             <Row
-              label="Catégorie enchères (principale)"
+              label="Catégorie principale"
               value={CATEGORY_LABELS[pro.category] ?? pro.category}
             />
             <Row label="Email" value={pro.email} />
@@ -79,11 +79,10 @@ export default async function ProComptePage() {
         <section className="rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-slate-900">Activité</h2>
           <dl className="mt-4 space-y-3 text-sm">
-            <Row label="Offres placées" value={String(stats.totalBids)} />
-            <Row label="Projets suivis" value={String(stats.auctionsParticipated)} />
             <Row label="Contacts débloqués" value={String(stats.contactUnlocks)} />
+            <Row label="Projets suivis" value={String(stats.auctionsParticipated)} />
             <Row
-              label="Frais d'enchères cumulés"
+              label="Crédits dépensés (historique)"
               value={`${stats.totalFeesEur.toFixed(2)} €`}
             />
             <Row

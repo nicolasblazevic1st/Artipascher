@@ -9,6 +9,7 @@ import { getProSession } from "@/lib/pro-auth";
 import {
   CREDIT_PACKS,
   CREDIT_PRICE_EUR,
+  getCreditPack,
   type CreditPackSize,
 } from "@/lib/store-types";
 import {
@@ -17,6 +18,7 @@ import {
   getProCreditBalance,
   getProCreditTransactions,
 } from "@/lib/store";
+import { UNLOCK_CREDITS_COST, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 export async function GET() {
   const session = await getProSession();
@@ -32,6 +34,8 @@ export async function GET() {
   return NextResponse.json({
     balance,
     creditPriceEur: CREDIT_PRICE_EUR,
+    unlockCreditsCost: UNLOCK_CREDITS_COST,
+    unlockPriceEur: UNLOCK_PRICE_EUR,
     packs: CREDIT_PACKS,
     transactions: transactions.slice(0, 50),
     demoAllowed: isDemoPaymentAllowed(),
@@ -63,9 +67,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  if (!CREDIT_PACKS.includes(packSize as CreditPackSize)) {
+  const pack = getCreditPack(packSize);
+  if (!pack || !CREDIT_PACKS.some((p) => p.credits === (packSize as CreditPackSize))) {
     return NextResponse.json(
-      { error: `Pack invalide. Choisissez parmi : ${CREDIT_PACKS.join(", ")}.` },
+      {
+        error: `Pack invalide. Choisissez parmi : ${CREDIT_PACKS.map((p) => p.credits).join(", ")}.`,
+      },
       { status: 400 }
     );
   }
@@ -74,8 +81,8 @@ export async function POST(request: NextRequest) {
     const result = await creditProWallet({
       proId: session.proId,
       type: "demo_grant",
-      amount: packSize,
-      note: `Pack démo ${packSize} crédits`,
+      amount: pack.credits,
+      note: `Pack démo ${pack.credits} crédits`,
     });
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -83,7 +90,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       demo: true,
       balance: result.balance,
-      credited: packSize,
+      credited: pack.credits,
     });
   }
 
@@ -103,7 +110,7 @@ export async function POST(request: NextRequest) {
   const checkout = await createCreditPackCheckout({
     proId: session.proId,
     proEmail: session.email,
-    packSize,
+    packSize: pack.credits,
     successUrl: compteUrl,
     cancelUrl: compteUrl,
   });
@@ -114,6 +121,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     checkoutUrl: checkout.url,
-    amountEur: packSize * CREDIT_PRICE_EUR,
+    amountEur: pack.priceEur,
+    credits: pack.credits,
   });
 }

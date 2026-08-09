@@ -14,19 +14,19 @@ import { WORK_CATEGORIES } from "@/lib/work-categories";
 
 const STEPS = [
   {
-    title: "Demandez vos travaux",
+    title: "Publiez votre demande",
     description:
-      "Créez une demande avec votre ville (59 ou 62), vos photos et une description détaillée. Notre équipe valide votre projet.",
+      "Décrivez votre projet (ville 59 ou 62, photos, détails). Aucun compte obligatoire. Notre équipe valide puis publie l’annonce.",
   },
   {
-    title: "Enchère inversée",
+    title: "Les artisans vous contactent",
     description:
-      "Une enchère est créée. Les artisans du Nord-Pas-de-Calais proposent des prix de plus en plus bas, librement.",
+      "Les professionnels vérifiés correspondant à votre besoin débloquent vos coordonnées et vous joignent pour un devis sur place.",
   },
   {
-    title: "Choisissez votre artisan",
+    title: "Vous choisissez librement",
     description:
-      "À la fin de l'enchère, comparez les offres reçues et sélectionnez librement l'artisan avec lequel vous souhaitez travailler.",
+      "Échangez avec les artisans intéressés et retenez celui qui vous convient. Artipascher ne prend aucune commission sur vos travaux.",
   },
 ];
 
@@ -46,12 +46,12 @@ export default async function HomePage() {
             Spécialiste Nord-Pas-de-Calais · Nord 59 · Pas-de-Calais 62
           </p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Enchères inversées pour vos travaux dans le Nord-Pas-de-Calais
+            Trouvez un artisan vérifié pour vos travaux dans le Nord-Pas-de-Calais
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-brand-100">
-            Artipascher connecte particuliers et artisans locaux inscrits au
-            registre du commerce. Le prix de départ est fixé au premier devis validé, les professionnels
-            vérifiés font baisser le prix.
+            Publiez votre demande gratuitement. Des artisans locaux inscrits au
+            registre du commerce débloquent vos coordonnées pour vous contacter
+            et établir un devis sur place.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <BetaAwareLink
@@ -73,7 +73,9 @@ export default async function HomePage() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-slate-900">Comment ça marche ?</h2>
-          <p className="mt-2 text-slate-600">Un processus simple, inspiré du modèle enchères inversées</p>
+          <p className="mt-2 text-slate-600">
+            Une demande, des artisans vérifiés, une mise en relation claire
+          </p>
         </div>
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {STEPS.map((step, index) => (
@@ -107,17 +109,17 @@ export default async function HomePage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h2 className="text-3xl font-bold text-slate-900">
-                Enchères actives dans le Nord-Pas-de-Calais
+                Offres de particuliers dans le Nord-Pas-de-Calais
               </h2>
               <p className="mt-2 text-slate-600">
-                Dernières opportunités disponibles en 59 et 62
+                Dernières demandes publiées en 59 et 62
               </p>
             </div>
             <Link
               href="/encheres"
               className="text-sm font-semibold text-brand-700 hover:text-brand-800"
             >
-              Voir toutes les enchères →
+              Voir toutes les offres →
             </Link>
           </div>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -151,8 +153,8 @@ export default async function HomePage() {
               <p className="mt-3 font-medium text-slate-900">{category}</p>
               <p className="mt-1 text-xs text-slate-500">
                 {activeCategories.has(category)
-                  ? "Enchères actives"
-                  : "Aucune enchère"}
+                  ? "Offres actives"
+                  : "Aucune offre"}
               </p>
             </div>
           ))}

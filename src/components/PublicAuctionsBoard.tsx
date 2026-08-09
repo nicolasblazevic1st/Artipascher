@@ -113,7 +113,7 @@ export default function PublicAuctionsBoard({
       <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-sm font-semibold text-slate-900">Zone géographique</p>
         <p className="mt-1 text-xs text-slate-500">
-          Filtrez les enchères par département ou autour d&apos;une ville.
+          Filtrez les offres par département ou autour d&apos;une ville.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -235,7 +235,7 @@ export default function PublicAuctionsBoard({
       </div>
 
       <p className="mt-6 text-sm text-slate-500">
-        {filtered.length} enchère{filtered.length !== 1 ? "s" : ""} affichée
+        {filtered.length} offre{filtered.length !== 1 ? "s" : ""} affichée
         {filtered.length !== 1 ? "s" : ""}
         {mode === "distance" && selectedCity
           ? ` · autour de ${selectedCity.city} (${radiusKm} km)`
@@ -246,11 +246,11 @@ export default function PublicAuctionsBoard({
 
       {mode === "distance" && !selectedCity ? (
         <p className="mt-8 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
-          Sélectionnez une ville pour afficher les enchères à proximité.
+          Sélectionnez une ville pour afficher les offres à proximité.
         </p>
       ) : filtered.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
-          Aucune enchère active dans cette zone.
+          Aucune offre active dans cette zone.
         </p>
       ) : (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

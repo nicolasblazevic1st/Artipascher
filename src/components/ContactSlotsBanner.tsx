@@ -21,7 +21,7 @@ const TONE_CLASS: Record<Tone, string> = {
 };
 
 /**
- * Bandeau visible : places de contact encore disponibles sur une enchère.
+ * Bandeau visible : places de contact encore disponibles sur une annonce.
  * Désactivable via `CONTACT_SLOTS_BANNER_ENABLED` ou `NEXT_PUBLIC_CONTACT_SLOTS_BANNER=false`.
  */
 export default function ContactSlotsBanner({

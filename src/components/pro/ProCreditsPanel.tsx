@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CREDIT_PRICE_EUR } from "@/lib/store-types";
+import {
+  CREDIT_PACKS,
+  CREDIT_PRICE_EUR,
+  creditPackUnitPriceEur,
+  type CreditPack,
+} from "@/lib/store-types";
+import { UNLOCK_CREDITS_COST, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 interface Txn {
   id: string;
@@ -14,8 +20,8 @@ interface Txn {
 
 const TXN_LABELS: Record<string, string> = {
   purchase: "Achat",
-  spend_unlock: "Déblocage contact",
-  spend_bid: "Enchère",
+  spend_unlock: "Mise en contact",
+  spend_bid: "Ancienne enchère",
   refund_unlock: "Recrédit contact",
   admin_adjust: "Ajustement",
   demo_grant: "Crédit démo",
@@ -24,7 +30,7 @@ const TXN_LABELS: Record<string, string> = {
 
 export default function ProCreditsPanel() {
   const [balance, setBalance] = useState(0);
-  const [packs, setPacks] = useState<number[]>([1, 5, 10, 20]);
+  const [packs, setPacks] = useState<CreditPack[]>([...CREDIT_PACKS]);
   const [transactions, setTransactions] = useState<Txn[]>([]);
   const [demoAllowed, setDemoAllowed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -37,7 +43,9 @@ export default function ProCreditsPanel() {
     const data = await res.json();
     if (res.ok) {
       setBalance(data.balance ?? 0);
-      setPacks(data.packs ?? [1, 5, 10, 20]);
+      if (Array.isArray(data.packs) && data.packs.length > 0) {
+        setPacks(data.packs as CreditPack[]);
+      }
       setTransactions(data.transactions ?? []);
       setDemoAllowed(data.demoAllowed === true);
     }
@@ -91,7 +99,8 @@ export default function ProCreditsPanel() {
         <div>
           <h2 className="font-semibold text-slate-900">Crédits</h2>
           <p className="mt-1 text-sm text-slate-600">
-            1 crédit = {CREDIT_PRICE_EUR}&nbsp;€ — déblocage contact = 5 crédits.
+            1 crédit = {CREDIT_PRICE_EUR}&nbsp;€ = {UNLOCK_CREDITS_COST} mise en
+            contact ({UNLOCK_PRICE_EUR}&nbsp;€). Packs à tarif dégressif.
           </p>
         </div>
         <p className="rounded-full bg-brand-50 px-4 py-2 text-lg font-bold text-brand-800">
@@ -108,30 +117,43 @@ export default function ProCreditsPanel() {
         </p>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        {packs.map((size) => (
-          <button
-            key={size}
-            type="button"
-            disabled={buying !== null}
-            onClick={() => buy(size, false)}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            {buying === size
-              ? "…"
-              : `Acheter ${size} · ${size * CREDIT_PRICE_EUR} €`}
-          </button>
-        ))}
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {packs.map((pack) => {
+          const unit = creditPackUnitPriceEur(pack);
+          const saving =
+            pack.credits > 1
+              ? Math.round((1 - unit / CREDIT_PRICE_EUR) * 100)
+              : 0;
+          return (
+            <button
+              key={pack.credits}
+              type="button"
+              disabled={buying !== null}
+              onClick={() => buy(pack.credits, false)}
+              className="rounded-lg border border-brand-200 bg-brand-50/40 px-4 py-3 text-left hover:border-brand-400 hover:bg-brand-50 disabled:opacity-50"
+            >
+              <p className="text-sm font-semibold text-slate-900">
+                {buying === pack.credits
+                  ? "…"
+                  : `${pack.credits} crédit${pack.credits > 1 ? "s" : ""} · ${pack.priceEur} €`}
+              </p>
+              <p className="mt-0.5 text-xs text-slate-600">
+                {unit}&nbsp;€ / crédit
+                {saving > 0 ? ` · −${saving} %` : ""}
+              </p>
+            </button>
+          );
+        })}
       </div>
 
       {demoAllowed && (
         <button
           type="button"
           disabled={buying !== null}
-          onClick={() => buy(5, true)}
+          onClick={() => buy(1, true)}
           className="mt-3 text-xs text-slate-500 underline"
         >
-          Mode démo — ajouter 5 crédits sans paiement
+          Mode démo — ajouter 1 crédit sans paiement
         </button>
       )}
 

@@ -46,7 +46,7 @@ export default function ClientQualificationGuide({ selectedCategory = "" }: Prop
         Documents vérifiés chez nos artisans
       </h3>
       <p className="mt-1 text-sm text-slate-600">
-        Chaque artisan affiche son niveau de qualification lors des enchères. Aucune entreprise
+        Chaque artisan affiche son niveau de qualification sur son profil. Aucune entreprise
         n&apos;est refusée pour son niveau — vous comparez librement prix et profils. Survolez
         le{" "}
         <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600">

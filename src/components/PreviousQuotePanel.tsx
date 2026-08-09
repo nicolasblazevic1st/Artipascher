@@ -36,9 +36,8 @@ export default function PreviousQuotePanel({ amount, proofUrl, note, compact = f
       <h2 className="text-sm font-semibold text-amber-900">Devis précédent communiqué</h2>
       <p className="mt-1 text-sm text-amber-800">
         Le client indique avoir déjà reçu une offre à{" "}
-        <strong>{formatPrice(amount)}</strong> d&apos;un autre artisan. Ce montant sert de{" "}
-        <strong>prix de départ</strong> à l&apos;ouverture de l&apos;enchère, jusqu&apos;à
-        validation du premier devis Artipascher après visite.
+        <strong>{formatPrice(amount)}</strong> d&apos;un autre artisan. Ce montant
+        est fourni à titre indicatif pour contextualiser le projet.
       </p>
       {note && (
         <p className="mt-2 text-sm text-amber-900/80">

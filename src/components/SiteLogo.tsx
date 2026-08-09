@@ -45,11 +45,10 @@ export default function SiteLogo({ compact = false }: { compact?: boolean }) {
             compact ? "text-base" : "text-lg sm:text-xl lg:text-[1.35rem]"
           }`}
         >
-          <span className="font-semibold text-brand-700">Enchères</span>{" "}
           <span className="text-brand-800">ARTIPASCHER</span>
         </p>
         <p className="hidden text-[11px] text-slate-500 sm:block sm:text-xs">
-          Enchères inversées · Nord 59/62
+          Travaux · Artisans vérifiés · Nord 59/62
         </p>
       </div>
     </Link>

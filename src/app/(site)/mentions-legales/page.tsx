@@ -90,8 +90,8 @@ export default function MentionsLegalesPage() {
           Artipascher est une plateforme numérique de mise en relation entre
           particuliers (ou clients professionnels) et artisans du bâtiment
           inscrits au registre du commerce, opérant principalement dans les
-          départements du Nord (59) et du Pas-de-Calais (62), au moyen
-          d&apos;enchères inversées.
+          départements du Nord (59) et du Pas-de-Calais (62), via la
+          publication d&apos;annonces et le déblocage de contacts.
         </p>
         <p className="mt-3">
           Artipascher agit en qualité d&apos;<strong>intermédiaire technique</strong>{" "}

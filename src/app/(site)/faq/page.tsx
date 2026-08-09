@@ -3,7 +3,7 @@ import BetaAwareLink from "@/components/BetaAwareLink";
 import { FAQ_ITEMS } from "@/lib/data";
 
 export const metadata: Metadata = {
-  title: "FAQ — Enchères inversées travaux Nord-Pas-de-Calais",
+  title: "FAQ — Travaux & artisans vérifiés Nord-Pas-de-Calais",
 };
 
 export default function FaqPage() {
@@ -11,7 +11,8 @@ export default function FaqPage() {
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <h1 className="text-4xl font-bold text-slate-900">Foire aux questions</h1>
       <p className="mt-2 text-slate-600">
-        Tout sur les enchères inversées Artipascher dans le Nord-Pas-de-Calais
+        Tout sur Artipascher : demandes de travaux et mise en relation dans le
+        Nord-Pas-de-Calais
       </p>
 
       <div className="mt-10 space-y-4">

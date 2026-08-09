@@ -47,7 +47,7 @@ export async function GET(
     return NextResponse.json(
       {
         error:
-          "Accès non débloqué. Dépensez 5 crédits pour voir les coordonnées.",
+          "Accès non débloqué. Une mise en contact (1 crédit · 20 €) est requise.",
         unlocked: false,
       },
       { status: 403 }

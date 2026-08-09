@@ -7,7 +7,7 @@ import { DATA_HOSTING_NOTICE } from "@/lib/data";
 export const metadata: Metadata = {
   title: "Comment ça marche — Présentation",
   description:
-    "Découvrez Artipascher en 90 secondes : enchères inversées, devis après visite, artisans vérifiés Nord 59/62.",
+    "Découvrez Artipascher en 90 secondes : publiez votre demande, les artisans vérifiés vous contactent, vous choisissez — Nord 59/62.",
 };
 
 export default function CommentCaMarchePage() {
@@ -21,8 +21,9 @@ export default function CommentCaMarchePage() {
           Comment fonctionne Artipascher ?
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          Du particulier à l&apos;artisan vérifié : demande, visite, devis, puis
-          enchères inversées dans le Nord-Pas-de-Calais.
+          Du particulier à l&apos;artisan vérifié : vous publiez une demande,
+          les professionnels débloquent vos coordonnées, vous choisissez
+          librement — dans le Nord-Pas-de-Calais.
         </p>
         <WorkTradesIconRow className="mt-6" />
       </div>
@@ -49,7 +50,7 @@ export default function CommentCaMarchePage() {
           className="rounded-2xl border border-brand-200 bg-brand-50 p-6 transition hover:border-brand-300"
         >
           <p className="font-semibold text-brand-800">Je suis artisan</p>
-          <p className="mt-1 text-sm text-slate-600">Rejoindre les enchères 59/62</p>
+          <p className="mt-1 text-sm text-slate-600">Voir les offres 59/62</p>
         </Link>
       </div>
     </div>

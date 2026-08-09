@@ -232,8 +232,8 @@ export default function SelectArtisanPanel({
 
       {!selected && !canSelect && (
         <p className="text-sm text-amber-700">
-          Votre demande est en cours de validation. Vous pourrez choisir un artisan dès que
-          l&apos;enchère sera lancée.
+          Votre demande est en cours de validation. Vous pourrez suivre les
+          artisans intéressés dès que l&apos;annonce sera publiée.
         </p>
       )}
 

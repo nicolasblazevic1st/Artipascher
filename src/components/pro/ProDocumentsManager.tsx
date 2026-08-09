@@ -82,7 +82,7 @@ function DocumentUploadRow({
       )}
       {!existing && docType.id === "rc" && (
         <p className="text-xs text-amber-700">
-          Document obligatoire pour accéder pleinement aux enchères.
+          Document obligatoire pour accéder pleinement aux offres.
         </p>
       )}
     </li>

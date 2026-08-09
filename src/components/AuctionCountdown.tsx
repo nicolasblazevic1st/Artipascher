@@ -21,7 +21,7 @@ function splitRemaining(ms: number): {
 }
 
 /**
- * Compte à rebours jusqu'à la fin d'une enchère.
+ * Compte à rebours jusqu'à la fin d'une annonce.
  */
 export default function AuctionCountdown({
   endsAt,
@@ -75,7 +75,7 @@ export default function AuctionCountdown({
         aria-live="polite"
       >
         {ended
-          ? "Enchère terminée"
+          ? "Annonce terminée"
           : days > 0
             ? `Fin dans ${days}j ${pad(hours)}h ${pad(minutes)}m`
             : `Fin dans ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`}
@@ -96,7 +96,7 @@ export default function AuctionCountdown({
       aria-live="polite"
     >
       <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-        {ended ? "Enchère terminée" : "Compte à rebours — temps restant"}
+        {ended ? "Annonce terminée" : "Compte à rebours — temps restant"}
       </p>
       {ended ? (
         <p className="mt-1 text-sm font-semibold">

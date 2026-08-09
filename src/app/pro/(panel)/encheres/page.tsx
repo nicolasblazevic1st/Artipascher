@@ -9,7 +9,10 @@ import {
   remainingAcceptSlots,
   MAX_CONTACT_UNLOCKS_PER_REQUEST,
 } from "@/lib/contact-slots";
-import { UNLOCK_CREDITS_COST } from "@/lib/client-contacts";
+import {
+  UNLOCK_CREDITS_COST,
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
 import { CATEGORY_LABELS, formatLocation } from "@/lib/data";
 import { hasContactUnlock } from "@/lib/store";
 
@@ -33,8 +36,8 @@ export default async function ProChantiersPage() {
       <h1 className="text-2xl font-bold text-slate-900">Offres de particuliers</h1>
       <p className="mt-1 text-sm text-slate-600">
         {auctions.length} projet{auctions.length > 1 ? "s" : ""} disponible
-        {auctions.length > 1 ? "s" : ""} en 59/62 · {UNLOCK_CREDITS_COST} crédits
-        pour débloquer un contact
+        {auctions.length > 1 ? "s" : ""} en 59/62 · {UNLOCK_PRICE_EUR}&nbsp;€ (
+        {UNLOCK_CREDITS_COST} crédit) par mise en contact
       </p>
 
       <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">

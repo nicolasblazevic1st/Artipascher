@@ -49,15 +49,15 @@ const FEATURES = [
   },
   {
     title: "Parrainage",
-    description: `Invitez une entreprise vérifiée avec votre lien. Dès qu'elle dépense ${REFERRAL_SPEND_THRESHOLD} crédits, vous en recevez ${REFERRAL_REWARD_CREDITS}.`,
+    description: `Invitez une entreprise vérifiée avec votre lien. Dès qu'elle dépense ${REFERRAL_SPEND_THRESHOLD} crédit, vous en recevez ${REFERRAL_REWARD_CREDITS}.`,
   },
 ];
 
 const PRICING = [
   {
-    title: `Déblocage contact · ${UNLOCK_CREDITS_COST} crédits (${UNLOCK_PRICE_EUR} €)`,
+    title: `Mise en contact · ${UNLOCK_PRICE_EUR} € (${UNLOCK_CREDITS_COST} crédit)`,
     description:
-      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis directement.",
+      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Packs crédits à tarif dégressif.",
   },
 ];
 
@@ -70,7 +70,7 @@ const STEPS = [
   {
     title: "Débloquez les contacts",
     description:
-      "Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (5 crédits, max. 5 artisans).",
+      `Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (${UNLOCK_PRICE_EUR} € / mise en contact, max. 5 artisans).`,
   },
   {
     title: "Concluez hors plateforme",
@@ -162,8 +162,8 @@ export default async function ProfessionnelPage() {
           <h2 className="text-3xl font-bold">Parrainez une entreprise vérifiée</h2>
           <p className="mt-4 text-lg text-brand-100">
             Depuis votre espace pro, récupérez votre code ou votre lien de parrainage.
-            Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD} crédits sur
-            Artipascher, vous recevez {REFERRAL_REWARD_CREDITS} crédits.
+            Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD}{" "}
+            crédit sur Artipascher, vous recevez {REFERRAL_REWARD_CREDITS} crédit.
           </p>
           <ul className="mx-auto mt-8 max-w-xl space-y-3 text-left text-sm text-brand-50">
             <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">
@@ -173,7 +173,7 @@ export default async function ProfessionnelPage() {
               2. Le filleul valide le code à l&apos;inscription ou dans Mon compte
             </li>
             <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">
-              3. Après {REFERRAL_SPEND_THRESHOLD} crédits dépensés, vous êtes crédité
+              3. Après {REFERRAL_SPEND_THRESHOLD} crédit dépensé, vous êtes crédité
               automatiquement
             </li>
           </ul>

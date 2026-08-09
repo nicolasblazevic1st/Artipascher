@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { BID_FEE_EUR } from "./auctions";
 import { UNLOCK_PRICE_EUR } from "./client-contacts";
+import { CREDIT_PRICE_EUR, getCreditPack } from "./store-types";
 
 export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
@@ -36,8 +37,8 @@ export async function createContactUnlockCheckout(params: {
           currency: "eur",
           unit_amount: UNLOCK_PRICE_EUR * 100,
           product_data: {
-            name: "Accès coordonnées client",
-            description: `Enchère : ${params.auctionTitle}`,
+            name: "Mise en contact client",
+            description: `Offre : ${params.auctionTitle}`,
           },
         },
         quantity: 1,
@@ -108,7 +109,9 @@ export async function createCreditPackCheckout(params: {
   const stripe = getStripe();
   if (!stripe) return null;
 
-  const amountEur = params.packSize * UNLOCK_PRICE_EUR;
+  const pack = getCreditPack(params.packSize);
+  if (!pack) return null;
+  const unit = Math.round((pack.priceEur / pack.credits) * 100) / 100;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -117,10 +120,10 @@ export async function createCreditPackCheckout(params: {
       {
         price_data: {
           currency: "eur",
-          unit_amount: amountEur * 100,
+          unit_amount: pack.priceEur * 100,
           product_data: {
-            name: `${params.packSize} crédit${params.packSize > 1 ? "s" : ""} Artipascher`,
-            description: "1 crédit = 1 € — utilisable pour débloquer un contact ou enchérir",
+            name: `${pack.credits} crédit${pack.credits > 1 ? "s" : ""} Artipascher`,
+            description: `Tarif dégressif · ${unit} € / crédit (réf. ${CREDIT_PRICE_EUR} €) — 1 crédit = 1 mise en contact`,
           },
         },
         quantity: 1,
@@ -129,7 +132,8 @@ export async function createCreditPackCheckout(params: {
     metadata: {
       type: "credit_purchase",
       proId: params.proId,
-      packSize: String(params.packSize),
+      packSize: String(pack.credits),
+      priceEur: String(pack.priceEur),
     },
     success_url: `${params.successUrl}?credits=1`,
     cancel_url: params.cancelUrl,

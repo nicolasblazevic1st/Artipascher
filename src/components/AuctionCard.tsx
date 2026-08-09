@@ -6,7 +6,6 @@ import {
   Auction,
   CATEGORY_LABELS,
   formatLocation,
-  formatPrice,
 } from "@/lib/data";
 import {
   isContactSlotsBannerEnabled,
@@ -20,11 +19,13 @@ export default function AuctionCard({
   auction: Auction;
   showDemoBanner?: boolean;
 }) {
-  const savings = auction.startPrice - auction.currentPrice;
+  const accepted = auction.acceptedArtisansCount ?? 0;
+  const max =
+    auction.maxAcceptedArtisans ?? MAX_ACCEPTED_ARTISANS_PER_AUCTION;
+  const slotsLeft = Math.max(0, max - accepted);
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-brand-200 hover:shadow-md">
-      {/* Photo pleine largeur — le bandeau vient après, jamais en overlay */}
       {auction.coverPhotoUrl ? (
         <img
           src={auction.coverPhotoUrl}
@@ -37,13 +38,7 @@ export default function AuctionCard({
 
       {isContactSlotsBannerEnabled() && (
         <div className="border-t border-slate-100 px-3 pt-3">
-          <ContactSlotsBanner
-            accepted={auction.acceptedArtisansCount ?? 0}
-            max={
-              auction.maxAcceptedArtisans ?? MAX_ACCEPTED_ARTISANS_PER_AUCTION
-            }
-            compact
-          />
+          <ContactSlotsBanner accepted={accepted} max={max} compact />
         </div>
       )}
 
@@ -70,38 +65,24 @@ export default function AuctionCard({
 
         <AuctionCountdown endsAt={auction.endsAt} className="mt-3" />
 
-        <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center">
+        <dl className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-center">
           <div>
-            <dt className="text-xs text-slate-500">Départ</dt>
-            <dd className="text-sm font-semibold text-slate-700">
-              {formatPrice(auction.startPrice)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-slate-500">Actuel</dt>
+            <dt className="text-xs text-slate-500">Contacts</dt>
             <dd className="text-sm font-bold text-brand-700">
-              {formatPrice(auction.currentPrice)}
+              {accepted} / {max}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Offres</dt>
-            <dd className="text-sm font-semibold text-slate-700">
-              {auction.bidCount}
-            </dd>
+            <dt className="text-xs text-slate-500">Places restantes</dt>
+            <dd className="text-sm font-semibold text-slate-700">{slotsLeft}</dd>
           </div>
         </dl>
-
-        {savings > 0 && (
-          <p className="mt-2 text-center text-xs font-medium text-brand-600">
-            −{formatPrice(savings)} depuis le départ
-          </p>
-        )}
 
         <Link
           href={`/encheres/${auction.id}`}
           className="mt-4 rounded-lg bg-brand-600 py-2.5 text-center text-sm font-medium text-white transition hover:bg-brand-700"
         >
-          Voir le chantier
+          Voir l&apos;offre
         </Link>
       </div>
     </article>

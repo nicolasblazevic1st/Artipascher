@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
   if (needsCredits && !(demo && isDemoPaymentAllowed())) {
     return NextResponse.json(
       {
-        error: `Solde insuffisant. Il faut ${UNLOCK_CREDITS_COST} crédits (1 crédit = 1 €) pour débloquer ce contact.`,
+        error: `Solde insuffisant. Il faut ${UNLOCK_CREDITS_COST} crédit (${UNLOCK_PRICE_EUR} €) pour une mise en contact.`,
         needsCredits: true,
         balance,
         requiredCredits: UNLOCK_CREDITS_COST,
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
       credits: UNLOCK_CREDITS_COST,
       auctionId,
       workRequestId: workRequest?.id,
-      note: `Déblocage coordonnées client (${UNLOCK_CREDITS_COST} crédits)`,
+      note: `Mise en contact client (${UNLOCK_CREDITS_COST} crédit · ${UNLOCK_PRICE_EUR} €)`,
     });
     if ("error" in spent) {
       return NextResponse.json(

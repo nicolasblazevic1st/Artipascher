@@ -34,6 +34,7 @@ import {
   normalizeSiret,
   type RcsVerificationResult,
 } from "@/lib/rcs";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 export interface WorkRequestFormDefaults {
   firstName: string;
@@ -456,15 +457,14 @@ export default function WorkRequestForm({
     <div className="mt-8 space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
       <div className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
-        <p className="font-medium">Pour une enchère de qualité :</p>
+        <p className="font-medium">Pour une annonce de qualité :</p>
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
-          <li>Téléphone obligatoire pour être joint par l&apos;artisan choisi</li>
+          <li>Mobile vérifié par SMS pour être joint par les artisans</li>
           <li>Adresse du chantier vérifiée via la Base Adresse Nationale (État)</li>
           <li>Date souhaitée de début des travaux</li>
-          <li>Prix de départ : devis précédent (si fourni) ou 1er devis Artipascher validé</li>
-          <li>Option : joindre un devis déjà reçu (montant + justificatif)</li>
+          <li>Option : joindre un devis déjà reçu (montant + justificatif) pour contextualiser</li>
         </ul>
       </div>
 
@@ -575,7 +575,7 @@ export default function WorkRequestForm({
         />
         <p className="mt-1 text-xs text-slate-500">
           Mobile français obligatoire, vérifié par SMS — communiqué aux artisans
-          uniquement après déblocage (5 crédits).
+          uniquement après mise en contact ({UNLOCK_PRICE_EUR}&nbsp;€).
         </p>
         {phoneVerified ? (
           <p className="mt-2 text-sm font-medium text-emerald-700">

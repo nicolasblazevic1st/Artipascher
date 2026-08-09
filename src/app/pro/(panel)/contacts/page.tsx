@@ -17,20 +17,21 @@ export default async function ProContactsPage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Contacts</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Coordonnées des particuliers dont vous avez débloqué le contact (1&nbsp;crédit).
+        Coordonnées des particuliers dont vous avez débloqué le contact
+        (20&nbsp;€ · 1 crédit).
       </p>
 
       {contacts.length === 0 ? (
         <div className="mt-10 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
           <p className="text-slate-600">
-            Aucun contact débloqué pour le moment. Manifestez votre intérêt sur une
-            enchère, puis débloquez les coordonnées après acceptation du client.
+            Aucun contact débloqué pour le moment. Parcourez les offres
+            correspondantes et débloquez les coordonnées pour joindre le client.
           </p>
           <Link
             href="/pro/encheres"
             className="mt-4 inline-block rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
           >
-            Parcourir les enchères
+            Parcourir les offres
           </Link>
         </div>
       ) : (

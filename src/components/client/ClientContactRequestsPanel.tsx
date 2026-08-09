@@ -169,7 +169,8 @@ export default function ClientContactRequestsPanel({ workRequestId }: Props) {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Artisans intéressés</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Acceptez un artisan pour qu&apos;il puisse débloquer vos coordonnées (1&nbsp;crédit).
+            Acceptez un artisan pour qu&apos;il puisse débloquer vos coordonnées
+            (20&nbsp;€ · 1 crédit).
             Vous avez 48&nbsp;h pour répondre. Après un refus ou une expiration, vous pouvez
             rappeler un artisan une seule fois.
           </p>

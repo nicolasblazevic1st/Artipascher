@@ -89,7 +89,7 @@ export function maskName(first: string, last: string): string {
   return `${first.charAt(0)}. ${last.charAt(0)}***`;
 }
 
-/** Crédits consommés pour débloquer les coordonnées (1 crédit = 1 €). */
-export const UNLOCK_CREDITS_COST = 5;
-/** Montant TTC équivalent au déblocage contact. */
-export const UNLOCK_PRICE_EUR = UNLOCK_CREDITS_COST;
+/** Crédits consommés pour une mise en contact (1 crédit = 20 €). */
+export const UNLOCK_CREDITS_COST = 1;
+/** Montant TTC de référence d’une mise en contact (= 1 crédit). */
+export const UNLOCK_PRICE_EUR = 20;

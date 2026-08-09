@@ -19,11 +19,11 @@ export async function generateMetadata(): Promise<Metadata> {
       process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
     ),
     title: {
-      default: "Artipascher — Enchères inversées travaux Nord 59/62",
+      default: "Artipascher — Travaux & artisans vérifiés Nord 59/62",
       template: "%s | Artipascher",
     },
     description:
-      "Plateforme d'enchères inversées pour vos travaux dans le Nord-Pas-de-Calais.",
+      "Publiez votre demande de travaux dans le Nord-Pas-de-Calais. Des artisans vérifiés débloquent vos coordonnées pour vous contacter.",
     icons: {
       icon: [
         { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },

@@ -11,8 +11,8 @@ export default async function Footer() {
         <div>
           <p className="text-lg font-bold text-white">Artipascher</p>
           <p className="mt-2 text-sm leading-relaxed">
-            La plateforme d&apos;enchères inversées pour vos travaux dans le
-            Nord-Pas-de-Calais. Artisans vérifiés des départements 59 et 62.
+            Mise en relation entre particuliers et artisans vérifiés dans le
+            Nord-Pas-de-Calais (départements 59 et 62).
           </p>
         </div>
         <div>
@@ -84,8 +84,8 @@ export default async function Footer() {
       </div>
       <div className="border-t border-brand-900 py-4 text-center text-xs text-brand-300">
         © {new Date().getFullYear()} Artipascher
-        {beta ? " — Version bêta (préouverture)" : ""} — Enchères inversées
-        travaux Nord-Pas-de-Calais
+        {beta ? " — Version bêta (préouverture)" : ""} — Travaux & artisans
+        vérifiés Nord-Pas-de-Calais
       </div>
     </footer>
   );

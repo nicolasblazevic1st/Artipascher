@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LegalDocument from "@/components/LegalDocument";
-import { BID_FEE_EUR } from "@/lib/auctions";
-import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import {
+  UNLOCK_CREDITS_COST,
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
 import { LEGAL_PUBLISHER } from "@/lib/legal";
-import { CREDIT_PACKS, CREDIT_PRICE_EUR } from "@/lib/store-types";
+import {
+  CREDIT_PACKS,
+  CREDIT_PRICE_EUR,
+  creditPackUnitPriceEur,
+} from "@/lib/store-types";
 
 export const metadata: Metadata = {
   title: "Conditions générales de vente",
@@ -13,8 +19,6 @@ export const metadata: Metadata = {
 };
 
 export default function CgvPage() {
-  const packs = CREDIT_PACKS.join(", ");
-
   return (
     <LegalDocument title="Conditions générales de vente (CGV)">
       <section>
@@ -47,25 +51,30 @@ export default function CgvPage() {
         </p>
         <ul>
           <li>
-            <strong>1 crédit = {CREDIT_PRICE_EUR}&nbsp;€</strong> TTC ou HT
-            selon le régime fiscal applicable affiché lors du paiement ;
+            <strong>1 crédit = {CREDIT_PRICE_EUR}&nbsp;€</strong> au tarif
+            unitaire de référence (TTC ou HT selon le régime fiscal affiché lors
+            du paiement) ;
           </li>
           <li>
-            packs proposés : <strong>{packs}</strong> crédits (sous réserve de
-            disponibilité) ;
+            <strong>1 crédit = 1 mise en contact</strong> (déblocage des
+            coordonnées d&apos;un Client) ;
           </li>
           <li>
-            usages typiques (tarifs unitaires de référence) :
+            packs à <strong>tarif dégressif</strong> (sous réserve de
+            disponibilité) :
             <ul>
-              <li>
-                déblocage des coordonnées d&apos;un Client :{" "}
-                {UNLOCK_PRICE_EUR}&nbsp;€ / {UNLOCK_PRICE_EUR} crédits ;
-              </li>
-              <li>
-                dépôt d&apos;une enchère : {BID_FEE_EUR}&nbsp;€ / {BID_FEE_EUR}{" "}
-                crédit.
-              </li>
+              {CREDIT_PACKS.map((pack) => (
+                <li key={pack.credits}>
+                  {pack.credits} crédit{pack.credits > 1 ? "s" : ""} :{" "}
+                  {pack.priceEur}&nbsp;€ (
+                  {creditPackUnitPriceEur(pack)}&nbsp;€ / crédit)
+                </li>
+              ))}
             </ul>
+          </li>
+          <li>
+            usage typique : mise en contact = {UNLOCK_CREDITS_COST} crédit (
+            {UNLOCK_PRICE_EUR}&nbsp;€ au tarif unitaire de référence).
           </li>
         </ul>
         <p className="mt-3">

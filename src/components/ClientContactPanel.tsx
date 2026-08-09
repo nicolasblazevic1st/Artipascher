@@ -117,7 +117,7 @@ export default function ClientContactPanel({
             Coordonnées client débloquées
           </h2>
           <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
-            Accès · {UNLOCK_CREDITS_COST} crédits
+            Accès · {UNLOCK_PRICE_EUR}&nbsp;€
           </span>
         </div>
         <p className="mt-1 text-xs text-emerald-700">
@@ -185,8 +185,8 @@ export default function ClientContactPanel({
       <p className="mt-2 text-sm text-slate-600">
         Les photos du projet restent visibles librement. Si votre activité
         correspond aux attentes du client et qu’il reste une place (max. 5
-        artisans), débloquez les coordonnées pour {UNLOCK_CREDITS_COST} crédits (
-        {UNLOCK_PRICE_EUR}&nbsp;€).
+        artisans), débloquez les coordonnées pour {UNLOCK_PRICE_EUR}&nbsp;€ (
+        {UNLOCK_CREDITS_COST} crédit).
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -264,7 +264,7 @@ export default function ClientContactPanel({
           >
             {paying
               ? "Traitement…"
-              : `Débloquer · ${UNLOCK_CREDITS_COST} crédits (${UNLOCK_PRICE_EUR} €)`}
+              : `Mise en contact · ${UNLOCK_PRICE_EUR} € (${UNLOCK_CREDITS_COST} crédit)`}
           </button>
           {process.env.NODE_ENV === "development" && (
             <button

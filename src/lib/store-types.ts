@@ -511,16 +511,40 @@ export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
   throttleMs: 150,
 };
 
-/** 1 crédit = 1 € — usage principal : déblocage contact. */
-export const CREDIT_PRICE_EUR = 1;
+/**
+ * Prix unitaire de référence : 1 crédit = 20 € = 1 mise en contact.
+ * Les packs appliquent un tarif dégressif (voir CREDIT_PACKS).
+ */
+export const CREDIT_PRICE_EUR = 20;
 
-export const CREDIT_PACKS = [1, 5, 10, 20] as const;
-export type CreditPackSize = (typeof CREDIT_PACKS)[number];
+export interface CreditPack {
+  credits: number;
+  /** Prix TTC du pack (tarif dégressif). */
+  priceEur: number;
+}
 
-/** Crédits dépensés par le filleul avant récompense du parrain. */
-export const REFERRAL_SPEND_THRESHOLD = 5;
+/** Packs à tarif dégressif (€ / crédit décroissant). */
+export const CREDIT_PACKS: readonly CreditPack[] = [
+  { credits: 1, priceEur: 20 }, // 20 € / crédit
+  { credits: 3, priceEur: 54 }, // 18 € / crédit (−10 %)
+  { credits: 5, priceEur: 85 }, // 17 € / crédit (−15 %)
+  { credits: 10, priceEur: 150 }, // 15 € / crédit (−25 %)
+] as const;
+
+export type CreditPackSize = (typeof CREDIT_PACKS)[number]["credits"];
+
+export function getCreditPack(credits: number): CreditPack | undefined {
+  return CREDIT_PACKS.find((p) => p.credits === credits);
+}
+
+export function creditPackUnitPriceEur(pack: CreditPack): number {
+  return Math.round((pack.priceEur / pack.credits) * 100) / 100;
+}
+
+/** Crédits dépensés par le filleul avant récompense du parrain (1 mise en contact). */
+export const REFERRAL_SPEND_THRESHOLD = 1;
 /** Crédits offerts au parrain une fois le seuil atteint. */
-export const REFERRAL_REWARD_CREDITS = 5;
+export const REFERRAL_REWARD_CREDITS = 1;
 
 export type CreditTxnType =
   | "purchase"

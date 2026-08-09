@@ -25,7 +25,7 @@ export default async function ClientDashboardPage() {
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Mes demandes" value={stats.totalRequests} href="/particulier/espace/demandes" />
         <StatCard label="En validation" value={stats.pending} />
-        <StatCard label="Enchères en cours" value={stats.active} highlight={stats.active > 0} />
+        <StatCard label="Annonces en cours" value={stats.active} highlight={stats.active > 0} />
         <StatCard label="Artisan choisi" value={stats.chosen} />
       </div>
 

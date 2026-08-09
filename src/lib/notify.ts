@@ -152,7 +152,7 @@ export async function notifyClientRequestReviewed(params: {
         : "Votre demande a été refusée",
     body:
       params.status === "approved"
-        ? `Votre chantier ${params.workRequest.category} à ${params.workRequest.city} est en enchère.`
+        ? `Votre chantier ${params.workRequest.category} à ${params.workRequest.city} est publié : les artisans correspondants peuvent vous contacter.`
         : `Votre demande ${params.workRequest.category} à ${params.workRequest.city} n'a pas été validée.`,
   });
 }
@@ -227,7 +227,7 @@ export async function notifyClientBidPlaced(params: {
 }) {
   await notifyClient(params.workRequest, {
     kind: "bid_placed",
-    title: "Nouvelle offre sur votre enchère",
+    title: "Nouvelle proposition reçue",
     body: `${params.companyName} propose ${formatPrice(params.amount)}.`,
   });
 }
