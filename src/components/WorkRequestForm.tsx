@@ -48,15 +48,27 @@ interface Props {
   defaults?: WorkRequestFormDefaults;
   /** Lien après succès (espace client). */
   successHref?: string;
+  /**
+   * Demande sans compte : champs contact éditables, OTP invité,
+   * puis invitation à créer un espace pour suivre les demandes.
+   */
+  guestMode?: boolean;
 }
 
 export default function WorkRequestForm({
   defaults,
   successHref = "/particulier/espace/demandes",
+  guestMode = false,
 }: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
+  const [submittedContact, setSubmittedContact] = useState<{
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -131,7 +143,10 @@ export default function WorkRequestForm({
     setOtpSending(true);
     setOtpMessage(null);
     setError(null);
-    const res = await fetch("/api/client/phone-verification/send", {
+    const endpoint = guestMode
+      ? "/api/guest/phone-verification/send"
+      : "/api/client/phone-verification/send";
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone }),
@@ -141,6 +156,13 @@ export default function WorkRequestForm({
     if (!res.ok) {
       if (typeof data.cooldownSeconds === "number") {
         setOtpCooldown(data.cooldownSeconds);
+      }
+      // En mode invité, un 409 signifie déjà vérifié : on peut continuer.
+      if (guestMode && res.status === 409) {
+        const e164 = normalizeFrenchMobile(phone);
+        if (e164) setPhoneVerifiedE164(e164);
+        setOtpMessage(data.error ?? "Mobile déjà vérifié.");
+        return;
       }
       setOtpMessage(data.error ?? "Envoi du SMS impossible.");
       return;
@@ -155,7 +177,10 @@ export default function WorkRequestForm({
     setOtpVerifying(true);
     setOtpMessage(null);
     setError(null);
-    const res = await fetch("/api/client/phone-verification/verify", {
+    const endpoint = guestMode
+      ? "/api/guest/phone-verification/verify"
+      : "/api/client/phone-verification/verify";
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone, code: otpCode }),
@@ -362,8 +387,14 @@ export default function WorkRequestForm({
       return;
     }
 
-    const body = (await res.json()) as { id?: string };
+    const body = (await res.json()) as { id?: string; guest?: boolean };
     setCreatedRequestId(body.id ?? null);
+    setSubmittedContact({
+      email: String(formData.get("email") ?? "").trim(),
+      firstName: String(formData.get("firstName") ?? "").trim(),
+      lastName: String(formData.get("lastName") ?? "").trim(),
+      phone: String(formData.get("phone") ?? "").trim(),
+    });
     setStatus("success");
     if (descriptionRef.current) {
       descriptionRef.current.value = "";
@@ -509,7 +540,7 @@ export default function WorkRequestForm({
           className={inputClass}
           required
           defaultValue={defaults?.firstName ?? ""}
-          readOnly
+          readOnly={!guestMode}
         />
         <input
           name="lastName"
@@ -518,7 +549,7 @@ export default function WorkRequestForm({
           className={inputClass}
           required
           defaultValue={defaults?.lastName ?? ""}
-          readOnly
+          readOnly={!guestMode}
         />
       </div>
       <input
@@ -528,7 +559,7 @@ export default function WorkRequestForm({
         className={inputClass}
         required
         defaultValue={defaults?.email ?? ""}
-        readOnly
+        readOnly={!guestMode}
       />
       <div>
         <input
@@ -1043,24 +1074,65 @@ export default function WorkRequestForm({
       </button>
 
       {status === "success" && (
-        <div className="space-y-2 text-center text-sm text-brand-700">
+        <div className="space-y-3 text-center text-sm text-brand-700">
           <p className="font-semibold">Demande envoyée.</p>
-          <p>
-            <Link
-              href={
-                createdRequestId
-                  ? `/particulier/espace/demandes/${createdRequestId}`
-                  : successHref
-              }
-              className="font-semibold underline"
-            >
-              Voir ma demande
-            </Link>
-            {" · "}
-            <Link href="/particulier/espace/demandes" className="underline">
-              Mes demandes
-            </Link>
-          </p>
+          {guestMode ? (
+            <>
+              <p className="text-slate-700">
+                Créez un compte gratuit pour suivre vos demandes et les artisans
+                qui vous contactent. Ce n&apos;est pas obligatoire, mais
+                recommandé.
+              </p>
+              <p className="flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={(() => {
+                    const params = new URLSearchParams({
+                      from: "/particulier/espace/demandes",
+                    });
+                    if (submittedContact?.email) {
+                      params.set("email", submittedContact.email);
+                    }
+                    if (submittedContact?.firstName) {
+                      params.set("firstName", submittedContact.firstName);
+                    }
+                    if (submittedContact?.lastName) {
+                      params.set("lastName", submittedContact.lastName);
+                    }
+                    if (submittedContact?.phone) {
+                      params.set("phone", submittedContact.phone);
+                    }
+                    return `/particulier/espace/inscription?${params.toString()}`;
+                  })()}
+                  className="rounded-lg bg-client-600 px-4 py-2 text-sm font-semibold text-white hover:bg-client-700"
+                >
+                  Créer mon compte
+                </Link>
+                <Link
+                  href="/particulier"
+                  className="text-sm font-medium underline"
+                >
+                  Retour à l&apos;accueil
+                </Link>
+              </p>
+            </>
+          ) : (
+            <p>
+              <Link
+                href={
+                  createdRequestId
+                    ? `/particulier/espace/demandes/${createdRequestId}`
+                    : successHref
+                }
+                className="font-semibold underline"
+              >
+                Voir ma demande
+              </Link>
+              {" · "}
+              <Link href="/particulier/espace/demandes" className="underline">
+                Mes demandes
+              </Link>
+            </p>
+          )}
         </div>
       )}
       </form>

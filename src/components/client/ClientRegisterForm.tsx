@@ -6,15 +6,19 @@ import { useSearchParams } from "next/navigation";
 
 export default function ClientRegisterForm() {
   const searchParams = useSearchParams();
-  const from = searchParams.get("from") ?? "/particulier/espace/demandes/nouvelle";
+  const from = searchParams.get("from") ?? "/particulier/espace/demandes";
   const loginHref = `/particulier/espace/login?from=${encodeURIComponent(
-    from.startsWith("/particulier/espace") ? from : "/particulier/espace/demandes/nouvelle"
+    from.startsWith("/particulier/espace") ? from : "/particulier/espace/demandes"
   )}`;
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState(
+    () => searchParams.get("firstName")?.trim() ?? ""
+  );
+  const [lastName, setLastName] = useState(
+    () => searchParams.get("lastName")?.trim() ?? ""
+  );
+  const [email, setEmail] = useState(() => searchParams.get("email")?.trim() ?? "");
+  const [phone, setPhone] = useState(() => searchParams.get("phone")?.trim() ?? "");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +65,8 @@ export default function ClientRegisterForm() {
       <div className="space-y-4 text-center">
         <p className="rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
           Compte créé. Un email de confirmation vient de vous être envoyé. Validez
-          votre adresse, puis connectez-vous pour créer votre demande de travaux.
+          votre adresse, puis connectez-vous pour suivre vos demandes (y compris
+          celles déjà envoyées avec le même email).
         </p>
         <Link
           href={loginHref}

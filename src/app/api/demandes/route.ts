@@ -25,7 +25,9 @@ import {
 import { clientPhoneIsVerified } from "@/lib/phone-verification";
 import {
   addWorkRequest,
+  consumeGuestPhoneVerification,
   getClientById,
+  isGuestPhoneVerified,
   linkOrphanWorkRequests,
   setWorkRequestPhotos,
   setWorkRequestPreviousQuote,
@@ -38,16 +40,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const session = await getClientSession();
-    if (!session) {
-      return NextResponse.json(
-        {
-          error:
-            "Connectez-vous à votre espace particulier pour créer une demande de travaux.",
-        },
-        { status: 401 }
-      );
-    }
-
     const formData = await request.formData();
 
     const firstName = String(formData.get("firstName") ?? "").trim();
@@ -231,32 +223,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: previousQuoteError }, { status: 400 });
     }
 
-    const existing = await getClientById(session.clientId);
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Session invalide. Reconnectez-vous." },
-        { status: 401 }
-      );
-    }
-    if (existing.email.toLowerCase() !== email.toLowerCase()) {
-      return NextResponse.json(
-        {
-          error:
-            "Utilisez l'email de votre compte connecté pour créer une demande.",
-        },
-        { status: 400 }
-      );
-    }
-    const client = existing;
+    let clientId: string | undefined;
+    let phoneVerifiedAt: string | undefined;
+    let guest = false;
 
-    if (!clientPhoneIsVerified(client, phoneNormalized)) {
-      return NextResponse.json(
-        {
-          error:
-            "Vérifiez votre mobile par SMS avant d'envoyer la demande (bouton « Recevoir un code »).",
-        },
-        { status: 400 }
-      );
+    if (session) {
+      const existing = await getClientById(session.clientId);
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Session invalide. Reconnectez-vous." },
+          { status: 401 }
+        );
+      }
+      if (existing.email.toLowerCase() !== email.toLowerCase()) {
+        return NextResponse.json(
+          {
+            error:
+              "Utilisez l'email de votre compte connecté pour créer une demande.",
+          },
+          { status: 400 }
+        );
+      }
+      if (!clientPhoneIsVerified(existing, phoneNormalized)) {
+        return NextResponse.json(
+          {
+            error:
+              "Vérifiez votre mobile par SMS avant d'envoyer la demande (bouton « Recevoir un code »).",
+          },
+          { status: 400 }
+        );
+      }
+      clientId = existing.id;
+      phoneVerifiedAt = existing.phoneVerifiedAt;
+    } else {
+      const guestOk = await isGuestPhoneVerified(phoneNormalized);
+      if (!guestOk) {
+        return NextResponse.json(
+          {
+            error:
+              "Vérifiez votre mobile par SMS avant d'envoyer la demande (bouton « Recevoir un code »).",
+          },
+          { status: 400 }
+        );
+      }
+      guest = true;
+      phoneVerifiedAt = new Date().toISOString();
     }
 
     const entry = await addWorkRequest({
@@ -264,8 +275,8 @@ export async function POST(request: NextRequest) {
       lastName,
       email,
       phone,
-      phoneVerifiedAt: client.phoneVerifiedAt,
-      clientId: client.id,
+      phoneVerifiedAt,
+      clientId,
       clientKind,
       companyName,
       clientSiret,
@@ -289,7 +300,11 @@ export async function POST(request: NextRequest) {
       photos: [],
     });
 
-    await linkOrphanWorkRequests(client.id, email);
+    if (clientId) {
+      await linkOrphanWorkRequests(clientId, email);
+    } else {
+      await consumeGuestPhoneVerification(phoneNormalized);
+    }
 
     const photoPaths = await saveRequestPhotos(entry.id, photos);
     await setWorkRequestPhotos(entry.id, photoPaths);
@@ -308,6 +323,7 @@ export async function POST(request: NextRequest) {
         success: true,
         id: entry.id,
         photoCount: photoPaths.length,
+        guest,
       },
       { status: 201 }
     );

@@ -350,6 +350,10 @@ export interface EmailVerificationToken {
 /** Challenge OTP SMS pour vérifier le mobile d'un particulier. */
 export interface PhoneVerificationChallenge {
   id: string;
+  /**
+   * Compte client, ou `__guest__` pour une vérification hors compte
+   * (demande de travaux sans inscription).
+   */
   clientId: string;
   phoneE164: string;
   codeHash: string;
@@ -357,6 +361,16 @@ export interface PhoneVerificationChallenge {
   attempts: number;
   createdAt: string;
 }
+
+/** Mobile vérifié sans compte (fenêtre courte pour soumettre une demande). */
+export interface GuestPhoneVerification {
+  phoneE164: string;
+  verifiedAt: string;
+  expiresAt: string;
+}
+
+/** Sujet store pour les OTP / vérifs hors compte. */
+export const GUEST_PHONE_SUBJECT_ID = "__guest__";
 
 export type SmsCampaignStatus =
   | "demo"
@@ -577,6 +591,7 @@ export interface DataStore {
   passwordResetTokens: PasswordResetToken[];
   emailVerificationTokens: EmailVerificationToken[];
   phoneVerificationChallenges: PhoneVerificationChallenge[];
+  guestPhoneVerifications?: GuestPhoneVerification[];
   smsCampaigns: SmsCampaign[];
   smsAcquisitionCampaigns?: SmsAcquisitionCampaign[];
   smsSettings?: SmsCampaignSettings;
@@ -597,6 +612,7 @@ export const EMPTY_STORE: DataStore = {
   passwordResetTokens: [],
   emailVerificationTokens: [],
   phoneVerificationChallenges: [],
+  guestPhoneVerifications: [],
   smsCampaigns: [],
   smsAcquisitionCampaigns: [],
   smsSettings: { ...DEFAULT_SMS_SETTINGS },

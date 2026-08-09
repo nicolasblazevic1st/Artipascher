@@ -21,7 +21,8 @@ export default async function ClientRegisterPage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Créer un compte</h1>
             <p className="text-sm text-slate-600">
-              Ensuite, créez votre demande de travaux depuis votre espace.
+              Optionnel pour publier une demande — utile pour les retrouver et
+              les suivre.
             </p>
           </div>
         </div>

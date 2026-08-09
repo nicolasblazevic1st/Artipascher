@@ -51,6 +51,7 @@ import {
   type ProQuote,
   type PasswordResetToken,
   type PasswordResetUserType,
+  type GuestPhoneVerification,
   type PhoneVerificationChallenge,
   type ProDocument,
   type ProRegistration,
@@ -105,6 +106,7 @@ export async function readStore(): Promise<DataStore> {
     passwordResetTokens: parsed.passwordResetTokens ?? [],
     emailVerificationTokens: parsed.emailVerificationTokens ?? [],
     phoneVerificationChallenges: parsed.phoneVerificationChallenges ?? [],
+    guestPhoneVerifications: parsed.guestPhoneVerifications ?? [],
     smsCampaigns: parsed.smsCampaigns ?? [],
     smsAcquisitionCampaigns: parsed.smsAcquisitionCampaigns ?? [],
     smsSettings: normalizeSmsSettings(parsed.smsSettings),
@@ -2087,6 +2089,52 @@ export async function verifyPhoneChallengeCode(params: {
   store.phoneVerificationChallenges.splice(index, 1);
   await writeStore(store);
   return { ok: true };
+}
+
+export async function markGuestPhoneVerified(
+  phoneE164: string,
+  ttlMs = 2 * 60 * 60 * 1000
+): Promise<GuestPhoneVerification> {
+  const store = await readStore();
+  const now = Date.now();
+  store.guestPhoneVerifications = (store.guestPhoneVerifications ?? []).filter(
+    (g) => new Date(g.expiresAt).getTime() > now && g.phoneE164 !== phoneE164
+  );
+  const entry: GuestPhoneVerification = {
+    phoneE164,
+    verifiedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + ttlMs).toISOString(),
+  };
+  store.guestPhoneVerifications.unshift(entry);
+  await writeStore(store);
+  return entry;
+}
+
+export async function isGuestPhoneVerified(phoneE164: string): Promise<boolean> {
+  const store = await readStore();
+  const now = Date.now();
+  const match = (store.guestPhoneVerifications ?? []).find(
+    (g) =>
+      g.phoneE164 === phoneE164 && new Date(g.expiresAt).getTime() > now
+  );
+  return Boolean(match);
+}
+
+export async function consumeGuestPhoneVerification(
+  phoneE164: string
+): Promise<boolean> {
+  const store = await readStore();
+  const now = Date.now();
+  const list = store.guestPhoneVerifications ?? [];
+  const index = list.findIndex(
+    (g) =>
+      g.phoneE164 === phoneE164 && new Date(g.expiresAt).getTime() > now
+  );
+  if (index === -1) return false;
+  list.splice(index, 1);
+  store.guestPhoneVerifications = list;
+  await writeStore(store);
+  return true;
 }
 
 export async function markClientPhoneVerified(
