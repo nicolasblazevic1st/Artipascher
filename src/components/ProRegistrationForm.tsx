@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import HelpTooltip from "@/components/HelpTooltip";
+import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
 import {
   PRO_REGISTRATION_COMPARTMENTS,
   PRO_REGISTRATION_DOCUMENTS,
@@ -188,7 +189,9 @@ export default function ProRegistrationForm() {
     }
 
     for (const groupId of activeGroupIds) {
-      const decennaleError = validateProDocumentFile(decennaleByGroup[groupId]!);
+      const decennaleError = validateProDocumentFile(decennaleByGroup[groupId]!, {
+        requireOriginalPdf: true,
+      });
       if (decennaleError) {
         const group = GROUPED_QUALIBAT_JOBS.find((g) => g.group.id === groupId)?.group;
         setError(
@@ -486,7 +489,7 @@ export default function ProRegistrationForm() {
             Documents obligatoires
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            JPG, PNG, WebP ou PDF · max 10 Mo par fichier.
+            RC pro et décennale : PDF original de l&apos;assureur · max 10 Mo.
             {!fieldsEnabled && (
               <span className="mt-1 block font-medium text-slate-600">
                 Disponible après vérification RCS réussie.
@@ -575,26 +578,19 @@ export default function ProRegistrationForm() {
                           Attestation décennale — « {group?.label} »{" "}
                           <span className="text-red-500">*</span>
                         </label>
-                        <input
+                        <ProDocumentFilePicker
                           id={`decennale-${groupId}`}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,application/pdf"
-                          required={fieldsEnabled}
                           disabled={!fieldsEnabled}
-                          onChange={(e) => {
+                          originalPdfOnly
+                          selectedFileName={decennaleByGroup[groupId]?.name}
+                          onChange={(file) => {
                             setDecennaleByGroup((prev) => ({
                               ...prev,
-                              [groupId]: e.target.files?.[0] ?? null,
+                              [groupId]: file,
                             }));
                             setError(null);
                           }}
-                          className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
                         />
-                        {decennaleByGroup[groupId] && (
-                          <p className="mt-1 text-xs text-brand-700">
-                            Fichier sélectionné : {decennaleByGroup[groupId]!.name}
-                          </p>
-                        )}
                       </div>
                     );
                   })}
@@ -619,22 +615,13 @@ export default function ProRegistrationForm() {
                         {doc.required && <span className="text-red-500">*</span>}
                         <HelpTooltip label={doc.label} content={doc.help} />
                       </label>
-                      <input
+                      <ProDocumentFilePicker
                         id={proDocumentFieldName(doc.id)}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,application/pdf"
-                        required={doc.required && fieldsEnabled}
                         disabled={!fieldsEnabled}
-                        onChange={(e) =>
-                          handleDocumentChange(doc.id, e.target.files?.[0] ?? null)
-                        }
-                        className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 disabled:cursor-not-allowed"
+                        originalPdfOnly={Boolean(doc.requireOriginalPdf)}
+                        selectedFileName={documents[doc.id]?.name}
+                        onChange={(file) => handleDocumentChange(doc.id, file)}
                       />
-                      {documents[doc.id] && (
-                        <p className="mt-1 text-xs text-brand-700">
-                          Fichier sélectionné : {documents[doc.id]!.name}
-                        </p>
-                      )}
                     </li>
                   ))}
                 </ul>

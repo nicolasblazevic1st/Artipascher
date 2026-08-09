@@ -125,6 +125,62 @@ export default function AdminLevel1Panel({ registration }: Props) {
         </div>
       )}
 
+      {registration.kbisPurchaseVerification ? (
+        <div
+          className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+            registration.kbisPurchaseVerification.status === "passed"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : "border-red-200 bg-red-50 text-red-900"
+          }`}
+        >
+          <p className="font-semibold">
+            {registration.kbisPurchaseVerification.status === "passed"
+              ? "Identité achat crédits : OK"
+              : "Identité achat crédits : refusée"}
+          </p>
+          <p className="mt-0.5 opacity-90">
+            Provider : {registration.kbisPurchaseVerification.provider}
+            {registration.kbisPurchaseVerification.companyNameAtCheck
+              ? ` · ${registration.kbisPurchaseVerification.companyNameAtCheck}`
+              : ""}
+          </p>
+          {registration.kbisPurchaseVerification.reason && (
+            <p className="mt-0.5 opacity-90">
+              {registration.kbisPurchaseVerification.reason}
+            </p>
+          )}
+          {registration.kbisPurchaseVerification.status === "failed" && (
+            <p className="mt-0.5 opacity-80">
+              Frais retenus :{" "}
+              {(registration.kbisPurchaseVerification.feeRetainedCents / 100)
+                .toFixed(2)
+                .replace(".", ",")}{" "}
+              €
+              {typeof registration.kbisPurchaseVerification.refundedCents ===
+                "number" && (
+                <>
+                  {" "}
+                  · remboursé :{" "}
+                  {(registration.kbisPurchaseVerification.refundedCents / 100)
+                    .toFixed(2)
+                    .replace(".", ",")}{" "}
+                  €
+                </>
+              )}
+            </p>
+          )}
+          <p className="mt-0.5 opacity-70">
+            {new Date(
+              registration.kbisPurchaseVerification.checkedAt
+            ).toLocaleString("fr-FR")}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-slate-500">
+          Identité achat crédits : pas encore contrôlée (prochain paiement Stripe).
+        </p>
+      )}
+
       {rcDoc && (
         <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3">
           <p className="text-sm font-medium text-slate-900">RC professionnelle</p>

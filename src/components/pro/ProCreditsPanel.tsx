@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import {
   CREDIT_PACKS,
   CREDIT_PRICE_EUR,
+  KBIS_VERIFICATION_FEE_EUR,
   creditPackUnitPriceEur,
   type CreditPack,
+  type KbisPurchaseVerification,
 } from "@/lib/store-types";
 import { UNLOCK_CREDITS_COST, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
@@ -33,6 +35,10 @@ export default function ProCreditsPanel() {
   const [packs, setPacks] = useState<CreditPack[]>([...CREDIT_PACKS]);
   const [transactions, setTransactions] = useState<Txn[]>([]);
   const [demoAllowed, setDemoAllowed] = useState(false);
+  const [identityGatePending, setIdentityGatePending] = useState(false);
+  const [kbisVerification, setKbisVerification] =
+    useState<KbisPurchaseVerification | null>(null);
+  const [feeEur, setFeeEur] = useState(KBIS_VERIFICATION_FEE_EUR);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,19 +54,64 @@ export default function ProCreditsPanel() {
       }
       setTransactions(data.transactions ?? []);
       setDemoAllowed(data.demoAllowed === true);
+      setIdentityGatePending(data.identityGatePending === true);
+      setKbisVerification(data.kbisPurchaseVerification ?? null);
+      if (typeof data.kbisVerificationFeeEur === "number") {
+        setFeeEur(data.kbisVerificationFeeEur);
+      }
     }
     setLoading(false);
+    return data as {
+      balance?: number;
+      kbisPurchaseVerification?: KbisPurchaseVerification | null;
+    };
   }, []);
 
   useEffect(() => {
     load();
     const params = new URLSearchParams(window.location.search);
     if (params.get("credits") === "1") {
-      setSuccess("Paiement reçu — vos crédits seront crédités sous peu.");
+      setSuccess("Paiement reçu — vérification d’identité en cours…");
       window.history.replaceState({}, "", window.location.pathname);
-      setTimeout(() => load(), 1500);
+
+      let attempts = 0;
+      const poll = async () => {
+        attempts += 1;
+        const data = await load();
+        const verif = data.kbisPurchaseVerification;
+        if (verif?.status === "failed") {
+          const refunded =
+            typeof verif.refundedCents === "number"
+              ? (verif.refundedCents / 100).toFixed(2).replace(".", ",")
+              : null;
+          setSuccess(null);
+          setError(
+            `Vérification d’identité refusée${
+              verif.reason ? ` : ${verif.reason}` : "."
+            } ${
+              refunded
+                ? `Remboursement de ${refunded} € effectué (frais de vérif. ${feeEur} € retenus).`
+                : `Les frais de vérification (${feeEur} €) peuvent être retenus.`
+            } Aucun crédit n’a été ajouté.`
+          );
+          return;
+        }
+        if ((data.balance ?? 0) > 0 || verif?.status === "passed") {
+          setError(null);
+          setSuccess("Paiement confirmé — vos crédits sont disponibles.");
+          return;
+        }
+        if (attempts < 6) {
+          setTimeout(poll, 1500);
+        } else {
+          setSuccess(
+            "Paiement reçu — les crédits apparaîtront sous peu. Rechargez la page si besoin."
+          );
+        }
+      };
+      setTimeout(poll, 1500);
     }
-  }, [load]);
+  }, [load, feeEur]);
 
   async function buy(packSize: number, demo = false) {
     setBuying(packSize);
@@ -107,6 +158,24 @@ export default function ProCreditsPanel() {
           {balance} crédit{balance !== 1 ? "s" : ""}
         </p>
       </div>
+
+      {identityGatePending && (
+        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+          À l&apos;achat, une <strong>vérification d&apos;identité</strong> (extrait
+          Kbis / registre) est effectuée. En cas de refus : remboursement du pack
+          moins {feeEur}&nbsp;€ de frais, sans crédit.
+        </p>
+      )}
+
+      {kbisVerification?.status === "passed" && (
+        <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+          Identité vérifiée
+          {kbisVerification.companyNameAtCheck
+            ? ` · ${kbisVerification.companyNameAtCheck}`
+            : ""}
+          .
+        </p>
+      )}
 
       {error && (
         <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

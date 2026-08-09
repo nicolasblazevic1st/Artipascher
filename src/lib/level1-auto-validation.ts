@@ -51,7 +51,7 @@ export function autoValidateRcDocument(
     return {
       status: "rejeté",
       reason:
-        "RC pro illisible (PDF scanné ou image). Téléversez un PDF texte ou une photo nette.",
+        "RC pro illisible. Envoyez le PDF original texte de votre assureur (pas une photo ni un scan).",
     };
   }
 
@@ -91,7 +91,7 @@ export function autoValidateDecennaleDocument(
   if (!documentHasReadableText(hints)) {
     return {
       status: "non_couvert",
-      reason: `Décennale « ${tradeLabel} » illisible. Téléversez un PDF texte ou une photo nette.`,
+      reason: `Décennale « ${tradeLabel} » illisible. Envoyez le PDF original texte de votre assureur.`,
     };
   }
 

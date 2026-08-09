@@ -5,22 +5,25 @@ export interface ProRegistrationDocumentType {
   required: boolean;
   /** Niveau de qualification Artipascher (1 = inscription rapide). */
   qualificationLevel: 1 | 2 | 3;
+  /** Exige le PDF original (attestation assureur), pas une photo. */
+  requireOriginalPdf?: boolean;
 }
 
 export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
   {
     id: "kbis",
     label: "KBIS / extrait RCS (< 3 mois)",
-    help: "Optionnel : le SIRET est déjà vérifié en direct au registre (RNE). Joignez un KBIS récent pour accélérer la validation.",
+    help: "Optionnel : le SIRET est déjà vérifié en direct au registre (RNE). Préférez le PDF Infogreffe / INSEE.",
     required: false,
     qualificationLevel: 1,
   },
   {
     id: "rc",
     label: "Assurance responsabilité civile professionnelle",
-    help: "Attestation ou contrat en cours de validité.",
+    help: "PDF original de l’attestation envoyée par votre assureur (e-mail / espace client) — sans photo ni modification.",
     required: true,
     qualificationLevel: 1,
+    requireOriginalPdf: true,
   },
   {
     id: "rge",
@@ -86,13 +89,64 @@ export function tradeDecennaleFieldName(tradeGroupId: string) {
   return `doc_decennale_${tradeGroupId}`;
 }
 
+/** Normalise le type MIME (souvent vide ou `image/jpg` après photo téléphone). */
+export function resolveProDocumentMime(file: File): string {
+  const raw = (file.type || "").toLowerCase().trim();
+  if (raw === "image/jpg") return "image/jpeg";
+  if (
+    ALLOWED_PRO_DOCUMENT_TYPES.includes(
+      raw as (typeof ALLOWED_PRO_DOCUMENT_TYPES)[number]
+    )
+  ) {
+    return raw;
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "pdf") return "application/pdf";
+  // Capture caméra iOS/Android : parfois sans extension ni MIME fiable.
+  if (!raw && !ext) return "image/jpeg";
+  return raw;
+}
+
+export function isProDocumentPdf(file: File): boolean {
+  return resolveProDocumentMime(file) === "application/pdf";
+}
+
+export function validateProDocumentFile(
+  file: File,
+  options?: { requireOriginalPdf?: boolean }
+): string | null {
+  if (!file || file.size === 0) {
+    return "Fichier manquant.";
+  }
+  const mime = resolveProDocumentMime(file);
+  if (options?.requireOriginalPdf) {
+    if (mime !== "application/pdf") {
+      return "Envoyez le PDF original de votre assureur (pas une photo ni un scan modifié).";
+    }
+  } else if (
+    !ALLOWED_PRO_DOCUMENT_TYPES.includes(
+      mime as (typeof ALLOWED_PRO_DOCUMENT_TYPES)[number]
+    )
+  ) {
+    return "Format non accepté. Utilisez un PDF, ou JPG / PNG / WebP.";
+  }
+  if (file.size > MAX_PRO_DOCUMENT_SIZE_BYTES) {
+    return `Chaque document doit faire moins de ${MAX_PRO_DOCUMENT_SIZE_BYTES / 1024 / 1024} Mo.`;
+  }
+  return null;
+}
+
 export function validateTradeDecennaleDocuments(
   tradeGroupIds: string[],
   files: Record<string, File | null | undefined>
 ): string | null {
   for (const groupId of tradeGroupIds) {
     const file = files[groupId];
-    const error = validateProDocumentFile(file!);
+    const error = validateProDocumentFile(file!, { requireOriginalPdf: true });
     if (error) {
       const label =
         error === "Fichier manquant."
@@ -104,35 +158,22 @@ export function validateTradeDecennaleDocuments(
   return null;
 }
 
-export function validateProDocumentFile(file: File): string | null {
-  if (!file || file.size === 0) {
-    return "Fichier manquant.";
-  }
-  if (
-    !ALLOWED_PRO_DOCUMENT_TYPES.includes(
-      file.type as (typeof ALLOWED_PRO_DOCUMENT_TYPES)[number]
-    )
-  ) {
-    return "Format non accepté. Utilisez JPG, PNG, WebP ou PDF.";
-  }
-  if (file.size > MAX_PRO_DOCUMENT_SIZE_BYTES) {
-    return `Chaque document doit faire moins de ${MAX_PRO_DOCUMENT_SIZE_BYTES / 1024 / 1024} Mo.`;
-  }
-  return null;
-}
-
 export function validateProRegistrationDocuments(
   files: Record<string, File | null | undefined>
 ): string | null {
   for (const doc of PRO_REGISTRATION_DOCUMENTS) {
     const file = files[doc.id];
     if (doc.required) {
-      const error = validateProDocumentFile(file!);
+      const error = validateProDocumentFile(file!, {
+        requireOriginalPdf: doc.requireOriginalPdf,
+      });
       if (error) {
         return `${doc.label} : ${error === "Fichier manquant." ? "document obligatoire." : error}`;
       }
     } else if (file && file.size > 0) {
-      const error = validateProDocumentFile(file);
+      const error = validateProDocumentFile(file, {
+        requireOriginalPdf: doc.requireOriginalPdf,
+      });
       if (error) return `${doc.label} : ${error}`;
     }
   }

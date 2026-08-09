@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     for (const selection of tradeSelections) {
       const entry = formData.get(tradeDecennaleFieldName(selection.tradeGroupId));
       const file = entry instanceof File && entry.size > 0 ? entry : null;
-      const error = validateProDocumentFile(file!);
+      const error = validateProDocumentFile(file!, { requireOriginalPdf: true });
       if (error) {
         return NextResponse.json(
           {

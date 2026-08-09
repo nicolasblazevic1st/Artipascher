@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 .cursor/
+*.traineddata
+
+# tesseract leftover language packs (not used)
 
 # debug
 npm-debug.log*

@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "fixtures:docs": "node scripts/generate-test-documents.mjs",
+    "fixtures:docs:verifiable": "node scripts/fetch-verifiable-test-docs.mjs",
+    "fixtures:docs:verify": "npx tsx scripts/verify-verifiable-docs.mts"
   },
   "dependencies": {
     "next": "^16.2.12",

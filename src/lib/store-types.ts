@@ -104,6 +104,28 @@ export interface PaymentNameCheck {
   stripeSessionId?: string;
 }
 
+/** Frais retenus si la vérif d'identité (Kbis) échoue au 1er achat de crédits. */
+export const KBIS_VERIFICATION_FEE_EUR = 3;
+export const KBIS_VERIFICATION_FEE_CENTS = KBIS_VERIFICATION_FEE_EUR * 100;
+
+export type KbisPurchaseVerificationStatus = "passed" | "failed" | "error";
+
+export type KbisPurchaseProvider = "registry" | "mock" | "infogreffe";
+
+/** Contrôle identité déclenché à l'achat de crédits (achat Kbis / registre). */
+export interface KbisPurchaseVerification {
+  status: KbisPurchaseVerificationStatus;
+  checkedAt: string;
+  stripeSessionId: string;
+  provider: KbisPurchaseProvider;
+  /** Centimes retenus en cas d'échec (défaut 300). */
+  feeRetainedCents: number;
+  refundedCents?: number;
+  stripeRefundId?: string;
+  reason?: string;
+  companyNameAtCheck?: string;
+}
+
 export interface ProRegistration {
   id: string;
   companyName: string;
@@ -131,6 +153,11 @@ export interface ProRegistration {
   legalRepresentatives?: LegalRepresentative[];
   /** Dernier contrôle nom CB vs dirigeants / raison sociale. */
   paymentNameCheck?: PaymentNameCheck;
+  /**
+   * Vérif d'identité à l'achat de crédits (Kbis / registre).
+   * Tant que status !== "passed", chaque achat Stripe repasse par le gate.
+   */
+  kbisPurchaseVerification?: KbisPurchaseVerification;
   /** Audit automatique niveau 1 (RCS, géo, cohérence OCR). */
   level1Audit?: ProLevel1Audit;
   /** Date de certification niveau 1 par l'admin. */

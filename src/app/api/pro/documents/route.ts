@@ -45,7 +45,9 @@ export async function POST(request: NextRequest) {
   for (const docType of PRO_REGISTRATION_DOCUMENTS) {
     const entry = formData.get(proDocumentFieldName(docType.id));
     if (!(entry instanceof File) || entry.size === 0) continue;
-    const error = validateProDocumentFile(entry);
+    const error = validateProDocumentFile(entry, {
+      requireOriginalPdf: docType.requireOriginalPdf,
+    });
     if (error) {
       return NextResponse.json(
         { error: `${docType.label} : ${error}` },
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
   for (const selection of tradeSelections) {
     const entry = formData.get(tradeDecennaleFieldName(selection.tradeGroupId));
     if (!(entry instanceof File) || entry.size === 0) continue;
-    const error = validateProDocumentFile(entry);
+    const error = validateProDocumentFile(entry, { requireOriginalPdf: true });
     if (error) {
       return NextResponse.json(
         {

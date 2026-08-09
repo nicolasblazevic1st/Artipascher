@@ -397,6 +397,7 @@ export async function updateProRegistration(
       | "level1Audit"
       | "legalRepresentatives"
       | "paymentNameCheck"
+      | "kbisPurchaseVerification"
     >
   >
 ): Promise<ProRegistration | null> {

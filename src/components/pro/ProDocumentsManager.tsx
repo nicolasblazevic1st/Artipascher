@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DOCUMENT_STATUS_LABELS } from "@/lib/level1-certification";
 import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
+import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
 import {
   PRO_REGISTRATION_COMPARTMENTS,
   PRO_REGISTRATION_DOCUMENTS,
@@ -26,13 +27,16 @@ function DocumentUploadRow({
   docType,
   existing,
   field,
+  pendingFile,
   onFileChange,
 }: {
   docType: ProRegistrationDocumentType;
   existing?: ProDocument;
   field: string;
+  pendingFile?: File | null;
   onFileChange: (field: string, file: File | null) => void;
 }) {
+  const originalPdfOnly = Boolean(docType.requireOriginalPdf);
   const status =
     existing?.verificationStatus ?? (existing ? "validé" : undefined);
   const statusMeta = status ? DOCUMENT_STATUS_LABELS[status] : null;
@@ -69,15 +73,15 @@ function DocumentUploadRow({
           </span>
         )}
       </div>
-      <input
-        type="file"
-        accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
-        className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-200"
-        onChange={(e) => onFileChange(field, e.target.files?.[0] ?? null)}
+      <ProDocumentFilePicker
+        id={field}
+        originalPdfOnly={originalPdfOnly}
+        selectedFileName={pendingFile?.name}
+        onChange={(file) => onFileChange(field, file)}
       />
       {existing && status === "rejeté" && (
         <p className="text-xs text-red-600">
-          Document rejeté — déposez une nouvelle version.
+          Document rejeté — déposez le PDF original de votre assureur.
         </p>
       )}
       {!existing && docType.id === "rc" && (
@@ -245,11 +249,11 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
                           {meta.text}
                         </span>
                       </div>
-                      <input
-                        type="file"
-                        accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
-                        className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-200"
-                        onChange={(e) => setFile(field, e.target.files?.[0] ?? null)}
+                      <ProDocumentFilePicker
+                        id={field}
+                        originalPdfOnly
+                        selectedFileName={files[field]?.name}
+                        onChange={(file) => setFile(field, file)}
                       />
                     </li>
                   );
@@ -265,6 +269,7 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
                     docType={docType}
                     existing={documents.find((d) => d.id === docType.id)}
                     field={proDocumentFieldName(docType.id)}
+                    pendingFile={files[proDocumentFieldName(docType.id)]}
                     onFileChange={setFile}
                   />
                 ))}
