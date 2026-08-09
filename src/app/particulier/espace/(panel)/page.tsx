@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { getClientSession } from "@/lib/client-auth";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
-import { formatPrice } from "@/lib/data";
 import { getClientDashboardStats } from "@/lib/store";
 
 const STATUS_LABELS = {
   pending: { text: "En validation", className: "bg-amber-100 text-amber-800" },
-  approved: { text: "Enchère active", className: "bg-client-100 text-client-800" },
+  approved: { text: "Annonce active", className: "bg-client-100 text-client-800" },
   rejected: { text: "Refusée", className: "bg-red-100 text-red-800" },
 };
 
@@ -62,10 +61,8 @@ export default async function ClientDashboardPage() {
                         {request.category} · {request.city}
                       </p>
                       <p className="mt-1 text-slate-500">
-                        {request.startPrice != null
-                          ? `Prix de départ ${formatPrice(request.startPrice)}`
-                          : "Prix de départ : en attente du 1er devis"}{" "}
-                        · {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
+                        Annonce :{" "}
+                        {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
                       </p>
                     </div>
                     <span

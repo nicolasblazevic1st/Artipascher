@@ -12,15 +12,13 @@ import {
   validatePhotoFiles,
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
-  validateClientStartPrice,
-  type StartPriceMode,
 } from "@/lib/demandes-validation";
 import BanAddressAutocomplete, {
   type SelectedBanAddress,
 } from "@/components/BanAddressAutocomplete";
 import {
-  AUCTION_DURATION_OPTIONS,
-  DEFAULT_AUCTION_DURATION_DAYS,
+  LISTING_DURATION_OPTIONS,
+  DEFAULT_LISTING_DURATION_DAYS,
 } from "@/lib/auction-duration";
 import {
   getNafOptionsForCategory,
@@ -70,13 +68,13 @@ export default function WorkRequestForm({
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
   const [previousQuoteNote, setPreviousQuoteNote] = useState("");
   const [proofPreview, setProofPreview] = useState<string | null>(null);
-  const [startPriceMode, setStartPriceMode] = useState<StartPriceMode>("first_quote");
-  const [clientStartPrice, setClientStartPrice] = useState("");
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
-  const [auctionDurationDays, setAuctionDurationDays] = useState(DEFAULT_AUCTION_DURATION_DAYS);
+  const [listingDurationDays, setListingDurationDays] = useState(
+    DEFAULT_LISTING_DURATION_DAYS
+  );
   const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
-  const [smsContactAlertsEnabled, setSmsContactAlertsEnabled] = useState(true);
+  const [acceptContactTerms, setAcceptContactTerms] = useState(false);
   const [phone, setPhone] = useState(defaults?.phone ?? "");
   const [phoneVerifiedE164, setPhoneVerifiedE164] = useState(
     defaults?.phoneVerifiedE164 ?? ""
@@ -94,7 +92,7 @@ export default function WorkRequestForm({
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
-  const minStartDate = minRequestedWorkStartDate(auctionDurationDays);
+  const minStartDate = minRequestedWorkStartDate(listingDurationDays);
   const maxStartDate = maxRequestedWorkStartDate();
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
   const requiresNafChoice = nafOptions.length > 1;
@@ -252,7 +250,7 @@ export default function WorkRequestForm({
 
     const startDateError = validateRequestedWorkStartDate(
       requestedWorkStartDate,
-      auctionDurationDays
+      listingDurationDays
     );
     if (startDateError) {
       setError(startDateError);
@@ -285,13 +283,12 @@ export default function WorkRequestForm({
       }
     }
 
-    if (startPriceMode === "client") {
-      const startPriceError = validateClientStartPrice(clientStartPrice);
-      if (startPriceError) {
-        setError(startPriceError);
-        setStatus("error");
-        return;
-      }
+    if (!acceptContactTerms) {
+      setError(
+        "Vous devez accepter les CGU / CGV pour autoriser la mise en contact avec les artisans."
+      );
+      setStatus("error");
+      return;
     }
 
     if (!category) {
@@ -321,21 +318,15 @@ export default function WorkRequestForm({
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
     formData.set("phone", phoneValue);
-    formData.set("auctionDurationDays", String(auctionDurationDays));
+    formData.set("auctionDurationDays", String(listingDurationDays));
     formData.set(
       "preferEstablishedCompany",
       preferEstablishedCompany ? "true" : "false"
     );
-    formData.set(
-      "smsContactAlertsEnabled",
-      smsContactAlertsEnabled ? "true" : "false"
-    );
-    formData.set("startPriceMode", startPriceMode);
-    if (startPriceMode === "client") {
-      formData.set("clientStartPrice", clientStartPrice.trim());
-    } else {
-      formData.delete("clientStartPrice");
-    }
+    formData.set("acceptContactTerms", acceptContactTerms ? "true" : "false");
+    formData.delete("smsContactAlertsEnabled");
+    formData.delete("startPriceMode");
+    formData.delete("clientStartPrice");
     formData.set("clientKind", isCompany ? "company" : "individual");
     if (isCompany && companyVerification) {
       formData.set("clientSiret", companyVerification.siret);
@@ -386,8 +377,7 @@ export default function WorkRequestForm({
     setPreviousQuoteAmount("");
     setPreviousQuoteProof(null);
     setPreviousQuoteNote("");
-    setStartPriceMode("first_quote");
-    setClientStartPrice("");
+    setAcceptContactTerms(false);
     if (proofPreview) URL.revokeObjectURL(proofPreview);
     setProofPreview(null);
     setSelectedAddress(null);
@@ -649,19 +639,19 @@ export default function WorkRequestForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label
-            htmlFor="auctionDurationDays"
+            htmlFor="listingDurationDays"
             className="mb-1 block text-sm font-medium text-slate-700"
           >
-            Durée de l&apos;enchère <span className="text-red-500">*</span>
+            Durée de l&apos;annonce <span className="text-red-500">*</span>
           </label>
           <select
-            id="auctionDurationDays"
+            id="listingDurationDays"
             name="auctionDurationDays"
             className={`${inputClass} text-slate-700`}
-            value={auctionDurationDays}
+            value={listingDurationDays}
             onChange={(e) => {
               const next = Number(e.target.value);
-              setAuctionDurationDays(next);
+              setListingDurationDays(next);
               const minDate = minRequestedWorkStartDate(next);
               if (requestedWorkStartDate && requestedWorkStartDate < minDate) {
                 setRequestedWorkStartDate("");
@@ -669,14 +659,15 @@ export default function WorkRequestForm({
             }}
             required
           >
-            {AUCTION_DURATION_OPTIONS.map((option) => (
+            {LISTING_DURATION_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
           <p className="mt-1 text-xs text-slate-500">
-            Période pendant laquelle les artisans peuvent enchérir (max. 3 mois).
+            Période pendant laquelle les artisans peuvent débloquer votre contact
+            (max. 5 artisans, max. 3 mois).
           </p>
         </div>
         <div>
@@ -698,13 +689,12 @@ export default function WorkRequestForm({
                 setRequestedWorkStartDate("");
                 return;
               }
-              // Bloque toute date avant J + durée (calendrier natif + saisie clavier).
               if (next < minStartDate || next > maxStartDate) {
                 setRequestedWorkStartDate("");
                 setError(
                   `Choisissez une date à partir du ${new Date(
                     `${minStartDate}T12:00:00`
-                  ).toLocaleDateString("fr-FR")} (fin d'enchère).`
+                  ).toLocaleDateString("fr-FR")} (fin d'annonce).`
                 );
                 return;
               }
@@ -717,7 +707,7 @@ export default function WorkRequestForm({
             required
           />
           <p className="mt-1 text-xs text-slate-500">
-            Le calendrier bloque les dates avant la fin de l&apos;enchère (
+            Le calendrier bloque les dates avant la fin de l&apos;annonce (
             {new Date(`${minStartDate}T12:00:00`).toLocaleDateString("fr-FR")}).
           </p>
         </div>
@@ -777,33 +767,6 @@ export default function WorkRequestForm({
           </label>
         </div>
       </fieldset>
-
-      <label
-        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-          smsContactAlertsEnabled
-            ? "border-brand-500 bg-brand-50"
-            : "border-slate-200 bg-white"
-        }`}
-      >
-        <input
-          type="checkbox"
-          name="smsContactAlertsEnabled"
-          checked={smsContactAlertsEnabled}
-          onChange={(e) => setSmsContactAlertsEnabled(e.target.checked)}
-          className="mt-1"
-        />
-        <span>
-          <span className="font-semibold text-slate-900">
-            M&apos;alerter par SMS et autoriser le contact artisan
-          </span>
-          <span className="mt-0.5 block text-xs text-slate-500">
-            Activé par défaut. Un artisan intéressé peut vous contacter
-            automatiquement (jusqu&apos;à 5), vous êtes prévenu par SMS, email et
-            notification. Décochez pour devoir accepter chaque demande sous
-            48&nbsp;h.
-          </span>
-        </span>
-      </label>
 
       <select
         name="category"
@@ -923,96 +886,6 @@ export default function WorkRequestForm({
         )}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p className="text-sm font-medium text-slate-800">
-          Budget / prix de référence (optionnel)
-        </p>
-        <p className="mt-0.5 text-xs text-slate-500">
-          Indiquez un ordre de grandeur pour aider les artisans à se positionner.
-        </p>
-        <fieldset className="mt-3 space-y-3">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="radio"
-              name="startPriceMode"
-              value="client"
-              checked={startPriceMode === "client"}
-              onChange={() => {
-                setStartPriceMode("client");
-                setError(null);
-              }}
-              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
-            />
-            <span className="flex-1">
-              <span className="block text-sm font-medium text-slate-800">
-                Je fixe mon prix de départ
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Les artisans pourront proposer moins que ce montant.
-              </span>
-              {startPriceMode === "client" && (
-                <input
-                  name="clientStartPrice"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={clientStartPrice}
-                  onChange={(e) => setClientStartPrice(e.target.value)}
-                  placeholder="Ex. 4500"
-                  className={`${inputClass} mt-2`}
-                  required
-                />
-              )}
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="radio"
-              name="startPriceMode"
-              value="first_quote"
-              checked={startPriceMode === "first_quote"}
-              onChange={() => {
-                setStartPriceMode("first_quote");
-                setClientStartPrice("");
-                setError(null);
-              }}
-              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-800">
-                Partir du premier devis Artipascher
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Le prix de départ sera fixé au premier devis validé après visite.
-              </span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="radio"
-              name="startPriceMode"
-              value="unspecified"
-              checked={startPriceMode === "unspecified"}
-              onChange={() => {
-                setStartPriceMode("unspecified");
-                setClientStartPrice("");
-                setError(null);
-              }}
-              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-800">
-                Ne pas préciser
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Aucun prix annoncé pour l&apos;instant ; il pourra être fixé plus
-                tard (ex. au premier devis).
-              </span>
-            </span>
-          </label>
-        </fieldset>
-      </div>
-
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <label className="flex cursor-pointer items-start gap-3">
           <input
@@ -1036,9 +909,8 @@ export default function WorkRequestForm({
               J&apos;ai déjà reçu un devis d&apos;un autre artisan
             </span>
             <span className="mt-0.5 block text-xs text-slate-500">
-              Optionnel — justificatif visible par Artipascher. Si vous n&apos;avez
-              pas fixé de prix ci-dessus, ce montant pourra servir de départ à
-              l&apos;ouverture.
+              Optionnel — justificatif visible par Artipascher, utile pour
+              contextualiser votre projet.
             </span>
           </span>
         </label>
@@ -1109,13 +981,58 @@ export default function WorkRequestForm({
         )}
       </div>
 
+      <label
+        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+          acceptContactTerms
+            ? "border-brand-500 bg-brand-50"
+            : "border-slate-200 bg-white"
+        }`}
+      >
+        <input
+          type="checkbox"
+          name="acceptContactTerms"
+          checked={acceptContactTerms}
+          onChange={(e) => {
+            setAcceptContactTerms(e.target.checked);
+            setError(null);
+          }}
+          className="mt-1"
+          required
+        />
+        <span>
+          <span className="font-semibold text-slate-900">
+            J&apos;accepte les CGU / CGV et j&apos;autorise la mise en contact{" "}
+            <span className="text-red-500">*</span>
+          </span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            En cochant cette case, vous acceptez les{" "}
+            <Link href="/cgu" className="underline" target="_blank">
+              CGU
+            </Link>{" "}
+            et{" "}
+            <Link href="/cgv" className="underline" target="_blank">
+              CGV
+            </Link>
+            , et vous autorisez jusqu&apos;à 5 artisans correspondant à votre
+            demande à débloquer vos coordonnées pour vous contacter (SMS, email
+            ou téléphone).
+          </span>
+        </span>
+      </label>
+
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
       <button
         type="submit"
-        disabled={status === "submitting" || status === "success" || !descriptionOk || !photosOk}
+        disabled={
+          status === "submitting" ||
+          status === "success" ||
+          !descriptionOk ||
+          !photosOk ||
+          !acceptContactTerms
+        }
         className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === "submitting"

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import TestBanner from "@/components/TestBanner";
-import { formatLocation, formatPrice } from "@/lib/data";
+import { formatLocation } from "@/lib/data";
 import { listAdminAuctionViews } from "@/lib/work-request-auctions";
 
-export default async function AdminEncheresPage() {
+export default async function AdminOffresPage() {
   const auctions = await listAdminAuctionViews();
   const fromSite = auctions.filter((a) => a.source === "workRequest");
   const samples = auctions.filter((a) => a.source === "sample");
@@ -11,19 +11,20 @@ export default async function AdminEncheresPage() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-900">Enchères</h2>
+      <h2 className="text-lg font-semibold text-slate-900">Offres publiées</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Enchères créées depuis les demandes du site public (après validation admin) —{" "}
-        {activeCount} active{activeCount > 1 ? "s" : ""} · {fromSite.length} au total
+        Annonces publiées après validation admin — mise en contact jusqu&apos;à 5
+        artisans · {activeCount} active{activeCount > 1 ? "s" : ""} ·{" "}
+        {fromSite.length} au total
       </p>
 
       {fromSite.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-slate-500">
-          Aucune enchère issue du site pour le moment. Validez une demande dans{" "}
+          Aucune offre issue du site pour le moment. Validez une demande dans{" "}
           <Link href="/admin/particuliers/demandes" className="text-brand-700 underline">
             Demandes travaux
           </Link>{" "}
-          pour en créer une.
+          pour en publier une.
         </p>
       ) : (
         <ul className="mt-8 space-y-4">
@@ -68,27 +69,13 @@ export default async function AdminEncheresPage() {
                   </p>
                 </div>
                 <div className="text-right text-sm">
-                  <p>
-                    {auction.startPrice != null ? (
-                      <>
-                        {formatPrice(auction.startPrice)} →{" "}
-                        <strong className="text-brand-700">
-                          {formatPrice(auction.currentPrice ?? auction.startPrice)}
-                        </strong>
-                      </>
-                    ) : (
-                      <span className="text-amber-700">Prix de départ en attente</span>
-                    )}
-                  </p>
-                  <p className="text-slate-500">
-                    {auction.bidCount} offre{auction.bidCount > 1 ? "s" : ""} ·{" "}
+                  <p className="font-semibold text-brand-700">
                     {auction.acceptedArtisansCount}/
-                    {auction.maxAcceptedArtisans} artisans acceptés ·{" "}
-                    {auction.feesCollected} € de frais
+                    {auction.maxAcceptedArtisans} contacts débloqués
                   </p>
                   {auction.endsAt && (
                     <p className="mt-1 text-xs text-slate-400">
-                      Fin :{" "}
+                      Fin d&apos;annonce :{" "}
                       {new Date(auction.endsAt).toLocaleDateString("fr-FR", {
                         day: "numeric",
                         month: "short",

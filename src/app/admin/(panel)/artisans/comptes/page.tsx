@@ -215,7 +215,7 @@ export default function AdminComptesArtisansPage() {
                 <Row label="Crédits" value={`${a.creditBalance} (dépensés ${a.spentCredits})`} />
                 <Row
                   label="Activité"
-                  value={`${a.bidsCount} enchères · ${a.unlocksCount} contacts`}
+                  value={`${a.unlocksCount} contact${a.unlocksCount > 1 ? "s" : ""} débloqué${a.unlocksCount > 1 ? "s" : ""}`}
                 />
                 <Row label="Parrainage" value={a.referralCode || "—"} />
                 <Row label="Filleuls" value={String(a.referralsCount)} />

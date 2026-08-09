@@ -223,7 +223,7 @@ export interface WorkRequest {
   startPriceMode?: "client" | "first_quote" | "unspecified";
   /** Renseigné lorsque le prix de départ provient d'un devis Artipascher validé. */
   startPriceQuoteId?: string;
-  /** Durée souhaitée de l'enchère en jours (max. 90). */
+  /** Durée d'annonce / mise en contact en jours (max. 90). */
   auctionDurationDays: number;
   /**
    * Si true : le particulier préfère une entreprise créée il y a plus de 2 ans.
@@ -231,9 +231,9 @@ export interface WorkRequest {
    */
   preferEstablishedCompany?: boolean;
   /**
-   * Si true (défaut) : SMS + acceptation auto quand un artisan demande le contact
-   * (compte dans le plafond de 5). undefined = true.
-   * Si false : le client doit accepter manuellement sous 48 h.
+   * Autorisation de mise en contact (acceptation CG à la création).
+   * Contact-only : toujours true pour les nouvelles demandes.
+   * undefined = true (historique).
    */
   smsContactAlertsEnabled?: boolean;
   photos: string[];

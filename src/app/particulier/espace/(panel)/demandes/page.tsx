@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { formatAuctionDurationDays } from "@/lib/auction-duration";
-import { formatPrice } from "@/lib/data";
 import type { WorkRequest } from "@/lib/store-types";
 
 type EnrichedRequest = WorkRequest & {
@@ -13,7 +12,7 @@ type EnrichedRequest = WorkRequest & {
 
 const STATUS_LABELS = {
   pending: { text: "En validation", className: "bg-amber-100 text-amber-800" },
-  approved: { text: "Enchère active", className: "bg-client-100 text-client-800" },
+  approved: { text: "Annonce active", className: "bg-client-100 text-client-800" },
   rejected: { text: "Refusée", className: "bg-red-100 text-red-800" },
 };
 
@@ -90,25 +89,13 @@ export default function ClientDemandesPage() {
                     </p>
                     <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
                       <div>
-                        Prix de départ :{" "}
-                        {request.startPrice != null
-                          ? formatPrice(request.startPrice)
-                          : "En attente du 1er devis"}
+                        Durée de l&apos;annonce :{" "}
+                        {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
                       </div>
-                      <div>
-                        Durée : {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
-                      </div>
-                      {request.status === "approved" && (
-                        <div>
-                          {request.bidCount} offre{request.bidCount > 1 ? "s" : ""}
-                          {request.lowestBid !== null &&
-                            ` · dès ${formatPrice(request.lowestBid)}`}
-                        </div>
-                      )}
                     </dl>
                     {request.auctionEndsAt && (
                       <p className="mt-2 text-xs text-slate-400">
-                        Fin enchère :{" "}
+                        Fin d&apos;annonce :{" "}
                         {new Date(request.auctionEndsAt).toLocaleString("fr-FR")}
                       </p>
                     )}

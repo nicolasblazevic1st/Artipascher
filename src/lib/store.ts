@@ -497,6 +497,7 @@ export async function getAdminStats() {
   const pendingRequests = store.workRequests.filter((r) => r.status === "pending").length;
   const approvedPros = store.proRegistrations.filter((p) => p.status === "approved").length;
   const pendingQuotes = store.proQuotes.filter((q) => q.status === "pending_moderation").length;
+  const totalUnlocks = store.contactUnlocks.filter((u) => !u.refundedAt).length;
 
   return {
     pendingPros,
@@ -506,6 +507,7 @@ export async function getAdminStats() {
     totalPros: store.proRegistrations.length,
     totalClients: store.clientAccounts.length,
     totalRequests: store.workRequests.length,
+    totalUnlocks,
   };
 }
 
@@ -554,6 +556,32 @@ export async function countContactUnlocksForAuction(
     }
   }
   return pros.size;
+}
+
+export async function listContactUnlocksForAuction(
+  auctionId: string
+): Promise<
+  Array<
+    ContactUnlock & {
+      companyName: string;
+      proEmail: string;
+    }
+  >
+> {
+  const store = await readStore();
+  return store.contactUnlocks
+    .filter((u) => u.auctionId === auctionId)
+    .map((u) => {
+      const pro = store.proRegistrations.find((p) => p.id === u.proId);
+      return {
+        ...u,
+        companyName: pro?.companyName ?? u.proId,
+        proEmail: pro?.email ?? "",
+      };
+    })
+    .sort(
+      (a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()
+    );
 }
 
 export async function getContactUnlock(

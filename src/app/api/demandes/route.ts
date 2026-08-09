@@ -14,8 +14,6 @@ import {
   validatePhotoFiles,
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
-  validateClientStartPrice,
-  parseStartPriceMode,
 } from "@/lib/demandes-validation";
 import { getClientSession } from "@/lib/client-auth";
 import { validateWorkRequestNafSelection } from "@/lib/naf-codes";
@@ -85,18 +83,16 @@ export async function POST(request: NextRequest) {
       preferEstablishedRaw === "true" ||
       preferEstablishedRaw === "1" ||
       preferEstablishedRaw === "on";
-    // Option par défaut activée : absente ou true → SMS contact.
-    const smsContactAlertsRaw = String(
-      formData.get("smsContactAlertsEnabled") ?? "true"
+    // Mise en contact autorisée via acceptation CG (plus d’opt-in SMS séparé).
+    const acceptContactTermsRaw = String(
+      formData.get("acceptContactTerms") ?? ""
     ).toLowerCase();
-    const smsContactAlertsEnabled =
-      smsContactAlertsRaw === "true" ||
-      smsContactAlertsRaw === "1" ||
-      smsContactAlertsRaw === "on";
+    const acceptContactTerms =
+      acceptContactTermsRaw === "true" ||
+      acceptContactTermsRaw === "1" ||
+      acceptContactTermsRaw === "on";
     const previousQuoteAmountRaw = String(formData.get("previousQuoteAmount") ?? "").trim();
     const previousQuoteNote = String(formData.get("previousQuoteNote") ?? "").trim();
-    const startPriceMode = parseStartPriceMode(formData.get("startPriceMode"));
-    const clientStartPriceRaw = String(formData.get("clientStartPrice") ?? "").trim();
 
     const photoEntries = formData.getAll("photos");
     const photos = photoEntries.filter(
@@ -119,6 +115,16 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis." },
+        { status: 400 }
+      );
+    }
+
+    if (!acceptContactTerms) {
+      return NextResponse.json(
+        {
+          error:
+            "Vous devez accepter les CGU / CGV pour autoriser la mise en contact avec les artisans.",
+        },
         { status: 400 }
       );
     }
@@ -225,15 +231,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: previousQuoteError }, { status: 400 });
     }
 
-    let clientStartPrice: number | undefined;
-    if (startPriceMode === "client") {
-      const startPriceError = validateClientStartPrice(clientStartPriceRaw);
-      if (startPriceError) {
-        return NextResponse.json({ error: startPriceError }, { status: 400 });
-      }
-      clientStartPrice = Number(clientStartPriceRaw);
-    }
-
     const existing = await getClientById(session.clientId);
     if (!existing) {
       return NextResponse.json(
@@ -287,9 +284,8 @@ export async function POST(request: NextRequest) {
       description: description.trim(),
       auctionDurationDays,
       preferEstablishedCompany,
-      smsContactAlertsEnabled,
-      startPriceMode,
-      startPrice: clientStartPrice,
+      smsContactAlertsEnabled: true,
+      startPriceMode: "unspecified",
       photos: [],
     });
 

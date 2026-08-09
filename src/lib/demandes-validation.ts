@@ -129,7 +129,7 @@ function toIsoDateLocal(date: Date): string {
 }
 
 /**
- * Date minimale de début de travaux : aujourd'hui, ou fin d'enchère
+ * Date minimale de début de travaux : aujourd'hui, ou fin d'annonce
  * (aujourd'hui + durée) si une durée est fournie.
  */
 export function minRequestedWorkStartDate(auctionDurationDays?: number): string {
@@ -185,7 +185,7 @@ export function validateRequestedWorkStartDate(
   if (duration != null) {
     const minAfterAuction = addDays(today, duration);
     if (startDay < minAfterAuction) {
-      return `La date de début doit être au plus tôt à la fin de l'enchère (${duration} jour${duration > 1 ? "s" : ""}), soit le ${minAfterAuction.toLocaleDateString("fr-FR")}.`;
+      return `La date de début doit être au plus tôt à la fin de l'annonce (${duration} jour${duration > 1 ? "s" : ""}), soit le ${minAfterAuction.toLocaleDateString("fr-FR")}.`;
     }
   }
 

@@ -10,12 +10,12 @@ export const MAX_CONTACT_UNLOCKS_PER_REQUEST = 5;
 export const MAX_ACCEPTED_ARTISANS_PER_AUCTION = MAX_CONTACT_UNLOCKS_PER_REQUEST;
 
 /**
- * Option « M'alerter par SMS » (défaut ON).
- * Historiquement : auto-accept des intérêts. En contact-only : informe le client
- * qu’un artisan a débloqué / qu’il reste des places (SMS acquisition).
+ * Autorisation de mise en contact (issue de l’acceptation des CG).
+ * Contact-only : toujours actif — les artisans matching peuvent débloquer
+ * dans la limite des places.
  */
-export function isSmsContactAlertsEnabled(request: WorkRequest): boolean {
-  return request.smsContactAlertsEnabled !== false;
+export function isSmsContactAlertsEnabled(_request: WorkRequest): boolean {
+  return true;
 }
 
 /**

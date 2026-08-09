@@ -13,7 +13,6 @@ import {
   resolveAuctionEndsAt,
 } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
-import { formatPrice } from "@/lib/data";
 import { getClientSession } from "@/lib/client-auth";
 import {
   ensureWorkRequestShareToken,
@@ -28,7 +27,7 @@ type Props = { params: Promise<{ id: string }> };
 
 const STATUS_LABELS = {
   pending: "En validation par notre équipe",
-  approved: "Enchère active",
+  approved: "Annonce active",
   rejected: "Demande refusée",
 };
 
@@ -82,7 +81,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             )}
           </div>
           {request.auctionId && request.status === "approved" && (
-            <p className="text-xs text-slate-500">Enchère active</p>
+            <p className="text-xs text-slate-500">Annonce active</p>
           )}
         </div>
 
@@ -142,29 +141,9 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Prix de départ</dt>
-            <dd className="mt-1 text-xl font-semibold">
-              {request.startPrice != null
-                ? formatPrice(request.startPrice)
-                : request.startPriceMode === "unspecified"
-                  ? "Non précisé"
-                  : "En attente du 1er devis"}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Mode prix de départ</dt>
-            <dd className="mt-1 text-sm font-semibold">
-              {request.startPriceMode === "client"
-                ? "Fixé par vous"
-                : request.startPriceMode === "unspecified"
-                  ? "Non précisé"
-                  : "Premier devis Artipascher"}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Durée enchère</dt>
+            <dt className="text-xs text-slate-500">Durée de l&apos;annonce</dt>
             <dd className="mt-1 text-sm font-semibold">
               {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
             </dd>
@@ -178,16 +157,10 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Contact auto + SMS</dt>
+            <dt className="text-xs text-slate-500">Mise en contact</dt>
             <dd className="mt-1 text-sm font-semibold">
-              {request.smsContactAlertsEnabled === false
-                ? "Désactivé (acceptation manuelle)"
-                : "Activé (max. 5 artisans)"}
+              Autorisée via CGU / CGV (max. 5 artisans)
             </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Devis validés</dt>
-            <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
           </div>
         </dl>
 
@@ -202,7 +175,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             />
             {request.auctionEndsAt && (
               <p className="text-sm text-slate-600">
-                Fin de l&apos;enchère :{" "}
+                Fin de l&apos;annonce :{" "}
                 <strong>
                   {new Date(request.auctionEndsAt).toLocaleString("fr-FR")}
                 </strong>

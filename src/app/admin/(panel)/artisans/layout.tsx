@@ -4,7 +4,6 @@ const TABS = [
   { href: "/admin/artisans/certification", label: "Certification" },
   { href: "/admin/artisans/comptes", label: "Comptes" },
   { href: "/admin/artisans/documents", label: "Documents" },
-  { href: "/admin/artisans/devis", label: "Devis" },
 ];
 
 export default function AdminArtisansLayout({
@@ -14,7 +13,7 @@ export default function AdminArtisansLayout({
     <div>
       <AdminSectionNav
         title="Artisans"
-        description="Certification, comptes, documents transmis et devis à modérer."
+        description="Certification, comptes et documents transmis."
         tabs={TABS}
       />
       {children}

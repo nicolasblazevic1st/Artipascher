@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatAuctionDurationDays } from "@/lib/auction-duration";
 import { getAdminStats, readStore } from "@/lib/store";
 import { VERIFIED_PROFESSIONALS } from "@/lib/professionals";
 import { listAdminAuctionViews } from "@/lib/work-request-auctions";
@@ -8,7 +9,7 @@ export default async function AdminDashboardPage() {
   const store = await readStore();
   const recentPending = store.proRegistrations.filter((p) => p.status === "pending").slice(0, 3);
   const recentRequests = store.workRequests.filter((r) => r.status === "pending").slice(0, 3);
-  const activePublicAuctions = (await listAdminAuctionViews()).filter(
+  const activePublicOffers = (await listAdminAuctionViews()).filter(
     (a) => a.source === "workRequest" && a.status === "active"
   ).length;
 
@@ -16,7 +17,7 @@ export default async function AdminDashboardPage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Tableau de bord</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Vue d&apos;ensemble — Artipascher Nord 59/62
+        Vue d&apos;ensemble — Artipascher Nord 59/62 · mise en contact
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -33,12 +34,6 @@ export default async function AdminDashboardPage() {
           urgent={stats.pendingRequests > 0}
         />
         <StatCard
-          label="Devis à modérer"
-          value={stats.pendingQuotes}
-          href="/admin/artisans/devis"
-          urgent={stats.pendingQuotes > 0}
-        />
-        <StatCard
           label="Artisans approuvés"
           value={stats.approvedPros}
           href="/admin/artisans/comptes"
@@ -49,8 +44,13 @@ export default async function AdminDashboardPage() {
           href="/admin/particuliers/comptes"
         />
         <StatCard
-          label="Enchères actives (site)"
-          value={activePublicAuctions}
+          label="Offres actives (site)"
+          value={activePublicOffers}
+          href="/admin/particuliers/encheres"
+        />
+        <StatCard
+          label="Contacts débloqués"
+          value={stats.totalUnlocks}
           href="/admin/particuliers/encheres"
         />
       </div>
@@ -96,10 +96,8 @@ export default async function AdminDashboardPage() {
                     {r.firstName} {r.lastName} — {r.city}
                   </p>
                   <p className="text-slate-500">
-                    {r.category} ·{" "}
-                    {r.startPrice != null
-                      ? `Prix de départ ${r.startPrice} €`
-                      : "Prix : en attente du 1er devis"}
+                    {r.category} · annonce{" "}
+                    {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}
                   </p>
                 </li>
               ))}
@@ -111,7 +109,7 @@ export default async function AdminDashboardPage() {
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-semibold">Artisans RCS vérifiés (catalogue démo)</h2>
         <p className="mt-1 text-sm text-slate-500">
-          {VERIFIED_PROFESSIONALS.length} artisans actifs dans les enchères de démonstration
+          {VERIFIED_PROFESSIONALS.length} artisans du catalogue de démonstration
         </p>
       </section>
     </div>

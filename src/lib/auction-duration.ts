@@ -1,6 +1,8 @@
-/** Durée d'enchère choisie par le particulier (max. 3 mois). */
+/** Durée d'annonce / mise en contact choisie par le particulier (max. 3 mois). */
 
 export const MAX_AUCTION_DURATION_DAYS = 90;
+/** Alias produit contact-only. */
+export const MAX_LISTING_DURATION_DAYS = MAX_AUCTION_DURATION_DAYS;
 
 export const AUCTION_DURATION_OPTIONS = [
   { value: 7, label: "7 jours (1 semaine)" },
@@ -10,12 +12,15 @@ export const AUCTION_DURATION_OPTIONS = [
   { value: 90, label: "90 jours (3 mois — maximum)" },
 ] as const;
 
+export const LISTING_DURATION_OPTIONS = AUCTION_DURATION_OPTIONS;
+
 export const DEFAULT_AUCTION_DURATION_DAYS = 30;
+export const DEFAULT_LISTING_DURATION_DAYS = DEFAULT_AUCTION_DURATION_DAYS;
 
 export function validateAuctionDurationDays(days: unknown): string | null {
   const n = typeof days === "string" ? Number(days) : days;
   if (typeof n !== "number" || Number.isNaN(n) || !Number.isInteger(n)) {
-    return "Durée d'enchère invalide.";
+    return "Durée d'annonce invalide.";
   }
   if (n < 1) {
     return "La durée minimum est de 1 jour.";
@@ -29,6 +34,8 @@ export function validateAuctionDurationDays(days: unknown): string | null {
   }
   return null;
 }
+
+export const validateListingDurationDays = validateAuctionDurationDays;
 
 export function formatAuctionDurationDays(days: number): string {
   const option = AUCTION_DURATION_OPTIONS.find((o) => o.value === days);

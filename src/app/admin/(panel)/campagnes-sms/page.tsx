@@ -866,7 +866,7 @@ export default function AdminSmsCampaignsPage() {
                 <option key={r.id} value={r.id}>
                   {r.category} · {r.city} ({r.department}) · {r.status}
                   {r.companyName ? ` · ${r.companyName}` : ""}
-                  {r.auctionId ? " · enchère" : ""}
+                  {r.auctionId ? " · offre" : ""}
                 </option>
               ))}
             </select>
@@ -1109,7 +1109,7 @@ export default function AdminSmsCampaignsPage() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Lien enchère
+                  Lien annonce
                 </a>
               </p>
 
