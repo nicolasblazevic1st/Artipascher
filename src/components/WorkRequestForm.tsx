@@ -35,7 +35,7 @@ import {
   type RcsVerificationResult,
 } from "@/lib/rcs";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
-import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/contact-match";
+import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/google-rating";
 
 export interface WorkRequestFormDefaults {
   firstName: string;

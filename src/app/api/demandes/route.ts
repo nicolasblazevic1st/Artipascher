@@ -22,7 +22,7 @@ import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
 } from "@/lib/phone-format";
-import { parseMinGoogleRating } from "@/lib/contact-match";
+import { parseMinGoogleRating } from "@/lib/google-rating";
 import { clientPhoneIsVerified } from "@/lib/phone-verification";
 import {
   addWorkRequest,
