@@ -158,6 +158,12 @@ export default function AdminDemandesPage() {
                         ? "préfère +2 ans (mix SMS 2/3)"
                         : "peu importe"}
                     </div>
+                    <div>
+                      Note Google :{" "}
+                      {r.minGoogleRating
+                        ? `≥ ${String(r.minGoogleRating).replace(".", ",")}/5`
+                        : "peu importe"}
+                    </div>
                     <div>Mise en contact : autorisée (CGU / CGV · max. 5)</div>
                     <div>{r.email}</div>
                     <div>

@@ -31,7 +31,7 @@ const FEATURES = [
   {
     title: "Gain de temps",
     description:
-      "Une seule demande : les artisans correspondants vous contactent directement. Vous choisissez librement.",
+      "Une seule demande : les artisans correspondants vous contactent directement. Vous comparez leurs propositions.",
   },
   {
     title: "Compte optionnel",
@@ -64,7 +64,7 @@ const STEPS = [
   {
     title: "Suivez vos demandes (recommandé)",
     description:
-      "Créez un compte gratuit pour retrouver vos demandes et suivre les échanges dans votre espace.",
+      "Créez un compte gratuit pour retrouver vos demandes. Vous pouvez aussi filtrer les artisans (ancienneté, note Google).",
   },
 ];
 

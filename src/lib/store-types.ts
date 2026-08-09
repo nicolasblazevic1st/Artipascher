@@ -231,6 +231,11 @@ export interface WorkRequest {
    */
   preferEstablishedCompany?: boolean;
   /**
+   * Note Google minimale souhaitée (ex. 4). Absent / 0 = pas de filtre.
+   * Appliqué au matching si une note est connue pour l’artisan.
+   */
+  minGoogleRating?: number;
+  /**
    * Autorisation de mise en contact (acceptation CG à la création).
    * Contact-only : toujours true pour les nouvelles demandes.
    * undefined = true (historique).

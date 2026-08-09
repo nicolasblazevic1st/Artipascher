@@ -35,6 +35,7 @@ import {
   type RcsVerificationResult,
 } from "@/lib/rcs";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/contact-match";
 
 export interface WorkRequestFormDefaults {
   firstName: string;
@@ -87,6 +88,7 @@ export default function WorkRequestForm({
     DEFAULT_LISTING_DURATION_DAYS
   );
   const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
+  const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
   const [acceptContactTerms, setAcceptContactTerms] = useState(false);
   const [phone, setPhone] = useState(defaults?.phone ?? "");
   const [phoneVerifiedE164, setPhoneVerifiedE164] = useState(
@@ -349,6 +351,11 @@ export default function WorkRequestForm({
       "preferEstablishedCompany",
       preferEstablishedCompany ? "true" : "false"
     );
+    if (minGoogleRating !== "") {
+      formData.set("minGoogleRating", String(minGoogleRating));
+    } else {
+      formData.delete("minGoogleRating");
+    }
     formData.set("acceptContactTerms", acceptContactTerms ? "true" : "false");
     formData.delete("smsContactAlertsEnabled");
     formData.delete("startPriceMode");
@@ -767,7 +774,7 @@ export default function WorkRequestForm({
             <span>
               <span className="font-semibold text-slate-900">Peu importe</span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Tous les artisans éligibles peuvent être contactés.
+                Tous les artisans éligibles peuvent vous contacter.
               </span>
             </span>
           </label>
@@ -796,6 +803,67 @@ export default function WorkRequestForm({
               </span>
             </span>
           </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-slate-700">
+          Note Google minimale
+        </legend>
+        <p className="mb-2 text-xs text-slate-500">
+          Optionnel. Les artisans dont la note Google connue est inférieure au
+          seuil ne pourront pas débloquer vos coordonnées.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+              minGoogleRating === ""
+                ? "border-brand-500 bg-brand-50"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            <input
+              type="radio"
+              name="minGoogleRating"
+              value=""
+              checked={minGoogleRating === ""}
+              onChange={() => setMinGoogleRating("")}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-semibold text-slate-900">Peu importe</span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Pas de filtre sur la note Google.
+              </span>
+            </span>
+          </label>
+          {MIN_GOOGLE_RATING_OPTIONS.map((value) => (
+            <label
+              key={value}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+                minGoogleRating === value
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-slate-200 bg-white"
+              }`}
+            >
+              <input
+                type="radio"
+                name="minGoogleRating"
+                value={String(value)}
+                checked={minGoogleRating === value}
+                onChange={() => setMinGoogleRating(value)}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-semibold text-slate-900">
+                  ≥ {String(value).replace(".", ",")}/5
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  Note Google minimale souhaitée.
+                </span>
+              </span>
+            </label>
+          ))}
         </div>
       </fieldset>
 

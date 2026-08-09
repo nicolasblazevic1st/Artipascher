@@ -22,6 +22,7 @@ import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
 } from "@/lib/phone-format";
+import { parseMinGoogleRating } from "@/lib/contact-match";
 import { clientPhoneIsVerified } from "@/lib/phone-verification";
 import {
   addWorkRequest,
@@ -75,6 +76,9 @@ export async function POST(request: NextRequest) {
       preferEstablishedRaw === "true" ||
       preferEstablishedRaw === "1" ||
       preferEstablishedRaw === "on";
+    const minGoogleRating = parseMinGoogleRating(
+      formData.get("minGoogleRating")
+    );
     // Mise en contact autorisée via acceptation CG (plus d’opt-in SMS séparé).
     const acceptContactTermsRaw = String(
       formData.get("acceptContactTerms") ?? ""
@@ -295,6 +299,7 @@ export async function POST(request: NextRequest) {
       description: description.trim(),
       auctionDurationDays,
       preferEstablishedCompany,
+      minGoogleRating,
       smsContactAlertsEnabled: true,
       startPriceMode: "unspecified",
       photos: [],

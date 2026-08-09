@@ -13,7 +13,7 @@ type SlideId =
   | "demande"
   | "annonce"
   | "contact"
-  | "choix"
+  | "criteres"
   | "cta";
 
 const SLIDE_LABELS: Record<SlideId, string> = {
@@ -21,7 +21,7 @@ const SLIDE_LABELS: Record<SlideId, string> = {
   demande: "Votre demande",
   annonce: "Annonce publiée",
   contact: "Mise en relation",
-  choix: "Vous choisissez",
+  criteres: "Vos critères",
   cta: "Lancez votre projet",
 };
 
@@ -30,7 +30,7 @@ const SLIDE_ORDER: SlideId[] = [
   "demande",
   "annonce",
   "contact",
-  "choix",
+  "criteres",
   "cta",
 ];
 
@@ -62,7 +62,7 @@ function SlideIntro() {
           Des artisans vérifiés pour vos travaux
         </h3>
         <p className="mt-2 text-sm text-brand-100 sm:text-base">
-          Publiez · Ils vous contactent · Vous choisissez
+          Publiez · Filtrez · Ils vous contactent
         </p>
         <WorkTradesIconRow className="mt-4 justify-start" tone="onDark" maxItems={5} />
         <p className="mt-3 text-xs text-brand-200/90">{DATA_HOSTING_NOTICE}</p>
@@ -166,35 +166,33 @@ function SlideContact() {
   );
 }
 
-function SlideChoix() {
+function SlideCriteres() {
   return (
     <MockBrowserChrome>
-      <div className="explainer-enter space-y-2">
+      <div className="explainer-enter space-y-3">
         <span className="rounded-full bg-client-100 px-2.5 py-0.5 text-xs font-semibold text-client-700">
-          Vous décidez
+          Vos attentes
         </span>
-        <p className="text-xs font-semibold text-slate-900">
-          Artisans intéressés
-        </p>
-        {[
-          { name: "Rénovation Lilloise SARL", note: "Visite proposée" },
-          { name: "Peinture Nord Express", note: "Devis en préparation" },
-        ].map((q) => (
-          <div
-            key={q.name}
-            className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2"
-          >
-            <div>
-              <p className="text-[10px] font-medium text-slate-900">{q.name}</p>
-              <p className="text-[10px] text-slate-500">{q.note}</p>
-            </div>
-            <span className="rounded-lg bg-client-600 px-2 py-1 text-[10px] font-medium text-white">
-              Contacter
+        <h3 className="text-sm font-bold text-slate-900">
+          Conditionnez qui peut vous contacter
+        </h3>
+        <ul className="space-y-2 text-xs text-slate-700">
+          <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <span className="font-semibold text-slate-900">Ancienneté</span>
+            <span className="mt-0.5 block text-[10px] text-slate-500">
+              Ex. entreprise créée il y a plus de 2 ans
             </span>
-          </div>
-        ))}
+          </li>
+          <li className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <span className="font-semibold text-amber-950">Note Google</span>
+            <span className="mt-0.5 block text-[10px] text-amber-800">
+              Ex. ≥ 4,0 / 5 — les notes trop basses ne débloquent pas vos
+              coordonnées
+            </span>
+          </li>
+        </ul>
         <p className="text-center text-[10px] text-slate-500">
-          Vous choisissez librement — pas d&apos;attribution automatique
+          Ce sont les artisans qui vous appellent — pas l&apos;inverse
         </p>
       </div>
     </MockBrowserChrome>
@@ -261,8 +259,8 @@ export default function SiteExplainer({ compact = false, autoPlay = true }: Prop
         return <SlideAnnonce />;
       case "contact":
         return <SlideContact />;
-      case "choix":
-        return <SlideChoix />;
+      case "criteres":
+        return <SlideCriteres />;
       case "cta":
         return <SlideCta />;
     }

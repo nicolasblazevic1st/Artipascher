@@ -36,6 +36,11 @@ export interface EnrichedArtisan {
   lon?: number;
   phone?: string;
   website?: string;
+  /** Note Google (Places), si enrichie. */
+  googleRating?: number;
+  /** Nombre d’avis Google (Places), si enrichi. */
+  googleUserRatingCount?: number;
+  googlePlaceId?: string;
   enrichmentStatus: EnrichmentStatus;
   enrichedAt?: string;
   lastVerifiedAt?: string;

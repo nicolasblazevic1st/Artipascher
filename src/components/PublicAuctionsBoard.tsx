@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AuctionCard from "@/components/AuctionCard";
-import type { Auction } from "@/lib/data";
+import {
+  CATEGORY_LABELS,
+  type Auction,
+  type TradeCategory,
+} from "@/lib/data";
 import { haversineKm } from "@/lib/geo-distance";
 
 type ZoneMode = "all" | "department" | "distance";
 type DepartmentFilter = "all" | "59" | "62";
+type CategoryFilter = "all" | TradeCategory;
 
 const RADIUS_OPTIONS = [10, 20, 30, 50] as const;
+const TRADE_CATEGORIES = Object.keys(CATEGORY_LABELS) as TradeCategory[];
 
 interface CitySuggestion {
   id: string;
@@ -24,10 +31,20 @@ interface Props {
   showDemoBanner?: boolean;
 }
 
+function parseCategoryParam(raw: string | null): CategoryFilter {
+  if (!raw) return "all";
+  return TRADE_CATEGORIES.includes(raw as TradeCategory)
+    ? (raw as TradeCategory)
+    : "all";
+}
+
 export default function PublicAuctionsBoard({
   auctions,
   showDemoBanner = true,
 }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<ZoneMode>("all");
   const [department, setDepartment] = useState<DepartmentFilter>("all");
   const [radiusKm, setRadiusKm] = useState<(typeof RADIUS_OPTIONS)[number]>(20);
@@ -35,6 +52,27 @@ export default function PublicAuctionsBoard({
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
   const [selectedCity, setSelectedCity] = useState<CitySuggestion | null>(null);
   const [loadingCities, setLoadingCities] = useState(false);
+  const [category, setCategory] = useState<CategoryFilter>(() =>
+    parseCategoryParam(searchParams.get("category"))
+  );
+
+  const availableCategories = useMemo(() => {
+    const present = new Set(auctions.map((a) => a.category));
+    return TRADE_CATEGORIES.filter((c) => present.has(c));
+  }, [auctions]);
+
+  useEffect(() => {
+    setCategory(parseCategoryParam(searchParams.get("category")));
+  }, [searchParams]);
+
+  function selectCategory(next: CategoryFilter) {
+    setCategory(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "all") params.delete("category");
+    else params.set("category", next);
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   useEffect(() => {
     if (mode !== "distance" || selectedCity || cityQuery.trim().length < 3) {
@@ -84,33 +122,80 @@ export default function PublicAuctionsBoard({
   }, [cityQuery, mode, selectedCity]);
 
   const filtered = useMemo(() => {
-    if (mode === "all") return auctions;
+    let list = auctions;
 
-    if (mode === "department") {
-      if (department === "all") return auctions;
-      return auctions.filter((a) => a.department === department);
+    if (category !== "all") {
+      list = list.filter((a) => a.category === category);
     }
 
-    if (!selectedCity) return [];
+    if (mode === "department") {
+      if (department !== "all") {
+        list = list.filter((a) => a.department === department);
+      }
+      return list;
+    }
 
-    return auctions
-      .map((auction) => {
-        if (auction.latitude == null || auction.longitude == null) return null;
-        const distanceKm = haversineKm(
-          { lat: selectedCity.lat, lon: selectedCity.lon },
-          { lat: auction.latitude, lon: auction.longitude }
-        );
-        if (distanceKm > radiusKm) return null;
-        return { auction, distanceKm };
-      })
-      .filter((row): row is { auction: Auction; distanceKm: number } => row != null)
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .map((row) => row.auction);
-  }, [auctions, mode, department, selectedCity, radiusKm]);
+    if (mode === "distance") {
+      if (!selectedCity) return [];
+      return list
+        .map((auction) => {
+          if (auction.latitude == null || auction.longitude == null) return null;
+          const distanceKm = haversineKm(
+            { lat: selectedCity.lat, lon: selectedCity.lon },
+            { lat: auction.latitude, lon: auction.longitude }
+          );
+          if (distanceKm > radiusKm) return null;
+          return { auction, distanceKm };
+        })
+        .filter(
+          (row): row is { auction: Auction; distanceKm: number } => row != null
+        )
+        .sort((a, b) => a.distanceKm - b.distanceKm)
+        .map((row) => row.auction);
+    }
+
+    return list;
+  }, [auctions, category, mode, department, selectedCity, radiusKm]);
 
   return (
     <div>
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {availableCategories.length > 0 && (
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-semibold text-slate-900">Type de travaux</p>
+          <p className="mt-1 text-xs text-slate-500">
+            Affichez uniquement les offres d&apos;un corps de métier.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => selectCategory("all")}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                category === "all"
+                  ? "bg-brand-700 text-white"
+                  : "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+              }`}
+            >
+              Tous
+            </button>
+            {availableCategories.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => selectCategory(cat)}
+                className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                  category === cat
+                    ? "bg-brand-700 text-white"
+                    : "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                }`}
+              >
+                {CATEGORY_LABELS[cat]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-sm font-semibold text-slate-900">Zone géographique</p>
         <p className="mt-1 text-xs text-slate-500">
           Filtrez les offres par département ou autour d&apos;une ville.
@@ -237,6 +322,7 @@ export default function PublicAuctionsBoard({
       <p className="mt-6 text-sm text-slate-500">
         {filtered.length} offre{filtered.length !== 1 ? "s" : ""} affichée
         {filtered.length !== 1 ? "s" : ""}
+        {category !== "all" ? ` · ${CATEGORY_LABELS[category]}` : ""}
         {mode === "distance" && selectedCity
           ? ` · autour de ${selectedCity.city} (${radiusKm} km)`
           : mode === "department" && department !== "all"
@@ -250,7 +336,7 @@ export default function PublicAuctionsBoard({
         </p>
       ) : filtered.length === 0 ? (
         <p className="mt-8 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
-          Aucune offre active dans cette zone.
+          Aucune offre active pour ces critères.
         </p>
       ) : (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

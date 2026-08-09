@@ -10,7 +10,10 @@ import {
   listPublicAuctions,
 } from "@/lib/work-request-auctions";
 import { shouldShowDemoBanner } from "@/lib/demo-banners";
-import { WORK_CATEGORIES } from "@/lib/work-categories";
+import {
+  WORK_CATEGORIES,
+  WORK_TO_TRADE_CATEGORY,
+} from "@/lib/work-categories";
 
 const STEPS = [
   {
@@ -24,9 +27,9 @@ const STEPS = [
       "Les professionnels vérifiés correspondant à votre besoin débloquent vos coordonnées et vous joignent pour un devis sur place.",
   },
   {
-    title: "Vous choisissez librement",
+    title: "Comparez leurs propositions",
     description:
-      "Échangez avec les artisans intéressés et retenez celui qui vous convient. Artipascher ne prend aucune commission sur vos travaux.",
+      "Les artisans vous contactent (visite, devis hors plateforme). Vous gardez la main — Artipascher ne prend aucune commission.",
   },
 ];
 
@@ -142,22 +145,29 @@ export default async function HomePage() {
           Tous corps de métier du bâtiment, artisans du Nord-Pas-de-Calais
         </p>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {WORK_CATEGORIES.map((category) => (
-            <div
-              key={category}
-              className="rounded-xl border border-slate-200 bg-white p-4 text-center"
-            >
-              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
-                <WorkCategoryIcon category={category} className="h-5 w-5" />
-              </span>
-              <p className="mt-3 font-medium text-slate-900">{category}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                {activeCategories.has(category)
-                  ? "Offres actives"
-                  : "Aucune offre"}
-              </p>
-            </div>
-          ))}
+          {WORK_CATEGORIES.map((category) => {
+            const trade = WORK_TO_TRADE_CATEGORY[category];
+            const href = trade
+              ? `/encheres?category=${encodeURIComponent(trade)}`
+              : "/encheres";
+            return (
+              <Link
+                key={category}
+                href={href}
+                className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:border-brand-300 hover:shadow-sm"
+              >
+                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                  <WorkCategoryIcon category={category} className="h-5 w-5" />
+                </span>
+                <p className="mt-3 font-medium text-slate-900">{category}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  {activeCategories.has(category)
+                    ? "Voir les offres →"
+                    : "Aucune offre"}
+                </p>
+              </Link>
+            );
+          })}
         </div>
       </section>
 

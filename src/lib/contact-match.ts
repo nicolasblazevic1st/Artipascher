@@ -16,6 +16,16 @@ import {
   WORK_TO_TRADE_CATEGORY,
 } from "./work-categories";
 
+/** Seuils proposés au particulier pour filtrer par note Google. */
+export const MIN_GOOGLE_RATING_OPTIONS = [3.5, 4, 4.5] as const;
+
+export function parseMinGoogleRating(raw: unknown): number | undefined {
+  const n = typeof raw === "number" ? raw : Number(String(raw ?? "").trim());
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  if (n > 5) return 5;
+  return Math.round(n * 10) / 10;
+}
+
 export type ContactMatchResult =
   | { ok: true }
   | { ok: false; reason: string };
@@ -61,9 +71,23 @@ async function resolveProCompanyCreatedAt(
   return prospect?.companyCreatedAt;
 }
 
+async function resolveProGoogleRating(
+  pro: ProRegistration
+): Promise<number | undefined> {
+  const fromDb = await getArtisanBySiret(pro.siret);
+  if (
+    typeof fromDb?.googleRating === "number" &&
+    Number.isFinite(fromDb.googleRating)
+  ) {
+    return fromDb.googleRating;
+  }
+  return undefined;
+}
+
 /**
- * Vérifie métier/NAF, zone (département) et préférence « entreprise ≥ 2 ans ».
- * Les annonces démo sans critères NAF restent ouvertes aux pros approuvés.
+ * Vérifie métier/NAF, zone (département), préférence « entreprise ≥ 2 ans »
+ * et note Google minimale. Les annonces démo sans critères NAF restent
+ * ouvertes aux pros approuvés.
  */
 export async function evaluateProContactMatch(
   pro: ProRegistration,
@@ -91,6 +115,17 @@ export async function evaluateProContactMatch(
         ok: false,
         reason:
           "Le client souhaite une entreprise créée il y a plus de 2 ans.",
+      };
+    }
+  }
+
+  const minRating = parseMinGoogleRating(request.minGoogleRating);
+  if (minRating != null) {
+    const rating = await resolveProGoogleRating(pro);
+    if (rating != null && rating < minRating) {
+      return {
+        ok: false,
+        reason: `Le client souhaite une note Google d’au moins ${minRating.toFixed(1).replace(".", ",")}/5 (votre fiche : ${rating.toFixed(1).replace(".", ",")}).`,
       };
     }
   }

@@ -21,9 +21,9 @@ export default function CommentCaMarchePage() {
           Comment fonctionne Artipascher ?
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-slate-600">
-          Du particulier à l&apos;artisan vérifié : vous publiez une demande,
-          les professionnels débloquent vos coordonnées, vous choisissez
-          librement — dans le Nord-Pas-de-Calais.
+          Du particulier à l&apos;artisan vérifié : vous publiez une demande
+          (avec critères éventuels), les professionnels débloquent vos
+          coordonnées et vous contactent — dans le Nord-Pas-de-Calais.
         </p>
         <WorkTradesIconRow className="mt-6" />
       </div>

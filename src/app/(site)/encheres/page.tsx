@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import PublicAuctionsBoard from "@/components/PublicAuctionsBoard";
 import { shouldShowDemoBanner } from "@/lib/demo-banners";
 import { listPublicAuctions } from "@/lib/work-request-auctions";
@@ -23,7 +24,16 @@ export default async function EncheresPage() {
         artisans par offre
       </p>
 
-      <PublicAuctionsBoard auctions={auctions} showDemoBanner={showDemoBanner} />
+      <Suspense
+        fallback={
+          <p className="mt-8 text-sm text-slate-500">Chargement des offres…</p>
+        }
+      >
+        <PublicAuctionsBoard
+          auctions={auctions}
+          showDemoBanner={showDemoBanner}
+        />
+      </Suspense>
     </div>
   );
 }

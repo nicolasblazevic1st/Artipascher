@@ -157,6 +157,14 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Note Google minimale</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              {request.minGoogleRating
+                ? `≥ ${String(request.minGoogleRating).replace(".", ",")}/5`
+                : "Peu importe"}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Mise en contact</dt>
             <dd className="mt-1 text-sm font-semibold">
               Autorisée via CGU / CGV (max. 5 artisans)

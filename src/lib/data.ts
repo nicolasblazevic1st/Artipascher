@@ -121,7 +121,7 @@ export const FAQ_ITEMS = [
   {
     question: "Comment fonctionne Artipascher ?",
     answer:
-      "Vous publiez une annonce décrivant vos travaux. Les artisans vérifiés du Nord-Pas-de-Calais qui correspondent à votre besoin peuvent débloquer vos coordonnées (crédits) pour vous contacter, visiter le chantier et vous envoyer un devis directement. Vous choisissez librement l’artisan retenu.",
+      "Vous publiez une annonce décrivant vos travaux (éventuellement avec des critères : ancienneté, note Google). Les artisans vérifiés du Nord-Pas-de-Calais qui correspondent peuvent débloquer vos coordonnées pour vous contacter, visiter le chantier et vous envoyer un devis directement.",
   },
   {
     question: "Artipascher couvre quelles zones ?",
