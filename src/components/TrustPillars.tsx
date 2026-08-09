@@ -1,45 +1,40 @@
-import Link from "next/link";
-
 export const TRUST_PILLARS = [
   {
     id: "decennale",
     label: "Garantie décennale",
-    detail: "Pour la garantie de vos travaux",
+    detail: "Travaux couverts 10 ans — En cas de malfaçon, vous êtes protégé.",
   },
   {
     id: "rc",
     label: "Assurance pro",
-    detail: "Assurance lors des travaux",
+    detail:
+      "Chantier assuré — Aucun risque financier en cas d'incident sur les travaux.",
   },
   {
     id: "google",
     label: "Avis Google",
-    detail: "Filtre possible selon note connue",
+    detail: "Note vérifiée — Filtrez les artisans selon leur réputation réelle.",
   },
   {
     id: "age",
     label: "Ancienneté",
     detail:
-      "Donnez sa chance à un jeune artisan ou choisissez la sérénité",
+      "Jeune talent ou artisan confirmé — À vous de choisir : dynamisme ou expérience éprouvée.",
   },
   {
     id: "bodacc",
     label: "Procédure collective",
-    detail: "Assurez-vous que l'entreprise est pérenne",
+    detail:
+      "Entreprise saine — Vérifiée financièrement, sans risque d'abandon de chantier.",
   },
 ] as const;
 
 interface Props {
-  /** Affiche le lien vers la présentation. */
-  showLearnMore?: boolean;
   className?: string;
 }
 
 /** Bande « Ce qu'on vérifie » — 5 contrôles, sans cartes lourdes. */
-export default function TrustPillars({
-  showLearnMore = true,
-  className = "",
-}: Props) {
+export default function TrustPillars({ className = "" }: Props) {
   return (
     <section
       id="controles"
@@ -47,27 +42,17 @@ export default function TrustPillars({
       aria-labelledby="trust-pillars-title"
     >
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2
-              id="trust-pillars-title"
-              className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
-            >
-              Ce qu&apos;on vérifie chez chaque artisan
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              100&nbsp;% Nord-Pas-de-Calais (59 / 62) · jusqu&apos;à 5 mises en
-              contact par annonce
-            </p>
-          </div>
-          {showLearnMore ? (
-            <Link
-              href="/comment-ca-marche#controles"
-              className="text-sm font-semibold text-brand-700 hover:text-brand-800"
-            >
-              Voir comment on vérifie →
-            </Link>
-          ) : null}
+        <div>
+          <h2
+            id="trust-pillars-title"
+            className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
+          >
+            Ce qu&apos;on vérifie chez chaque artisan
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            100&nbsp;% Nord-Pas-de-Calais (59 / 62) · jusqu&apos;à 5 mises en
+            contact par annonce
+          </p>
         </div>
 
         <ul className="mt-6 divide-y divide-slate-200 border-y border-slate-200">

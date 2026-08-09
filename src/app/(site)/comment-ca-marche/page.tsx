@@ -31,7 +31,7 @@ export default function CommentCaMarchePage() {
         </div>
       </div>
 
-      <TrustPillars showLearnMore={false} />
+      <TrustPillars />
 
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
         <div className="mt-2">
