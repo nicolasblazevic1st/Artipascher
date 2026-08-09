@@ -300,6 +300,8 @@ export async function POST(request: NextRequest) {
       auctionDurationDays,
       preferEstablishedCompany,
       minGoogleRating,
+      requireActiveCompany: true,
+      requireValidInsurances: true,
       smsContactAlertsEnabled: true,
       startPriceMode: "unspecified",
       photos: [],

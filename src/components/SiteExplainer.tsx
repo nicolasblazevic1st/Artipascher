@@ -177,17 +177,24 @@ function SlideCriteres() {
           Conditionnez qui peut vous contacter
         </h3>
         <ul className="space-y-2 text-xs text-slate-700">
+          <li className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <span className="font-semibold text-emerald-950">
+              Obligatoire · statut &amp; assurances
+            </span>
+            <span className="mt-0.5 block text-[10px] text-emerald-800">
+              Entreprise active · décennale + RC pro à jour
+            </span>
+          </li>
           <li className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <span className="font-semibold text-slate-900">Ancienneté</span>
             <span className="mt-0.5 block text-[10px] text-slate-500">
-              Ex. entreprise créée il y a plus de 2 ans
+              Optionnel · ex. entreprise créée il y a plus de 2 ans
             </span>
           </li>
           <li className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
             <span className="font-semibold text-amber-950">Note Google</span>
             <span className="mt-0.5 block text-[10px] text-amber-800">
-              Ex. ≥ 4,0 / 5 — les notes trop basses ne débloquent pas vos
-              coordonnées
+              Optionnel · ex. ≥ 4,0 / 5
             </span>
           </li>
         </ul>

@@ -164,6 +164,9 @@ export default function AdminDemandesPage() {
                         ? `≥ ${String(r.minGoogleRating).replace(".", ",")}/5`
                         : "peu importe"}
                     </div>
+                    <div>
+                      Obligatoire : statut normal · décennale &amp; RC pro
+                    </div>
                     <div>Mise en contact : autorisée (CGU / CGV · max. 5)</div>
                     <div>{r.email}</div>
                     <div>

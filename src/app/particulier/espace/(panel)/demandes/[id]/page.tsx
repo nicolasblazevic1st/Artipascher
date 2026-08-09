@@ -165,6 +165,12 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Conditions obligatoires</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              Statut normal · décennale &amp; RC pro à jour
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Mise en contact</dt>
             <dd className="mt-1 text-sm font-semibold">
               Autorisée via CGU / CGV (max. 5 artisans)

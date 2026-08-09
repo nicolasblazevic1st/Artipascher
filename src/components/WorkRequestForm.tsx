@@ -1080,6 +1080,58 @@ export default function WorkRequestForm({
         )}
       </div>
 
+      <fieldset className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <legend className="px-1 text-sm font-medium text-slate-700">
+          Conditions obligatoires{" "}
+          <span className="font-normal text-slate-500">(non modifiables)</span>
+        </legend>
+        <p className="mb-3 text-xs text-slate-500">
+          Seuls les artisans respectant ces critères pourront débloquer vos
+          coordonnées.
+        </p>
+        <ul className="space-y-2">
+          <li className="flex items-start gap-3 text-sm text-slate-800">
+            <input
+              type="checkbox"
+              checked
+              disabled
+              readOnly
+              className="mt-1"
+              aria-label="Entreprise au statut normal obligatoire"
+            />
+            <span>
+              <span className="font-semibold">
+                Entreprise au statut normal
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Active au registre — hors liquidation, dissolution ou cessation
+                d&apos;activité.
+              </span>
+            </span>
+          </li>
+          <li className="flex items-start gap-3 text-sm text-slate-800">
+            <input
+              type="checkbox"
+              checked
+              disabled
+              readOnly
+              className="mt-1"
+              aria-label="Décennale et assurance RC pro à jour obligatoires"
+            />
+            <span>
+              <span className="font-semibold">
+                Décennale et assurance RC pro à jour
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Attestations validées par Artipascher pour le métier concerné.
+              </span>
+            </span>
+          </li>
+        </ul>
+        <input type="hidden" name="requireActiveCompany" value="true" />
+        <input type="hidden" name="requireValidInsurances" value="true" />
+      </fieldset>
+
       <label
         className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
           acceptContactTerms

@@ -236,6 +236,15 @@ export interface WorkRequest {
    */
   minGoogleRating?: number;
   /**
+   * Toujours true sur les nouvelles demandes : entreprise au statut normal
+   * (active, hors liquidation / cessation).
+   */
+  requireActiveCompany?: boolean;
+  /**
+   * Toujours true sur les nouvelles demandes : décennale + RC pro validées.
+   */
+  requireValidInsurances?: boolean;
+  /**
    * Autorisation de mise en contact (acceptation CG à la création).
    * Contact-only : toujours true pour les nouvelles demandes.
    * undefined = true (historique).

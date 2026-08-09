@@ -9,6 +9,7 @@ import {
   resolveWorkRequestNafCodes,
 } from "./naf-codes";
 import { normalizeNafCode } from "./naf-trade-groups";
+import { isLevel1DocumentsValidated } from "./level1-certification";
 import { getArtisanProspects } from "./store";
 import type { ProRegistration, WorkRequest } from "./store-types";
 import { parseMinGoogleRating } from "./google-rating";
@@ -98,6 +99,28 @@ export async function evaluateProContactMatch(
       ok: false,
       reason:
         "Votre activité ne correspond pas aux métiers / codes NAF attendus pour cette demande.",
+    };
+  }
+
+  // Critères indécocheables côté particulier (toujours exigés).
+  const requireActive = request.requireActiveCompany !== false;
+  if (requireActive) {
+    const artisan = await getArtisanBySiret(pro.siret);
+    if (artisan?.status === "closed") {
+      return {
+        ok: false,
+        reason:
+          "Le client n’accepte que les entreprises au statut normal (hors liquidation / cessation).",
+      };
+    }
+  }
+
+  const requireInsurances = request.requireValidInsurances !== false;
+  if (requireInsurances && !isLevel1DocumentsValidated(pro)) {
+    return {
+      ok: false,
+      reason:
+        "Le client exige une décennale et une assurance RC professionnelle à jour (validées).",
     };
   }
 
