@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     started: true,
     async: true,
     message: full
-      ? "Sync SIRENE complète lancée en arrière-plan (plusieurs minutes). Rechargez la liste ensuite."
-      : "Sync SIRENE lancée en arrière-plan. Rechargez la liste dans une à deux minutes.",
+      ? "Sync SIRENE complète lancée (toute la base NPC, plusieurs minutes). Rechargez la liste ensuite."
+      : "Sync rapide SIRENE lancée (quelques pages / métier). Rechargez la liste dans une à deux minutes.",
   });
 }

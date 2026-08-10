@@ -386,16 +386,18 @@ export default function AdminBaseArtisansPage() {
             disabled={Boolean(busy)}
             onClick={() => void runAction("sirene")}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+            title="Mise à jour rapide SIRENE (quelques pages par métier NAF). Idéal au quotidien."
           >
-            Sync SIRENE
+            Sync rapide SIRENE
           </button>
           <button
             type="button"
             disabled={Boolean(busy)}
             onClick={() => void runAction("sirene-full")}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+            title="Parcourt tout SIRENE pour les métiers NPC (plusieurs minutes). À lancer rarement, ex. première charge ou rattrapage."
           >
-            Sync complète
+            Sync SIRENE complète
           </button>
           <button
             type="button"
@@ -415,6 +417,7 @@ export default function AdminBaseArtisansPage() {
             disabled={Boolean(busy) || stats?.placesEnabled === false}
             onClick={() => void runAction("places")}
             className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50"
+            title="Cherche les numéros de téléphone manquants via Google Places"
           >
             Enrichir Places
           </button>
@@ -436,6 +439,11 @@ export default function AdminBaseArtisansPage() {
           </button>
         </div>
       </div>
+      <p className="text-xs text-slate-500">
+        <strong>Sync rapide</strong> : mise à jour courte (quelques pages / métier).{" "}
+        <strong>Sync SIRENE complète</strong> : toute la base NPC, plusieurs
+        minutes — à lancer rarement.
+      </p>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
