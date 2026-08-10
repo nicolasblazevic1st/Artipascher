@@ -211,11 +211,41 @@ export default function CguPage() {
         <p className="mt-3">
           L&apos;Éditeur peut envoyer des SMS d&apos;information / invitation à
           des entreprises du bâtiment (sources publiques et/ou enrichissement)
-          pour signaler des chantiers ou inviter à s&apos;inscrire. Un numéro /
-          SIRET déjà contacté par SMS marketing n&apos;est en principe{" "}
-          <strong>pas relancé</strong> par ce canal. Les SMS transactionnels
-          adressés aux Clients (vérification du mobile, alertes de contact) sont
-          distincts des SMS marketing.
+          pour signaler des chantiers ou inviter à s&apos;inscrire sur la
+          Plateforme.
+        </p>
+        <ul>
+          <li>
+            Ces envois peuvent être déclenchés{" "}
+            <strong>manuellement</strong> ou{" "}
+            <strong>automatiquement</strong> lorsqu&apos;une demande Client est
+            validée et publiée comme offre (enchère) destinée aux Professionnels,
+            dans la limite des places de contact prévues (notamment 5 Artisans
+            maximum par offre) ;
+          </li>
+          <li>
+            les SMS marketing sont transmis via le prestataire technique{" "}
+            <strong>OVH SMS</strong> ; dès qu&apos;un envoi est effectivement
+            soumis à ce prestataire, le message est pris en charge pour
+            livraison (sous réserve des règles du réseau) ;
+          </li>
+          <li>
+            les messages marketing comportent une mention{" "}
+            <strong>STOP</strong> permettant de s&apos;opposer aux prochains
+            envois marketing ; ils sont en principe adressés uniquement dans la
+            fenêtre indicative des SMS commerciaux en France (lundi–samedi,
+            8h–20h, heure de Paris) ;
+          </li>
+          <li>
+            un numéro / SIRET déjà contacté par SMS marketing n&apos;est en
+            principe <strong>pas relancé</strong> par ce canal.
+          </li>
+        </ul>
+        <p className="mt-3">
+          Les SMS transactionnels adressés aux Clients (vérification du mobile,
+          alertes de contact) sont distincts des SMS marketing et peuvent
+          ne pas comporter de clause STOP lorsqu&apos;ils sont liés à une action
+          de l&apos;Utilisateur ou au service demandé.
         </p>
       </section>
 

@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation (CGU) — Artipascher
 
-Dernière mise à jour : 8 août 2026 · Version 1.1-brouillon
+Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
 > Brouillon à faire relire par un avocat.
 
@@ -49,7 +49,14 @@ Le déblocage donne accès aux **coordonnées** (identité, téléphone, email, 
 
 ## 8. Prospection SMS (Professionnels non inscrits)
 
-L'Éditeur peut envoyer des SMS d'information / invitation à des entreprises du bâtiment (sources publiques / enrichissement) pour signaler des chantiers. Un numéro / SIRET déjà contacté par SMS marketing n'est en principe **pas relancé** par ce canal. Les SMS transactionnels aux Clients (vérification, alertes) sont distincts.
+L'Éditeur peut envoyer des SMS d'information / invitation à des entreprises du bâtiment (sources publiques et/ou enrichissement) pour signaler des chantiers ou inviter à s'inscrire sur la Plateforme.
+
+- Ces envois peuvent être déclenchés **manuellement** ou **automatiquement** lorsqu'une demande Client est validée et publiée comme offre (enchère) destinée aux Professionnels, dans la limite des places de contact prévues (notamment 5 Artisans maximum par offre) ;
+- les SMS marketing sont transmis via le prestataire technique **OVH SMS** ; dès qu'un envoi est effectivement soumis à ce prestataire, le message est pris en charge pour livraison (sous réserve des règles du réseau) ;
+- les messages marketing comportent une mention **STOP** permettant de s'opposer aux prochains envois marketing ; ils sont en principe adressés uniquement dans la fenêtre indicative des SMS commerciaux en France (lundi–samedi, 8h–20h, heure de Paris) ;
+- un numéro / SIRET déjà contacté par SMS marketing n'est en principe **pas relancé** par ce canal.
+
+Les SMS transactionnels adressés aux Clients (vérification du mobile, alertes de contact) sont distincts des SMS marketing et peuvent ne pas comporter de clause STOP lorsqu'ils sont liés à une action de l'Utilisateur ou au service demandé.
 
 ## 9. Obligations des Utilisateurs
 

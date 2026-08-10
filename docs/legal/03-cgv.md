@@ -1,6 +1,6 @@
 # Conditions générales de vente (CGV) — Artipascher
 
-Dernière mise à jour : 8 août 2026 · Version 1.1-brouillon
+Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
 > Brouillon à faire relire par un avocat. CGV destinées aux **professionnels** (vente de crédits).
 
@@ -12,9 +12,10 @@ Voir aussi les CGU.
 
 ## 2. Produits
 
-- 1 crédit = 1 € (selon régime fiscal affiché au paiement)
-- Packs : 1, 5, 10, 20 crédits (sous réserve d'affichage)
-- Usages typiques : déblocage contact 1 crédit ; dépôt enchère 1 crédit
+- 1 crédit = 20 € au tarif unitaire de référence (selon régime fiscal et packs affichés au paiement ; packs à tarif dégressif possibles)
+- 1 crédit = 1 mise en contact (déblocage des coordonnées Client)
+- Packs : selon affichage en vigueur sur le Site
+- Usages typiques : déblocage contact 1 crédit ; certaines actions (ex. dépôt d'enchère) peuvent aussi consommer des crédits selon l'affichage
 - Crédits non remboursables en espèces (sauf obligation légale), sans valeur hors plateforme
 
 ## 2 bis. Nature du service payant

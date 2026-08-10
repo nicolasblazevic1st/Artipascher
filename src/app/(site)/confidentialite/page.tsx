@@ -49,8 +49,16 @@ export default function ConfidentialitePage() {
           </li>
           <li>
             <strong>Prospects acquisition</strong> : données d&apos;entreprises
-            (SIRET, code NAF, ville, téléphone enrichi le cas échéant) utilisées
-            pour la prospection SMS ;
+            (SIRET, code NAF, ville, téléphone enrichi le cas échéant, sources
+            publiques type annuaire / enrichissement) utilisées pour la
+            prospection SMS et le suivi d&apos;opposition (STOP / déjà
+            contacté) ;
+          </li>
+          <li>
+            <strong>Campagnes SMS</strong> : historique des lots / envois
+            (destinataires, statut, date), lien éventuel avec une offre
+            publiée, et indicateurs d&apos;attribution (ex. inscription après
+            SMS) ;
           </li>
           <li>
             <strong>Paiements</strong> : données de transaction via le
@@ -81,7 +89,8 @@ export default function ConfidentialitePage() {
           <li>
             Intérêt légitime : sécurité, prévention de la fraude, amélioration
             du service, statistiques agrégées, prospection B2B d&apos;entreprises
-            (SMS marketing avec possibilité d&apos;opposition STOP) ;
+            (SMS marketing manuels ou automatiques à la publication d&apos;une
+            offre, avec possibilité d&apos;opposition STOP) ;
           </li>
           <li>
             Obligation légale : conservation comptable / fiscale le cas échéant ;
@@ -94,17 +103,42 @@ export default function ConfidentialitePage() {
 
       <section>
         <h2>4. SMS</h2>
+        <p className="mt-3">
+          Les SMS sont acheminés via le prestataire <strong>OVH SMS</strong>{" "}
+          (API). Expéditeur alphanumérique lorsque disponible (ex. Artipascher).
+        </p>
         <ul>
           <li>
             <strong>Transactionnels (Clients)</strong> : code de vérification
-            du mobile ; alerte lorsqu&apos;un Artisan demande le contact —
-            prestataire SMS (OVH), même expéditeur lorsque possible ;
+            du mobile ; alerte lorsqu&apos;un Artisan demande le contact. Ces
+            messages sont liés au service ; ils peuvent ne pas comporter de
+            clause STOP afin d&apos;éviter un désabonnement involontaire après
+            un code ou une alerte ;
           </li>
           <li>
             <strong>Marketing (Professionnels / prospects)</strong> :
-            information sur des chantiers et/ou invitation à s&apos;inscrire —
-            mention STOP, horaires applicables aux SMS commerciaux ; un SIRET
-            déjà contacté n&apos;est en principe plus relancé par ce canal.
+            information sur des chantiers et/ou invitation à s&apos;inscrire.
+            Les campagnes peuvent être lancées manuellement ou{" "}
+            <strong>automatiquement</strong> lorsqu&apos;une demande Client est
+            validée et publiée comme offre. Elles peuvent être découpées en
+            lots quotidiens jusqu&apos;à atteinte de l&apos;objectif de mise en
+            relation (ex. 5 contacts) ;
+          </li>
+          <li>
+            les SMS marketing comportent une mention <strong>STOP</strong> ;
+            l&apos;opposition est prise en compte pour les prochains envois
+            marketing. Envoi en principe limité à la fenêtre indicative des SMS
+            commerciaux (lundi–samedi, 8h–20h, heure de Paris) ;
+          </li>
+          <li>
+            un SIRET / numéro déjà contacté par SMS marketing n&apos;est en
+            principe plus relancé par ce canal ;
+          </li>
+          <li>
+            dès qu&apos;un envoi marketing est effectivement soumis à OVH, le
+            message est pris en charge pour livraison (crédits OVH débités selon
+            le contrat du prestataire). Une phase de préparation / validation
+            interne peut précéder cet envoi réel.
           </li>
         </ul>
       </section>

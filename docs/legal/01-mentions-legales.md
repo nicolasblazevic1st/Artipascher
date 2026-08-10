@@ -1,6 +1,6 @@
 # Mentions légales — Artipascher
 
-Dernière mise à jour : 8 août 2026 · Version 1.1-brouillon
+Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
 > Brouillon à faire relire par un avocat. Champs `[À COMPLÉTER]` à renseigner.
 
