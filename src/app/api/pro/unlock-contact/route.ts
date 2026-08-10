@@ -66,7 +66,14 @@ export async function POST(request: NextRequest) {
 
   const level1 = canUnlockContacts(pro);
   if (!level1.ok) {
-    return NextResponse.json({ error: level1.reason }, { status: 403 });
+    return NextResponse.json(
+      {
+        error:
+          "Votre compte n’est pas prêt à contacter un client. Complétez votre dossier.",
+        needsAccountSetup: true,
+      },
+      { status: 403 }
+    );
   }
 
   if (await hasContactUnlock(session.proId, auctionId)) {
@@ -95,7 +102,10 @@ export async function POST(request: NextRequest) {
     const match = await evaluateProContactMatch(pro, workRequest);
     if (!match.ok) {
       return NextResponse.json(
-        { error: match.reason, needsMatch: true },
+        {
+          error: "Vous ne répondez pas à une des exigences du client.",
+          needsMatch: true,
+        },
         { status: 403 }
       );
     }

@@ -39,6 +39,7 @@ export default function ClientContactPanel({
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showMatchModal, setShowMatchModal] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
   const fetchContact = useCallback(async () => {
@@ -74,6 +75,7 @@ export default function ClientContactPanel({
   async function handleUnlock(demo = false) {
     setPaying(true);
     setError(null);
+    setShowMatchModal(false);
     const res = await fetch("/api/pro/unlock-contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -88,6 +90,18 @@ export default function ClientContactPanel({
     }
     if (data.unlocked || data.alreadyUnlocked) {
       await fetchContact();
+      return;
+    }
+    if (data.needsMatch) {
+      setShowMatchModal(true);
+      return;
+    }
+    if (data.needsAccountSetup) {
+      setError(
+        typeof data.error === "string" && data.error.trim()
+          ? data.error
+          : "Votre compte n’est pas prêt à contacter un client. Complétez votre dossier."
+      );
       return;
     }
     setError(data.error ?? "Paiement impossible.");
@@ -181,12 +195,43 @@ export default function ClientContactPanel({
 
   return (
     <section id="contact" className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6">
+      {showMatchModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          role="presentation"
+          onClick={() => setShowMatchModal(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="match-modal-title"
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              id="match-modal-title"
+              className="text-lg font-semibold text-slate-900"
+            >
+              Déblocage impossible
+            </h3>
+            <p className="mt-3 text-sm text-slate-600">
+              Vous ne répondez pas à une des exigences du client.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowMatchModal(false)}
+              className="mt-5 w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Les photos du projet restent visibles librement. Si votre activité
-        correspond aux attentes du client et qu’il reste une place (max. 5
-        artisans), débloquez les coordonnées pour {UNLOCK_PRICE_EUR}&nbsp;€ (
-        {UNLOCK_CREDITS_COST} crédit).
+        Débloquez les coordonnées pour {UNLOCK_PRICE_EUR}&nbsp;€ (
+        {UNLOCK_CREDITS_COST} crédit) si votre profil correspond aux critères du
+        client.
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">

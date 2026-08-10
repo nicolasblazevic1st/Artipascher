@@ -131,6 +131,15 @@ export function getLevel1ConsistencyIssues(pro: ProRegistration): Level1Consiste
 }
 
 export function isLevel1DocumentsValidated(pro: ProRegistration): boolean {
+  return listMissingVerificationDocuments(pro).length === 0;
+}
+
+/** Documents / validations manquants pour débloquer un contact. */
+export function listMissingVerificationDocuments(
+  pro: ProRegistration
+): string[] {
+  const missing: string[] = [];
+
   const legacyApproved =
     pro.status === "approved" &&
     !pro.level1CertifiedAt &&
@@ -138,16 +147,44 @@ export function isLevel1DocumentsValidated(pro: ProRegistration): boolean {
 
   if (legacyApproved) {
     const trades = getProTradeSelections(pro);
-    return trades.every((s) => !s.decennaleStatus || s.decennaleStatus === "validé");
+    for (const s of trades) {
+      if (s.decennaleStatus && s.decennaleStatus !== "validé") {
+        const trade =
+          s.qualibatJobLabel || s.tradeGroupLabel || "votre métier";
+        missing.push(
+          s.decennaleStatus === "rejeté"
+            ? `Décennale (${trade}) — à renvoyer`
+            : `Décennale (${trade}) — en cours de validation`
+        );
+      }
+    }
+    return missing;
   }
 
   const rcDoc = pro.documents?.find(isRcDocument);
-  if (!rcDoc || documentStatus(rcDoc) !== "validé") return false;
+  const rcStatus = documentStatus(rcDoc);
+  if (!rcDoc || rcStatus !== "validé") {
+    if (!rcDoc) missing.push("RC professionnelle");
+    else if (rcStatus === "rejeté")
+      missing.push("RC professionnelle — à renvoyer");
+    else missing.push("RC professionnelle — en cours de validation");
+  }
 
   const trades = getProTradeSelections(pro);
-  if (trades.length === 0) return false;
+  if (trades.length === 0) {
+    missing.push("Décennale");
+  } else {
+    for (const s of trades) {
+      if (s.decennaleStatus === "validé") continue;
+      const trade = s.qualibatJobLabel || s.tradeGroupLabel || "votre métier";
+      if (!s.decennaleStatus) missing.push(`Décennale (${trade})`);
+      else if (s.decennaleStatus === "rejeté")
+        missing.push(`Décennale (${trade}) — à renvoyer`);
+      else missing.push(`Décennale (${trade}) — en cours de validation`);
+    }
+  }
 
-  return trades.every((s) => s.decennaleStatus === "validé");
+  return missing;
 }
 
 export function isLevel1Certified(pro: ProRegistration): boolean {
@@ -161,24 +198,39 @@ export function isLevel1ReadyForAdminReview(pro: ProRegistration): boolean {
 export function canUnlockContacts(pro: ProRegistration): {
   ok: boolean;
   reason?: string;
+  missingItems?: string[];
 } {
   if (pro.status !== "approved") {
+    const missingItems = listMissingVerificationDocuments(pro);
     return {
       ok: false,
       reason:
         "Certification niveau 1 non obtenue. Vérifiez vos documents (RC pro et décennale) et réinscrivez-vous si besoin.",
+      missingItems:
+        missingItems.length > 0
+          ? missingItems
+          : ["RC professionnelle", "Décennale"],
     };
   }
 
   if (!pro.rcsVerified) {
-    return { ok: false, reason: "Vérification RCS requise." };
+    return {
+      ok: false,
+      reason: "Vérification RCS requise.",
+      missingItems: ["Vérification RCS"],
+    };
   }
 
   if (!isLevel1Certified(pro) && !isLevel1DocumentsValidated(pro)) {
+    const missingItems = listMissingVerificationDocuments(pro);
     return {
       ok: false,
       reason:
         "Certification niveau 1 incomplète : RC pro et décennale(s) doivent être validées automatiquement.",
+      missingItems:
+        missingItems.length > 0
+          ? missingItems
+          : ["RC professionnelle", "Décennale"],
     };
   }
 

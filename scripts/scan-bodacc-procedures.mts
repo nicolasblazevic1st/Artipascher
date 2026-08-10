@@ -3,10 +3,11 @@
  * Écrit uniquement les hits « procédure active » dans data/bodacc-active-procedures.json.
  *
  * Usage :
- *   npx tsx scripts/scan-bodacc-procedures.mts
- *   npx tsx scripts/scan-bodacc-procedures.mts --limit=200
- *   npx tsx scripts/scan-bodacc-procedures.mts --delay-ms=250 --concurrency=2
- *   npx tsx scripts/scan-bodacc-procedures.mts --reset   # recommence le progrès
+ *   npm run scan:bodacc
+ *   npm run scan:bodacc -- --retry-unavailable
+ *   npm run scan:bodacc -- --retry-unavailable --delay-ms=800 --concurrency=1
+ *   npm run scan:bodacc -- --limit=2000
+ *   npm run scan:bodacc -- --reset
  */
 import { promises as fs } from "fs";
 import path from "path";
@@ -38,9 +39,11 @@ interface ActiveBodaccDb {
   active: ActiveBodaccEntry[];
 }
 
+type CheckStatus = "clear" | "active_procedure" | "unavailable";
+
 interface ScanProgress {
   updatedAt: string;
-  checked: Record<string, "clear" | "active_procedure" | "unavailable">;
+  checked: Record<string, CheckStatus>;
   stats: {
     clear: number;
     active_procedure: number;
@@ -50,23 +53,25 @@ interface ScanProgress {
 
 function parseArgs(argv: string[]) {
   let limit: number | undefined;
-  let delayMs = 250;
-  let concurrency = 2;
+  let delayMs = 800;
+  let concurrency = 1;
   let reset = false;
+  let retryUnavailable = false;
   for (const arg of argv) {
     if (arg === "--reset") reset = true;
+    else if (arg === "--retry-unavailable") retryUnavailable = true;
     else if (arg.startsWith("--limit=")) {
       limit = Math.max(1, Number(arg.slice("--limit=".length)) || 0) || undefined;
     } else if (arg.startsWith("--delay-ms=")) {
-      delayMs = Math.max(0, Number(arg.slice("--delay-ms=".length)) || 250);
+      delayMs = Math.max(0, Number(arg.slice("--delay-ms=".length)) || 800);
     } else if (arg.startsWith("--concurrency=")) {
       concurrency = Math.min(
         5,
-        Math.max(1, Number(arg.slice("--concurrency=".length)) || 2)
+        Math.max(1, Number(arg.slice("--concurrency=".length)) || 1)
       );
     }
   }
-  return { limit, delayMs, concurrency, reset };
+  return { limit, delayMs, concurrency, reset, retryUnavailable };
 }
 
 async function readJsonSafe<T>(filePath: string, fallback: T): Promise<T> {
@@ -93,15 +98,31 @@ function emptyProgress(): ScanProgress {
   };
 }
 
+function recomputeStats(checked: Record<string, CheckStatus>): ScanProgress["stats"] {
+  const stats = { clear: 0, active_procedure: 0, unavailable: 0 };
+  for (const status of Object.values(checked)) {
+    stats[status] = (stats[status] ?? 0) + 1;
+  }
+  return stats;
+}
+
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
 async function main() {
-  const { limit, delayMs, concurrency, reset } = parseArgs(process.argv.slice(2));
+  const { limit, delayMs, concurrency, reset, retryUnavailable } = parseArgs(
+    process.argv.slice(2)
+  );
 
   console.log("=== Scan BODACC → base procédures actives ===");
-  console.log({ limit: limit ?? "all", delayMs, concurrency, reset });
+  console.log({
+    limit: limit ?? "all",
+    delayMs,
+    concurrency,
+    reset,
+    retryUnavailable,
+  });
 
   const db = await readArtisansDb();
   const bySiren = new Map<
@@ -127,6 +148,19 @@ async function main() {
   let progress = reset
     ? emptyProgress()
     : await readJsonSafe<ScanProgress>(PROGRESS_PATH, emptyProgress());
+
+  if (retryUnavailable && !reset) {
+    let cleared = 0;
+    for (const [siren, status] of Object.entries(progress.checked)) {
+      if (status === "unavailable") {
+        delete progress.checked[siren];
+        cleared++;
+      }
+    }
+    progress.stats = recomputeStats(progress.checked);
+    console.log(`Retry : ${cleared} SIREN « unavailable » remis en file`);
+  }
+
   let activeDb = reset
     ? {
         updatedAt: new Date().toISOString(),
@@ -148,7 +182,7 @@ async function main() {
   const pending = allSirens.filter((s) => !progress.checked[s]);
   const queue = limit ? pending.slice(0, limit) : pending;
   console.log(
-    `Déjà scannés : ${Object.keys(progress.checked).length} · à faire maintenant : ${queue.length}`
+    `Déjà OK : ${Object.keys(progress.checked).length} · à faire : ${queue.length}`
   );
 
   if (queue.length === 0) {
@@ -160,10 +194,12 @@ async function main() {
 
   let done = 0;
   let idx = 0;
+  let consecutiveUnavailable = 0;
   const started = Date.now();
 
   async function persist() {
     progress.updatedAt = new Date().toISOString();
+    progress.stats = recomputeStats(progress.checked);
     activeDb = {
       updatedAt: progress.updatedAt,
       source: "artisans-enrichment.json",
@@ -184,7 +220,20 @@ async function main() {
       const check = await checkBodaccCollectiveProcedures(siren);
       const status = check.status;
       progress.checked[siren] = status;
-      progress.stats[status] = (progress.stats[status] ?? 0) + 1;
+
+      if (status === "unavailable") {
+        consecutiveUnavailable++;
+        // Quota API probablement atteint — on s'arrête pour reprendre plus tard.
+        if (consecutiveUnavailable >= 40) {
+          console.warn(
+            "\nTrop d'unavailable d'affilée (quota BODACC ?). Pause — relance plus tard avec --retry-unavailable."
+          );
+          idx = queue.length;
+          break;
+        }
+      } else {
+        consecutiveUnavailable = 0;
+      }
 
       if (status === "active_procedure") {
         const meta = bySiren.get(siren);
@@ -207,6 +256,7 @@ async function main() {
 
       done++;
       if (done % 25 === 0 || done === queue.length) {
+        progress.stats = recomputeStats(progress.checked);
         const elapsed = (Date.now() - started) / 1000;
         const rate = done / Math.max(elapsed, 0.001);
         console.log(
@@ -222,8 +272,8 @@ async function main() {
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
   await persist();
 
-  console.log("\nTerminé.");
-  console.log("Stats session progress :", progress.stats);
+  console.log("\nTerminé (ou pause quota).");
+  console.log("Stats :", progress.stats);
   console.log("Procédures actives (fichier) :", activeBySiren.size);
   console.log("→", ACTIVE_DB_PATH);
   console.log("→", PROGRESS_PATH);

@@ -89,14 +89,6 @@ export default async function HomePage() {
             <StepCard key={step.title} number={index + 1} {...step} />
           ))}
         </div>
-        <p className="mt-8 text-center">
-          <Link
-            href="/comment-ca-marche"
-            className="text-sm font-semibold text-brand-700 hover:text-brand-800"
-          >
-            Voir la présentation animée (~90 s) →
-          </Link>
-        </p>
       </section>
 
       <section className="border-y border-slate-200 bg-white py-16">

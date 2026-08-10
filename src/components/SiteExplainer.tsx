@@ -128,7 +128,7 @@ function SlideAnnonce() {
             Visible par les artisans correspondants
           </p>
           <p className="mt-1 text-[10px] text-slate-600">
-            Métier, département et attentes client — max. 5 déblocages
+            Consultation libre · déblocage si critères client OK — max. 5
           </p>
         </div>
       </div>

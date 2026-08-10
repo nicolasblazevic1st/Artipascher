@@ -9,7 +9,10 @@ import {
   resolveWorkRequestNafCodes,
 } from "./naf-codes";
 import { normalizeNafCode } from "./naf-trade-groups";
-import { isLevel1DocumentsValidated } from "./level1-certification";
+import {
+  isLevel1DocumentsValidated,
+  listMissingVerificationDocuments,
+} from "./level1-certification";
 import { getArtisanProspects } from "./store";
 import type { ProRegistration, WorkRequest } from "./store-types";
 import { parseMinGoogleRating } from "./google-rating";
@@ -20,9 +23,16 @@ import {
 
 export { MIN_GOOGLE_RATING_OPTIONS, parseMinGoogleRating } from "./google-rating";
 
+export type ContactMatchCode = "verification" | "criteria";
+
 export type ContactMatchResult =
   | { ok: true }
-  | { ok: false; reason: string };
+  | {
+      ok: false;
+      reason: string;
+      code: ContactMatchCode;
+      missingItems?: string[];
+    };
 
 function proNafCodes(pro: ProRegistration): Set<string> {
   const codes = new Set<string>();
@@ -79,24 +89,18 @@ async function resolveProGoogleRating(
 }
 
 /**
- * Vérifie métier/NAF, zone (département), préférence d'ancienneté
- * (&lt; 2 ans ou ≥ 2 ans exclusif) et note Google minimale.
+ * Critères client pour débloquer un contact (consultation libre tous départements) :
+ * métier/NAF, entreprise active, RC + décennale, ancienneté, note Google.
  * Les annonces démo sans critères NAF restent ouvertes aux pros approuvés.
  */
 export async function evaluateProContactMatch(
   pro: ProRegistration,
   request: WorkRequest
 ): Promise<ContactMatchResult> {
-  if (pro.department !== request.department) {
-    return {
-      ok: false,
-      reason: `Ce chantier est en ${request.department}. Votre siège est déclaré en ${pro.department}.`,
-    };
-  }
-
   if (!requestMatchesProTrade(request, pro)) {
     return {
       ok: false,
+      code: "criteria",
       reason:
         "Votre activité ne correspond pas aux métiers / codes NAF attendus pour cette demande.",
     };
@@ -109,18 +113,26 @@ export async function evaluateProContactMatch(
     if (artisan?.status === "closed") {
       return {
         ok: false,
+        code: "verification",
         reason:
           "Le client n’accepte que les entreprises au statut normal (hors liquidation / cessation).",
+        missingItems: ["Entreprise active (pas fermée)"],
       };
     }
   }
 
   const requireInsurances = request.requireValidInsurances !== false;
   if (requireInsurances && !isLevel1DocumentsValidated(pro)) {
+    const missingItems = listMissingVerificationDocuments(pro);
     return {
       ok: false,
+      code: "verification",
       reason:
         "Le client exige une décennale et une assurance RC professionnelle à jour (validées).",
+      missingItems:
+        missingItems.length > 0
+          ? missingItems
+          : ["RC professionnelle", "Décennale"],
     };
   }
 
@@ -129,6 +141,7 @@ export async function evaluateProContactMatch(
     if (createdAt && companyAgeCohort(createdAt) === "young") {
       return {
         ok: false,
+        code: "criteria",
         reason:
           "Le client souhaite une entreprise créée il y a plus de 2 ans.",
       };
@@ -138,6 +151,7 @@ export async function evaluateProContactMatch(
     if (!createdAt || companyAgeCohort(createdAt) !== "young") {
       return {
         ok: false,
+        code: "criteria",
         reason:
           "Le client souhaite une entreprise créée il y a moins de 2 ans.",
       };
@@ -150,6 +164,7 @@ export async function evaluateProContactMatch(
     if (rating != null && rating < minRating) {
       return {
         ok: false,
+        code: "criteria",
         reason: `Le client souhaite une note Google d’au moins ${minRating.toFixed(1).replace(".", ",")}/5 (votre fiche : ${rating.toFixed(1).replace(".", ",")}).`,
       };
     }

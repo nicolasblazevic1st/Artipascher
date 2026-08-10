@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatPublicLocation } from "@/lib/client-address";
@@ -71,6 +72,10 @@ export default async function ProChantierDetailPage({ params }: Props) {
         max={MAX_CONTACT_UNLOCKS_PER_REQUEST}
         className="mt-4"
       />
+
+      {workRequest && (
+        <OfferClientRequirements request={workRequest} className="mt-4" />
+      )}
 
       <ClientContactPanel
         auctionId={id}

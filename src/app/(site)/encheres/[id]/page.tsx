@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
@@ -86,6 +87,10 @@ export default async function ChantierDetailPage({ params }: Props) {
           max={MAX_CONTACT_UNLOCKS_PER_REQUEST}
           className="mt-5"
         />
+
+        {workRequest && (
+          <OfferClientRequirements request={workRequest} className="mt-5" />
+        )}
 
         {workRequest?.previousQuoteAmount != null && workRequest.previousQuoteProofUrl && (
           <div className="mt-6">

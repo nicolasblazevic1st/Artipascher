@@ -48,8 +48,10 @@ export default function CguPage() {
           </li>
           <li>
             <strong>Annonce / offre</strong> : publication d&apos;une demande de
-            travaux validée, visible par les Professionnels correspondants
-            pendant la durée choisie par le Client.
+            travaux validée, consultable par les Professionnels (tous
+            départements du périmètre) pendant la durée choisie par le Client ;
+            le déblocage des coordonnées reste soumis aux critères définis par
+            le Client.
           </li>
           <li>
             <strong>Crédits</strong> : unités prépayées permettant aux
@@ -189,8 +191,11 @@ export default function CguPage() {
             automatique n&apos;est imposée.
           </li>
           <li>
-            Le déblocage des coordonnées est soumis à consommation de crédits
-            (voir <Link href="/cgv">CGV</Link>).
+            Le déblocage des coordonnées est soumis à la correspondance du
+            profil Professionnel avec les critères choisis par le Client
+            (métier, entreprise active, assurances, ancienneté, note Google le
+            cas échéant) et à la consommation de crédits (voir{" "}
+            <Link href="/cgv">CGV</Link>).
           </li>
           <li>
             Le déblocage donne accès aux{" "}

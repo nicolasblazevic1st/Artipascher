@@ -37,7 +37,7 @@ const FEATURES = [
   {
     title: "Matching métier",
     description:
-      "Vous ne voyez que les demandes alignées avec votre activité, votre département et les attentes client.",
+      "Vous consultez toutes les offres ; le déblocage des coordonnées est réservé si votre profil correspond aux critères du client.",
   },
   {
     title: "Places limitées",

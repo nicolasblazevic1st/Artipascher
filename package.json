@@ -11,7 +11,10 @@
     "fixtures:docs:verifiable": "node scripts/fetch-verifiable-test-docs.mjs",
     "fixtures:docs:verify": "npx tsx scripts/verify-verifiable-docs.mts",
     "fixtures:bodacc": "npx tsx scripts/verify-bodacc.mts",
-    "scan:bodacc": "npx tsx scripts/scan-bodacc-procedures.mts"
+    "scan:bodacc": "npx tsx scripts/scan-bodacc-procedures.mts",
+    "scan:bodacc:retry": "npx tsx scripts/scan-bodacc-procedures.mts --retry-unavailable --delay-ms=800 --concurrency=1",
+    "bodacc:list": "npx tsx scripts/list-bodacc-active.mts",
+    "bodacc:stats": "npx tsx scripts/list-bodacc-active.mts --stats"
   },
   "dependencies": {
     "next": "^16.2.12",
