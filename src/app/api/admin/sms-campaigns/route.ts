@@ -133,6 +133,7 @@ export async function POST(request: NextRequest) {
   let action: "start" | "tick" | "pause" | "resume" | "approve" = "start";
   let smsPerDay: number | undefined;
   let batchId = "";
+  let recipientSirets: string[] | undefined;
 
   try {
     const body = await request.json();
@@ -150,6 +151,11 @@ export async function POST(request: NextRequest) {
     demo = body.demo === true;
     if (typeof body.smsPerDay === "number") {
       smsPerDay = Math.max(1, Math.min(200, Math.floor(body.smsPerDay)));
+    }
+    if (Array.isArray(body.recipientSirets)) {
+      recipientSirets = body.recipientSirets
+        .map((s: unknown) => String(s ?? "").trim())
+        .filter(Boolean);
     }
   } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
@@ -258,6 +264,7 @@ export async function POST(request: NextRequest) {
       message: message || undefined,
       trigger: "manual",
       smsPerDay,
+      recipientSirets,
     });
     return NextResponse.json({ result }, { status: 201 });
   } catch (e) {

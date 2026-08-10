@@ -1013,7 +1013,12 @@ async function acceptedCountForRequest(request: WorkRequest): Promise<number> {
  */
 export async function runAcquisitionCampaignTick(
   acquisitionId: string,
-  options?: { demo?: boolean; message?: string }
+  options?: {
+    demo?: boolean;
+    message?: string;
+    /** SIRET du lot (sélection admin). Sinon sélection auto. */
+    recipientSirets?: string[];
+  }
 ): Promise<AcquisitionTickResult> {
   const acquisition = await getSmsAcquisitionCampaignById(acquisitionId);
   if (!acquisition) {
@@ -1102,14 +1107,26 @@ export async function runAcquisitionCampaignTick(
     };
   }
 
+  const requested = (options?.recipientSirets ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
   const preview = await previewSmsCampaignDetailed(request, {
-    campaignSize: remaining,
+    // Pool assez large pour retrouver les SIRET cochés en admin.
+    campaignSize:
+      requested.length > 0
+        ? Math.max(remaining, requested.length, 50)
+        : remaining,
     fillPhonesViaPlaces: true,
   });
-  const sirets = preview.candidates
-    .filter((c) => c.selectedByDefault)
-    .map((c) => c.siret)
-    .slice(0, remaining);
+  const sirets = (
+    requested.length > 0
+      ? requested.filter((siret) =>
+          preview.candidates.some((c) => c.siret === siret)
+        )
+      : preview.candidates
+          .filter((c) => c.selectedByDefault)
+          .map((c) => c.siret)
+  ).slice(0, remaining);
 
   if (sirets.length === 0) {
     const updated =
@@ -1175,6 +1192,8 @@ export async function startAcquisitionCampaign(
     message?: string;
     trigger?: SmsCampaignTrigger;
     smsPerDay?: number;
+    /** SIRET du lot du jour (sélection admin). Sinon sélection auto. */
+    recipientSirets?: string[];
   }
 ): Promise<AcquisitionTickResult> {
   const existing = await getActiveSmsAcquisitionCampaign(request.id);
@@ -1185,6 +1204,7 @@ export async function startAcquisitionCampaign(
     return runAcquisitionCampaignTick(existing.id, {
       demo: options?.demo,
       message: options?.message,
+      recipientSirets: options?.recipientSirets,
     });
   }
 
@@ -1205,6 +1225,7 @@ export async function startAcquisitionCampaign(
   return runAcquisitionCampaignTick(acquisition.id, {
     demo: options?.demo,
     message: options?.message,
+    recipientSirets: options?.recipientSirets,
   });
 }
 

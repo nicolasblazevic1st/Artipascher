@@ -98,10 +98,10 @@ const COHORT_LABELS: Record<SmsCohort, string> = {
 };
 
 const STATUS_LABELS: Record<SmsCampaign["status"], string> = {
-  sent: "Envoyée",
-  demo: "Mode démo",
+  sent: "Envoyé",
+  demo: "Simulé (démo)",
   failed: "Échec partiel",
-  pending_review: "Prévu (à valider, pas d’OVH)",
+  pending_review: "Lot à valider",
   cancelled: "Annulé (objectif atteint / obsolète)",
 };
 
@@ -176,6 +176,10 @@ export default function AdminSmsCampaignsPage() {
   const [artisanBusy, setArtisanBusy] = useState<string | null>(null);
   const [placesBoost, setPlacesBoost] = useState("100");
   const [mounted, setMounted] = useState(false);
+  const [tab, setTab] = useState<"todo" | "launch" | "track" | "tools">(
+    "launch"
+  );
+  const [tabReady, setTabReady] = useState(false);
 
   const loadArtisanStats = useCallback(async () => {
     try {
@@ -216,10 +220,22 @@ export default function AdminSmsCampaignsPage() {
     setMounted(true);
     void load();
     void loadArtisanStats();
+  }, [load, loadArtisanStats]);
+
+  useEffect(() => {
+    if (tabReady || loading) return;
     const params = new URLSearchParams(window.location.search);
     const requestId = params.get("request");
-    if (requestId) setSelectedId(requestId);
-  }, [load, loadArtisanStats]);
+    if (requestId) {
+      setSelectedId(requestId);
+      setTab("launch");
+    } else if (pendingReview.length > 0) {
+      setTab("todo");
+    } else {
+      setTab("launch");
+    }
+    setTabReady(true);
+  }, [loading, pendingReview.length, tabReady]);
 
   /** Évite mismatch SSR/client sur l'attribut HTML disabled. */
   function disableWhen(condition: boolean): boolean | undefined {
@@ -382,6 +398,10 @@ export default function AdminSmsCampaignsPage() {
 
   async function handleStartCampaign(demo = false) {
     if (!selectedId) return;
+    if (preview && selectedSirets.size === 0) {
+      setError("Cochez au moins un destinataire pour le lot du jour.");
+      return;
+    }
     setSending(true);
     setError(null);
     setSuccess(null);
@@ -396,6 +416,7 @@ export default function AdminSmsCampaignsPage() {
           message: message.trim() || undefined,
           demo,
           smsPerDay: campaignSize,
+          recipientSirets: preview ? Array.from(selectedSirets) : undefined,
         }),
       });
       const data = await res.json();
@@ -412,11 +433,15 @@ export default function AdminSmsCampaignsPage() {
         skippedReason?: string;
       };
       const sent = result.batch?.sentCount ?? 0;
+      const prepared = result.batch?.status === "pending_review";
       setSuccess(
-        result.skippedReason && sent === 0
+        result.skippedReason && sent === 0 && !prepared
           ? `Campagne ${result.acquisition.status} — ${result.skippedReason} (contacts ${result.acceptedCount}/5).`
-          : `${demo ? "Démo" : "Campagne"} : ${sent} SMS du jour · contacts ${result.acceptedCount}/5 · statut ${result.acquisition.status}.`
+          : prepared
+            ? `Lot préparé pour validation (${result.batch?.recipientCount ?? 0} destinataires) · contacts ${result.acceptedCount}/5 · campagne ${result.acquisition.status}.`
+            : `${demo ? "Simulation" : "Lot"} : ${sent} SMS · contacts ${result.acceptedCount}/5 · campagne ${result.acquisition.status}.`
       );
+      setTab(prepared ? "todo" : "track");
       await load();
     } catch {
       setError("Erreur réseau pendant le démarrage.");
@@ -454,10 +479,11 @@ export default function AdminSmsCampaignsPage() {
       } else {
         setSuccess(
           `Lot validé : ${result.batch?.sentCount ?? 0}/${result.batch?.recipientCount ?? 0} SMS ${
-            demo ? "(démo)" : "OVH"
+            demo ? "(simulation)" : "envoyés"
           }.`
         );
       }
+      setTab("track");
       await load();
     } catch {
       setError("Erreur réseau pendant la validation.");
@@ -569,13 +595,42 @@ export default function AdminSmsCampaignsPage() {
     ];
   }, [preview]);
 
+  const acceptedForSelected =
+    acquisitions.find((a) => a.workRequestId === selectedId)?.acceptedCount ?? 0;
+  const reviewBeforeSend = settings?.requireReviewBeforeSend !== false;
+  const excludedCount =
+    (preview?.platformCount ?? 0) + (preview?.alreadyMarketedCount ?? 0);
+
+  const tabs: Array<{
+    id: "todo" | "launch" | "track" | "tools";
+    label: string;
+    badge?: number;
+  }> = [
+    {
+      id: "todo",
+      label: "À faire",
+      badge: pendingReview.length || undefined,
+    },
+    { id: "launch", label: "Lancer" },
+    { id: "track", label: "Suivre" },
+    { id: "tools", label: "Outils" },
+  ];
+
   return (
     <div>
       <h1 className="text-2xl font-bold">Campagnes SMS</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Campagne multi-jours : budget SMS/jour, plus proches d&apos;abord (59+62,
-        sans filtre dept chantier), jusqu&apos;à 5/5. SIRENE sans tél → Places ou
-        saisie manuelle.
+        Une <strong>campagne</strong> court jusqu&apos;à 5 contacts. Chaque jour
+        un <strong>lot</strong> (budget SMS) est préparé ou envoyé. Plus proches
+        d&apos;abord (59+62).
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        <Link
+          href="/admin/conversions-sms"
+          className="font-medium text-brand-700 underline"
+        >
+          Conversions SMS → comptes
+        </Link>
       </p>
 
       {loading && (
@@ -591,6 +646,21 @@ export default function AdminSmsCampaignsPage() {
             Réessayer
           </button>
         </p>
+      )}
+
+      {(error || success) && (
+        <div className="mt-4 space-y-2">
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+              {error}
+            </p>
+          )}
+          {success && (
+            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+              {success}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -619,23 +689,57 @@ export default function AdminSmsCampaignsPage() {
           }`}
         >
           {loading
-            ? "Mode démo : chargement…"
+            ? "Démo : chargement…"
             : demoAllowed
-              ? "Mode démo disponible"
-              : "Mode démo indisponible (OVH_SMS_ENABLED=true en prod)"}
+              ? "Simulation (démo) disponible"
+              : "Simulation indisponible (OVH actif en prod)"}
         </span>
         <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
           {loading
             ? "Demandes : …"
             : `${requests.length} demande${requests.length !== 1 ? "s" : ""} éligible${requests.length !== 1 ? "s" : ""}`}
         </span>
-        <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
-          {loading
-            ? "Campagnes : …"
-            : `${campaigns.length} campagne${campaigns.length !== 1 ? "s" : ""} en historique`}
-        </span>
+        {pendingReview.length > 0 && (
+          <span className="rounded-full bg-amber-100 px-3 py-1 font-medium text-amber-900">
+            {pendingReview.length} lot{pendingReview.length > 1 ? "s" : ""} à
+            valider
+          </span>
+        )}
       </div>
 
+      <div
+        className="mt-6 flex flex-wrap gap-1 border-b border-slate-200"
+        role="tablist"
+        aria-label="Sections campagnes SMS"
+      >
+        {tabs.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(t.id)}
+              className={`relative px-4 py-2.5 text-sm font-medium transition ${
+                active
+                  ? "border-b-2 border-brand-600 text-brand-800"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {t.label}
+              {typeof t.badge === "number" && t.badge > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                  {t.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "tools" && (
+      <>
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-sm">
         <h2 className="font-semibold text-slate-900">
           Base artisans (SIRENE + Google Places)
@@ -787,7 +891,7 @@ export default function AdminSmsCampaignsPage() {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2">
-                SMS / jour
+                SMS / jour (défaut)
                 <input
                   type="number"
                   min={1}
@@ -824,20 +928,16 @@ export default function AdminSmsCampaignsPage() {
           </>
         )}
       </section>
+      </>
+      )}
 
-      <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-semibold">Nouvelle campagne</h2>
+      {tab === "launch" && (
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="text-lg font-semibold">Lancer une campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Campagne multi-jours : chaque jour jusqu&apos;à « SMS / jour », du plus
-          proche au plus loin (59 et 62 dans le rayon), jusqu&apos;à 5/5. STOP +
-          lun–sam 8h–20h Paris. 1 SMS / SIRET. Voir{" "}
-          <Link
-            href="/admin/conversions-sms"
-            className="font-medium text-brand-700 underline"
-          >
-            Conversions SMS → comptes
-          </Link>
-          .
+          Prévisualisez le lot du jour, cochez les destinataires, puis préparez
+          ou simulez. La campagne continue chaque jour jusqu&apos;à 5/5 contacts.
+          STOP + lun–sam 8h–20h Paris.
         </p>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -878,7 +978,7 @@ export default function AdminSmsCampaignsPage() {
             )}
 
             <label className="mt-3 mb-1 block text-sm font-medium text-slate-700">
-              SMS / jour (cette campagne)
+              SMS / jour (budget du lot)
             </label>
             <input
               type="number"
@@ -914,40 +1014,50 @@ export default function AdminSmsCampaignsPage() {
             {preview && selectedByCohort && !previewLoading && (
               <>
                 <p className="font-medium text-slate-900">
-                  {selectedCount} SMS sélectionné{selectedCount > 1 ? "s" : ""}
+                  Résumé du lot
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Proposition mix acquisition (jamais de re-SMS marketing)
+                <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  <li>
+                    <strong>{selectedCount}</strong> destinataire
+                    {selectedCount > 1 ? "s" : ""} sélectionné
+                    {selectedCount > 1 ? "s" : ""}
+                  </li>
+                  <li>
+                    {preview.candidates.length} joignables ·{" "}
+                    {preview.withoutPhone.length} sans téléphone ·{" "}
+                    {excludedCount} exclus
+                  </li>
+                  <li>
+                    Objectif contacts : <strong>{acceptedForSelected}/5</strong>
+                  </li>
+                  <li>
+                    Mode :{" "}
+                    <strong>
+                      {reviewBeforeSend
+                        ? "sera préparé pour validation (pas d’OVH immédiat)"
+                        : "envoi immédiat si OVH configuré"}
+                    </strong>
+                  </li>
+                </ul>
+                <p className="mt-2 text-xs text-slate-500">
+                  Mix proposé : {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
+                  {preview.suggestedCounts.new_established} ≥2 ans
                   {preview.preferEstablishedCompany === true
-                    ? " — préférence client → uniquement ≥2 ans"
+                    ? " (client : uniquement ≥2 ans)"
                     : preview.preferEstablishedCompany === false
-                      ? " — préférence client → uniquement &lt;2 ans"
-                      : " — mix ~50/50 &lt;2 ans / ≥2 ans"}{" "}
-                  : {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
-                  {preview.suggestedCounts.new_established} ≥2 ans · sélection :{" "}
-                  {selectedByCohort.new_young} / {selectedByCohort.new_established}
+                      ? " (client : uniquement &lt;2 ans)"
+                      : ""}
+                  {" · "}sélection actuelle : {selectedByCohort.new_young} /{" "}
+                  {selectedByCohort.new_established}
+                  {!preview.geoFound ? " · géo approximative" : ""}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {preview.candidates.length} joignables · {preview.withoutPhone.length}{" "}
-                  sans téléphone · {preview.gouvCount} SIRENE · {preview.platformCount}{" "}
-                  plateforme (exclus) · {preview.alreadyMarketedCount ?? 0} déjà SMS
-                  marketing (exclus définitivement) · {preview.totalNearby} au total
-                  {preview.geoFound ? "" : " (géo approximative / introuvable)"}
-                </p>
-                {preview.placesFill && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    {preview.placesFill.enabled
-                      ? `Priorité distance → ${preview.placesFill.phonesAfter}/${preview.placesFill.targetPhones} SMS · Places : ${preview.placesFill.attempts} tentatives · ${preview.placesFill.phonesFound} tél. trouvés · ${preview.placesFill.requestsUsed} req. (${preview.placesFill.phonesBefore} tél. déjà en base dans le rayon)`
-                      : "Places non configuré : seuls les numéros déjà en base sont utilisables (toujours du plus proche au plus loin)."}
-                  </p>
-                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={selectSuggested}
                     className="rounded border border-slate-300 px-2 py-1 text-xs"
                   >
-                    Proposition mix
+                    Proposition auto
                   </button>
                   <button
                     type="button"
@@ -1117,7 +1227,7 @@ export default function AdminSmsCampaignsPage() {
 
               {sending && (
                 <div className="mt-3">
-                  <LoadingBar label="Démarrage campagne / envoi du lot du jour…" />
+                  <LoadingBar label="Préparation / envoi du lot…" />
                 </div>
               )}
 
@@ -1125,72 +1235,83 @@ export default function AdminSmsCampaignsPage() {
                 <button
                   type="button"
                   onClick={() => handleStartCampaign(false)}
-                  disabled={disableWhen(sending || !selectedId)}
+                  disabled={disableWhen(
+                    sending || !selectedId || selectedSirets.size === 0
+                  )}
                   className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
                 >
                   {sending
-                    ? "Préparation…"
-                    : "Démarrer / préparer le lot du jour"}
+                    ? "Traitement…"
+                    : reviewBeforeSend
+                      ? "Préparer le lot"
+                      : "Envoyer le lot"}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleStartCampaign(true)}
-                  disabled={disableWhen(sending || !demoAllowed || !selectedId)}
+                  disabled={disableWhen(
+                    sending ||
+                      !demoAllowed ||
+                      !selectedId ||
+                      selectedSirets.size === 0
+                  )}
                   title={
                     !demoAllowed
-                      ? "Mode démo désactivé quand OVH SMS est actif en production"
+                      ? "Simulation désactivée quand OVH SMS est actif en production"
                       : undefined
                   }
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                 >
-                  {demoAllowed
-                    ? "Démarrer en démo"
-                    : "Démo indisponible"}
+                  {demoAllowed ? "Simuler (démo)" : "Simulation indisponible"}
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                La prévisualisation montre le prochain lot (~{campaignSize} SMS).
-                La campagne continue chaque jour jusqu&apos;à 5/5 contacts.
+                Les cases cochées sont bien celles du lot (max ~{campaignSize}).
+                La campagne continue ensuite chaque jour jusqu&apos;à 5/5.
               </p>
             </div>
           </>
         )}
 
         {!preview && selectedId && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleStartCampaign(false)}
-              disabled={disableWhen(sending || !smsConfigured)}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-            >
-              Démarrer campagne sans prévisualiser
-            </button>
-            <button
-              type="button"
-              onClick={() => handleStartCampaign(true)}
-              disabled={disableWhen(sending || !demoAllowed)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              Démarrer en démo
-            </button>
+          <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            <p>
+              Prévisualisez d&apos;abord le lot pour choisir les destinataires.
+              Sinon vous pouvez démarrer avec la sélection automatique.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => handleStartCampaign(false)}
+                disabled={disableWhen(sending)}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {reviewBeforeSend
+                  ? "Préparer sans prévisualiser"
+                  : "Envoyer sans prévisualiser"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStartCampaign(true)}
+                disabled={disableWhen(sending || !demoAllowed)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                Simuler sans prévisualiser
+              </button>
+            </div>
           </div>
         )}
-
-        {error && (
-          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-        )}
-        {success && (
-          <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-            {success}
-          </p>
-        )}
       </section>
+      )}
 
-      <section className="mt-8">
+      {tab === "todo" && (
+      <section className="mt-6">
         <h2 className="text-lg font-semibold">
-          Lots prévus (préparés la veille — aucun OVH)
+          Lots à valider
         </h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Préparés sans OVH. Validez pour envoyer, ou simulez.
+        </p>
         {pendingReview.length === 0 ? (
           <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
             Aucun lot en attente. Le cron du soir prépare le lendemain ; tu
@@ -1232,7 +1353,7 @@ export default function AdminSmsCampaignsPage() {
                       onClick={() => handleApproveBatch(batch.id, false)}
                       className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                     >
-                      Valider → OVH
+                      Envoyer le lot
                     </button>
                     <button
                       type="button"
@@ -1240,7 +1361,7 @@ export default function AdminSmsCampaignsPage() {
                       onClick={() => handleApproveBatch(batch.id, true)}
                       className="rounded border border-slate-300 px-3 py-1.5 text-xs disabled:opacity-50"
                     >
-                      Valider en démo
+                      Simuler (démo)
                     </button>
                   </div>
                 </div>
@@ -1249,8 +1370,11 @@ export default function AdminSmsCampaignsPage() {
           </ul>
         )}
       </section>
+      )}
 
-      <section className="mt-8">
+      {tab === "track" && (
+      <>
+      <section className="mt-6">
         <h2 className="text-lg font-semibold">Campagnes en cours</h2>
         {loading ? (
           <div className="mt-4">
@@ -1323,6 +1447,7 @@ export default function AdminSmsCampaignsPage() {
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Historique des lots</h2>
+        <p className="mt-1 text-xs text-slate-500">Lots déjà envoyés, simulés ou annulés.</p>
         {loading ? (
           <div className="mt-4">
             <LoadingBar label="Chargement de l’historique des campagnes…" />
@@ -1357,15 +1482,22 @@ export default function AdminSmsCampaignsPage() {
                 <p className="mt-2 text-xs text-slate-600">{c.message}</p>
                 <Link
                   href={`/admin/campagnes-sms?request=${c.workRequestId}`}
+                  onClick={() => {
+                    setSelectedId(c.workRequestId);
+                    setPreview(null);
+                    setTab("launch");
+                  }}
                   className="mt-2 inline-block text-xs font-medium text-brand-700 hover:underline"
                 >
-                  Rouvrir la demande
+                  Rouvrir dans Lancer
                 </Link>
               </li>
             ))}
           </ul>
         )}
       </section>
+      </>
+      )}
     </div>
   );
 }
