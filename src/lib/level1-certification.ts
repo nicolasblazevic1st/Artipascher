@@ -152,7 +152,7 @@ export function listMissingVerificationDocuments(
         const trade =
           s.qualibatJobLabel || s.tradeGroupLabel || "votre métier";
         missing.push(
-          s.decennaleStatus === "rejeté"
+          s.decennaleStatus === "non_couvert"
             ? `Décennale (${trade}) — à renvoyer`
             : `Décennale (${trade}) — en cours de validation`
         );
@@ -178,7 +178,7 @@ export function listMissingVerificationDocuments(
       if (s.decennaleStatus === "validé") continue;
       const trade = s.qualibatJobLabel || s.tradeGroupLabel || "votre métier";
       if (!s.decennaleStatus) missing.push(`Décennale (${trade})`);
-      else if (s.decennaleStatus === "rejeté")
+      else if (s.decennaleStatus === "non_couvert")
         missing.push(`Décennale (${trade}) — à renvoyer`);
       else missing.push(`Décennale (${trade}) — en cours de validation`);
     }
