@@ -7,10 +7,10 @@ import {
 } from "@/lib/payments";
 import { getProSession } from "@/lib/pro-auth";
 import {
-  CREDIT_PACKS,
-  CREDIT_PRICE_EUR,
-  getCreditPack,
-  type CreditPackSize,
+  CONTACT_BALANCE_PACKS,
+  CONTACT_UNLOCK_REF_EUR,
+  getContactBalancePack,
+  type ContactBalancePackSize,
 } from "@/lib/store-types";
 import {
   creditProWallet,
@@ -18,7 +18,7 @@ import {
   getProCreditBalance,
   getProCreditTransactions,
 } from "@/lib/store";
-import { UNLOCK_CREDITS_COST, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { getSiteOrigin } from "@/lib/share";
 
 export async function GET() {
@@ -34,10 +34,10 @@ export async function GET() {
 
   return NextResponse.json({
     balance,
-    creditPriceEur: CREDIT_PRICE_EUR,
-    unlockCreditsCost: UNLOCK_CREDITS_COST,
+    currency: "eur",
+    unlockRefEur: CONTACT_UNLOCK_REF_EUR,
     unlockPriceEur: UNLOCK_PRICE_EUR,
-    packs: CREDIT_PACKS,
+    packs: CONTACT_BALANCE_PACKS,
     transactions: transactions.slice(0, 50),
     demoAllowed: isDemoPaymentAllowed(),
     stripeConfigured: isStripeConfigured(),
@@ -62,17 +62,22 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    packSize = Number(body.packSize);
+    packSize = Number(body.packSize ?? body.creditEur);
     demo = body.demo === true;
   } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  const pack = getCreditPack(packSize);
-  if (!pack || !CREDIT_PACKS.some((p) => p.credits === (packSize as CreditPackSize))) {
+  const pack = getContactBalancePack(packSize);
+  if (
+    !pack ||
+    !CONTACT_BALANCE_PACKS.some(
+      (p) => p.creditEur === (packSize as ContactBalancePackSize)
+    )
+  ) {
     return NextResponse.json(
       {
-        error: `Pack invalide. Choisissez parmi : ${CREDIT_PACKS.map((p) => p.credits).join(", ")}.`,
+        error: `Pack invalide. Choisissez parmi : ${CONTACT_BALANCE_PACKS.map((p) => p.creditEur).join(", ")} €.`,
       },
       { status: 400 }
     );
@@ -82,8 +87,8 @@ export async function POST(request: NextRequest) {
     const result = await creditProWallet({
       proId: session.proId,
       type: "demo_grant",
-      amount: pack.credits,
-      note: `Pack démo ${pack.credits} crédits`,
+      amount: pack.creditEur,
+      note: `Pack démo solde ${pack.creditEur} €`,
     });
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -91,7 +96,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       demo: true,
       balance: result.balance,
-      credited: pack.credits,
+      credited: pack.creditEur,
     });
   }
 
@@ -110,7 +115,7 @@ export async function POST(request: NextRequest) {
   const checkout = await createCreditPackCheckout({
     proId: session.proId,
     proEmail: session.email,
-    packSize: pack.credits,
+    packSize: pack.creditEur,
     successUrl: compteUrl,
     cancelUrl: compteUrl,
   });
@@ -121,7 +126,8 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     checkoutUrl: checkout.url,
-    amountEur: pack.priceEur,
-    credits: pack.credits,
+    amountEur: pack.payEur,
+    creditedEur: pack.creditEur,
+    credits: pack.creditEur,
   });
 }

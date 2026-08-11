@@ -131,7 +131,7 @@ export default async function ChantierDetailPage({ params }: Props) {
 
         <p className="mt-8 text-center text-xs text-slate-500">
           Jusqu’à 5 artisans correspondant aux attentes du client · Déblocage des
-          coordonnées avec des crédits · Artisans RCS
+          coordonnées avec votre solde · Artisans RCS
         </p>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import type { WorkRequest } from "@/lib/store-types";
 
 type EnrichedRequest = WorkRequest & {
@@ -90,7 +90,7 @@ export default function ClientDemandesPage() {
                     <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
                       <div>
                         Durée de l&apos;annonce :{" "}
-                        {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
+                        {formatWorkRequestAuctionDuration(request)}
                       </div>
                     </dl>
                     {request.auctionEndsAt && (

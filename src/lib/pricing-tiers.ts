@@ -1,9 +1,8 @@
 /**
- * Tickets de chantier → prix de déblocage contact (crédits).
- * 1 crédit de référence = CREDIT_PRICE_EUR (20 €) ; le débit est proportionnel.
+ * Tickets de chantier → prix de déblocage contact (solde euros).
  */
 
-import { CREDIT_PRICE_EUR } from "./store-types";
+import { CONTACT_UNLOCK_REF_EUR } from "./store-types";
 
 export const PRICING_TIER_IDS = ["bas", "moyen", "eleve", "premium"] as const;
 
@@ -63,18 +62,15 @@ export function unlockPriceEurForTier(
   return getPricingTier(tier ?? DEFAULT_PRICING_TIER).unlockPriceEur;
 }
 
-/** Crédits à débiter pour un prix € (ex. 17,5 € → 0,875 crédit si 1 crédit = 20 €). */
+/** @deprecated Solde en euros : le débit = prix €. Conservé pour compat. */
 export function unlockCreditsForPriceEur(priceEur: number): number {
-  if (!Number.isFinite(priceEur) || priceEur <= 0) {
-    return unlockCreditsForPriceEur(unlockPriceEurForTier(DEFAULT_PRICING_TIER));
-  }
-  return Math.round((priceEur / CREDIT_PRICE_EUR) * 1000) / 1000;
+  return Math.round((priceEur || CONTACT_UNLOCK_REF_EUR) * 1000) / 1000;
 }
 
 export function unlockCreditsForTier(
   tier: PricingTierId | undefined | null
 ): number {
-  return unlockCreditsForPriceEur(unlockPriceEurForTier(tier));
+  return unlockPriceEurForTier(tier);
 }
 
 export function formatUnlockPriceEur(priceEur: number): string {
@@ -744,6 +740,28 @@ export function getWorkOptionById(id: string): NafWorkOption | undefined {
   return NAF_WORK_OPTIONS.find((o) => o.id === id);
 }
 
+export const OTHER_WORK_OPTION_ID = "autre";
+
+export const OTHER_WORK_DESCRIPTION_MIN = 10;
+export const OTHER_WORK_DESCRIPTION_MAX = 200;
+
+/** Libellé prestation pour SMS / admin (sans jargon ticket). */
+export function formatWorkPrestationLabel(request: {
+  category: string;
+  workOptionId?: string | null;
+  workOptionOtherDescription?: string | null;
+}): string {
+  if (request.workOptionId === OTHER_WORK_OPTION_ID) {
+    const other = request.workOptionOtherDescription?.trim();
+    return other ? `Autre : ${other}` : "Autre prestation";
+  }
+  if (request.workOptionId) {
+    const opt = getWorkOptionById(request.workOptionId);
+    if (opt) return opt.name;
+  }
+  return request.category;
+}
+
 export function resolveUnlockPricing(input: {
   pricingTier?: PricingTierId | string | null;
   workOptionId?: string | null;
@@ -753,6 +771,14 @@ export function resolveUnlockPricing(input: {
   unlockCredits: number;
   workOption?: NafWorkOption;
 } {
+  if (input.workOptionId === OTHER_WORK_OPTION_ID) {
+    const unlockPriceEur = unlockPriceEurForTier(DEFAULT_PRICING_TIER);
+  return {
+    tier: DEFAULT_PRICING_TIER,
+    unlockPriceEur,
+    unlockCredits: unlockPriceEur,
+  };
+  }
   const workOption = input.workOptionId
     ? getWorkOptionById(input.workOptionId)
     : undefined;
@@ -765,7 +791,7 @@ export function resolveUnlockPricing(input: {
   return {
     tier,
     unlockPriceEur,
-    unlockCredits: unlockCreditsForPriceEur(unlockPriceEur),
+    unlockCredits: unlockPriceEur,
     workOption,
   };
 }
@@ -773,16 +799,42 @@ export function resolveUnlockPricing(input: {
 export function validatePricingSelection(input: {
   pricingTier?: string | null;
   workOptionId?: string | null;
+  workOptionOtherDescription?: string | null;
   nafCodes: readonly string[];
 }):
   | {
       ok: true;
       pricingTier: PricingTierId;
       workOptionId?: string;
+      workOptionOtherDescription?: string;
       unlockPriceEur: number;
     }
   | { ok: false; error: string } {
   const workOptionId = input.workOptionId?.trim() || undefined;
+
+  if (workOptionId === OTHER_WORK_OPTION_ID) {
+    const other = (input.workOptionOtherDescription ?? "").trim();
+    if (other.length < OTHER_WORK_DESCRIPTION_MIN) {
+      return {
+        ok: false,
+        error: `Décrivez brièvement la prestation (au moins ${OTHER_WORK_DESCRIPTION_MIN} caractères).`,
+      };
+    }
+    if (other.length > OTHER_WORK_DESCRIPTION_MAX) {
+      return {
+        ok: false,
+        error: `Description trop longue (max. ${OTHER_WORK_DESCRIPTION_MAX} caractères).`,
+      };
+    }
+    return {
+      ok: true,
+      pricingTier: DEFAULT_PRICING_TIER,
+      workOptionId: OTHER_WORK_OPTION_ID,
+      workOptionOtherDescription: other,
+      unlockPriceEur: unlockPriceEurForTier(DEFAULT_PRICING_TIER),
+    };
+  }
+
   if (workOptionId) {
     const opt = getWorkOptionById(workOptionId);
     if (!opt) {
@@ -809,8 +861,7 @@ export function validatePricingSelection(input: {
   if (!isPricingTierId(raw)) {
     return {
       ok: false,
-      error:
-        "Choisissez le type de prestation (ticket) pour fixer le prix de mise en contact.",
+      error: "Choisissez le type de prestation pour continuer.",
     };
   }
   return {

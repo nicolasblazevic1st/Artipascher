@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getClientSession } from "@/lib/client-auth";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import { getClientDashboardStats } from "@/lib/store";
 
 const STATUS_LABELS = {
@@ -62,7 +62,7 @@ export default async function ClientDashboardPage() {
                       </p>
                       <p className="mt-1 text-slate-500">
                         Annonce :{" "}
-                        {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
+                        {formatWorkRequestAuctionDuration(request)}
                       </p>
                     </div>
                     <span

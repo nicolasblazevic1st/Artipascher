@@ -165,7 +165,7 @@ export default function BidPanel({
       setSuccess(
         demo && data.demo
           ? `Enchère à ${formatPrice(amount)} enregistrée (mode démo) — devis OCR vérifié.`
-          : `Enchère à ${formatPrice(amount)} enregistrée (−1 crédit) — devis OCR vérifié.`
+          : `Enchère à ${formatPrice(amount)} enregistrée (−${BID_FEE_EUR} €) — devis OCR vérifié.`
       );
       return;
     }
@@ -218,7 +218,7 @@ export default function BidPanel({
       )}
       <p className="mt-2 text-sm text-slate-600">
         Prix actuel : <strong className="text-brand-700">{formatPrice(currentPrice)}</strong>
-        {" · "}Frais : <strong>1 crédit ({BID_FEE_EUR} €)</strong> par enchère
+        {" · "}Frais : <strong>{BID_FEE_EUR}&nbsp;€</strong> (solde) par enchère
       </p>
 
       {proLoggedIn && eligibility?.maxBidsPerAuction != null && (
@@ -363,7 +363,7 @@ export default function BidPanel({
               ? "Vérification OCR…"
               : !devisFile
                 ? "Joignez le devis PDF pour enchérir"
-                : `Enchérir à ${formatPrice(amount)} · 1 crédit`}
+                : `Enchérir à ${formatPrice(amount)} · ${BID_FEE_EUR} €`}
           </button>
           {process.env.NODE_ENV === "development" && (
             <button
@@ -376,7 +376,7 @@ export default function BidPanel({
             </button>
           )}
           <a href="/pro/compte#credits" className="block text-xs text-brand-700 underline">
-            Acheter des crédits
+            Acheter du solde
           </a>
         </div>
       )}
@@ -408,7 +408,7 @@ export default function BidPanel({
       )}
 
       <p className="mt-4 text-xs text-slate-500">
-        Départ : {formatPrice(startPrice!)} · 1 crédit ({BID_FEE_EUR} €) par enchère · Devis PDF
+        Départ : {formatPrice(startPrice!)} · {BID_FEE_EUR}&nbsp;€ (solde) par enchère · Devis PDF
         OCR obligatoire · Maximum 3 enchères par artisan et par chantier
       </p>
         </>

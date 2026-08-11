@@ -47,7 +47,7 @@ export async function GET(
     return NextResponse.json(
       {
         error:
-          "Accès non débloqué. Une mise en contact (crédits selon le ticket du chantier) est requise.",
+          "Accès non débloqué. Une mise en contact (solde selon le ticket du chantier) est requise.",
         unlocked: false,
       },
       { status: 403 }

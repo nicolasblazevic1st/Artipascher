@@ -4,8 +4,9 @@ import {
   getProRegistrationById,
   updateProRegistration,
 } from "@/lib/store";
+import { getContactBalancePack } from "@/lib/store-types";
 
-/** Crédite le wallet après un Checkout Stripe réussi (webhook ou retour client). */
+/** Crédite le solde (€) après un Checkout Stripe réussi (webhook ou retour client). */
 export async function fulfillCreditPurchaseSession(session: {
   id: string;
   metadata?: Record<string, string> | null;
@@ -17,23 +18,31 @@ export async function fulfillCreditPurchaseSession(session: {
 > {
   if (
     session.metadata?.type !== "credit_purchase" ||
-    !session.metadata.proId ||
-    !session.metadata.packSize
+    !session.metadata.proId
   ) {
-    return { ok: false, error: "Session hors achat crédits." };
+    return { ok: false, error: "Session hors achat solde." };
   }
 
-  const packSize = Number(session.metadata.packSize);
+  const creditEur = Number(
+    session.metadata.creditEur ?? session.metadata.packSize
+  );
   const priceEur = Number(session.metadata.priceEur);
-  if (!Number.isFinite(packSize) || packSize <= 0) {
+  if (!Number.isFinite(creditEur) || creditEur <= 0) {
     return { ok: false, error: "Pack invalide." };
   }
+
+  // Anciens packs en « crédits » (1/3/5/10) → convertir en euros de solde.
+  const pack = getContactBalancePack(creditEur);
+  const legacyCreditSizes = [1, 3, 5, 10];
+  const amountToCredit =
+    pack?.creditEur ??
+    (legacyCreditSizes.includes(creditEur) ? creditEur * 20 : creditEur);
 
   const proId = session.metadata.proId;
   const result = await creditProWallet({
     proId,
     type: "purchase",
-    amount: packSize,
+    amount: amountToCredit,
     amountEur:
       Number.isFinite(priceEur) && priceEur > 0
         ? priceEur
@@ -41,7 +50,7 @@ export async function fulfillCreditPurchaseSession(session: {
           ? session.amount_total / 100
           : undefined,
     stripeSessionId: session.id,
-    note: `Achat pack ${packSize} crédits`,
+    note: `Achat solde ${amountToCredit} €`,
   });
 
   if ("error" in result) {
@@ -75,7 +84,7 @@ export async function fulfillCreditPurchaseSession(session: {
 
   return {
     ok: true,
-    credited: packSize,
+    credited: amountToCredit,
     balance: result.balance,
     alreadyApplied: result.alreadyApplied,
   };

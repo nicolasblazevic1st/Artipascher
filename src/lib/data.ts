@@ -146,17 +146,17 @@ export const FAQ_ITEMS = [
   {
     question: "Combien de temps reste visible une annonce ?",
     answer:
-      "Vous choisissez la durée lors de votre demande : de 7 jours à 3 mois maximum. Un compteur indique le temps restant sur chaque fiche une fois l’annonce publiée.",
+      "Vous choisissez la durée lors de votre demande : de 6 heures à 3 mois maximum. Un compteur indique le temps restant sur chaque fiche une fois l’annonce publiée.",
   },
   {
     question: "Combien coûte le déblocage pour le professionnel ?",
     answer:
-      "Une mise en contact coûte 1 crédit (20 € au tarif unitaire). Des packs à tarif dégressif sont proposés (ex. 10 crédits à 15 € / crédit). Chaque demande est limitée à 5 mises en contact maximum.",
+      "Le déblocage débite le solde du professionnel selon le ticket du chantier (15 €, 17,50 €, 20 € ou 25 €). Des packs de solde à tarif dégressif sont proposés. Chaque demande est limitée à 5 mises en contact maximum.",
   },
   {
     question: "Les coordonnées du client sont-elles visibles par tous ?",
     answer:
-      "Non. Nom, téléphone, email et adresse exacte restent masqués. Seuls les artisans inscrits au RCS, approuvés, et correspondant au besoin peuvent débloquer les coordonnées (1 crédit · 20 €).",
+      "Non. Nom, téléphone, email et adresse exacte restent masqués. Seuls les artisans inscrits au RCS, approuvés, et correspondant au besoin peuvent débloquer les coordonnées (débit du solde selon le ticket).",
   },
   {
     question: "Comment choisir mon artisan ?",

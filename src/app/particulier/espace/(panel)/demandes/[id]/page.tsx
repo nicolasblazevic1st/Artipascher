@@ -9,17 +9,12 @@ import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatPublicLocation, formatWorkRequestAddress } from "@/lib/client-address";
 import {
-  formatAuctionDurationDays,
+  formatWorkRequestAuctionDuration,
   resolveAuctionEndsAt,
 } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { getClientSession } from "@/lib/client-auth";
-import {
-  formatUnlockPriceEur,
-  getPricingTier,
-  getWorkOptionById,
-  resolveUnlockPricing,
-} from "@/lib/pricing-tiers";
+import { formatWorkPrestationLabel } from "@/lib/pricing-tiers";
 import {
   ensureWorkRequestShareToken,
   getApprovedProQuotesForAuction,
@@ -58,14 +53,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
       ? await ensureWorkRequestShareToken(id, session.clientId)
       : null;
   const photosEditable = request.status !== "rejected";
-  const unlockPricing = resolveUnlockPricing({
-    pricingTier: request.pricingTier,
-    workOptionId: request.workOptionId,
-  });
-  const workOption = request.workOptionId
-    ? getWorkOptionById(request.workOptionId)
-    : unlockPricing.workOption;
-  const tierMeta = getPricingTier(unlockPricing.tier);
+  const prestationLabel = formatWorkPrestationLabel(request);
 
   return (
     <div>
@@ -93,11 +81,9 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
                 Spécialité NAF : {request.nafCodes.join(" · ")}
               </p>
             )}
-            {(request.workOptionId || request.pricingTier) && (
+            {(request.workOptionId || request.workOptionOtherDescription) && (
               <p className="mt-1 text-xs text-slate-600">
-                {workOption ? `${workOption.name} · ` : ""}
-                {tierMeta.label} — mise en contact artisans{" "}
-                {formatUnlockPriceEur(unlockPricing.unlockPriceEur)}
+                Prestation : {prestationLabel}
               </p>
             )}
           </div>
@@ -166,7 +152,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Durée de l&apos;annonce</dt>
             <dd className="mt-1 text-sm font-semibold">
-              {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
+              {formatWorkRequestAuctionDuration(request)}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
@@ -206,6 +192,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             <AuctionCountdown
               endsAt={resolveAuctionEndsAt({
                 auctionEndsAt: request.auctionEndsAt,
+                auctionDurationHours: request.auctionDurationHours,
                 auctionDurationDays: request.auctionDurationDays,
                 from: request.reviewedAt ?? request.createdAt,
               })}

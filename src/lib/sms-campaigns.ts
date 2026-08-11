@@ -11,6 +11,7 @@ import {
   markArtisanPhoneInvalid,
 } from "./places-quota";
 import { absoluteUrl } from "./share";
+import { formatWorkPrestationLabel } from "./pricing-tiers";
 import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "./contact-slots";
 import { isMarketingSmsWindowOpen, normalizeFrenchMobile, sendSms } from "./sms";
 import {
@@ -136,9 +137,10 @@ export function buildDefaultCampaignMessage(request: WorkRequest): string {
     ? `/encheres/${request.auctionId}`
     : "/encheres";
   const url = absoluteUrl(auctionPath);
+  const prestation = formatWorkPrestationLabel(request);
   return (
-    `Artipascher : chantier ${request.category} a ${request.city} (${request.department}). ` +
-    `Encherissez : ${url}`
+    `Artipascher : ${prestation} a ${request.city} (${request.department}). ` +
+    `Details : ${url}`
   );
 }
 

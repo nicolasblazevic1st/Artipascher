@@ -4,33 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
-  MIN_DESCRIPTION_LENGTH,
-  MAX_PHOTOS,
+  LISTING_DURATION_OPTIONS,
+  DEFAULT_LISTING_DURATION_HOURS,
+} from "@/lib/auction-duration";
+import {
   minRequestedWorkStartDate,
   maxRequestedWorkStartDate,
   validateDescription,
   validatePhotoFiles,
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
+  MIN_DESCRIPTION_LENGTH,
+  MAX_PHOTOS,
 } from "@/lib/demandes-validation";
-import BanAddressAutocomplete, {
-  type SelectedBanAddress,
-} from "@/components/BanAddressAutocomplete";
-import {
-  LISTING_DURATION_OPTIONS,
-  DEFAULT_LISTING_DURATION_DAYS,
-} from "@/lib/auction-duration";
 import {
   getNafOptionsForCategory,
   validateWorkRequestNafSelection,
 } from "@/lib/naf-codes";
 import {
-  formatUnlockPriceEur,
-  getPricingTier,
   getWorkOptionsForNafCodes,
-  PRICING_TIERS,
+  OTHER_WORK_DESCRIPTION_MAX,
+  OTHER_WORK_DESCRIPTION_MIN,
+  OTHER_WORK_OPTION_ID,
   type PricingTierId,
-  unlockCreditsForTier,
   validatePricingSelection,
 } from "@/lib/pricing-tiers";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
@@ -44,6 +40,9 @@ import {
   type RcsVerificationResult,
 } from "@/lib/rcs";
 import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/google-rating";
+import BanAddressAutocomplete, {
+  type SelectedBanAddress,
+} from "@/components/BanAddressAutocomplete";
 
 export interface WorkRequestFormDefaults {
   firstName: string;
@@ -87,6 +86,8 @@ export default function WorkRequestForm({
   const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>([]);
   const [workOptionId, setWorkOptionId] = useState("");
   const [pricingTier, setPricingTier] = useState<PricingTierId | "">("");
+  const [workOptionOtherDescription, setWorkOptionOtherDescription] =
+    useState("");
   const [hasPreviousQuote, setHasPreviousQuote] = useState(false);
   const [previousQuoteAmount, setPreviousQuoteAmount] = useState("");
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
@@ -94,8 +95,8 @@ export default function WorkRequestForm({
   const [proofPreview, setProofPreview] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
-  const [listingDurationDays, setListingDurationDays] = useState(
-    DEFAULT_LISTING_DURATION_DAYS
+  const [listingDurationHours, setListingDurationHours] = useState(
+    DEFAULT_LISTING_DURATION_HOURS
   );
   const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
@@ -117,7 +118,7 @@ export default function WorkRequestForm({
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
-  const minStartDate = minRequestedWorkStartDate(listingDurationDays);
+  const minStartDate = minRequestedWorkStartDate(listingDurationHours);
   const maxStartDate = maxRequestedWorkStartDate();
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
   const requiresNafChoice = nafOptions.length > 1;
@@ -148,6 +149,7 @@ export default function WorkRequestForm({
     setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
     setWorkOptionId("");
     setPricingTier("");
+    setWorkOptionOtherDescription("");
     setError(null);
   }
 
@@ -160,19 +162,23 @@ export default function WorkRequestForm({
     });
     setWorkOptionId("");
     setPricingTier("");
+    setWorkOptionOtherDescription("");
     setError(null);
   }
 
   function selectWorkOption(id: string) {
     const opt = workOptions.find((o) => o.id === id);
     setWorkOptionId(id);
-    if (opt) setPricingTier(opt.tier);
+    if (opt) {
+      setPricingTier(opt.tier);
+      setWorkOptionOtherDescription("");
+    }
     setError(null);
   }
 
-  function selectPricingTier(tier: PricingTierId) {
-    setPricingTier(tier);
-    setWorkOptionId("");
+  function selectOtherWorkOption() {
+    setWorkOptionId(OTHER_WORK_OPTION_ID);
+    setPricingTier("eleve");
     setError(null);
   }
 
@@ -315,7 +321,7 @@ export default function WorkRequestForm({
 
     const startDateError = validateRequestedWorkStartDate(
       requestedWorkStartDate,
-      listingDurationDays
+      listingDurationHours
     );
     if (startDateError) {
       setError(startDateError);
@@ -372,6 +378,10 @@ export default function WorkRequestForm({
     const pricingCheck = validatePricingSelection({
       pricingTier,
       workOptionId: workOptionId || undefined,
+      workOptionOtherDescription:
+        workOptionId === OTHER_WORK_OPTION_ID
+          ? workOptionOtherDescription
+          : undefined,
       nafCodes: nafCheck.nafCodes,
     });
     if (!pricingCheck.ok) {
@@ -393,6 +403,14 @@ export default function WorkRequestForm({
     } else {
       formData.delete("workOptionId");
     }
+    if (pricingCheck.workOptionOtherDescription) {
+      formData.set(
+        "workOptionOtherDescription",
+        pricingCheck.workOptionOtherDescription
+      );
+    } else {
+      formData.delete("workOptionOtherDescription");
+    }
     formData.set("description", getDescriptionValue().trim());
     formData.set("addressLine", selectedAddress.addressLine);
     formData.set("postalCode", selectedAddress.postalCode);
@@ -400,7 +418,7 @@ export default function WorkRequestForm({
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
     formData.set("phone", phoneValue);
-    formData.set("auctionDurationDays", String(listingDurationDays));
+    formData.set("auctionDurationHours", String(listingDurationHours));
     formData.set(
       "preferEstablishedCompany",
       preferEstablishedCompany ? "true" : "false"
@@ -636,9 +654,7 @@ export default function WorkRequestForm({
         />
         <p className="mt-1 text-xs text-slate-500">
           Mobile français obligatoire, vérifié par SMS — communiqué aux artisans
-          uniquement après mise en contact (
-          {formatUnlockPriceEur(15)} à {formatUnlockPriceEur(25)} selon le
-          ticket).
+          uniquement après mise en contact.
         </p>
         {phoneVerified ? (
           <p className="mt-2 text-sm font-medium text-emerald-700">
@@ -733,19 +749,19 @@ export default function WorkRequestForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label
-            htmlFor="listingDurationDays"
+            htmlFor="listingDurationHours"
             className="mb-1 block text-sm font-medium text-slate-700"
           >
             Durée de l&apos;annonce <span className="text-red-500">*</span>
           </label>
           <select
-            id="listingDurationDays"
-            name="auctionDurationDays"
+            id="listingDurationHours"
+            name="auctionDurationHours"
             className={`${inputClass} text-slate-700`}
-            value={listingDurationDays}
+            value={listingDurationHours}
             onChange={(e) => {
               const next = Number(e.target.value);
-              setListingDurationDays(next);
+              setListingDurationHours(next);
               const minDate = minRequestedWorkStartDate(next);
               if (requestedWorkStartDate && requestedWorkStartDate < minDate) {
                 setRequestedWorkStartDate("");
@@ -761,7 +777,7 @@ export default function WorkRequestForm({
           </select>
           <p className="mt-1 text-xs text-slate-500">
             Période pendant laquelle les artisans peuvent débloquer votre contact
-            (max. 5 artisans, max. 3 mois).
+            (de 6&nbsp;h à 3 mois, max. 5 artisans).
           </p>
         </div>
         <div>
@@ -988,93 +1004,92 @@ export default function WorkRequestForm({
       {category && effectiveNafCodes.length > 0 && (
         <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <legend className="px-1 text-sm font-semibold text-slate-900">
-            Prestation / ticket <span className="text-red-500">*</span>
+            Type de prestation <span className="text-red-500">*</span>
           </legend>
           <p className="mt-1 text-xs text-slate-600">
-            Plus le chantier est technique ou urgent, plus la mise en contact
-            artisan est chère :{" "}
-            {PRICING_TIERS.map((t) => (
-              <span key={t.id}>
-                {t.label} {formatUnlockPriceEur(t.unlockPriceEur)}
-                {t.id !== "premium" ? " · " : ""}
-              </span>
-            ))}
-            .
+            Indiquez la nature des travaux pour mieux matcher les artisans.
           </p>
 
-          {workOptions.length > 0 ? (
-            <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
-              {workOptions.map((opt) => {
-                const tier = getPricingTier(opt.tier);
-                const checked = workOptionId === opt.id;
-                return (
-                  <li key={opt.id}>
-                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
-                      <input
-                        type="radio"
-                        name="workOptionId"
-                        value={opt.id}
-                        checked={checked}
-                        onChange={() => selectWorkOption(opt.id)}
-                        className="mt-1"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium text-slate-900">
-                            {opt.name}
-                          </span>
-                          <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-800">
-                            {formatUnlockPriceEur(tier.unlockPriceEur)}
-                          </span>
-                          <span className="text-[11px] text-slate-500">
-                            {tier.label}
-                          </span>
-                        </span>
-                        <span className="mt-0.5 block text-xs text-slate-600">
-                          {opt.detail}
-                          {requiresNafChoice || effectiveNafCodes.length > 1 ? (
-                            <> · NAF {opt.nafCode}</>
-                          ) : null}
-                        </span>
-                      </span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <ul className="mt-3 space-y-2">
-              {PRICING_TIERS.map((tier) => (
-                <li key={tier.id}>
+          <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+            {workOptions.map((opt) => {
+              const checked = workOptionId === opt.id;
+              return (
+                <li key={opt.id}>
                   <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
                     <input
                       type="radio"
-                      name="pricingTier"
-                      value={tier.id}
-                      checked={pricingTier === tier.id}
-                      onChange={() => selectPricingTier(tier.id)}
+                      name="workOptionId"
+                      value={opt.id}
+                      checked={checked}
+                      onChange={() => selectWorkOption(opt.id)}
                       className="mt-1"
                     />
-                    <span>
+                    <span className="min-w-0 flex-1">
                       <span className="font-medium text-slate-900">
-                        {tier.label} — {formatUnlockPriceEur(tier.unlockPriceEur)}
+                        {opt.name}
                       </span>
                       <span className="mt-0.5 block text-xs text-slate-600">
-                        {tier.shortHelp} · {unlockCreditsForTier(tier.id)} crédit
-                        {unlockCreditsForTier(tier.id) > 1 ? "s" : ""} (réf. 20&nbsp;€)
+                        {opt.detail}
                       </span>
                     </span>
                   </label>
                 </li>
-              ))}
-            </ul>
+              );
+            })}
+            <li>
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                <input
+                  type="radio"
+                  name="workOptionId"
+                  value={OTHER_WORK_OPTION_ID}
+                  checked={workOptionId === OTHER_WORK_OPTION_ID}
+                  onChange={() => selectOtherWorkOption()}
+                  className="mt-1"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-slate-900">Autre</span>
+                  <span className="mt-0.5 block text-xs text-slate-600">
+                    Prestation non listée — décrivez-la brièvement
+                  </span>
+                </span>
+              </label>
+            </li>
+          </ul>
+
+          {workOptionId === OTHER_WORK_OPTION_ID && (
+            <div className="mt-3">
+              <label className="mb-1 block text-xs font-medium text-slate-700">
+                Courte description <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="workOptionOtherDescription"
+                value={workOptionOtherDescription}
+                onChange={(e) =>
+                  setWorkOptionOtherDescription(e.target.value.slice(0, OTHER_WORK_DESCRIPTION_MAX))
+                }
+                placeholder="Ex. débouchage WC + remplacement robinet cuisine"
+                className={inputClass}
+                required
+                minLength={OTHER_WORK_DESCRIPTION_MIN}
+                maxLength={OTHER_WORK_DESCRIPTION_MAX}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                {workOptionOtherDescription.trim().length} /{" "}
+                {OTHER_WORK_DESCRIPTION_MIN} car. min. (max.{" "}
+                {OTHER_WORK_DESCRIPTION_MAX})
+              </p>
+            </div>
           )}
 
-          {workOptions.length > 0 && (
+          {workOptionId && workOptionId !== OTHER_WORK_OPTION_ID && (
             <input type="hidden" name="pricingTier" value={pricingTier} />
           )}
+          {workOptionId === OTHER_WORK_OPTION_ID && (
+            <input type="hidden" name="pricingTier" value="eleve" />
+          )}
 
-          {!workOptionId && !pricingTier && (
+          {!workOptionId && (
             <p className="mt-2 text-xs font-medium text-amber-700">
               Sélectionnez une prestation pour continuer.
             </p>

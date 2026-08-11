@@ -21,7 +21,7 @@ const FEATURES = [
   {
     title: "Gratuit pour vous",
     description:
-      "Aucun frais, aucune commission sur vos travaux. Les professionnels utilisent des crédits pour obtenir vos coordonnées.",
+      "Aucun frais, aucune commission sur vos travaux. Les professionnels utilisent leur solde pour obtenir vos coordonnées.",
   },
   {
     title: "Artisans RCS vérifiés",

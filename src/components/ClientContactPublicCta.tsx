@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
-import {
-  formatUnlockPriceEur,
-  unlockCreditsForPriceEur,
-} from "@/lib/pricing-tiers";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 
 interface Props {
   auctionId: string;
@@ -15,7 +12,7 @@ interface Props {
 
 /**
  * Sur les pages publiques : renvoie le pro vers son espace pour
- * débloquer les coordonnées (matching + crédits).
+ * débloquer les coordonnées (matching + solde).
  */
 export default function ClientContactPublicCta({
   auctionId,
@@ -24,7 +21,6 @@ export default function ClientContactPublicCta({
   unlockPriceEur = UNLOCK_PRICE_EUR,
 }: Props) {
   const href = `/pro/encheres/${encodeURIComponent(auctionId)}`;
-  const unlockCredits = unlockCreditsForPriceEur(unlockPriceEur);
   const priceLabel = formatUnlockPriceEur(unlockPriceEur);
 
   return (
@@ -33,8 +29,7 @@ export default function ClientContactPublicCta({
       <p className="mt-2 text-sm text-slate-600">
         Les photos restent visibles librement. Depuis votre espace pro, débloquez
         les coordonnées si vous correspondez aux attentes du client (max. 5
-        artisans) pour {priceLabel} ({unlockCredits} crédit
-        {unlockCredits > 1 ? "s" : ""}).
+        artisans) pour {priceLabel} (solde).
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">

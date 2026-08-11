@@ -57,6 +57,7 @@ export default async function SharedChantierPage({ params }: Props) {
   const unlockCount = await countContactUnlocksForAuction(request.auctionId);
   const auctionEndsAt = resolveAuctionEndsAt({
     auctionEndsAt: request.auctionEndsAt,
+    auctionDurationHours: request.auctionDurationHours,
     auctionDurationDays: request.auctionDurationDays,
     from: request.reviewedAt ?? request.createdAt,
   });

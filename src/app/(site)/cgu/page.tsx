@@ -54,12 +54,12 @@ export default function CguPage() {
             le Client.
           </li>
           <li>
-            <strong>Crédits</strong> : unités prépayées permettant aux
+            <strong>Solde</strong> : montant prépayé en euros permettant aux
             Professionnels d&apos;utiliser certains services payants de la
             Plateforme (voir <Link href="/cgv">CGV</Link>).
           </li>
           <li>
-            <strong>Déblocage</strong> : accès payant (crédits) aux coordonnées
+            <strong>Déblocage</strong> : accès payant (solde) aux coordonnées
             d&apos;un Client après autorisation de contact.
           </li>
         </ul>
@@ -167,7 +167,7 @@ export default function CguPage() {
           <li>
             Les coordonnées du Client ne sont communiquées à un Professionnel
             qu&apos;après autorisation de contact et{" "}
-            <strong>déblocage</strong> (crédits — voir{" "}
+            <strong>déblocage</strong> (solde — voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
         </ul>
@@ -194,7 +194,7 @@ export default function CguPage() {
             Le déblocage des coordonnées est soumis à la correspondance du
             profil Professionnel avec les critères choisis par le Client
             (métier, entreprise active, assurances, ancienneté, note Google le
-            cas échéant) et à la consommation de crédits (voir{" "}
+            cas échéant) et à la consommation de solde (voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
           <li>

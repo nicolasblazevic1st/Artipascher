@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  CREDIT_PACKS,
-  CREDIT_PRICE_EUR,
-  creditPackUnitPriceEur,
-  type CreditPack,
+  CONTACT_BALANCE_PACKS,
+  CONTACT_UNLOCK_REF_EUR,
+  contactBalancePackDiscountPercent,
+  type ContactBalancePack,
 } from "@/lib/store-types";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 
 interface Txn {
   id: string;
@@ -18,18 +19,20 @@ interface Txn {
 }
 
 const TXN_LABELS: Record<string, string> = {
-  purchase: "Achat",
+  purchase: "Rechargement",
   spend_unlock: "Mise en contact",
   spend_bid: "Ancienne enchère",
-  refund_unlock: "Recrédit contact",
+  refund_unlock: "Remboursement contact",
   admin_adjust: "Ajustement",
-  demo_grant: "Crédit démo",
+  demo_grant: "Solde démo",
   referral_reward: "Parrainage",
 };
 
 export default function ProCreditsPanel() {
   const [balance, setBalance] = useState(0);
-  const [packs, setPacks] = useState<CreditPack[]>([...CREDIT_PACKS]);
+  const [packs, setPacks] = useState<ContactBalancePack[]>([
+    ...CONTACT_BALANCE_PACKS,
+  ]);
   const [transactions, setTransactions] = useState<Txn[]>([]);
   const [demoAllowed, setDemoAllowed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,15 @@ export default function ProCreditsPanel() {
     if (res.ok) {
       setBalance(data.balance ?? 0);
       if (Array.isArray(data.packs) && data.packs.length > 0) {
-        setPacks(data.packs as CreditPack[]);
+        const normalized = (data.packs as Array<Record<string, number>>).map(
+          (p) => ({
+            creditEur: p.creditEur ?? p.credits ?? 0,
+            payEur: p.payEur ?? p.priceEur ?? 0,
+          })
+        );
+        if (normalized.every((p) => p.creditEur > 0)) {
+          setPacks(normalized as ContactBalancePack[]);
+        }
       }
       setTransactions(data.transactions ?? []);
       setDemoAllowed(data.demoAllowed === true);
@@ -56,7 +67,7 @@ export default function ProCreditsPanel() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("credits") === "1") {
       const sessionId = params.get("session_id");
-      setSuccess("Paiement reçu — confirmation des crédits…");
+      setSuccess("Paiement reçu — confirmation du solde…");
       window.history.replaceState({}, "", window.location.pathname + "#credits");
 
       void (async () => {
@@ -73,64 +84,65 @@ export default function ProCreditsPanel() {
               setSuccess(
                 data.alreadyApplied
                   ? "Paiement déjà pris en compte — solde à jour."
-                  : `${data.credited} crédit(s) ajouté(s).`
+                  : `${formatUnlockPriceEur(data.credited ?? 0)} ajoutés au solde.`
               );
               await load();
               return;
             }
+            setError(data.error ?? "Confirmation du paiement impossible.");
           } catch {
-            /* fallback poll ci-dessous */
+            setError("Confirmation du paiement impossible.");
           }
         }
-        setTimeout(() => load(), 1500);
-        setTimeout(() => load(), 5000);
+        await load();
       })();
     }
   }, [load]);
 
-  async function buy(packSize: number, demo = false) {
-    setBuying(packSize);
+  async function buyPack(creditEur: number, demo = false) {
+    setBuying(creditEur);
     setError(null);
     setSuccess(null);
     const res = await fetch("/api/pro/credits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ packSize, demo }),
+      body: JSON.stringify({ packSize: creditEur, creditEur, demo }),
     });
     const data = await res.json();
     setBuying(null);
 
-    if (data.checkoutUrl) {
-      window.location.href = data.checkoutUrl;
-      return;
-    }
     if (!res.ok) {
       setError(data.error ?? "Achat impossible.");
       return;
     }
-    if (data.demo) {
-      setSuccess(`${data.credited} crédit(s) ajouté(s) (mode démo).`);
-      setBalance(data.balance);
-      await load();
+    if (data.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
+      return;
     }
+    setBalance(data.balance ?? 0);
+    setSuccess(
+      `Solde crédité de ${formatUnlockPriceEur(data.credited ?? creditEur)}.`
+    );
+    await load();
   }
 
   if (loading) {
-    return <p className="text-sm text-slate-500">Chargement des crédits…</p>;
+    return <p className="text-sm text-slate-500">Chargement du solde…</p>;
   }
 
   return (
     <section id="credits" className="rounded-xl border border-slate-200 bg-white p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-slate-900">Crédits</h2>
+          <h2 className="font-semibold text-slate-900">Solde</h2>
           <p className="mt-1 text-sm text-slate-600">
-            1 crédit = {CREDIT_PRICE_EUR}&nbsp;€ (réf.). Mise en contact selon
-            le ticket du chantier (15 à 25&nbsp;€). Packs à tarif dégressif.
+            Rechargez votre solde pour débloquer des contacts (
+            {CONTACT_UNLOCK_REF_EUR - 5}&nbsp;€ à {CONTACT_UNLOCK_REF_EUR + 5}
+            &nbsp;€ selon le chantier). Packs à tarif dégressif.
           </p>
         </div>
         <p className="rounded-full bg-brand-50 px-4 py-2 text-lg font-bold text-brand-800">
-          {balance} crédit{balance !== 1 ? "s" : ""}
+          {formatUnlockPriceEur(balance)}
         </p>
       </div>
 
@@ -145,27 +157,24 @@ export default function ProCreditsPanel() {
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {packs.map((pack) => {
-          const unit = creditPackUnitPriceEur(pack);
-          const saving =
-            pack.credits > 1
-              ? Math.round((1 - unit / CREDIT_PRICE_EUR) * 100)
-              : 0;
+          const discount = contactBalancePackDiscountPercent(pack);
           return (
             <button
-              key={pack.credits}
+              key={pack.creditEur}
               type="button"
               disabled={buying !== null}
-              onClick={() => buy(pack.credits, false)}
-              className="rounded-lg border border-brand-200 bg-brand-50/40 px-4 py-3 text-left hover:border-brand-400 hover:bg-brand-50 disabled:opacity-50"
+              onClick={() => buyPack(pack.creditEur, false)}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left hover:border-brand-300 hover:bg-brand-50 disabled:opacity-50"
             >
-              <p className="text-sm font-semibold text-slate-900">
-                {buying === pack.credits
-                  ? "…"
-                  : `${pack.credits} crédit${pack.credits > 1 ? "s" : ""} · ${pack.priceEur} €`}
+              <p className="font-semibold text-slate-900">
+                {formatUnlockPriceEur(pack.creditEur)} de solde
               </p>
-              <p className="mt-0.5 text-xs text-slate-600">
-                {unit}&nbsp;€ / crédit
-                {saving > 0 ? ` · −${saving} %` : ""}
+              <p className="mt-0.5 text-sm text-slate-600">
+                {formatUnlockPriceEur(pack.payEur)}
+                {discount > 0 ? ` · −${discount} %` : ""}
+              </p>
+              <p className="mt-2 text-xs font-medium text-brand-700">
+                {buying === pack.creditEur ? "Redirection…" : "Acheter"}
               </p>
             </button>
           );
@@ -176,31 +185,41 @@ export default function ProCreditsPanel() {
         <button
           type="button"
           disabled={buying !== null}
-          onClick={() => buy(1, true)}
+          onClick={() => buyPack(packs[0]?.creditEur ?? 20, true)}
           className="mt-3 text-xs text-slate-500 underline"
         >
-          Mode démo — ajouter 1 crédit sans paiement
+          Mode démo — créditer {formatUnlockPriceEur(packs[0]?.creditEur ?? 20)}{" "}
+          sans paiement
         </button>
       )}
 
       {transactions.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-medium text-slate-800">Historique</h3>
-          <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-xs text-slate-600">
-            {transactions.map((t) => (
-              <li key={t.id} className="flex justify-between gap-2 border-b border-slate-100 py-1.5">
-                <span>
-                  {TXN_LABELS[t.type] ?? t.type}
-                  {t.note ? ` · ${t.note}` : ""}
-                </span>
-                <span
+          <h3 className="text-sm font-semibold text-slate-900">Historique</h3>
+          <ul className="mt-2 divide-y divide-slate-100 text-sm">
+            {transactions.map((txn) => (
+              <li
+                key={txn.id}
+                className="flex items-center justify-between gap-3 py-2"
+              >
+                <div>
+                  <p className="font-medium text-slate-800">
+                    {TXN_LABELS[txn.type] ?? txn.type}
+                  </p>
+                  {txn.note && (
+                    <p className="text-xs text-slate-500">{txn.note}</p>
+                  )}
+                </div>
+                <p
                   className={
-                    t.amount > 0 ? "font-medium text-emerald-700" : "font-medium text-slate-800"
+                    txn.amount >= 0
+                      ? "font-semibold text-emerald-700"
+                      : "font-semibold text-slate-700"
                   }
                 >
-                  {t.amount > 0 ? "+" : ""}
-                  {t.amount} · solde {t.balanceAfter}
-                </span>
+                  {txn.amount >= 0 ? "+" : ""}
+                  {formatUnlockPriceEur(txn.amount)}
+                </p>
               </li>
             ))}
           </ul>

@@ -21,6 +21,7 @@ import { TRADE_CATEGORY_TO_WORK, WORK_TO_TRADE_CATEGORY } from "./work-categorie
 function endsAtForRequest(request: WorkRequest): string | undefined {
   return resolveAuctionEndsAt({
     auctionEndsAt: request.auctionEndsAt,
+    auctionDurationHours: request.auctionDurationHours,
     auctionDurationDays: request.auctionDurationDays,
     from: request.reviewedAt ?? request.createdAt,
   });

@@ -6,8 +6,8 @@ import {
 } from "@/lib/ban-address";
 import { validateClientAddress } from "@/lib/client-address";
 import {
-  DEFAULT_AUCTION_DURATION_DAYS,
-  validateAuctionDurationDays,
+  DEFAULT_AUCTION_DURATION_HOURS,
+  validateAuctionDurationHours,
 } from "@/lib/auction-duration";
 import {
   validateDescription,
@@ -68,9 +68,14 @@ export async function POST(request: NextRequest) {
       .filter(Boolean);
     const pricingTierRaw = String(formData.get("pricingTier") ?? "").trim();
     const workOptionIdRaw = String(formData.get("workOptionId") ?? "").trim();
+    const workOptionOtherDescriptionRaw = String(
+      formData.get("workOptionOtherDescription") ?? ""
+    ).trim();
     const description = String(formData.get("description") ?? "");
     const durationRaw = String(
-      formData.get("auctionDurationDays") ?? DEFAULT_AUCTION_DURATION_DAYS
+      formData.get("auctionDurationHours") ??
+        formData.get("auctionDurationDays") ??
+        DEFAULT_AUCTION_DURATION_HOURS
     );
     const preferEstablishedRaw = String(
       formData.get("preferEstablishedCompany") ?? "false"
@@ -177,15 +182,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: addressError }, { status: 400 });
     }
 
-    const durationError = validateAuctionDurationDays(durationRaw);
+    // Compat : anciens clients envoyaient des jours ; si valeur ≤ 90 et hors options heures, traiter comme jours.
+    let durationHours = Number(durationRaw);
+    const hoursError = validateAuctionDurationHours(durationHours);
+    if (hoursError) {
+      const asDays = Number(durationRaw);
+      if (
+        Number.isInteger(asDays) &&
+        asDays >= 1 &&
+        asDays <= 90 &&
+        !Number.isNaN(asDays)
+      ) {
+        durationHours = asDays * 24;
+      }
+    }
+    const durationError = validateAuctionDurationHours(durationHours);
     if (durationError) {
       return NextResponse.json({ error: durationError }, { status: 400 });
     }
-    const auctionDurationDays = Number(durationRaw);
+    const auctionDurationHours = durationHours;
 
     const startDateError = validateRequestedWorkStartDate(
       requestedWorkStartDate,
-      auctionDurationDays
+      auctionDurationHours
     );
     if (startDateError) {
       return NextResponse.json({ error: startDateError }, { status: 400 });
@@ -220,6 +239,7 @@ export async function POST(request: NextRequest) {
     const pricingCheck = validatePricingSelection({
       pricingTier: pricingTierRaw,
       workOptionId: workOptionIdRaw || undefined,
+      workOptionOtherDescription: workOptionOtherDescriptionRaw || undefined,
       nafCodes: nafCheck.nafCodes,
     });
     if (!pricingCheck.ok) {
@@ -310,8 +330,10 @@ export async function POST(request: NextRequest) {
       nafCodes: nafCheck.nafCodes,
       pricingTier: pricingCheck.pricingTier,
       workOptionId: pricingCheck.workOptionId,
+      workOptionOtherDescription: pricingCheck.workOptionOtherDescription,
       description: description.trim(),
-      auctionDurationDays,
+      auctionDurationHours,
+      auctionDurationDays: Math.max(1, Math.round(auctionDurationHours / 24)),
       preferEstablishedCompany,
       minGoogleRating,
       requireActiveCompany: true,

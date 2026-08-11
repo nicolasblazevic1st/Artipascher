@@ -3,15 +3,15 @@ import Link from "next/link";
 import LegalDocument from "@/components/LegalDocument";
 import { LEGAL_PUBLISHER } from "@/lib/legal";
 import {
-  CREDIT_PACKS,
-  CREDIT_PRICE_EUR,
-  creditPackUnitPriceEur,
+  CONTACT_BALANCE_PACKS,
+  CONTACT_UNLOCK_REF_EUR,
+  contactBalancePackDiscountPercent,
 } from "@/lib/store-types";
 
 export const metadata: Metadata = {
   title: "Conditions générales de vente",
   description:
-    "Conditions générales de vente des crédits Artipascher destinés aux professionnels.",
+    "Conditions générales de vente du solde Artipascher destiné aux professionnels.",
 };
 
 export default function CgvPage() {
@@ -22,8 +22,8 @@ export default function CgvPage() {
         <p className="mt-3">
           Les présentes Conditions générales de vente (ci-après « CGV »)
           s&apos;appliquent à la vente, par {LEGAL_PUBLISHER.brand} /{" "}
-          {LEGAL_PUBLISHER.legalName} (ci-après « le Vendeur »), de{" "}
-          <strong>crédits numériques</strong> permettant aux Professionnels
+          {LEGAL_PUBLISHER.legalName} (ci-après « le Vendeur »), d&apos;un{" "}
+          <strong>solde en euros</strong> permettant aux Professionnels
           d&apos;utiliser certains services payants de la plateforme Artipascher
           (ci-après « la Plateforme »).
         </p>
@@ -42,50 +42,48 @@ export default function CgvPage() {
       <section>
         <h2>2. Produits / services vendus</h2>
         <p className="mt-3">
-          Le Vendeur commercialise des crédits utilisables sur la Plateforme.
+          Le Vendeur commercialise un solde utilisable sur la Plateforme.
           Sauf indication contraire affichée au moment de l&apos;achat :
         </p>
         <ul>
           <li>
-            <strong>1 crédit = {CREDIT_PRICE_EUR}&nbsp;€</strong> au tarif
-            unitaire de référence (TTC ou HT selon le régime fiscal affiché lors
-            du paiement) ;
+            le solde est libellé en <strong>euros</strong> ; le tarif unitaire de
+            référence pour une mise en contact typique est de{" "}
+            <strong>{CONTACT_UNLOCK_REF_EUR}&nbsp;€</strong> (TTC ou HT selon le
+            régime fiscal affiché lors du paiement) ;
           </li>
           <li>
-            <strong>1 crédit = 1 mise en contact</strong> (déblocage des
-            coordonnées d&apos;un Client) ;
+            chaque <strong>déblocage</strong> débite le solde du montant exact du
+            ticket du chantier (15&nbsp;€ / 17,50&nbsp;€ / 20&nbsp;€ / 25&nbsp;€) ;
           </li>
           <li>
             packs à <strong>tarif dégressif</strong> (sous réserve de
             disponibilité) :
             <ul>
-              {CREDIT_PACKS.map((pack) => (
-                <li key={pack.credits}>
-                  {pack.credits} crédit{pack.credits > 1 ? "s" : ""} :{" "}
-                  {pack.priceEur}&nbsp;€ (
-                  {creditPackUnitPriceEur(pack)}&nbsp;€ / crédit)
-                </li>
-              ))}
+              {CONTACT_BALANCE_PACKS.map((pack) => {
+                const discount = contactBalancePackDiscountPercent(pack);
+                return (
+                  <li key={pack.creditEur}>
+                    payer {pack.payEur}&nbsp;€ → recevoir {pack.creditEur}&nbsp;€
+                    de solde
+                    {discount > 0 ? ` (−${discount} %)` : ""}
+                  </li>
+                );
+              })}
             </ul>
-          </li>
-          <li>
-            usage typique : mise en contact selon le ticket du chantier
-            (15&nbsp;€ / 17,50&nbsp;€ / 20&nbsp;€ / 25&nbsp;€), débitée en
-            crédits au tarif unitaire de référence ({CREDIT_PRICE_EUR}&nbsp;€ /
-            crédit).
           </li>
         </ul>
         <p className="mt-3">
-          Les crédits n&apos;ont pas de valeur monétaire hors Plateforme, ne
-          sont pas remboursables en espèces (sauf obligation légale) et ne
-          constituent pas un instrument de paiement au sens du droit bancaire.
+          Le solde n&apos;a pas de valeur monétaire hors Plateforme, n&apos;est
+          pas remboursable en espèces (sauf obligation légale) et ne constitue
+          pas un instrument de paiement au sens du droit bancaire.
         </p>
       </section>
 
       <section>
         <h2>2 bis. Nature du service payant</h2>
         <p className="mt-3">
-          Le crédit consommé pour un <strong>déblocage</strong> donne accès aux{" "}
+          Le montant débité pour un <strong>déblocage</strong> donne accès aux{" "}
           <strong>coordonnées</strong> d&apos;un Client ayant autorisé le
           contact (acceptation manuelle ou option d&apos;alerte SMS avec
           acceptation automatique, dans la limite prévue aux CGU).
@@ -93,7 +91,7 @@ export default function CgvPage() {
         <p className="mt-3">
           <strong>Ne sont pas garantis</strong> : une réponse du Client, un
           devis signé, un chantier, ni un volume minimal d&apos;offres à
-          proximité du Professionnel. Les crédits permettent l&apos;accès à des
+          proximité du Professionnel. Le solde permet l&apos;accès à des
           fonctionnalités de la Plateforme, non la vente d&apos;un résultat
           commercial.
         </p>
@@ -102,7 +100,7 @@ export default function CgvPage() {
       <section>
         <h2>3. Commande et paiement</h2>
         <p className="mt-3">
-          La commande de crédits s&apos;effectue depuis l&apos;espace
+          La commande de solde s&apos;effectue depuis l&apos;espace
           Professionnel, via un prestataire de paiement (notamment Stripe). Le
           Professionnel garantit disposer des autorisations nécessaires pour
           utiliser le moyen de paiement choisi.
@@ -111,7 +109,7 @@ export default function CgvPage() {
           La vente est ferme dès confirmation du paiement réussi et crédit du
           solde sur le compte Professionnel. Une confirmation peut être adressée
           par email et/ou affichée dans l&apos;espace compte. L&apos;accès à
-          l&apos;achat de crédits suppose un compte Professionnel{" "}
+          l&apos;achat de solde suppose un compte Professionnel{" "}
           <strong>préalablement vérifié</strong> à l&apos;inscription (registre,
           BODACC, attestations RC pro et décennale — voir CGU).
         </p>
@@ -136,7 +134,7 @@ export default function CgvPage() {
       <section>
         <h2>5. Exécution du service</h2>
         <p className="mt-3">
-          Les crédits sont crédités sur le compte Professionnel après validation
+          Le solde est crédité sur le compte Professionnel après validation
           du paiement. L&apos;exécution est immédiate ou quasi immédiate sous
           réserve du bon fonctionnement des systèmes de paiement et de la
           Plateforme.
@@ -161,7 +159,7 @@ export default function CgvPage() {
       <section>
         <h2>7. Remboursements</h2>
         <p className="mt-3">
-          Les crédits ne donnent lieu à aucun remboursement, sauf{" "}
+          Le solde ne donne lieu à aucun remboursement, sauf{" "}
           <strong>dysfonctionnement imputable au Vendeur</strong> (par exemple
           impossibilité technique d&apos;accéder aux coordonnées après
           déblocage, ou coordonnées manifestement invalides du fait de la
@@ -183,13 +181,13 @@ export default function CgvPage() {
       </section>
 
       <section>
-        <h2>8. Durée de validité des crédits</h2>
+        <h2>8. Durée de validité du solde</h2>
         <p className="mt-3">
-          Sauf mention contraire sur la Plateforme, les crédits n&apos;ont pas
+          Sauf mention contraire sur la Plateforme, le solde n&apos;a pas
           de date d&apos;expiration automatique. L&apos;Éditeur se réserve
           toutefois le droit, après information préalable raisonnable, de fixer
           une durée de validité ou de procéder à une clôture de service
-          entraînant la perte des crédits non utilisés, dans le respect du droit
+          entraînant la perte du solde non utilisé, dans le respect du droit
           applicable.
         </p>
       </section>
@@ -198,7 +196,7 @@ export default function CgvPage() {
         <h2>9. Responsabilité</h2>
         <p className="mt-3">
           La responsabilité du Vendeur au titre des présentes CGV est limitée au
-          montant des crédits concernés par le litige, hors dommages indirects,
+          montant du solde concerné par le litige, hors dommages indirects,
           dans les limites autorisées par la loi. Le Vendeur n&apos;est pas
           responsable des litiges relatifs aux travaux réalisés entre Client et
           Artisan, ni du volume d&apos;opportunités disponibles pour un

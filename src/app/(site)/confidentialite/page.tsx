@@ -45,7 +45,7 @@ export default function ConfidentialitePage() {
           <li>
             <strong>Compte Professionnel</strong> : raison sociale, SIRET/SIREN,
             email, téléphone, documents (décennale, RC pro…), métiers,
-            historique de déblocages et de crédits ;
+            historique de déblocages et de solde ;
           </li>
           <li>
             <strong>Prospects acquisition</strong> : données d&apos;entreprises
@@ -84,7 +84,7 @@ export default function ConfidentialitePage() {
           <li>
             Exécution du contrat / mesures précontractuelles : création de
             compte, vérification du mobile Client, mise en relation, gestion des
-            annonces, vente de crédits, alertes de contact ;
+            annonces, vente de solde, alertes de contact ;
           </li>
           <li>
             Intérêt légitime : sécurité, prévention de la fraude, amélioration

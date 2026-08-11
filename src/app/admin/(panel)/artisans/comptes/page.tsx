@@ -112,7 +112,7 @@ export default function AdminComptesArtisansPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Comptes</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Suivi de tous les comptes professionnels inscrits — activité, crédits, email.
+        Suivi de tous les comptes professionnels inscrits — activité, solde, email.
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

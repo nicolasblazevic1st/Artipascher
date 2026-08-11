@@ -129,20 +129,17 @@ export async function POST(request: NextRequest) {
     workOptionId: workRequest?.workOptionId,
   });
   const unlockPriceEur = pricing.unlockPriceEur;
-  const unlockCredits = pricing.unlockCredits;
   const priceLabel = formatUnlockPriceEur(unlockPriceEur);
 
   const balance = await getProCreditBalance(session.proId);
-  const needsCredits = balance + 0.0001 < unlockCredits;
-  if (needsCredits && !(demo && isDemoPaymentAllowed())) {
+  const needsBalance = balance + 0.0001 < unlockPriceEur;
+  if (needsBalance && !(demo && isDemoPaymentAllowed())) {
     return NextResponse.json(
       {
-        error: `Solde insuffisant. Il faut ${unlockCredits} crédit${
-          unlockCredits > 1 ? "s" : ""
-        } (${priceLabel}) pour une mise en contact.`,
+        error: `Solde insuffisant. Il faut ${priceLabel} pour une mise en contact (solde actuel : ${formatUnlockPriceEur(balance)}).`,
         needsCredits: true,
         balance,
-        requiredCredits: unlockCredits,
+        requiredEur: unlockPriceEur,
         unlockPriceEur,
         pricingTier: pricing.tier,
       },
@@ -150,16 +147,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let spentCredits = 0;
-  if (!needsCredits) {
+  let spentEur = 0;
+  if (!needsBalance) {
     const spent = await spendProCredit({
       proId: session.proId,
       type: "spend_unlock",
-      credits: unlockCredits,
       amountEur: unlockPriceEur,
       auctionId,
       workRequestId: workRequest?.id,
-      note: `Mise en contact client (${pricing.tier} · ${unlockCredits} crédit · ${priceLabel})`,
+      note: `Mise en contact client (${pricing.tier} · ${priceLabel})`,
     });
     if ("error" in spent) {
       return NextResponse.json(
@@ -167,7 +163,7 @@ export async function POST(request: NextRequest) {
         { status: 402 }
       );
     }
-    spentCredits = unlockCredits;
+    spentEur = unlockPriceEur;
   }
 
   const unlock = await addContactUnlock({
@@ -178,11 +174,11 @@ export async function POST(request: NextRequest) {
   });
 
   if ("error" in unlock) {
-    if (spentCredits > 0) {
+    if (spentEur > 0) {
       await creditProWallet({
         proId: session.proId,
         type: "refund_unlock",
-        amount: spentCredits,
+        amount: spentEur,
         auctionId,
         workRequestId: workRequest?.id,
         note: "Remboursement — places de contact déjà prises",
@@ -197,10 +193,10 @@ export async function POST(request: NextRequest) {
   const newBalance = await getProCreditBalance(session.proId);
   return NextResponse.json({
     unlocked: true,
-    creditsSpent: spentCredits,
+    amountSpentEur: spentEur,
     unlockPriceEur,
     pricingTier: pricing.tier,
     balance: newBalance,
-    demo: demo && needsCredits,
+    demo: demo && needsBalance,
   });
 }

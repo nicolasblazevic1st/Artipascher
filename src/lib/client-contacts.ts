@@ -19,7 +19,7 @@ export interface ClientContact {
   clientKind?: "individual" | "company";
 }
 
-/** Données privées — jamais exposées sans paiement (crédits) par un pro approuvé. */
+/** Données privées — jamais exposées sans paiement (solde) par un pro approuvé. */
 export const CLIENT_CONTACTS: Record<string, ClientContact> = {
   "1": {
     auctionId: "1",

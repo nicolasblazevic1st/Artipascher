@@ -6,7 +6,7 @@ interface Props {
   className?: string;
 }
 
-/** Exigences client visibles avant achat de crédits / déblocage. */
+/** Exigences client visibles avant achat de solde / déblocage. */
 export default function OfferClientRequirements({
   request,
   className = "",

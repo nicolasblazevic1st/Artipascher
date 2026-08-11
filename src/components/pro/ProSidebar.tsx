@@ -1,5 +1,6 @@
 import Link from "next/link";
 import NotificationBell from "@/components/NotificationBell";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import ProLogoutButton from "./ProLogoutButton";
 
 const NAV = [
@@ -16,7 +17,7 @@ export default function ProSidebar({
   companyName: string;
   creditBalance: number;
 }) {
-  const low = creditBalance < 5;
+  const low = creditBalance < 15;
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100">
@@ -33,11 +34,11 @@ export default function ProSidebar({
               ? "bg-amber-500 text-amber-950 hover:bg-amber-400"
               : "bg-brand-700 text-white hover:bg-brand-600"
           }`}
-          title="Voir et recharger vos crédits"
+          title="Voir et recharger votre solde"
         >
-          <span className="text-xs font-medium opacity-90">Crédits</span>
+          <span className="text-xs font-medium opacity-90">Solde</span>
           <span className="text-lg font-bold tabular-nums leading-none">
-            {creditBalance}
+            {formatUnlockPriceEur(creditBalance)}
           </span>
         </Link>
       </div>

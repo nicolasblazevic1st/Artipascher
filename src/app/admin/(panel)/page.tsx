@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import { getAdminStats, readStore } from "@/lib/store";
 import { VERIFIED_PROFESSIONALS } from "@/lib/professionals";
 import { listAdminAuctionViews } from "@/lib/work-request-auctions";
@@ -97,7 +97,7 @@ export default async function AdminDashboardPage() {
                   </p>
                   <p className="text-slate-500">
                     {r.category} · annonce{" "}
-                    {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}
+                    {formatWorkRequestAuctionDuration(r)}
                   </p>
                 </li>
               ))}

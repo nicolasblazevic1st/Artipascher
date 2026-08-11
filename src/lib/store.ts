@@ -70,10 +70,37 @@ type LegacyWorkRequest = WorkRequest & { budget?: number };
 
 function normalizeWorkRequest(request: LegacyWorkRequest): WorkRequest {
   const { budget, ...rest } = request;
+  const hours =
+    typeof rest.auctionDurationHours === "number" &&
+    rest.auctionDurationHours > 0
+      ? Math.floor(rest.auctionDurationHours)
+      : typeof rest.auctionDurationDays === "number" &&
+          rest.auctionDurationDays > 0
+        ? Math.floor(rest.auctionDurationDays) * 24
+        : 720;
   return {
     ...rest,
     startPrice: rest.startPrice ?? budget,
+    auctionDurationHours: hours,
+    auctionDurationDays:
+      rest.auctionDurationDays ?? Math.max(1, Math.round(hours / 24)),
   };
+}
+
+const LEGACY_CREDIT_TO_EUR = 20;
+
+function migrateWalletToEuros(store: DataStore): boolean {
+  if (store.walletCurrency === "eur") return false;
+  for (const wallet of store.creditWallets) {
+    wallet.balance = Math.round(wallet.balance * LEGACY_CREDIT_TO_EUR * 1000) / 1000;
+  }
+  for (const txn of store.creditTransactions) {
+    txn.amount = Math.round(txn.amount * LEGACY_CREDIT_TO_EUR * 1000) / 1000;
+    txn.balanceAfter =
+      Math.round(txn.balanceAfter * LEGACY_CREDIT_TO_EUR * 1000) / 1000;
+  }
+  store.walletCurrency = "eur";
+  return true;
 }
 
 async function ensureStore(): Promise<void> {
@@ -90,7 +117,7 @@ export async function readStore(): Promise<DataStore> {
   await ensureStore();
   const raw = await fs.readFile(STORE_PATH, "utf-8");
   const parsed = JSON.parse(raw) as Partial<DataStore>;
-  return {
+  const store: DataStore = {
     ...EMPTY_STORE,
     ...parsed,
     clientAccounts: parsed.clientAccounts ?? [],
@@ -113,7 +140,12 @@ export async function readStore(): Promise<DataStore> {
     creditWallets: parsed.creditWallets ?? [],
     creditTransactions: parsed.creditTransactions ?? [],
     notifications: parsed.notifications ?? [],
+    walletCurrency: parsed.walletCurrency,
   };
+  if (migrateWalletToEuros(store)) {
+    await writeStore(store);
+  }
+  return store;
 }
 
 function normalizeSmsSettings(
@@ -2741,7 +2773,7 @@ async function applyCreditDelta(
 
   const next = Math.round((wallet.balance + data.amount) * 1000) / 1000;
   if (next < -0.0001) {
-    return { error: "Solde de crédits insuffisant." };
+    return { error: "Solde insuffisant." };
   }
   const balanceAfter = Math.max(0, next);
 
@@ -2791,7 +2823,7 @@ export async function creditProWallet(data: {
   | { balance: number; transaction: ProCreditTransaction; alreadyApplied: boolean }
   | { error: string }
 > {
-  if (data.amount <= 0) return { error: "Le crédit doit être positif." };
+  if (data.amount <= 0) return { error: "Le montant doit être positif." };
   const store = await readStore();
   const result = await applyCreditDelta(store, data);
   if ("error" in result) return result;
@@ -2802,16 +2834,22 @@ export async function creditProWallet(data: {
 export async function spendProCredit(data: {
   proId: string;
   type: "spend_unlock" | "spend_bid";
-  /** Crédits à débiter (peut être fractionnaire, ex. 0,875 pour 17,50 €). */
+  /** Montant en euros à débiter. */
   credits?: number;
+  /** Alias explicite euros (prioritaire si fourni). */
+  amountEur?: number;
   auctionId?: string;
   workRequestId?: string;
   note?: string;
-  amountEur?: number;
 }): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
-  const credits = Math.round((data.credits ?? 1) * 1000) / 1000;
-  if (!(credits > 0)) {
-    return { error: "Montant de crédits invalide." };
+  const euros =
+    Math.round(
+      (typeof data.amountEur === "number" && data.amountEur > 0
+        ? data.amountEur
+        : (data.credits ?? 0)) * 1000
+    ) / 1000;
+  if (!(euros > 0)) {
+    return { error: "Montant invalide." };
   }
   const store = await readStore();
   const result = await applyCreditDelta(store, {
@@ -2820,8 +2858,8 @@ export async function spendProCredit(data: {
     auctionId: data.auctionId,
     workRequestId: data.workRequestId,
     note: data.note,
-    amountEur: data.amountEur,
-    amount: -credits,
+    amountEur: euros,
+    amount: -euros,
   });
   if ("error" in result) return result;
   await maybeGrantReferralRewardInStore(store, data.proId);
@@ -2951,7 +2989,7 @@ async function maybeGrantReferralRewardInStore(
     proId: referrer.id,
     type: "referral_reward",
     amount: REFERRAL_REWARD_CREDITS,
-    note: `Parrainage — ${spender.companyName} a dépensé ${REFERRAL_SPEND_THRESHOLD} crédits`,
+    note: `Parrainage — ${spender.companyName} a dépensé ${REFERRAL_SPEND_THRESHOLD} €`,
   });
   if ("error" in credited) return;
 

@@ -5,7 +5,7 @@ import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatNafList } from "@/lib/naf-trade-groups";
 import type { WorkRequest } from "@/lib/store-types";
@@ -150,7 +150,7 @@ export default function AdminDemandesPage() {
                     </div>
                     <div>
                       Durée annonce :{" "}
-                      {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}
+                      {formatWorkRequestAuctionDuration(r)}
                     </div>
                     <div>
                       Ancienneté :{" "}

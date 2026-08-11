@@ -21,7 +21,7 @@ import { primaryTradeCategory } from "@/lib/pro-trades";
 import { applyRcsActivitiesToTradeSelection } from "@/lib/naf-trade-groups";
 import { isValidSiretFormat, normalizeSiret, type RcsVerificationResult } from "@/lib/rcs";
 import {
-  REFERRAL_REWARD_CREDITS,
+  REFERRAL_REWARD_EUR,
   REFERRAL_SPEND_THRESHOLD,
 } from "@/lib/store-types";
 
@@ -652,8 +652,8 @@ export default function ProRegistrationForm() {
         />
         <p className="mt-1 text-xs text-slate-500">
           Si une entreprise vérifiée vous a invité, saisissez son code. Après{" "}
-          {REFERRAL_SPEND_THRESHOLD} crédit dépensé, votre parrain reçoit{" "}
-          {REFERRAL_REWARD_CREDITS} crédit.
+          {REFERRAL_SPEND_THRESHOLD}&nbsp;€ dépensés, votre parrain reçoit{" "}
+          {REFERRAL_REWARD_EUR}&nbsp;€ de solde.
         </p>
       </div>
 

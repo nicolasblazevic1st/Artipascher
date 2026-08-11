@@ -7,14 +7,14 @@ import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { getIsBetaMode } from "@/lib/beta-server";
 import {
-  REFERRAL_REWARD_CREDITS,
+  REFERRAL_REWARD_EUR,
   REFERRAL_SPEND_THRESHOLD,
 } from "@/lib/store-types";
 
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
   description:
-    "Rejoignez Artipascher : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées avec des crédits.",
+    "Rejoignez Artipascher : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées avec votre solde.",
 };
 
 const FEATURES = [
@@ -45,7 +45,7 @@ const FEATURES = [
   },
   {
     title: "Parrainage",
-    description: `Invitez une entreprise vérifiée avec votre lien. Dès qu'elle dépense ${REFERRAL_SPEND_THRESHOLD} crédit, vous en recevez ${REFERRAL_REWARD_CREDITS}.`,
+    description: `Invitez une entreprise vérifiée avec votre lien. Dès qu'elle dépense ${REFERRAL_SPEND_THRESHOLD} €, vous recevez ${REFERRAL_REWARD_EUR} € de solde.`,
   },
 ];
 
@@ -53,7 +53,7 @@ const PRICING = [
   {
     title: `Mise en contact · 15 à 25 € selon ticket`,
     description:
-      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Packs crédits à tarif dégressif.",
+      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Packs de solde à tarif dégressif.",
   },
 ];
 
@@ -158,8 +158,8 @@ export default async function ProfessionnelPage() {
           <h2 className="text-3xl font-bold">Parrainez une entreprise vérifiée</h2>
           <p className="mt-4 text-lg text-brand-100">
             Depuis votre espace pro, récupérez votre code ou votre lien de parrainage.
-            Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD}{" "}
-            crédit sur Artipascher, vous recevez {REFERRAL_REWARD_CREDITS} crédit.
+            Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD}&nbsp;€
+            sur Artipascher, vous recevez {REFERRAL_REWARD_EUR}&nbsp;€ de solde.
           </p>
           <ul className="mx-auto mt-8 max-w-xl space-y-3 text-left text-sm text-brand-50">
             <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">

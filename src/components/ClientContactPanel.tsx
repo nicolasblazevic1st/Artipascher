@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
-import {
-  formatUnlockPriceEur,
-  unlockCreditsForPriceEur,
-} from "@/lib/pricing-tiers";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 interface ClientContact {
@@ -26,7 +23,6 @@ interface Props {
   auctionId: string;
   publicLocation: string;
   requestedWorkStartDate?: string;
-  /** Prix de déblocage pour cette annonce (ticket client). */
   unlockPriceEur?: number;
 }
 
@@ -36,7 +32,6 @@ export default function ClientContactPanel({
   requestedWorkStartDate,
   unlockPriceEur = UNLOCK_PRICE_EUR,
 }: Props) {
-  const unlockCredits = unlockCreditsForPriceEur(unlockPriceEur);
   const priceLabel = formatUnlockPriceEur(unlockPriceEur);
   const [proLoggedIn, setProLoggedIn] = useState(false);
   const [companyName, setCompanyName] = useState("");
@@ -94,7 +89,7 @@ export default function ClientContactPanel({
       window.location.href = data.checkoutUrl;
       return;
     }
-    if (data.unlocked || data.alreadyUnlocked) {
+    if (res.ok || data.unlocked || data.alreadyUnlocked) {
       await fetchContact();
       return;
     }
@@ -154,7 +149,7 @@ export default function ClientContactPanel({
             </div>
           )}
           <div>
-            <dt className="text-emerald-600">Contact</dt>
+            <dt className="text-emerald-600">Nom</dt>
             <dd className="font-medium text-emerald-900">
               {contact.firstName} {contact.lastName}
             </dd>
@@ -179,7 +174,8 @@ export default function ClientContactPanel({
           <div>
             <dt className="text-emerald-600">Adresse</dt>
             <dd className="font-medium text-emerald-900">
-              {contact.address}, {contact.postalCode}
+              {contact.address}
+              {contact.postalCode ? ` · ${contact.postalCode}` : ""}
             </dd>
           </div>
         </dl>
@@ -190,7 +186,7 @@ export default function ClientContactPanel({
         </p>
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => void handleLogout()}
           className="mt-4 text-xs text-emerald-700 underline"
         >
           Se déconnecter
@@ -235,9 +231,8 @@ export default function ClientContactPanel({
       )}
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Débloquez les coordonnées pour {priceLabel} (
-        {unlockCredits} crédit{unlockCredits > 1 ? "s" : ""}) si votre profil
-        correspond aux critères du client.
+        Débloquez les coordonnées pour {priceLabel} (débit sur votre solde) si
+        votre profil correspond aux critères du client.
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -284,7 +279,6 @@ export default function ClientContactPanel({
           ) : (
             <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-white p-4">
               <ProInlineLoginForm
-                compact
                 onSuccess={async (name) => {
                   setProLoggedIn(true);
                   setCompanyName(name);
@@ -313,11 +307,7 @@ export default function ClientContactPanel({
             disabled={paying}
             className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
           >
-            {paying
-              ? "Traitement…"
-              : `Mise en contact · ${priceLabel} (${unlockCredits} crédit${
-                  unlockCredits > 1 ? "s" : ""
-                })`}
+            {paying ? "Traitement…" : `Mise en contact · ${priceLabel}`}
           </button>
           {process.env.NODE_ENV === "development" && (
             <button
@@ -326,18 +316,18 @@ export default function ClientContactPanel({
               disabled={paying}
               className="block text-xs text-slate-500 underline"
             >
-              Mode démo (dev) — débloquer sans crédit
+              Mode démo (dev) — débloquer sans solde
             </button>
           )}
           <a
             href="/pro/compte#credits"
             className="block text-xs font-medium text-brand-700 underline"
           >
-            Acheter des crédits
+            Recharger mon solde
           </a>
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => void handleLogout()}
             className="block text-xs text-slate-500 underline"
           >
             Se déconnecter

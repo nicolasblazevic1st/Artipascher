@@ -281,10 +281,13 @@ export interface WorkRequest {
   /**
    * Ticket de chantier (bas / moyen / élevé / premium) → prix de déblocage contact.
    * Absent sur l’historique = ticket élevé (20 €, ancien tarif unique).
+   * Non affiché au particulier.
    */
   pricingTier?: "bas" | "moyen" | "eleve" | "premium";
   /** Prestation détaillée choisie (catalogue NAF), si renseignée. */
   workOptionId?: string;
+  /** Description courte si prestation = « Autre ». */
+  workOptionOtherDescription?: string;
   description: string;
   /** Prix de départ de l'enchère. Peut venir du client, d'un devis précédent,
    *  ou du premier devis Artipascher validé. */
@@ -298,8 +301,12 @@ export interface WorkRequest {
   startPriceMode?: "client" | "first_quote" | "unspecified";
   /** Renseigné lorsque le prix de départ provient d'un devis Artipascher validé. */
   startPriceQuoteId?: string;
-  /** Durée d'annonce / mise en contact en jours (max. 90). */
-  auctionDurationDays: number;
+  /** Durée d'annonce / mise en contact en heures. */
+  auctionDurationHours: number;
+  /**
+   * @deprecated Legacy jours — migré vers auctionDurationHours (×24).
+   */
+  auctionDurationDays?: number;
   /**
    * Ancienneté d'entreprise exigée pour les contacts / SMS :
    * - true : uniquement ≥ 2 ans
@@ -603,40 +610,78 @@ export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
 };
 
 /**
- * Prix unitaire de référence : 1 crédit = 20 €.
- * Le coût d’une mise en contact varie selon le ticket (15 / 17,5 / 20 / 25 €).
- * Les packs appliquent un tarif dégressif (voir CREDIT_PACKS).
+ * Solde pro en euros pour l’achat de mises en contact.
+ * Les packs créditent plus que le prix payé (tarif dégressif).
  */
-export const CREDIT_PRICE_EUR = 20;
+export const CONTACT_UNLOCK_REF_EUR = 20;
 
-export interface CreditPack {
-  credits: number;
-  /** Prix TTC du pack (tarif dégressif). */
-  priceEur: number;
+export interface ContactBalancePack {
+  /** Solde crédité en euros. */
+  creditEur: number;
+  /** Prix TTC payé (Stripe). */
+  payEur: number;
 }
 
-/** Packs à tarif dégressif (€ / crédit décroissant). */
-export const CREDIT_PACKS: readonly CreditPack[] = [
-  { credits: 1, priceEur: 20 }, // 20 € / crédit
-  { credits: 3, priceEur: 54 }, // 18 € / crédit (−10 %)
-  { credits: 5, priceEur: 85 }, // 17 € / crédit (−15 %)
-  { credits: 10, priceEur: 150 }, // 15 € / crédit (−25 %)
+/** Packs solde : payer payEur → recevoir creditEur. */
+export const CONTACT_BALANCE_PACKS: readonly ContactBalancePack[] = [
+  { creditEur: 20, payEur: 20 },
+  { creditEur: 60, payEur: 54 },
+  { creditEur: 100, payEur: 85 },
+  { creditEur: 200, payEur: 150 },
 ] as const;
 
-export type CreditPackSize = (typeof CREDIT_PACKS)[number]["credits"];
+export type ContactBalancePackSize =
+  (typeof CONTACT_BALANCE_PACKS)[number]["creditEur"];
 
+export function getContactBalancePack(
+  creditEur: number
+): ContactBalancePack | undefined {
+  return CONTACT_BALANCE_PACKS.find((p) => p.creditEur === creditEur);
+}
+
+export function contactBalancePackDiscountPercent(
+  pack: ContactBalancePack
+): number {
+  if (pack.creditEur <= 0) return 0;
+  return Math.round((1 - pack.payEur / pack.creditEur) * 100);
+}
+
+/** @deprecated Alias — préférer CONTACT_UNLOCK_REF_EUR. */
+export const CREDIT_PRICE_EUR = CONTACT_UNLOCK_REF_EUR;
+/** @deprecated Alias packs crédits → solde. */
+export type CreditPack = { credits: number; priceEur: number };
+/** @deprecated */
+export const CREDIT_PACKS = CONTACT_BALANCE_PACKS.map((p) => ({
+  credits: p.creditEur,
+  priceEur: p.payEur,
+})) as readonly CreditPack[];
+/** @deprecated */
+export type CreditPackSize = ContactBalancePackSize;
+/** @deprecated */
 export function getCreditPack(credits: number): CreditPack | undefined {
-  return CREDIT_PACKS.find((p) => p.credits === credits);
+  const pack = getContactBalancePack(credits);
+  return pack
+    ? { credits: pack.creditEur, priceEur: pack.payEur }
+    : undefined;
+}
+/** @deprecated */
+export function creditPackUnitPriceEur(pack: {
+  credits?: number;
+  priceEur: number;
+  creditEur?: number;
+  payEur?: number;
+}): number {
+  const credit = pack.creditEur ?? pack.credits ?? 1;
+  const pay = pack.payEur ?? pack.priceEur;
+  return Math.round((pay / credit) * 100) / 100;
 }
 
-export function creditPackUnitPriceEur(pack: CreditPack): number {
-  return Math.round((pack.priceEur / pack.credits) * 100) / 100;
-}
-
-/** Crédits dépensés par le filleul avant récompense du parrain (1 mise en contact). */
-export const REFERRAL_SPEND_THRESHOLD = 1;
-/** Crédits offerts au parrain une fois le seuil atteint. */
-export const REFERRAL_REWARD_CREDITS = 1;
+/** € dépensés par le filleul avant récompense du parrain. */
+export const REFERRAL_SPEND_THRESHOLD = 20;
+/** € offerts au parrain une fois le seuil atteint. */
+export const REFERRAL_REWARD_EUR = 20;
+/** @deprecated Alias. */
+export const REFERRAL_REWARD_CREDITS = REFERRAL_REWARD_EUR;
 
 export type CreditTxnType =
   | "purchase"
@@ -651,7 +696,7 @@ export interface ProCreditTransaction {
   id: string;
   proId: string;
   type: CreditTxnType;
-  /** +N à l'achat, -1 à la dépense. */
+  /** Delta en euros (+achat, −dépense). */
   amount: number;
   balanceAfter: number;
   /** Montant payé en euros (achats Stripe). */
@@ -665,6 +710,7 @@ export interface ProCreditTransaction {
 
 export interface ProCreditWallet {
   proId: string;
+  /** Solde en euros. */
   balance: number;
   updatedAt: string;
 }
@@ -716,6 +762,8 @@ export interface DataStore {
   creditWallets: ProCreditWallet[];
   creditTransactions: ProCreditTransaction[];
   notifications: AppNotification[];
+  /** Une fois migré, les soldes/transactions sont en euros. */
+  walletCurrency?: "eur" | "credits";
 }
 
 export const EMPTY_STORE: DataStore = {
@@ -737,4 +785,5 @@ export const EMPTY_STORE: DataStore = {
   creditWallets: [],
   creditTransactions: [],
   notifications: [],
+  walletCurrency: "eur",
 };

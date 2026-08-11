@@ -4,11 +4,9 @@ import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
-import {
-  UNLOCK_CREDITS_COST,
-  UNLOCK_PRICE_EUR,
-} from "@/lib/client-contacts";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { formatNafList } from "@/lib/naf-trade-groups";
 import {
   getWorkRequestById,
@@ -73,11 +71,10 @@ export default async function AdminOffreDetailPage({ params }: Props) {
           <h1 className="mt-2 text-2xl font-bold text-slate-900">{auction.title}</h1>
           <p className="mt-1 text-sm text-slate-500">
             Fin d&apos;annonce : {endsLabel}
-            {workRequest?.auctionDurationDays != null && (
+            {workRequest && (
               <>
                 {" "}
-                · durée{" "}
-                {formatAuctionDurationDays(workRequest.auctionDurationDays)}
+                · durée {formatWorkRequestAuctionDuration(workRequest)}
               </>
             )}
           </p>
@@ -88,8 +85,7 @@ export default async function AdminOffreDetailPage({ params }: Props) {
             {activeUnlocks.length}/{auction.maxAcceptedArtisans}
           </p>
           <p className="text-xs text-slate-400">
-            {UNLOCK_CREDITS_COST} crédit · {UNLOCK_PRICE_EUR}&nbsp;€ / mise en
-            contact
+            {formatUnlockPriceEur(UNLOCK_PRICE_EUR)} typique / mise en contact
           </p>
         </div>
       </div>
@@ -242,7 +238,7 @@ export default async function AdminOffreDetailPage({ params }: Props) {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-brand-700">
-                    {unlock.amountEur} crédits
+                    {unlock.amountEur}&nbsp;€
                   </p>
                   {unlock.refundedAt ? (
                     <p className="text-xs text-slate-500">Recrédité (legacy)</p>
