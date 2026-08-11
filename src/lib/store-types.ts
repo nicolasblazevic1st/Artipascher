@@ -278,6 +278,13 @@ export interface WorkRequest {
    * Obligatoires pour la recherche d’artisans autour du chantier.
    */
   nafCodes?: string[];
+  /**
+   * Ticket de chantier (bas / moyen / élevé / premium) → prix de déblocage contact.
+   * Absent sur l’historique = ticket élevé (20 €, ancien tarif unique).
+   */
+  pricingTier?: "bas" | "moyen" | "eleve" | "premium";
+  /** Prestation détaillée choisie (catalogue NAF), si renseignée. */
+  workOptionId?: string;
   description: string;
   /** Prix de départ de l'enchère. Peut venir du client, d'un devis précédent,
    *  ou du premier devis Artipascher validé. */
@@ -596,7 +603,8 @@ export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
 };
 
 /**
- * Prix unitaire de référence : 1 crédit = 20 € = 1 mise en contact.
+ * Prix unitaire de référence : 1 crédit = 20 €.
+ * Le coût d’une mise en contact varie selon le ticket (15 / 17,5 / 20 / 25 €).
  * Les packs appliquent un tarif dégressif (voir CREDIT_PACKS).
  */
 export const CREDIT_PRICE_EUR = 20;

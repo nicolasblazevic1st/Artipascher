@@ -15,6 +15,12 @@ import {
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { getClientSession } from "@/lib/client-auth";
 import {
+  formatUnlockPriceEur,
+  getPricingTier,
+  getWorkOptionById,
+  resolveUnlockPricing,
+} from "@/lib/pricing-tiers";
+import {
   ensureWorkRequestShareToken,
   getApprovedProQuotesForAuction,
   getBidsForAuction,
@@ -52,6 +58,14 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
       ? await ensureWorkRequestShareToken(id, session.clientId)
       : null;
   const photosEditable = request.status !== "rejected";
+  const unlockPricing = resolveUnlockPricing({
+    pricingTier: request.pricingTier,
+    workOptionId: request.workOptionId,
+  });
+  const workOption = request.workOptionId
+    ? getWorkOptionById(request.workOptionId)
+    : unlockPricing.workOption;
+  const tierMeta = getPricingTier(unlockPricing.tier);
 
   return (
     <div>
@@ -77,6 +91,13 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             {request.nafCodes && request.nafCodes.length > 0 && (
               <p className="mt-2 text-xs text-slate-600">
                 Spécialité NAF : {request.nafCodes.join(" · ")}
+              </p>
+            )}
+            {(request.workOptionId || request.pricingTier) && (
+              <p className="mt-1 text-xs text-slate-600">
+                {workOption ? `${workOption.name} · ` : ""}
+                {tierMeta.label} — mise en contact artisans{" "}
+                {formatUnlockPriceEur(unlockPricing.unlockPriceEur)}
               </p>
             )}
           </div>

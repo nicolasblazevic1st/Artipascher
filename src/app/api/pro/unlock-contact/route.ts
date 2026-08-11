@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { SAMPLE_AUCTIONS } from "@/lib/data";
-import {
-  getClientContact,
-  UNLOCK_CREDITS_COST,
-  UNLOCK_PRICE_EUR,
-} from "@/lib/client-contacts";
+import { getClientContact } from "@/lib/client-contacts";
 import { evaluateProContactMatch } from "@/lib/contact-match";
 import {
   isAcceptSlotsFull,
   MAX_CONTACT_UNLOCKS_PER_REQUEST,
 } from "@/lib/contact-slots";
 import { canUnlockContacts } from "@/lib/level1-certification";
+import {
+  formatUnlockPriceEur,
+  resolveUnlockPricing,
+} from "@/lib/pricing-tiers";
 import { getProSession } from "@/lib/pro-auth";
 import { isDemoPaymentAllowed } from "@/lib/payments";
 import {
@@ -124,15 +124,27 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const pricing = resolveUnlockPricing({
+    pricingTier: workRequest?.pricingTier,
+    workOptionId: workRequest?.workOptionId,
+  });
+  const unlockPriceEur = pricing.unlockPriceEur;
+  const unlockCredits = pricing.unlockCredits;
+  const priceLabel = formatUnlockPriceEur(unlockPriceEur);
+
   const balance = await getProCreditBalance(session.proId);
-  const needsCredits = balance < UNLOCK_CREDITS_COST;
+  const needsCredits = balance + 0.0001 < unlockCredits;
   if (needsCredits && !(demo && isDemoPaymentAllowed())) {
     return NextResponse.json(
       {
-        error: `Solde insuffisant. Il faut ${UNLOCK_CREDITS_COST} crédit (${UNLOCK_PRICE_EUR} €) pour une mise en contact.`,
+        error: `Solde insuffisant. Il faut ${unlockCredits} crédit${
+          unlockCredits > 1 ? "s" : ""
+        } (${priceLabel}) pour une mise en contact.`,
         needsCredits: true,
         balance,
-        requiredCredits: UNLOCK_CREDITS_COST,
+        requiredCredits: unlockCredits,
+        unlockPriceEur,
+        pricingTier: pricing.tier,
       },
       { status: 402 }
     );
@@ -143,10 +155,11 @@ export async function POST(request: NextRequest) {
     const spent = await spendProCredit({
       proId: session.proId,
       type: "spend_unlock",
-      credits: UNLOCK_CREDITS_COST,
+      credits: unlockCredits,
+      amountEur: unlockPriceEur,
       auctionId,
       workRequestId: workRequest?.id,
-      note: `Mise en contact client (${UNLOCK_CREDITS_COST} crédit · ${UNLOCK_PRICE_EUR} €)`,
+      note: `Mise en contact client (${pricing.tier} · ${unlockCredits} crédit · ${priceLabel})`,
     });
     if ("error" in spent) {
       return NextResponse.json(
@@ -154,13 +167,13 @@ export async function POST(request: NextRequest) {
         { status: 402 }
       );
     }
-    spentCredits = UNLOCK_CREDITS_COST;
+    spentCredits = unlockCredits;
   }
 
   const unlock = await addContactUnlock({
     proId: session.proId,
     auctionId,
-    amountEur: UNLOCK_PRICE_EUR,
+    amountEur: unlockPriceEur,
     workRequestId: workRequest?.id,
   });
 
@@ -185,6 +198,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     unlocked: true,
     creditsSpent: spentCredits,
+    unlockPriceEur,
+    pricingTier: pricing.tier,
     balance: newBalance,
     demo: demo && needsCredits,
   });

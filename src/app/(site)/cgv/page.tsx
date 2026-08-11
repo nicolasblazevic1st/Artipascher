@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LegalDocument from "@/components/LegalDocument";
-import {
-  UNLOCK_CREDITS_COST,
-  UNLOCK_PRICE_EUR,
-} from "@/lib/client-contacts";
 import { LEGAL_PUBLISHER } from "@/lib/legal";
 import {
   CREDIT_PACKS,
@@ -73,8 +69,10 @@ export default function CgvPage() {
             </ul>
           </li>
           <li>
-            usage typique : mise en contact = {UNLOCK_CREDITS_COST} crédit (
-            {UNLOCK_PRICE_EUR}&nbsp;€ au tarif unitaire de référence).
+            usage typique : mise en contact selon le ticket du chantier
+            (15&nbsp;€ / 17,50&nbsp;€ / 20&nbsp;€ / 25&nbsp;€), débitée en
+            crédits au tarif unitaire de référence ({CREDIT_PRICE_EUR}&nbsp;€ /
+            crédit).
           </li>
         </ul>
         <p className="mt-3">

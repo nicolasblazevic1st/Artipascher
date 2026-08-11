@@ -24,6 +24,15 @@ import {
   getNafOptionsForCategory,
   validateWorkRequestNafSelection,
 } from "@/lib/naf-codes";
+import {
+  formatUnlockPriceEur,
+  getPricingTier,
+  getWorkOptionsForNafCodes,
+  PRICING_TIERS,
+  type PricingTierId,
+  unlockCreditsForTier,
+  validatePricingSelection,
+} from "@/lib/pricing-tiers";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
 import {
   formatFrenchPhoneDisplay,
@@ -34,7 +43,6 @@ import {
   normalizeSiret,
   type RcsVerificationResult,
 } from "@/lib/rcs";
-import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/google-rating";
 
 export interface WorkRequestFormDefaults {
@@ -77,6 +85,8 @@ export default function WorkRequestForm({
   const [previews, setPreviews] = useState<string[]>([]);
   const [category, setCategory] = useState("");
   const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>([]);
+  const [workOptionId, setWorkOptionId] = useState("");
+  const [pricingTier, setPricingTier] = useState<PricingTierId | "">("");
   const [hasPreviousQuote, setHasPreviousQuote] = useState(false);
   const [previousQuoteAmount, setPreviousQuoteAmount] = useState("");
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
@@ -111,6 +121,13 @@ export default function WorkRequestForm({
   const maxStartDate = maxRequestedWorkStartDate();
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
   const requiresNafChoice = nafOptions.length > 1;
+  const effectiveNafCodes =
+    selectedNafCodes.length > 0
+      ? selectedNafCodes
+      : nafOptions.length === 1
+        ? [nafOptions[0].code]
+        : [];
+  const workOptions = getWorkOptionsForNafCodes(effectiveNafCodes);
   const phoneE164 = normalizeFrenchMobile(phone);
   const phoneVerified =
     Boolean(phoneE164) &&
@@ -129,6 +146,33 @@ export default function WorkRequestForm({
     setCategory(next);
     const options = getNafOptionsForCategory(next);
     setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
+    setWorkOptionId("");
+    setPricingTier("");
+    setError(null);
+  }
+
+  function toggleNafCode(code: string) {
+    setSelectedNafCodes((prev) => {
+      const next = prev.includes(code)
+        ? prev.filter((c) => c !== code)
+        : [...prev, code];
+      return next;
+    });
+    setWorkOptionId("");
+    setPricingTier("");
+    setError(null);
+  }
+
+  function selectWorkOption(id: string) {
+    const opt = workOptions.find((o) => o.id === id);
+    setWorkOptionId(id);
+    if (opt) setPricingTier(opt.tier);
+    setError(null);
+  }
+
+  function selectPricingTier(tier: PricingTierId) {
+    setPricingTier(tier);
+    setWorkOptionId("");
     setError(null);
   }
 
@@ -198,13 +242,6 @@ export default function WorkRequestForm({
     if (data.phoneDisplay) setPhone(data.phoneDisplay);
     setOtpCode("");
     setOtpMessage("Mobile vérifié.");
-  }
-
-  function toggleNafCode(code: string) {
-    setSelectedNafCodes((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-    );
-    setError(null);
   }
 
   function syncDescriptionLength(value: string) {
@@ -332,12 +369,29 @@ export default function WorkRequestForm({
       return;
     }
 
+    const pricingCheck = validatePricingSelection({
+      pricingTier,
+      workOptionId: workOptionId || undefined,
+      nafCodes: nafCheck.nafCodes,
+    });
+    if (!pricingCheck.ok) {
+      setError(pricingCheck.error);
+      setStatus("error");
+      return;
+    }
+
     setStatus("submitting");
 
     const formData = new FormData(form);
     formData.delete("nafCodes");
     for (const code of nafCheck.nafCodes) {
       formData.append("nafCodes", code);
+    }
+    formData.set("pricingTier", pricingCheck.pricingTier);
+    if (pricingCheck.workOptionId) {
+      formData.set("workOptionId", pricingCheck.workOptionId);
+    } else {
+      formData.delete("workOptionId");
     }
     formData.set("description", getDescriptionValue().trim());
     formData.set("addressLine", selectedAddress.addressLine);
@@ -582,7 +636,9 @@ export default function WorkRequestForm({
         />
         <p className="mt-1 text-xs text-slate-500">
           Mobile français obligatoire, vérifié par SMS — communiqué aux artisans
-          uniquement après mise en contact ({UNLOCK_PRICE_EUR}&nbsp;€).
+          uniquement après mise en contact (
+          {formatUnlockPriceEur(15)} à {formatUnlockPriceEur(25)} selon le
+          ticket).
         </p>
         {phoneVerified ? (
           <p className="mt-2 text-sm font-medium text-emerald-700">
@@ -924,6 +980,103 @@ export default function WorkRequestForm({
           {selectedNafCodes.length === 0 && (
             <p className="mt-2 text-xs font-medium text-amber-700">
               Sélection obligatoire pour continuer.
+            </p>
+          )}
+        </fieldset>
+      )}
+
+      {category && effectiveNafCodes.length > 0 && (
+        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-900">
+            Prestation / ticket <span className="text-red-500">*</span>
+          </legend>
+          <p className="mt-1 text-xs text-slate-600">
+            Plus le chantier est technique ou urgent, plus la mise en contact
+            artisan est chère :{" "}
+            {PRICING_TIERS.map((t) => (
+              <span key={t.id}>
+                {t.label} {formatUnlockPriceEur(t.unlockPriceEur)}
+                {t.id !== "premium" ? " · " : ""}
+              </span>
+            ))}
+            .
+          </p>
+
+          {workOptions.length > 0 ? (
+            <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+              {workOptions.map((opt) => {
+                const tier = getPricingTier(opt.tier);
+                const checked = workOptionId === opt.id;
+                return (
+                  <li key={opt.id}>
+                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                      <input
+                        type="radio"
+                        name="workOptionId"
+                        value={opt.id}
+                        checked={checked}
+                        onChange={() => selectWorkOption(opt.id)}
+                        className="mt-1"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium text-slate-900">
+                            {opt.name}
+                          </span>
+                          <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-800">
+                            {formatUnlockPriceEur(tier.unlockPriceEur)}
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            {tier.label}
+                          </span>
+                        </span>
+                        <span className="mt-0.5 block text-xs text-slate-600">
+                          {opt.detail}
+                          {requiresNafChoice || effectiveNafCodes.length > 1 ? (
+                            <> · NAF {opt.nafCode}</>
+                          ) : null}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {PRICING_TIERS.map((tier) => (
+                <li key={tier.id}>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                    <input
+                      type="radio"
+                      name="pricingTier"
+                      value={tier.id}
+                      checked={pricingTier === tier.id}
+                      onChange={() => selectPricingTier(tier.id)}
+                      className="mt-1"
+                    />
+                    <span>
+                      <span className="font-medium text-slate-900">
+                        {tier.label} — {formatUnlockPriceEur(tier.unlockPriceEur)}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-slate-600">
+                        {tier.shortHelp} · {unlockCreditsForTier(tier.id)} crédit
+                        {unlockCreditsForTier(tier.id) > 1 ? "s" : ""} (réf. 20&nbsp;€)
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {workOptions.length > 0 && (
+            <input type="hidden" name="pricingTier" value={pricingTier} />
+          )}
+
+          {!workOptionId && !pricingTier && (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Sélectionnez une prestation pour continuer.
             </p>
           )}
         </fieldset>

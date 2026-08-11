@@ -17,6 +17,7 @@ import {
 } from "@/lib/demandes-validation";
 import { getClientSession } from "@/lib/client-auth";
 import { validateWorkRequestNafSelection } from "@/lib/naf-codes";
+import { validatePricingSelection } from "@/lib/pricing-tiers";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
 import {
   formatFrenchPhoneDisplay,
@@ -65,6 +66,8 @@ export async function POST(request: NextRequest) {
       .getAll("nafCodes")
       .map((v) => String(v).trim())
       .filter(Boolean);
+    const pricingTierRaw = String(formData.get("pricingTier") ?? "").trim();
+    const workOptionIdRaw = String(formData.get("workOptionId") ?? "").trim();
     const description = String(formData.get("description") ?? "");
     const durationRaw = String(
       formData.get("auctionDurationDays") ?? DEFAULT_AUCTION_DURATION_DAYS
@@ -214,6 +217,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: nafCheck.error }, { status: 400 });
     }
 
+    const pricingCheck = validatePricingSelection({
+      pricingTier: pricingTierRaw,
+      workOptionId: workOptionIdRaw || undefined,
+      nafCodes: nafCheck.nafCodes,
+    });
+    if (!pricingCheck.ok) {
+      return NextResponse.json({ error: pricingCheck.error }, { status: 400 });
+    }
+
     const photosError = validatePhotoFiles(photos);
     if (photosError) {
       return NextResponse.json({ error: photosError }, { status: 400 });
@@ -296,6 +308,8 @@ export async function POST(request: NextRequest) {
       requestedWorkStartDate,
       category,
       nafCodes: nafCheck.nafCodes,
+      pricingTier: pricingCheck.pricingTier,
+      workOptionId: pricingCheck.workOptionId,
       description: description.trim(),
       auctionDurationDays,
       preferEstablishedCompany,

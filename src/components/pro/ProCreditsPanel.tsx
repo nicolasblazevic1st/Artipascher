@@ -7,7 +7,6 @@ import {
   creditPackUnitPriceEur,
   type CreditPack,
 } from "@/lib/store-types";
-import { UNLOCK_CREDITS_COST, UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 interface Txn {
   id: string;
@@ -126,8 +125,8 @@ export default function ProCreditsPanel() {
         <div>
           <h2 className="font-semibold text-slate-900">Crédits</h2>
           <p className="mt-1 text-sm text-slate-600">
-            1 crédit = {CREDIT_PRICE_EUR}&nbsp;€ = {UNLOCK_CREDITS_COST} mise en
-            contact ({UNLOCK_PRICE_EUR}&nbsp;€). Packs à tarif dégressif.
+            1 crédit = {CREDIT_PRICE_EUR}&nbsp;€ (réf.). Mise en contact selon
+            le ticket du chantier (15 à 25&nbsp;€). Packs à tarif dégressif.
           </p>
         </div>
         <p className="rounded-full bg-brand-50 px-4 py-2 text-lg font-bold text-brand-800">

@@ -7,10 +7,6 @@ import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { getIsBetaMode } from "@/lib/beta-server";
 import {
-  UNLOCK_CREDITS_COST,
-  UNLOCK_PRICE_EUR,
-} from "@/lib/client-contacts";
-import {
   REFERRAL_REWARD_CREDITS,
   REFERRAL_SPEND_THRESHOLD,
 } from "@/lib/store-types";
@@ -55,7 +51,7 @@ const FEATURES = [
 
 const PRICING = [
   {
-    title: `Mise en contact · ${UNLOCK_PRICE_EUR} € (${UNLOCK_CREDITS_COST} crédit)`,
+    title: `Mise en contact · 15 à 25 € selon ticket`,
     description:
       "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Packs crédits à tarif dégressif.",
   },
@@ -70,7 +66,7 @@ const STEPS = [
   {
     title: "Débloquez les contacts",
     description:
-      `Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (${UNLOCK_PRICE_EUR} € / mise en contact, max. 5 artisans).`,
+      "Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (15 à 25 € selon le ticket, max. 5 artisans).",
   },
   {
     title: "Concluez hors plateforme",

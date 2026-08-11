@@ -18,6 +18,7 @@ import {
 } from "@/lib/data";
 import { countContactUnlocksForAuction } from "@/lib/store";
 import { getWorkRequestByAuctionId, resolveAuction } from "@/lib/work-request-auctions";
+import { resolveUnlockPricing } from "@/lib/pricing-tiers";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -42,6 +43,10 @@ export default async function ChantierDetailPage({ params }: Props) {
   const workCategory =
     workRequest?.category ??
     (sample ? CATEGORY_LABELS[sample.category] : resolved.title);
+  const unlockPricing = resolveUnlockPricing({
+    pricingTier: workRequest?.pricingTier,
+    workOptionId: workRequest?.workOptionId,
+  });
 
   const isTest = resolved.isTest === true || workRequest?.isTest === true;
   const showDemoBanner = await shouldShowDemoBanner();
@@ -121,6 +126,7 @@ export default async function ChantierDetailPage({ params }: Props) {
               : formatLocation(resolved.city, resolved.department)
           }
           requestedWorkStartDate={workRequest?.requestedWorkStartDate}
+          unlockPriceEur={unlockPricing.unlockPriceEur}
         />
 
         <p className="mt-8 text-center text-xs text-slate-500">

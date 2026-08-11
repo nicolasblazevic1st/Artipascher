@@ -2739,10 +2739,11 @@ async function applyCreditDelta(
     store.creditWallets.push(wallet);
   }
 
-  const next = wallet.balance + data.amount;
-  if (next < 0) {
+  const next = Math.round((wallet.balance + data.amount) * 1000) / 1000;
+  if (next < -0.0001) {
     return { error: "Solde de crédits insuffisant." };
   }
+  const balanceAfter = Math.max(0, next);
 
   if (data.stripeSessionId) {
     const dup = store.creditTransactions.find(
@@ -2757,7 +2758,7 @@ async function applyCreditDelta(
     }
   }
 
-  wallet.balance = next;
+  wallet.balance = balanceAfter;
   wallet.updatedAt = new Date().toISOString();
 
   const transaction: ProCreditTransaction = {
@@ -2766,7 +2767,7 @@ async function applyCreditDelta(
     type: data.type,
     amount: data.amount,
     amountEur: data.amountEur,
-    balanceAfter: next,
+    balanceAfter,
     auctionId: data.auctionId,
     workRequestId: data.workRequestId,
     stripeSessionId: data.stripeSessionId,
@@ -2801,13 +2802,17 @@ export async function creditProWallet(data: {
 export async function spendProCredit(data: {
   proId: string;
   type: "spend_unlock" | "spend_bid";
-  /** Nombre de crédits à débiter (défaut 1). */
+  /** Crédits à débiter (peut être fractionnaire, ex. 0,875 pour 17,50 €). */
   credits?: number;
   auctionId?: string;
   workRequestId?: string;
   note?: string;
+  amountEur?: number;
 }): Promise<{ balance: number; transaction: ProCreditTransaction } | { error: string }> {
-  const credits = Math.max(1, Math.round(data.credits ?? 1));
+  const credits = Math.round((data.credits ?? 1) * 1000) / 1000;
+  if (!(credits > 0)) {
+    return { error: "Montant de crédits invalide." };
+  }
   const store = await readStore();
   const result = await applyCreditDelta(store, {
     proId: data.proId,
@@ -2815,6 +2820,7 @@ export async function spendProCredit(data: {
     auctionId: data.auctionId,
     workRequestId: data.workRequestId,
     note: data.note,
+    amountEur: data.amountEur,
     amount: -credits,
   });
   if ("error" in result) return result;

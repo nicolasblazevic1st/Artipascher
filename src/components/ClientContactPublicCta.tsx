@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import {
-  UNLOCK_CREDITS_COST,
-  UNLOCK_PRICE_EUR,
-} from "@/lib/client-contacts";
+  formatUnlockPriceEur,
+  unlockCreditsForPriceEur,
+} from "@/lib/pricing-tiers";
 
 interface Props {
   auctionId: string;
   publicLocation: string;
   requestedWorkStartDate?: string;
+  unlockPriceEur?: number;
 }
 
 /**
@@ -19,8 +21,11 @@ export default function ClientContactPublicCta({
   auctionId,
   publicLocation,
   requestedWorkStartDate,
+  unlockPriceEur = UNLOCK_PRICE_EUR,
 }: Props) {
   const href = `/pro/encheres/${encodeURIComponent(auctionId)}`;
+  const unlockCredits = unlockCreditsForPriceEur(unlockPriceEur);
+  const priceLabel = formatUnlockPriceEur(unlockPriceEur);
 
   return (
     <section id="contact" className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6">
@@ -28,7 +33,8 @@ export default function ClientContactPublicCta({
       <p className="mt-2 text-sm text-slate-600">
         Les photos restent visibles librement. Depuis votre espace pro, débloquez
         les coordonnées si vous correspondez aux attentes du client (max. 5
-        artisans) pour {UNLOCK_PRICE_EUR}&nbsp;€ ({UNLOCK_CREDITS_COST} crédit).
+        artisans) pour {priceLabel} ({unlockCredits} crédit
+        {unlockCredits > 1 ? "s" : ""}).
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">

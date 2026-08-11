@@ -16,6 +16,7 @@ import {
   getWorkRequestByAuctionId,
   resolveAuction,
 } from "@/lib/work-request-auctions";
+import { resolveUnlockPricing } from "@/lib/pricing-tiers";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -37,6 +38,10 @@ export default async function ProChantierDetailPage({ params }: Props) {
   const workRequest = await getWorkRequestByAuctionId(id);
   const unlockCount = await countContactUnlocksForAuction(id);
   const showDemoBanner = shouldShowDemoBannerForProSession(session);
+  const unlockPricing = resolveUnlockPricing({
+    pricingTier: workRequest?.pricingTier,
+    workOptionId: workRequest?.workOptionId,
+  });
 
   return (
     <div>
@@ -85,6 +90,7 @@ export default async function ProChantierDetailPage({ params }: Props) {
             : formatLocation(resolved.city, resolved.department)
         }
         requestedWorkStartDate={workRequest?.requestedWorkStartDate}
+        unlockPriceEur={unlockPricing.unlockPriceEur}
       />
 
       <p className="mt-4 text-center text-xs text-slate-500">

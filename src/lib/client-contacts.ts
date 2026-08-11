@@ -1,3 +1,9 @@
+import {
+  DEFAULT_PRICING_TIER,
+  unlockCreditsForTier,
+  unlockPriceEurForTier,
+} from "./pricing-tiers";
+
 export interface ClientContact {
   auctionId: string;
   firstName: string;
@@ -89,7 +95,7 @@ export function maskName(first: string, last: string): string {
   return `${first.charAt(0)}. ${last.charAt(0)}***`;
 }
 
-/** Crédits consommés pour une mise en contact (1 crédit = 20 €). */
-export const UNLOCK_CREDITS_COST = 1;
-/** Montant TTC de référence d’une mise en contact (= 1 crédit). */
-export const UNLOCK_PRICE_EUR = 20;
+/** @deprecated Préférer resolveUnlockPricing / unlockCreditsForTier. */
+export const UNLOCK_CREDITS_COST = unlockCreditsForTier(DEFAULT_PRICING_TIER);
+/** Montant TTC de référence (ticket élevé) si aucun ticket sur l’annonce. */
+export const UNLOCK_PRICE_EUR = unlockPriceEurForTier(DEFAULT_PRICING_TIER);

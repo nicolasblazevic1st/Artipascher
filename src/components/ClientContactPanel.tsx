@@ -4,9 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import {
-  UNLOCK_CREDITS_COST,
-  UNLOCK_PRICE_EUR,
-} from "@/lib/client-contacts";
+  formatUnlockPriceEur,
+  unlockCreditsForPriceEur,
+} from "@/lib/pricing-tiers";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 interface ClientContact {
   firstName: string;
@@ -25,13 +26,18 @@ interface Props {
   auctionId: string;
   publicLocation: string;
   requestedWorkStartDate?: string;
+  /** Prix de déblocage pour cette annonce (ticket client). */
+  unlockPriceEur?: number;
 }
 
 export default function ClientContactPanel({
   auctionId,
   publicLocation,
   requestedWorkStartDate,
+  unlockPriceEur = UNLOCK_PRICE_EUR,
 }: Props) {
+  const unlockCredits = unlockCreditsForPriceEur(unlockPriceEur);
+  const priceLabel = formatUnlockPriceEur(unlockPriceEur);
   const [proLoggedIn, setProLoggedIn] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -131,7 +137,7 @@ export default function ClientContactPanel({
             Coordonnées client débloquées
           </h2>
           <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
-            Accès · {UNLOCK_PRICE_EUR}&nbsp;€
+            Accès · {priceLabel}
           </span>
         </div>
         <p className="mt-1 text-xs text-emerald-700">
@@ -229,9 +235,9 @@ export default function ClientContactPanel({
       )}
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Débloquez les coordonnées pour {UNLOCK_PRICE_EUR}&nbsp;€ (
-        {UNLOCK_CREDITS_COST} crédit) si votre profil correspond aux critères du
-        client.
+        Débloquez les coordonnées pour {priceLabel} (
+        {unlockCredits} crédit{unlockCredits > 1 ? "s" : ""}) si votre profil
+        correspond aux critères du client.
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -309,7 +315,9 @@ export default function ClientContactPanel({
           >
             {paying
               ? "Traitement…"
-              : `Mise en contact · ${UNLOCK_PRICE_EUR} € (${UNLOCK_CREDITS_COST} crédit)`}
+              : `Mise en contact · ${priceLabel} (${unlockCredits} crédit${
+                  unlockCredits > 1 ? "s" : ""
+                })`}
           </button>
           {process.env.NODE_ENV === "development" && (
             <button
