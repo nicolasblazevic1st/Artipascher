@@ -1,0 +1,8 @@
+# Identifiants Basic Auth pour https://dev.artipascher.fr (staging uniquement).
+# Copier sur le VPS : cp deploy/dev-basic-auth.example deploy/dev-basic-auth
+# Puis éditer user:password (ne pas committer deploy/dev-basic-auth).
+#
+# Format : une seule ligne active
+# user:password
+
+dev:CHANGE_ME_STRONG_PASSWORD

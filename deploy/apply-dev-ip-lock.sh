@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Applique le verrouillage IP Nginx sur dev.artipascher.fr (obligatoire staging).
+# @deprecated Préférer deploy/apply-dev-basic-auth.sh (Basic Auth).
+# Applique le verrouillage IP Nginx sur dev.artipascher.fr.
 # Lit deploy/allowed-dev-ip (une IPv4 par ligne) ou ARTIPASCHER_DEV_ALLOW_IP.
 
 set -euo pipefail
@@ -31,8 +32,10 @@ if [ ${#IPS[@]} -eq 0 ]; then
   echo "ERREUR: aucune IP autorisée pour dev.artipascher.fr"
   echo "  Créez deploy/allowed-dev-ip (voir allowed-dev-ip.example)"
   echo "  ou : sudo bash deploy/apply-dev-ip-lock.sh VOTRE_IP"
+  echo "  (recommandé : bash deploy/apply-dev-basic-auth.sh)"
   exit 1
 fi
 
-echo "==> Verrouillage dev.artipascher.fr → ${IPS[*]}"
+echo "==> [deprecated] Verrouillage IP dev.artipascher.fr → ${IPS[*]}"
+echo "    Préférer : bash deploy/apply-dev-basic-auth.sh"
 sudo bash deploy/lock-dev-site-to-ip.sh "${IPS[@]}"

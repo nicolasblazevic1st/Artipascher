@@ -41,20 +41,46 @@ sudo certbot --nginx -d dev.artipascher.fr
 | Mode bêta | bordereau + blocages | **désactivé** (`NEXT_PUBLIC_BETA_MODE=false`) |
 | Crons | actifs | **ne pas configurer** sur staging |
 | Admin | `ADMIN_PASSWORD` prod | **même mot de passe + `@`** |
-| Accès web dev | public | **IP allowlist Nginx** (voir ci-dessous) |
+| Accès web | public | **Basic Auth Nginx** (voir ci-dessous) |
 
 Données `data/` **séparées** (copie initiale depuis prod au setup, puis évolution indépendante).
 
-## Restreindre dev.artipascher.fr à ton IP (obligatoire)
+## Accès web staging (Basic Auth)
 
-Le staging **n’est jamais public**. Au premier setup :
+Le staging est accessible depuis n’importe quelle IP, protégé par **mot de passe HTTP** (pas de lock IP).
 
 ```bash
-cp deploy/allowed-dev-ip.example deploy/allowed-dev-ip
-nano deploy/allowed-dev-ip   # ton IP publique
-bash deploy/apply-dev-ip-lock.sh
+cp deploy/dev-basic-auth.example deploy/dev-basic-auth
+nano deploy/dev-basic-auth   # user:password
+bash deploy/apply-dev-basic-auth.sh
 ```
 
-Chaque `deploy-staging.sh` réapplique cette allowlist.
+Chaque `deploy-staging.sh` / `fix-staging-now.sh` réapplique cette Basic Auth.
+
+Exceptions **sans** mot de passe :
+
+- `POST /api/webhooks/stripe` (webhooks Stripe test)
+- `/.well-known/acme-challenge/` (Let's Encrypt)
 
 La **prod** (`artipascher.fr`) reste publique.
+
+## SSH (ouvert + clés uniquement)
+
+Pour éviter les blocages KVM quand l’IP box change :
+
+```bash
+# Une fois (console OVH ou session déjà ouverte)
+sudo bash deploy/open-ssh.sh /chemin/vers/id_ed25519_vps.pub
+```
+
+Ou one-shot complet (Basic Auth + SSH) :
+
+```bash
+cd /var/www/artipascher-dev
+cp deploy/dev-basic-auth.example deploy/dev-basic-auth && nano deploy/dev-basic-auth
+# coller la pubkey PC dans /tmp/id_ed25519_vps.pub
+sudo bash deploy/apply-staging-simple-access.sh /tmp/id_ed25519_vps.pub
+bash deploy/deploy-staging.sh
+```
+
+`open-ssh.sh` ouvre le port 22 dans UFW et force `PasswordAuthentication no`.

@@ -26,8 +26,8 @@ echo "==> start PM2 sur port $PORT (build $BUILD_ID)"
 ARTIPASCHER_BUILD_ID="$BUILD_ID" PORT="$PORT" pm2 start "$STAGING_DIR/ecosystem.staging.config.cjs"
 pm2 save
 
-echo "==> Nginx → 127.0.0.1:$PORT"
-bash deploy/apply-dev-ip-lock.sh
+echo "==> Nginx → 127.0.0.1:$PORT (Basic Auth)"
+bash deploy/apply-dev-basic-auth.sh
 
 echo "==> attente démarrage…"
 STABLE=0

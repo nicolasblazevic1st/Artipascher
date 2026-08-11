@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# @deprecated Préférer deploy/open-ssh.sh (SSH ouvert + clés uniquement).
 # Restreint SSH (port 22) à une seule IP publique via UFW.
 # Usage (sur le VPS, avec une session SSH déjà ouverte) :
 #   sudo bash deploy/lock-ssh-to-ip.sh 109.30.111.204
@@ -12,6 +13,7 @@ ALLOW_IP="${1:-}"
 if [[ -z "$ALLOW_IP" ]]; then
   echo "Usage: sudo bash deploy/lock-ssh-to-ip.sh <IP_PUBLIQUE>"
   echo "Exemple: sudo bash deploy/lock-ssh-to-ip.sh 109.30.111.204"
+  echo "(recommandé : sudo bash deploy/open-ssh.sh /chemin/id_ed25519.pub)"
   exit 1
 fi
 

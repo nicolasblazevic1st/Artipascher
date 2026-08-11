@@ -127,8 +127,8 @@ if [ "$STABLE" != "1" ]; then
   exit 1
 fi
 
-echo "==> Nginx dev.artipascher.fr (accès IP uniquement)"
-bash deploy/apply-dev-ip-lock.sh
+echo "==> Nginx dev.artipascher.fr (Basic Auth)"
+bash deploy/apply-dev-basic-auth.sh
 
 echo "==> vérif proxy local (port ${STAGING_PORT})"
 TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${STAGING_PORT}/" | grep -o '<title>[^<]*</title>' | head -1 || true)"

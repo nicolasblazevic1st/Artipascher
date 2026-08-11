@@ -1,30 +1,67 @@
 #!/usr/bin/env bash
-# @deprecated Préférer deploy/lock-dev-basic-auth.sh (Basic Auth).
-# Restreint dev.artipascher.fr à une ou plusieurs IP (Nginx).
-# Usage : sudo bash deploy/lock-dev-site-to-ip.sh 109.30.111.204 [autre-ip…]
+# Protège dev.artipascher.fr par Basic Auth Nginx (plus de lock IP).
+# Usage : sudo bash deploy/lock-dev-basic-auth.sh
+#
+# Identifiants (premier trouvé gagne) :
+#   - ARTIPASCHER_DEV_AUTH_USER + ARTIPASCHER_DEV_AUTH_PASS
+#   - deploy/dev-basic-auth  (une ligne : user:password)
 #
 # Le site prod (artipascher.fr) n'est pas modifié.
-# Let's Encrypt : /.well-known/acme-challenge/ reste ouvert pour le renouvellement.
+# Stripe webhook + ACME restent sans Basic Auth.
 
 set -euo pipefail
-
-if [ $# -lt 1 ]; then
-  echo "Usage: sudo bash deploy/lock-dev-site-to-ip.sh <IP_PUBLIQUE> [IP2…]"
-  echo "(recommandé : sudo bash deploy/lock-dev-basic-auth.sh)"
-  exit 1
-fi
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "Relance avec sudo."
   exit 1
 fi
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+AUTH_FILE="${ROOT}/deploy/dev-basic-auth"
 NGINX_SITE="/etc/nginx/sites-available/artipascher-dev"
+HTPASSWD_FILE="/etc/nginx/.htpasswd-artipascher-dev"
 DOMAIN="dev.artipascher.fr"
 CERT="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 KEY="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
 WEBROOT="/var/www/html"
-# Staging Next écoute sur 3002 (3001 souvent bloqué par un zombie next-server)
+
+AUTH_USER="${ARTIPASCHER_DEV_AUTH_USER:-}"
+AUTH_PASS="${ARTIPASCHER_DEV_AUTH_PASS:-}"
+
+if [ -z "$AUTH_USER" ] || [ -z "$AUTH_PASS" ]; then
+  if [ -f "$AUTH_FILE" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      line="${line%%#*}"
+      line="$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+      [ -z "$line" ] && continue
+      case "$line" in
+        *:*)
+          AUTH_USER="${line%%:*}"
+          AUTH_PASS="${line#*:}"
+          break
+          ;;
+      esac
+    done < "$AUTH_FILE"
+  fi
+fi
+
+if [ -z "${AUTH_USER}" ] || [ -z "${AUTH_PASS}" ]; then
+  echo "ERREUR: identifiants Basic Auth manquants."
+  echo "  Créez ${AUTH_FILE} (voir deploy/dev-basic-auth.example)"
+  echo "  ou exportez ARTIPASCHER_DEV_AUTH_USER / ARTIPASCHER_DEV_AUTH_PASS"
+  exit 1
+fi
+
+if ! command -v htpasswd >/dev/null 2>&1; then
+  apt-get update -qq
+  apt-get install -y apache2-utils
+fi
+
+mkdir -p "$WEBROOT"
+htpasswd -bc "$HTPASSWD_FILE" "$AUTH_USER" "$AUTH_PASS"
+chmod 640 "$HTPASSWD_FILE"
+chown root:www-data "$HTPASSWD_FILE" 2>/dev/null || chown root:nginx "$HTPASSWD_FILE" 2>/dev/null || true
+
 PROXY_COMMON="        proxy_pass http://127.0.0.1:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
@@ -33,42 +70,29 @@ PROXY_COMMON="        proxy_pass http://127.0.0.1:3002;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
-        # Sync admin (SIRENE / Places) : éviter 504 HTML avant fin de requête
         proxy_connect_timeout 60s;
         proxy_send_timeout 300s;
         proxy_read_timeout 300s;"
 
-ALLOW_LINES=""
-for ip in "$@"; do
-  if ! [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "IP invalide: $ip"
-    exit 1
-  fi
-  ALLOW_LINES="${ALLOW_LINES}        allow ${ip};
-"
-done
-
-mkdir -p "$WEBROOT"
-
 write_proxy_location() {
-  # Stripe doit pouvoir POSTer les webhooks (sinon les crédits ne sont jamais crédités).
   printf '%s\n' "    location = /api/webhooks/stripe {"
-  printf '%s\n' "        allow all;"
+  printf '%s\n' "        # Pas de Basic Auth — Stripe doit POSTer librement"
+  printf '%s\n' "        auth_basic off;"
   printf '%s\n' ""
   printf '%s\n' "$PROXY_COMMON"
   printf '%s\n' "    }"
   printf '%s\n' ""
   printf '%s\n' "    location / {"
-  printf '%s' "$ALLOW_LINES"
-  printf '%s\n' "        deny all;"
+  printf '%s\n' "        auth_basic \"Artipascher staging\";"
+  printf '%s\n' "        auth_basic_user_file ${HTPASSWD_FILE};"
   printf '%s\n' ""
   printf '%s\n' "$PROXY_COMMON"
   printf '%s\n' "    }"
 }
 
 {
-  echo "# Généré par deploy/lock-dev-site-to-ip.sh — $(date -Iseconds)"
-  echo "# Accès dev limité aux IP autorisées. Prod inchangée."
+  echo "# Généré par deploy/lock-dev-basic-auth.sh — $(date -Iseconds)"
+  echo "# Accès dev via Basic Auth. Prod inchangée."
   echo ""
   echo "server {"
   echo "    listen 80;"
@@ -119,6 +143,7 @@ nginx -t
 systemctl reload nginx
 
 echo ""
-echo "✅ ${DOMAIN} limité aux IP : $*"
+echo "✅ ${DOMAIN} protégé par Basic Auth (user: ${AUTH_USER})"
 echo "   Prod artipascher.fr : inchangée"
-echo "   Changer d'IP : sudo bash deploy/lock-dev-site-to-ip.sh NOUVELLE_IP"
+echo "   Webhook Stripe + ACME : sans mot de passe"
+echo "   Changer le mdp : éditer deploy/dev-basic-auth puis relancer ce script"
