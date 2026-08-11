@@ -741,6 +741,8 @@ export function getWorkOptionById(id: string): NafWorkOption | undefined {
 }
 
 export const OTHER_WORK_OPTION_ID = "autre";
+/** Ticket appliqué à « Autre » (déblocage). */
+export const OTHER_WORK_PRICING_TIER: PricingTierId = "bas";
 
 export const OTHER_WORK_DESCRIPTION_MIN = 10;
 export const OTHER_WORK_DESCRIPTION_MAX = 200;
@@ -772,12 +774,12 @@ export function resolveUnlockPricing(input: {
   workOption?: NafWorkOption;
 } {
   if (input.workOptionId === OTHER_WORK_OPTION_ID) {
-    const unlockPriceEur = unlockPriceEurForTier(DEFAULT_PRICING_TIER);
-  return {
-    tier: DEFAULT_PRICING_TIER,
-    unlockPriceEur,
-    unlockCredits: unlockPriceEur,
-  };
+    const unlockPriceEur = unlockPriceEurForTier(OTHER_WORK_PRICING_TIER);
+    return {
+      tier: OTHER_WORK_PRICING_TIER,
+      unlockPriceEur,
+      unlockCredits: unlockPriceEur,
+    };
   }
   const workOption = input.workOptionId
     ? getWorkOptionById(input.workOptionId)
@@ -828,10 +830,10 @@ export function validatePricingSelection(input: {
     }
     return {
       ok: true,
-      pricingTier: DEFAULT_PRICING_TIER,
+      pricingTier: OTHER_WORK_PRICING_TIER,
       workOptionId: OTHER_WORK_OPTION_ID,
       workOptionOtherDescription: other,
-      unlockPriceEur: unlockPriceEurForTier(DEFAULT_PRICING_TIER),
+      unlockPriceEur: unlockPriceEurForTier(OTHER_WORK_PRICING_TIER),
     };
   }
 

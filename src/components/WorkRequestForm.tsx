@@ -178,7 +178,7 @@ export default function WorkRequestForm({
 
   function selectOtherWorkOption() {
     setWorkOptionId(OTHER_WORK_OPTION_ID);
-    setPricingTier("eleve");
+    setPricingTier("bas");
     setError(null);
   }
 
@@ -1086,7 +1086,7 @@ export default function WorkRequestForm({
             <input type="hidden" name="pricingTier" value={pricingTier} />
           )}
           {workOptionId === OTHER_WORK_OPTION_ID && (
-            <input type="hidden" name="pricingTier" value="eleve" />
+            <input type="hidden" name="pricingTier" value="bas" />
           )}
 
           {!workOptionId && (
