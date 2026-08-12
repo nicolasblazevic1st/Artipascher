@@ -6,7 +6,16 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/icon.png", "/favicon-48.png", "/apple-icon.png", "/site.webmanifest"],
+      allow: [
+        "/",
+        "/favicon.ico",
+        "/favicon-48.png",
+        "/favicon-96.png",
+        "/icon.png",
+        "/apple-icon.png",
+        "/brand-icon.svg",
+        "/site.webmanifest",
+      ],
     },
     sitemap: `${baseUrl.replace(/\/$/, "")}/sitemap.xml`,
   };
