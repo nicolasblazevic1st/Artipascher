@@ -26,11 +26,13 @@ export async function generateMetadata(): Promise<Metadata> {
       "Publiez votre demande de travaux dans le Nord-Pas-de-Calais. Des artisans vérifiés débloquent vos coordonnées pour vous contacter.",
     icons: {
       icon: [
+        { url: "/favicon.ico", sizes: "any" },
         { url: "/favicon-48.png", type: "image/png", sizes: "48x48" },
+        { url: "/favicon-96.png", type: "image/png", sizes: "96x96" },
         { url: "/icon.png", type: "image/png", sizes: "512x512" },
         { url: "/brand-icon.svg", type: "image/svg+xml" },
       ],
-      shortcut: "/favicon-48.png",
+      shortcut: "/favicon.ico",
       apple: "/apple-icon.png",
     },
     manifest: "/site.webmanifest",
