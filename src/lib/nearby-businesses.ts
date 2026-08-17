@@ -19,7 +19,7 @@ export interface NearbyBusiness {
   source: "gouv" | "platform";
   /** Date de création SIRENE (YYYY-MM-DD) si disponible. */
   companyCreatedAt?: string;
-  /** Disponible uniquement pour les artisans inscrits sur Artipascher. */
+  /** Disponible uniquement pour les artisans inscrits sur Nord Artisan Pro. */
   phone?: string;
   email?: string;
   proId?: string;

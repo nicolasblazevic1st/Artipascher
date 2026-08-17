@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Établissement hors zone Artipascher : siège en 59 (Nord) ou 62 (Pas-de-Calais) requis.",
+            "Établissement hors zone Nord Artisan Pro : siège en 59 (Nord) ou 62 (Pas-de-Calais) requis.",
         },
         { status: 400 }
       );

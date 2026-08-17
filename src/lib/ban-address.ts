@@ -160,7 +160,7 @@ export async function verifyBanAddress(
   if (!department) {
     return {
       valid: false,
-      error: "Code postal hors zone Artipascher (59 ou 62 uniquement).",
+      error: "Code postal hors zone Nord Artisan Pro (59 ou 62 uniquement).",
     };
   }
 

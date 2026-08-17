@@ -1,6 +1,6 @@
 # Documents de test vérifiables (sources publiques)
 
-Kit pour tester Artipascher avec des **documents issus d’internet / sources officielles**, plus des specimens d’assurance alignés sur une **vraie entreprise 59**.
+Kit pour tester Nord Artisan Pro avec des **documents issus d’internet / sources officielles**, plus des specimens d’assurance alignés sur une **vraie entreprise 59**.
 
 ## Entreprise de référence (registre public)
 
@@ -15,8 +15,8 @@ Kit pour tester Artipascher avec des **documents issus d’internet / sources of
 |--------|--------|--------|
 | `kbis-ou-avis-sirene.pdf` | Avis de situation SIRENE | **INSEE officiel** (gratuit) |
 | `02-modele-decennale-service-public.pdf` | Modèle d’attestation décennale | **Service-Public** (R44868) |
-| `rc-pro.pdf` | Attestation RC (texte + regex) | Specimen Artipascher (SIRET réel) |
-| `decennale.pdf` | Attestation décennale (texte + regex) | Specimen Artipascher (SIRET réel) |
+| `rc-pro.pdf` | Attestation RC (texte + regex) | Specimen Nord Artisan Pro (SIRET réel) |
+| `decennale.pdf` | Attestation décennale (texte + regex) | Specimen Nord Artisan Pro (SIRET réel) |
 | `fiche-entreprise-verifiable.json` | Identité + dirigeants + noms CB | Registre gouv + INSEE |
 
 > Les fichiers `rc-pro.pdf` / `decennale.pdf` **ne sont pas** de vraies polices d’assurance : ce sont des specimens PDF texte pour tests (extraction + regex), remplis avec les infos **publiques** de l’entreprise.  

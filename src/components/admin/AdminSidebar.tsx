@@ -54,7 +54,7 @@ export default function AdminSidebar() {
     <aside className="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-slate-300">
       <div className="border-b border-slate-800 px-5 py-5">
         <Link href="/admin" className="block">
-          <p className="text-lg font-bold text-white">Artipascher</p>
+          <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
           <p className="text-xs text-slate-400">Administration</p>
         </Link>
       </div>

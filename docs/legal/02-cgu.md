@@ -1,4 +1,4 @@
-# Conditions générales d'utilisation (CGU) — Artipascher
+# Conditions générales d'utilisation (CGU) — Nord Artisan Pro
 
 Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
@@ -6,7 +6,7 @@ Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
 ## 1. Objet
 
-Les présentes CGU régissent l'accès et l'utilisation du site artipascher.fr édité par Artipascher / [À COMPLÉTER : dénomination sociale].
+Les présentes CGU régissent l'accès et l'utilisation du site nord-artisan-pro.com édité par Nord Artisan Pro / Nicolas BLAZEVIC.
 
 Toute utilisation implique l'acceptation des CGU.
 
@@ -21,7 +21,7 @@ Toute utilisation implique l'acceptation des CGU.
 
 ## 3. Rôle de la Plateforme
 
-Artipascher est un **intermédiaire de mise en relation**. Elle n'est pas entreprise de travaux, maître d'œuvre ni partie au contrat de chantier.
+Nord Artisan Pro est un **intermédiaire de mise en relation**. Elle n'est pas entreprise de travaux, maître d'œuvre ni partie au contrat de chantier.
 
 Le devis, le prix, le planning, la facturation et le paiement des travaux sont conclus **directement entre Client et Artisan**. Aucune commission sur les travaux.
 
@@ -37,7 +37,7 @@ Informations exactes et à jour. Professionnels : SIRET vérifié, périmètre 5
 
 - Description, photos, adresse chantier et **mobile français** requis.
 - Le mobile doit être **vérifié par code SMS** avant publication d'une demande.
-- Le Client peut indiquer une préférence d'**ancienneté d'entreprise** (≥ 2 ans) : critère de ciblage / prospection, **sans garantie** sur le profil final des Artisans.
+- Le Client peut indiquer une préférence d'**ancienneté d'entreprise** (0 à 5 ans ou 5 ans et plus) : critère de ciblage / prospection, **sans garantie** sur le profil final des Artisans.
 - Option (activée par défaut) : **alerte SMS** lorsqu'un Artisan souhaite le contacter. Si activée, la demande de contact est **acceptée automatiquement**, dans la limite de **5 Artisans** par enchère ; le Client est informé (SMS, email, notification). Si désactivée, le Client accepte ou refuse manuellement sous 48 h.
 - Les coordonnées du Client ne sont communiquées à un Professionnel qu'après autorisation de contact et **déblocage** (crédits).
 
@@ -68,7 +68,7 @@ Responsabilité de l'auteur. Licence d'hébergement à l'Éditeur. Retrait possi
 
 ## 11. Données personnelles
 
-RGPD. Contact : contact@artipascher.fr. Voir politique de confidentialité et cookies.
+RGPD. Contact : contact@nord-artisan-pro.com. Voir politique de confidentialité et cookies.
 
 ## 12. Responsabilité
 
@@ -76,11 +76,11 @@ Pas de garantie sur la conclusion ni la qualité des travaux, ni sur le volume d
 
 ## 13. Propriété intellectuelle
 
-Marques et contenus Artipascher protégés.
+Marques et contenus Nord Artisan Pro protégés.
 
 ## 14. Suspension / résiliation
 
-En cas de manquement, fraude, ou sur demande à contact@artipascher.fr.
+En cas de manquement, fraude, ou sur demande à contact@nord-artisan-pro.com.
 
 ## 15. Modification
 
@@ -88,8 +88,8 @@ Version publiée sur le Site applicable.
 
 ## 16. Droit applicable
 
-Droit français. Médiateur consommation : [À COMPLÉTER].
+Droit français. Médiateur consommation : Médiateur de la consommation FEVAD — BP 20015, 75362 Paris Cedex 8 — https://www.mediateurfevad.fr.
 
 ## 17. Contact
 
-contact@artipascher.fr
+contact@nord-artisan-pro.com

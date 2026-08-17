@@ -30,7 +30,7 @@ export default function ApprovedQuotesList({
     return (
       <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
         Aucun devis validé pour le moment. Les artisans déposent leur devis après visite
-        sur le chantier ; chaque devis est vérifié par Artipascher avant publication.
+        sur le chantier ; chaque devis est vérifié par Nord Artisan Pro avant publication.
       </div>
     );
   }

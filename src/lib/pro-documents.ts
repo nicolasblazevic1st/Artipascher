@@ -3,7 +3,7 @@ export interface ProRegistrationDocumentType {
   label: string;
   help: string;
   required: boolean;
-  /** Niveau de qualification Artipascher (1 = inscription rapide). */
+  /** Niveau de qualification Nord Artisan Pro (1 = inscription rapide). */
   qualificationLevel: 1 | 2 | 3;
   /** Exige le PDF original (attestation assureur), pas une photo. */
   requireOriginalPdf?: boolean;

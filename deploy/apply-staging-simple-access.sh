@@ -36,6 +36,6 @@ fi
 
 echo ""
 echo "✅ Accès simplifié appliqué."
-echo "   Web : https://dev.artipascher.fr (prompt Basic Auth)"
+echo "   Web : https://dev.nord-artisan-pro.com (prompt Basic Auth)"
 echo "   SSH : port 22 ouvert (clés uniquement)"
 echo "   Deploy : bash deploy/deploy-staging.sh"

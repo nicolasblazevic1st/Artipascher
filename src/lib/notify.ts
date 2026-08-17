@@ -89,8 +89,8 @@ export async function notifyClientContactInterest(params: {
 
   const url = absoluteUrl(`/particulier/espace/demandes/${workRequest.id}`);
   const message = autoAccepted
-    ? `Artipascher : ${companyName} peut vous contacter pour ${workRequest.category} a ${workRequest.city}${slots}. Details : ${url}`
-    : `Artipascher : ${companyName} souhaite vous contacter pour ${workRequest.category} a ${workRequest.city}. ` +
+    ? `Nord Artisan Pro : ${companyName} peut vous contacter pour ${workRequest.category} a ${workRequest.city}${slots}. Details : ${url}`
+    : `Nord Artisan Pro : ${companyName} souhaite vous contacter pour ${workRequest.category} a ${workRequest.city}. ` +
       `Repondez sous 48h : ${url}`;
 
   const result = await sendSms(phone, message, "transactional");

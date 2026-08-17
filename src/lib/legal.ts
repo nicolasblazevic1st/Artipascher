@@ -1,32 +1,40 @@
+import { BRAND } from "./brand";
+
 /**
- * Identité de l'éditeur — à compléter avant mise en production « ouverte ».
- * Les mentions légales LCEN exigent ces informations exactes.
+ * Identité de l'éditeur — LCEN / mentions légales.
+ * Adresse : à coller depuis l’avis de situation Sirene (siège).
  */
 export const LEGAL_PUBLISHER = {
   /** Nom commercial / marque */
-  brand: "Artipascher",
-  /** Dénomination sociale (ex. « Dupont Nicolas EI », « Artipascher SASU ») */
-  legalName: "[À COMPLÉTER : dénomination sociale]",
+  brand: BRAND.name,
+  /** Dénomination (EI = nom de l’entrepreneur) */
+  legalName: "Nicolas BLAZEVIC",
   /** Forme juridique */
-  legalForm: "[À COMPLÉTER : EI / EURL / SASU / SAS…]",
-  /** Capital social (si société) — laisser « N/A » pour EI */
-  shareCapital: "[À COMPLÉTER : capital social ou N/A]",
-  /** SIRET */
-  siret: "[À COMPLÉTER : SIRET]",
-  /** RCS / greffe */
-  rcs: "[À COMPLÉTER : RCS + ville, ou « non applicable » si EI]",
-  /** Siège / adresse de l'éditeur */
-  address: "[À COMPLÉTER : adresse complète]",
+  legalForm: "Entrepreneur individuel",
+  /** Capital social — N/A pour EI */
+  shareCapital: "N/A",
+  /** SIRET (SIREN 108 238 924 + NIC 00014) */
+  siret: "108 238 924 00014",
+  /** Immatriculation */
+  rcs: "Immatriculé au Registre National des Entreprises (RNE) — SIREN 108 238 924",
+  /** Siège */
+  address: "26 rue de Santes, 59320 Haubourdin",
   /** Directeur / responsable de la publication */
-  publicationDirector: "[À COMPLÉTER : prénom NOM]",
+  publicationDirector: "Nicolas BLAZEVIC",
   /** Contact */
-  email: "contact@artipascher.fr",
+  email: BRAND.emailContact,
   /** Site */
-  siteUrl: "https://artipascher.fr",
+  siteUrl: BRAND.siteUrl,
+  /**
+   * Médiateur de la consommation (CGU).
+   * Vérifier que l’adhésion FEVAD inclut bien le dispositif de médiation.
+   */
+  consumerMediator:
+    "Médiateur de la consommation FEVAD — BP 20015, 75362 Paris Cedex 8 — https://www.mediateurfevad.fr",
   /** Date de dernière mise à jour des documents */
-  lastUpdated: "10 août 2026",
+  lastUpdated: "17 août 2026",
   /** Version des documents */
-  version: "1.2-brouillon",
+  version: "1.4-brouillon",
 } as const;
 
 /** Hébergeur (OVH) — données publiques usuelles */

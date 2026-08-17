@@ -1,7 +1,7 @@
-export const COOKIE_CONSENT_STORAGE_KEY = "artipascher_cookie_consent";
+export const COOKIE_CONSENT_STORAGE_KEY = "nap_cookie_consent";
 export const COOKIE_CONSENT_VERSION = 1;
-export const COOKIE_CONSENT_CHANGE_EVENT = "artipascher:cookie-consent-change";
-export const COOKIE_CONSENT_OPEN_EVENT = "artipascher:cookie-consent-open";
+export const COOKIE_CONSENT_CHANGE_EVENT = "nap:cookie-consent-change";
+export const COOKIE_CONSENT_OPEN_EVENT = "nap:cookie-consent-open";
 
 export type CookieConsentChoice = {
   version: number;

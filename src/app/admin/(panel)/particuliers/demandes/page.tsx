@@ -153,11 +153,17 @@ export default function AdminDemandesPage() {
                       {formatWorkRequestAuctionDuration(r)}
                     </div>
                     <div>
+                      Artisans max :{" "}
+                      {typeof r.maxContactArtisans === "number"
+                        ? r.maxContactArtisans
+                        : 5}
+                    </div>
+                    <div>
                       Ancienneté :{" "}
                       {r.preferEstablishedCompany === true
-                        ? "uniquement +2 ans"
+                        ? "uniquement 5+"
                         : r.preferEstablishedCompany === false
-                          ? "uniquement −2 ans"
+                          ? "uniquement 0–5 ans"
                           : "âge non précisé"}
                     </div>
                     <div>
@@ -169,7 +175,13 @@ export default function AdminDemandesPage() {
                     <div>
                       Obligatoire : statut normal · décennale &amp; RC pro
                     </div>
-                    <div>Mise en contact : autorisée (CGU / CGV · max. 5)</div>
+                    <div>
+                      Mise en contact : autorisée (CGU / CGV · max.{" "}
+                      {typeof r.maxContactArtisans === "number"
+                        ? r.maxContactArtisans
+                        : 5}
+                      )
+                    </div>
                     <div>{r.email}</div>
                     <div>
                       Tél : {r.phone?.trim() || "Non renseigné"}

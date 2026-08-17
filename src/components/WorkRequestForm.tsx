@@ -99,6 +99,7 @@ export default function WorkRequestForm({
     DEFAULT_LISTING_DURATION_HOURS
   );
   const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
+  const [maxContactArtisans, setMaxContactArtisans] = useState(5);
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
   const [acceptContactTerms, setAcceptContactTerms] = useState(false);
   const [phone, setPhone] = useState(defaults?.phone ?? "");
@@ -423,6 +424,7 @@ export default function WorkRequestForm({
       "preferEstablishedCompany",
       preferEstablishedCompany ? "true" : "false"
     );
+    formData.set("maxContactArtisans", String(maxContactArtisans));
     if (minGoogleRating !== "") {
       formData.set("minGoogleRating", String(minGoogleRating));
     } else {
@@ -825,6 +827,41 @@ export default function WorkRequestForm({
 
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-slate-700">
+          Nombre d&apos;artisans <span className="text-red-500">*</span>
+        </legend>
+        <p className="mb-2 text-xs text-slate-500">
+          Combien d&apos;artisans maximum pourront débloquer vos coordonnées
+          et vous contacter (1 à 5).
+        </p>
+        <div className="grid grid-cols-5 gap-2">
+          {([1, 2, 3, 4, 5] as const).map((n) => (
+            <label
+              key={n}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border px-2 py-3 text-sm ${
+                maxContactArtisans === n
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-slate-200 bg-white"
+              }`}
+            >
+              <input
+                type="radio"
+                name="maxContactArtisans"
+                value={n}
+                checked={maxContactArtisans === n}
+                onChange={() => setMaxContactArtisans(n)}
+                className="sr-only"
+              />
+              <span className="text-lg font-semibold text-slate-900">{n}</span>
+              <span className="text-[10px] text-slate-500">
+                {n === 1 ? "artisan" : "artisans"}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-slate-700">
           Ancienneté de l&apos;entreprise <span className="text-red-500">*</span>
         </legend>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -845,10 +882,10 @@ export default function WorkRequestForm({
             />
             <span>
               <span className="font-semibold text-slate-900">
-                Moins de 2 ans d&apos;existence
+                0 à 5 ans d&apos;existence
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Uniquement des entreprises créées il y a moins de 2 ans.
+                Uniquement des entreprises créées il y a moins de 5 ans.
               </span>
             </span>
           </label>
@@ -869,10 +906,10 @@ export default function WorkRequestForm({
             />
             <span>
               <span className="font-semibold text-slate-900">
-                Plus de 2 ans d&apos;existence
+                5 ans et plus (5+)
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Uniquement des entreprises créées il y a plus de 2 ans.
+                Uniquement des entreprises créées il y a 5 ans ou plus.
               </span>
             </span>
           </label>
@@ -1177,7 +1214,7 @@ export default function WorkRequestForm({
               J&apos;ai déjà reçu un devis d&apos;un autre artisan
             </span>
             <span className="mt-0.5 block text-xs text-slate-500">
-              Optionnel — justificatif visible par Artipascher, utile pour
+              Optionnel — justificatif visible par Nord Artisan Pro, utile pour
               contextualiser votre projet.
             </span>
           </span>
@@ -1292,7 +1329,7 @@ export default function WorkRequestForm({
                 Décennale et assurance RC pro à jour
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Attestations validées par Artipascher pour le métier concerné.
+                Attestations validées par Nord Artisan Pro pour le métier concerné.
               </span>
             </span>
           </li>

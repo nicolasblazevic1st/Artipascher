@@ -1,4 +1,4 @@
-# Conditions générales de vente (CGV) — Artipascher
+# Conditions générales de vente (CGV) — Nord Artisan Pro
 
 Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
@@ -6,7 +6,7 @@ Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
 ## 1. Objet
 
-Vente de **crédits numériques** permettant d'utiliser des services payants de la plateforme Artipascher (B2B). Ne régit pas le contrat de travaux Client/Artisan.
+Vente de **crédits numériques** permettant d'utiliser des services payants de la plateforme Nord Artisan Pro (B2B). Ne régit pas le contrat de travaux Client/Artisan.
 
 Voir aussi les CGU.
 
@@ -30,7 +30,7 @@ Depuis l'espace Professionnel via Stripe. Vente ferme après paiement réussi et
 
 ## 4. Prix et facturation
 
-Prix affichés au moment de l'achat. Facture / justificatif selon modalités techniques. SIRET vendeur : [À COMPLÉTER].
+Prix affichés au moment de l'achat. Facture / justificatif selon modalités techniques. SIRET vendeur : 108 238 924 00014.
 
 ## 5. Exécution
 
@@ -46,7 +46,7 @@ Pas de remboursement des crédits sauf **dysfonctionnement imputable au Vendeur*
 
 L'absence de réponse du Client, l'absence d'offres dans une zone géographique, ou le refus ultérieur de travaux **ne constituent pas** un motif de remboursement.
 
-Le Vendeur peut, à titre commercial, recréditer un crédit dans certains cas (ex. désengagement Client après déblocage), sans obligation générale. Contact : contact@artipascher.fr.
+Le Vendeur peut, à titre commercial, recréditer un crédit dans certains cas (ex. désengagement Client après déblocage), sans obligation générale. Contact : contact@nord-artisan-pro.com.
 
 ## 8. Validité des crédits
 
@@ -58,7 +58,7 @@ Limitée au montant des crédits concernés (hors dommages indirects), dans les 
 
 ## 10. Données
 
-Traitement pour exécution de la vente, facturation, fraude (Stripe). contact@artipascher.fr
+Traitement pour exécution de la vente, facturation, fraude (Stripe). contact@nord-artisan-pro.com
 
 ## 11. Modification
 
@@ -70,4 +70,4 @@ Droit français. Tribunaux du siège du Vendeur (B2B), sous réserve d'ordre pub
 
 ## 13. Contact
 
-contact@artipascher.fr
+contact@nord-artisan-pro.com

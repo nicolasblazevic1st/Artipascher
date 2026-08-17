@@ -88,7 +88,7 @@ export function checkDecennaleForWorkCategory(
   if (pending) {
     return {
       ok: false,
-      reason: `Votre attestation décennale pour « ${pending.tradeGroupLabel} » est en cours de vérification par Artipascher. Vous pourrez enchérir dès validation.`,
+      reason: `Votre attestation décennale pour « ${pending.tradeGroupLabel} » est en cours de vérification par Nord Artisan Pro. Vous pourrez enchérir dès validation.`,
     };
   }
 

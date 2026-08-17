@@ -1,6 +1,6 @@
 # Environnement dev / staging (VPS)
 
-Développement sur **`dev.artipascher.fr`** (port 3002), production inchangée sur **`artipascher.fr`** (port 3000).
+Développement sur **`dev.nord-artisan-pro.com`** (port 3002), production inchangée sur **`nord-artisan-pro.com`** (port 3000).
 
 ## DNS (OVH)
 
@@ -26,7 +26,7 @@ Développement sur **`dev.artipascher.fr`** (port 3002), production inchangée s
 cd /var/www/artipascher
 git pull origin master
 bash deploy/setup-staging.sh
-sudo certbot --nginx -d dev.artipascher.fr
+sudo certbot --nginx -d dev.nord-artisan-pro.com
 ```
 
 ## Différences staging vs prod
@@ -62,7 +62,7 @@ Exceptions **sans** mot de passe :
 - `POST /api/webhooks/stripe` (webhooks Stripe test)
 - `/.well-known/acme-challenge/` (Let's Encrypt)
 
-La **prod** (`artipascher.fr`) reste publique.
+La **prod** (`nord-artisan-pro.com`) reste publique.
 
 ## SSH (ouvert + clés uniquement)
 

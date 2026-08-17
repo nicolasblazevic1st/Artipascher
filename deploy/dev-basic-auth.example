@@ -1,4 +1,4 @@
-# Identifiants Basic Auth pour https://dev.artipascher.fr (staging uniquement).
+# Identifiants Basic Auth pour https://dev.nord-artisan-pro.com (staging uniquement).
 # Copier sur le VPS : cp deploy/dev-basic-auth.example deploy/dev-basic-auth
 # Puis éditer user:password (ne pas committer deploy/dev-basic-auth).
 #

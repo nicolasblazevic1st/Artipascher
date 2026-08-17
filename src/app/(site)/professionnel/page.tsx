@@ -14,7 +14,7 @@ import {
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
   description:
-    "Rejoignez Artipascher : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées avec votre solde.",
+    "Rejoignez Nord Artisan Pro : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées avec votre solde.",
 };
 
 const FEATURES = [
@@ -71,7 +71,7 @@ const STEPS = [
   {
     title: "Concluez hors plateforme",
     description:
-      "Appelez le client, visitez le chantier et envoyez votre devis — Artipascher ne prend aucune commission sur vos travaux.",
+      "Appelez le client, visitez le chantier et envoyez votre devis — Nord Artisan Pro ne prend aucune commission sur vos travaux.",
   },
 ];
 
@@ -85,7 +85,7 @@ export default async function ProfessionnelPage() {
             Développez votre activité dans le Nord-Pas-de-Calais
           </h1>
           <p className="mt-4 text-lg text-slate-300">
-            Rejoignez Artipascher : clients qualifiés en 59 et 62, mise en
+            Rejoignez Nord Artisan Pro : clients qualifiés en 59 et 62, mise en
             relation ciblée. Accès réservé aux entreprises inscrites au registre
             du commerce.
           </p>
@@ -124,7 +124,7 @@ export default async function ProfessionnelPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="text-center text-3xl font-bold">Pourquoi rejoindre Artipascher ?</h2>
+        <h2 className="text-center text-3xl font-bold">Pourquoi rejoindre Nord Artisan Pro ?</h2>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <FeatureCard key={f.title} {...f} />
@@ -135,7 +135,7 @@ export default async function ProfessionnelPage() {
       <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <h2 className="text-center text-2xl font-bold">Tarifs plateforme</h2>
         <p className="mt-2 text-center text-sm text-slate-600">
-          Seules facturations Artipascher — aucune commission sur vos prestations, pas
+          Seules facturations Nord Artisan Pro — aucune commission sur vos prestations, pas
           d&apos;abonnement.
         </p>
         <ul className="mt-8 space-y-4">
@@ -159,7 +159,7 @@ export default async function ProfessionnelPage() {
           <p className="mt-4 text-lg text-brand-100">
             Depuis votre espace pro, récupérez votre code ou votre lien de parrainage.
             Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD}&nbsp;€
-            sur Artipascher, vous recevez {REFERRAL_REWARD_EUR}&nbsp;€ de solde.
+            sur Nord Artisan Pro, vous recevez {REFERRAL_REWARD_EUR}&nbsp;€ de solde.
           </p>
           <ul className="mx-auto mt-8 max-w-xl space-y-3 text-left text-sm text-brand-50">
             <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">

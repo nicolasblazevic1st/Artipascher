@@ -127,19 +127,19 @@ if [ "$STABLE" != "1" ]; then
   exit 1
 fi
 
-echo "==> Nginx dev.artipascher.fr (Basic Auth)"
+echo "==> Nginx dev.nord-artisan-pro.com (Basic Auth)"
 bash deploy/apply-dev-basic-auth.sh
 
 echo "==> vérif proxy local (port ${STAGING_PORT})"
-TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${STAGING_PORT}/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
-TITLE_3000="$(curl -s -H "Host: artipascher.fr" "http://127.0.0.1:3000/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+TITLE="$(curl -s -H "Host: dev.nord-artisan-pro.com" "http://127.0.0.1:${STAGING_PORT}/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+TITLE_3000="$(curl -s -H "Host: nord-artisan-pro.com" "http://127.0.0.1:3000/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
 echo "   :${STAGING_PORT} title: ${TITLE:-'(vide)'}"
 echo "   :3000 title: ${TITLE_3000:-'(vide)'}"
 
-RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${STAGING_PORT}/api/runtime-info" || true)"
+RUNTIME="$(curl -s -H "Host: dev.nord-artisan-pro.com" "http://127.0.0.1:${STAGING_PORT}/api/runtime-info" || true)"
 echo "   runtime-info: $RUNTIME"
 
-BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${STAGING_PORT}/build-id.txt" || true)"
+BUILD_TXT="$(curl -s -H "Host: dev.nord-artisan-pro.com" "http://127.0.0.1:${STAGING_PORT}/build-id.txt" || true)"
 echo "   build-id.txt: $BUILD_TXT"
 
 if echo "$TITLE" | grep -q "Bêta ·"; then
@@ -158,4 +158,4 @@ if ! echo "$RUNTIME" | grep -q '"beta":false'; then
   exit 1
 fi
 
-echo "✅ Staging OK (dev.artipascher.fr → :${STAGING_PORT}) — commit $BUILD_ID — $(date -Iseconds)"
+echo "✅ Staging OK (dev.nord-artisan-pro.com → :${STAGING_PORT}) — commit $BUILD_ID — $(date -Iseconds)"

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # @deprecated Préférer deploy/lock-dev-basic-auth.sh (Basic Auth).
-# Restreint dev.artipascher.fr à une ou plusieurs IP (Nginx).
+# Restreint dev.nord-artisan-pro.com à une ou plusieurs IP (Nginx).
 # Usage : sudo bash deploy/lock-dev-site-to-ip.sh 109.30.111.204 [autre-ip…]
 #
-# Le site prod (artipascher.fr) n'est pas modifié.
+# Le site prod (nord-artisan-pro.com) n'est pas modifié.
 # Let's Encrypt : /.well-known/acme-challenge/ reste ouvert pour le renouvellement.
 
 set -euo pipefail
@@ -20,7 +20,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 NGINX_SITE="/etc/nginx/sites-available/artipascher-dev"
-DOMAIN="dev.artipascher.fr"
+DOMAIN="dev.nord-artisan-pro.com"
 CERT="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 KEY="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
 WEBROOT="/var/www/html"
@@ -120,5 +120,5 @@ systemctl reload nginx
 
 echo ""
 echo "✅ ${DOMAIN} limité aux IP : $*"
-echo "   Prod artipascher.fr : inchangée"
+echo "   Prod nord-artisan-pro.com : inchangée"
 echo "   Changer d'IP : sudo bash deploy/lock-dev-site-to-ip.sh NOUVELLE_IP"

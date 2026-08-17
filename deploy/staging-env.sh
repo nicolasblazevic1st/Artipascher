@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Variables .env.local obligatoires pour le staging (dev.artipascher.fr).
+# Variables .env.local obligatoires pour le staging (dev.nord-artisan-pro.com).
 # Usage : bash deploy/staging-env.sh [.env.local]
 
 set -euo pipefail
@@ -23,7 +23,7 @@ set_env() {
   mv "$tmp" "$ENV_FILE"
 }
 
-set_env NEXT_PUBLIC_SITE_URL "https://dev.artipascher.fr"
+set_env NEXT_PUBLIC_SITE_URL "https://dev.nord-artisan-pro.com"
 set_env NEXT_PUBLIC_BETA_MODE "false"
 set_env NEXT_PUBLIC_ARTIPASCHER_STAGING "1"
 set_env ARTIPASCHER_STAGING "1"

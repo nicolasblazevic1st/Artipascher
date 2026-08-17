@@ -23,7 +23,7 @@ export default function ProSidebar({
     <aside className="flex w-56 shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100">
       <div className="border-b border-brand-900 px-5 py-5">
         <Link href="/pro" className="block">
-          <p className="text-lg font-bold text-white">Artipascher</p>
+          <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
           <p className="text-xs text-brand-200">Espace professionnel</p>
         </Link>
         <p className="mt-3 truncate text-xs font-medium text-white">{companyName}</p>

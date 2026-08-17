@@ -5,7 +5,7 @@ import { getClientContact } from "@/lib/client-contacts";
 import { evaluateProContactMatch } from "@/lib/contact-match";
 import {
   isAcceptSlotsFull,
-  MAX_CONTACT_UNLOCKS_PER_REQUEST,
+  resolveMaxContactArtisans,
 } from "@/lib/contact-slots";
 import { canUnlockContacts } from "@/lib/level1-certification";
 import {
@@ -112,13 +112,14 @@ export async function POST(request: NextRequest) {
   }
 
   const unlockCount = await countContactUnlocksForAuction(auctionId);
-  if (isAcceptSlotsFull(unlockCount)) {
+  const maxUnlocks = resolveMaxContactArtisans(workRequest);
+  if (isAcceptSlotsFull(unlockCount, maxUnlocks)) {
     return NextResponse.json(
       {
-        error: `Les ${MAX_CONTACT_UNLOCKS_PER_REQUEST} places de contact sont déjà prises pour cette demande.`,
+        error: `Les ${maxUnlocks} places de contact sont déjà prises pour cette demande.`,
         slotsFull: true,
         unlockCount,
-        maxUnlocks: MAX_CONTACT_UNLOCKS_PER_REQUEST,
+        maxUnlocks,
       },
       { status: 409 }
     );

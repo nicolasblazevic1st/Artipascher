@@ -6,7 +6,7 @@ import { computeCurrentPrice, MAX_BIDS_PER_AUCTION } from "./auctions";
 import {
   isAcceptSlotsFull,
   isSmsContactAlertsEnabled,
-  MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+  resolveMaxContactArtisans,
 } from "./contact-slots";
 import {
   generateReferralCode,
@@ -665,9 +665,15 @@ export async function addContactUnlock(data: {
       occupied.add(u.proId);
     }
   }
-  if (isAcceptSlotsFull(occupied.size)) {
+  const workRequest =
+    (data.workRequestId
+      ? store.workRequests.find((w) => w.id === data.workRequestId)
+      : undefined) ??
+    store.workRequests.find((w) => w.auctionId === data.auctionId);
+  const maxSlots = resolveMaxContactArtisans(workRequest);
+  if (isAcceptSlotsFull(occupied.size, maxSlots)) {
     return {
-      error: `Les ${MAX_ACCEPTED_ARTISANS_PER_AUCTION} places de contact sont déjà prises pour cette demande.`,
+      error: `Les ${maxSlots} places de contact sont déjà prises pour cette demande.`,
     };
   }
 
@@ -2380,13 +2386,14 @@ export async function createContactRequest(data: {
       acceptedPros.add(r.proId);
     }
   }
-  if (isAcceptSlotsFull(acceptedPros.size)) {
+  const maxSlots = resolveMaxContactArtisans(workRequest);
+  if (isAcceptSlotsFull(acceptedPros.size, maxSlots)) {
     return {
-      error: `Les ${MAX_ACCEPTED_ARTISANS_PER_AUCTION} places de contact sont déjà prises pour cette offre.`,
+      error: `Les ${maxSlots} places de contact sont déjà prises pour cette offre.`,
     };
   }
 
-  // Option client « M'alerter » (défaut) : acceptation auto + compte dans le plafond 5.
+  // Option client « M'alerter » (défaut) : acceptation auto + compte dans le plafond.
   // Clients blacklistés : jamais d’auto-accept (défense en profondeur).
   const autoAccepted =
     !clientAccount?.blockedFromContact &&
@@ -2410,7 +2417,7 @@ export async function createContactRequest(data: {
     request,
     autoAccepted,
     acceptedCount,
-    maxAccepted: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+    maxAccepted: maxSlots,
   };
 }
 
@@ -2463,9 +2470,10 @@ export async function decideContactRequest(
         acceptedPros.add(r.proId);
       }
     }
-    if (!acceptedPros.has(req.proId) && isAcceptSlotsFull(acceptedPros.size)) {
+    const maxSlots = resolveMaxContactArtisans(workRequest);
+    if (!acceptedPros.has(req.proId) && isAcceptSlotsFull(acceptedPros.size, maxSlots)) {
       return {
-        error: `Vous avez déjà accepté ${MAX_ACCEPTED_ARTISANS_PER_AUCTION} artisans pour cette offre (maximum autorisé).`,
+        error: `Vous avez déjà accepté ${maxSlots} artisan${maxSlots > 1 ? "s" : ""} pour cette offre (maximum autorisé).`,
       };
     }
   }

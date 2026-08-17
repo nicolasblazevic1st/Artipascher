@@ -127,7 +127,7 @@ export async function createCreditPackCheckout(params: {
           currency: "eur",
           unit_amount: pack.payEur * 100,
           product_data: {
-            name: `Solde Artipascher · ${pack.creditEur} €`,
+            name: `Solde Nord Artisan Pro · ${pack.creditEur} €`,
             description:
               discount > 0
                 ? `Tarif dégressif (−${discount} %) · mises en contact ${CONTACT_UNLOCK_REF_EUR - 5}–${CONTACT_UNLOCK_REF_EUR + 5} €`

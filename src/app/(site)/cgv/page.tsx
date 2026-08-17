@@ -11,7 +11,7 @@ import {
 export const metadata: Metadata = {
   title: "Conditions générales de vente",
   description:
-    "Conditions générales de vente du solde Artipascher destiné aux professionnels.",
+    "Conditions générales de vente du solde Nord Artisan Pro destiné aux professionnels.",
 };
 
 export default function CgvPage() {
@@ -24,7 +24,7 @@ export default function CgvPage() {
           s&apos;appliquent à la vente, par {LEGAL_PUBLISHER.brand} /{" "}
           {LEGAL_PUBLISHER.legalName} (ci-après « le Vendeur »), d&apos;un{" "}
           <strong>solde en euros</strong> permettant aux Professionnels
-          d&apos;utiliser certains services payants de la plateforme Artipascher
+          d&apos;utiliser certains services payants de la plateforme Nord Artisan Pro
           (ci-après « la Plateforme »).
         </p>
         <p className="mt-3">

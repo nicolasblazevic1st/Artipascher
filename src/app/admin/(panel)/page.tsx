@@ -17,7 +17,7 @@ export default async function AdminDashboardPage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Tableau de bord</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Vue d&apos;ensemble — Artipascher Nord 59/62 · mise en contact
+        Vue d&apos;ensemble — Nord Artisan Pro Nord 59/62 · mise en contact
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

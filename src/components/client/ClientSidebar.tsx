@@ -19,7 +19,7 @@ export default function ClientSidebar({
     <aside className="flex w-56 shrink-0 flex-col border-r border-client-900 bg-client-800 text-client-50">
       <div className="border-b border-client-900 px-5 py-5">
         <Link href="/particulier/espace" className="block">
-          <p className="text-lg font-bold text-white">Artipascher</p>
+          <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
           <p className="text-xs text-client-200">Espace particulier</p>
         </Link>
         <p className="mt-3 truncate text-xs font-medium text-white">

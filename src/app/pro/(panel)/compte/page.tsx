@@ -127,7 +127,7 @@ export default async function ProComptePage() {
 
       <p className="mt-6 text-xs text-slate-500">
         Pour modifier les informations d&apos;entreprise (SIRET, siège…), contactez
-        l&apos;administrateur Artipascher.
+        l&apos;administrateur Nord Artisan Pro.
       </p>
     </div>
   );

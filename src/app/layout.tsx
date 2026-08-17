@@ -4,6 +4,7 @@ import { BetaModeProvider } from "@/components/BetaModeProvider";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { getIsBetaMode } from "@/lib/beta-server";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +20,13 @@ export async function generateMetadata(): Promise<Metadata> {
       process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
     ),
     title: {
-      default: "Artipascher — Travaux & artisans vérifiés Nord 59/62",
-      template: "%s | Artipascher",
+      default: BRAND.titleDefault,
+      template: `%s | ${BRAND.name}`,
     },
-    description:
-      "Publiez votre demande de travaux dans le Nord-Pas-de-Calais. Des artisans vérifiés débloquent vos coordonnées pour vous contacter.",
+    description: BRAND.description,
+    robots: staging
+      ? { index: false, follow: false, googleBot: { index: false, follow: false } }
+      : { index: true, follow: true },
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "any" },
@@ -37,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     manifest: "/site.webmanifest",
     openGraph: {
-      siteName: "Artipascher",
+      siteName: BRAND.name,
       locale: "fr_FR",
       type: "website",
     },

@@ -4,8 +4,11 @@ import { NextResponse } from "next/server";
  * Préouverture / version bêta.
  *
  * Règle simple (inversée) :
- * - bêta UNIQUEMENT sur artipascher.fr / www.artipascher.fr
- * - partout ailleurs (dev.artipascher.fr, localhost, IP, staging) → ouvert
+ * - bêta UNIQUEMENT sur le domaine de prod publique
+ * - partout ailleurs (dev.*, localhost, IP, staging) → ouvert
+ *
+ * Pendant la transition de marque, artipascher.fr et nord-artisan-pro.com
+ * sont tous deux traités comme prod.
  */
 
 function envFlagFalse(value: string | undefined): boolean {
@@ -26,17 +29,24 @@ export function normalizeHost(host: string | null | undefined): string {
   return host.split(",")[0]?.trim().toLowerCase().split(":")[0] ?? "";
 }
 
-/** Domaine de production publique uniquement. */
+/** Domaines de production publique (marque actuelle + ancien domaine). */
 export function isProductionPublicHost(
   host: string | null | undefined
 ): boolean {
   const h = normalizeHost(host);
-  return h === "artipascher.fr" || h === "www.artipascher.fr";
+  return (
+    h === "nord-artisan-pro.com" ||
+    h === "www.nord-artisan-pro.com" ||
+    h === "artipascher.fr" ||
+    h === "www.artipascher.fr"
+  );
 }
 
 export function isDevStagingHost(host: string | null | undefined): boolean {
   const h = normalizeHost(host);
   return (
+    h === "dev.nord-artisan-pro.com" ||
+    h.endsWith(".dev.nord-artisan-pro.com") ||
     h === "dev.artipascher.fr" ||
     h.endsWith(".dev.artipascher.fr") ||
     h === "localhost" ||
@@ -50,6 +60,7 @@ export function isStagingSite(): boolean {
   if (process.env.PORT === "3001") return true;
 
   const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").toLowerCase();
+  if (site.includes("dev.nord-artisan-pro.com")) return true;
   if (site.includes("dev.artipascher.fr")) return true;
 
   return false;
@@ -91,7 +102,7 @@ export function isBetaMode(): boolean {
 }
 
 export const BETA_CLOSED_MESSAGE =
-  "Artipascher est en phase de préouverture (version bêta). Les inscriptions, demandes de travaux et paiements ne sont pas encore ouverts au public.";
+  "Nord Artisan Pro est en phase de préouverture (version bêta). Les inscriptions, demandes de travaux et paiements ne sont pas encore ouverts au public.";
 
 export function betaClosedJsonResponse() {
   return NextResponse.json(

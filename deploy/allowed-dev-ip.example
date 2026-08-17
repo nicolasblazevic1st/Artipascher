@@ -1,4 +1,4 @@
-# Une IP publique par ligne — accès dev.artipascher.fr (staging uniquement).
+# Une IP publique par ligne — accès dev.nord-artisan-pro.com (staging uniquement).
 # Copier sur le VPS : cp deploy/allowed-dev-ip.example deploy/allowed-dev-ip
 # Puis éditer avec votre IP (ne pas committer allowed-dev-ip).
 

@@ -1,4 +1,4 @@
-/** Codes NAF (INSEE) associés aux catégories de travaux Artipascher. */
+/** Codes NAF (INSEE) associés aux catégories de travaux Nord Artisan Pro. */
 
 import { getNafLabel, normalizeNafCode } from "./naf-trade-groups";
 

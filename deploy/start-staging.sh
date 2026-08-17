@@ -13,7 +13,7 @@ export ARTIPASCHER_STAGING="${ARTIPASCHER_STAGING:-1}"
 export BETA_MODE="${BETA_MODE:-false}"
 export NEXT_PUBLIC_BETA_MODE="${NEXT_PUBLIC_BETA_MODE:-false}"
 export NEXT_PUBLIC_ARTIPASCHER_STAGING="${NEXT_PUBLIC_ARTIPASCHER_STAGING:-1}"
-export NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://dev.artipascher.fr}"
+export NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://dev.nord-artisan-pro.com}"
 
 # Libérer CE port uniquement (PIDs listeners), sans pkill -f
 bash "$STAGING_DIR/deploy/free-port.sh" "$PORT" || true

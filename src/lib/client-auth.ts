@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-export const CLIENT_SESSION_COOKIE = "artipascher_client_session";
+export const CLIENT_SESSION_COOKIE = "nap_client_session";
 
 export interface ClientSession {
   clientId: string;

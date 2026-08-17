@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-export const PRO_SESSION_COOKIE = "artipascher_pro_session";
+export const PRO_SESSION_COOKIE = "nap_pro_session";
 
 export interface ProSession {
   proId: string;

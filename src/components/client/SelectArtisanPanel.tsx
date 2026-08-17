@@ -177,7 +177,7 @@ export default function SelectArtisanPanel({
     return (
       <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
         Aucun devis validé pour le moment. Les artisans contactent le particulier, visitent
-        le chantier, puis déposent un devis vérifié par Artipascher.
+        le chantier, puis déposent un devis vérifié par Nord Artisan Pro.
       </div>
     );
   }

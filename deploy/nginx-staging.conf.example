@@ -1,12 +1,14 @@
-# Staging / dev — dev.artipascher.fr → port 3002
+# Staging / dev — dev.nord-artisan-pro.com → port 3002
 # Copier : sudo cp deploy/nginx-staging.conf.example /etc/nginx/sites-available/artipascher-dev
 #          sudo ln -sf /etc/nginx/sites-available/artipascher-dev /etc/nginx/sites-enabled/
 #          sudo nginx -t && sudo systemctl reload nginx
-# Puis : sudo certbot --nginx -d dev.artipascher.fr
+# Puis : sudo certbot --nginx -d dev.nord-artisan-pro.com
+#
+# (Les process PM2 restent nommés artipascher-dev — multi-sites VPS.)
 
 server {
     listen 80;
-    server_name dev.artipascher.fr;
+    server_name dev.nord-artisan-pro.com;
 
     client_max_body_size 20M;
 

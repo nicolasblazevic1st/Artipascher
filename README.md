@@ -1,4 +1,6 @@
-# Artipascher
+# Nord Artisan Pro
+
+> Marque commerciale : **Nord Artisan Pro**. Le dossier / dépôt Git peut encore s’appeler `Artipascher` (chemins VPS `/var/www/artipascher`, variables `ARTIPASCHER_*`).
 
 Plateforme d'**enchères inversées** pour travaux, spécialisée **Nord (59) / Pas-de-Calais (62)**.
 
@@ -57,7 +59,7 @@ sudo bash deploy/setup-vps.sh
 nano /var/www/artipascher/.env.local   # ADMIN_PASSWORD, NEXT_PUBLIC_SITE_URL, PAYMENT_MODE
 ```
 
-**Nginx + HTTPS :** voir `deploy/DNS-OVH.md` et `deploy/nginx.conf.example`, puis `certbot --nginx -d artipascher.fr -d www.artipascher.fr`.
+**Nginx + HTTPS :** voir `deploy/DNS-OVH.md` et `deploy/nginx.conf.example`, puis `certbot --nginx -d nord-artisan-pro.com -d www.nord-artisan-pro.com`.
 
 **Mises à jour après un push GitHub :**
 

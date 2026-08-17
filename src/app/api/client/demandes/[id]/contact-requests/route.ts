@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
-import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import { formatProTradeSelections } from "@/lib/pro-trades";
 import {
   countAcceptedArtisansForAuction,
@@ -50,6 +50,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   return NextResponse.json({
     items,
     acceptedArtisansCount,
-    maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+    maxAcceptedArtisans: resolveMaxContactArtisans(workRequest),
   });
 }

@@ -1,6 +1,8 @@
 import type { WorkRequest } from "@/lib/store-types";
 
-/** Max d’artisans ayant débloqué (payé) les coordonnées pour une même demande. */
+/** Plancher / plafond absolus du choix client. */
+export const MIN_CONTACT_ARTISANS = 1;
+/** Max d’artisans pouvant débloquer les coordonnées pour une même demande. */
 export const MAX_CONTACT_UNLOCKS_PER_REQUEST = 5;
 
 /**
@@ -8,6 +10,37 @@ export const MAX_CONTACT_UNLOCKS_PER_REQUEST = 5;
  * Conservé pour les imports existants (SMS, bannières).
  */
 export const MAX_ACCEPTED_ARTISANS_PER_AUCTION = MAX_CONTACT_UNLOCKS_PER_REQUEST;
+
+/** Plafond effectif pour une demande (défaut = max plateforme si absent). */
+export function resolveMaxContactArtisans(
+  request?: Pick<WorkRequest, "maxContactArtisans"> | null
+): number {
+  const n = request?.maxContactArtisans;
+  if (
+    typeof n === "number" &&
+    Number.isInteger(n) &&
+    n >= MIN_CONTACT_ARTISANS &&
+    n <= MAX_CONTACT_UNLOCKS_PER_REQUEST
+  ) {
+    return n;
+  }
+  return MAX_CONTACT_UNLOCKS_PER_REQUEST;
+}
+
+/** Parse formulaire / API → 1..5 ou null si invalide. */
+export function parseMaxContactArtisans(raw: unknown): number | null {
+  const n =
+    typeof raw === "number" ? raw : Number(String(raw ?? "").trim());
+  if (
+    !Number.isFinite(n) ||
+    !Number.isInteger(n) ||
+    n < MIN_CONTACT_ARTISANS ||
+    n > MAX_CONTACT_UNLOCKS_PER_REQUEST
+  ) {
+    return null;
+  }
+  return n;
+}
 
 /**
  * Autorisation de mise en contact (issue de l’acceptation des CG).
@@ -44,20 +77,23 @@ export function formatAcceptedArtisanSlots(
   accepted: number,
   max: number = MAX_ACCEPTED_ARTISANS_PER_AUCTION
 ): string {
-  const n = Math.max(0, Math.min(accepted, max));
-  return `${n} / ${max}`;
+  const safeMax = max > 0 ? max : MAX_ACCEPTED_ARTISANS_PER_AUCTION;
+  const n = Math.max(0, Math.min(accepted, safeMax));
+  return `${n} / ${safeMax}`;
 }
 
 export function remainingAcceptSlots(
   accepted: number,
   max: number = MAX_ACCEPTED_ARTISANS_PER_AUCTION
 ): number {
-  return Math.max(0, max - Math.max(0, accepted));
+  const safeMax = max > 0 ? max : MAX_ACCEPTED_ARTISANS_PER_AUCTION;
+  return Math.max(0, safeMax - Math.max(0, accepted));
 }
 
 export function isAcceptSlotsFull(
   accepted: number,
   max: number = MAX_ACCEPTED_ARTISANS_PER_AUCTION
 ): boolean {
-  return accepted >= max;
+  const safeMax = max > 0 ? max : MAX_ACCEPTED_ARTISANS_PER_AUCTION;
+  return accepted >= safeMax;
 }

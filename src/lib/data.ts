@@ -116,17 +116,17 @@ export const FAQ_ITEMS = [
   {
     question: "Le service est-il gratuit pour les particuliers ?",
     answer:
-      "Oui. Publier une demande de travaux est gratuit et sans engagement. Artipascher ne prend aucune commission ni pourcentage sur vos travaux.",
+      "Oui. Publier une demande de travaux est gratuit et sans engagement. Nord Artisan Pro ne prend aucune commission ni pourcentage sur vos travaux.",
   },
   {
-    question: "Comment fonctionne Artipascher ?",
+    question: "Comment fonctionne Nord Artisan Pro ?",
     answer:
       "Vous publiez une annonce décrivant vos travaux (éventuellement avec des critères : ancienneté, note Google). Les artisans vérifiés du Nord-Pas-de-Calais qui correspondent peuvent débloquer vos coordonnées pour vous contacter, visiter le chantier et vous envoyer un devis directement.",
   },
   {
-    question: "Artipascher couvre quelles zones ?",
+    question: "Nord Artisan Pro couvre quelles zones ?",
     answer:
-      "Artipascher est spécialisé dans le Nord-Pas-de-Calais : départements Nord (59) et Pas-de-Calais (62). Lille, Roubaix, Tourcoing, Valenciennes, Dunkerque, Douai, Lens, Arras et environs.",
+      "Nord Artisan Pro est spécialisé dans le Nord-Pas-de-Calais : départements Nord (59) et Pas-de-Calais (62). Lille, Roubaix, Tourcoing, Valenciennes, Dunkerque, Douai, Lens, Arras et environs.",
   },
   {
     question: "Comment demander des travaux ?",
@@ -141,7 +141,7 @@ export const FAQ_ITEMS = [
   {
     question: "Pourquoi seuls les artisans inscrits au RCS sont visibles ?",
     answer:
-      "Artipascher ne met en relation qu’avec des entreprises du bâtiment inscrites au registre du commerce. Chaque SIRET est contrôlé auprès du registre national. Les structures non immatriculées ne peuvent pas débloquer de contacts.",
+      "Nord Artisan Pro ne met en relation qu’avec des entreprises du bâtiment inscrites au registre du commerce. Chaque SIRET est contrôlé auprès du registre national. Les structures non immatriculées ne peuvent pas débloquer de contacts.",
   },
   {
     question: "Combien de temps reste visible une annonce ?",

@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-export const ADMIN_SESSION_COOKIE = "artipascher_admin_session";
+export const ADMIN_SESSION_COOKIE = "nap_admin_session";
 
 export function getAdminPassword(): string {
   return process.env.ADMIN_PASSWORD ?? "artipascher2026";

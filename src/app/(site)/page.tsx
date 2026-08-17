@@ -30,7 +30,7 @@ const STEPS = [
   {
     title: "Comparez leurs propositions",
     description:
-      "Les artisans vous contactent (visite, devis hors plateforme). Vous gardez la main — Artipascher ne prend aucune commission.",
+      "Les artisans vous contactent (visite, devis hors plateforme). Vous gardez la main — Nord Artisan Pro ne prend aucune commission.",
   },
 ];
 
@@ -47,7 +47,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_50%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <p className="mb-4 inline-block rounded-full bg-white/10 px-4 py-1 text-sm font-medium backdrop-blur">
-            Artipascher · 100&nbsp;% Nord-Pas-de-Calais · 59 / 62
+            Nord Artisan Pro · 100&nbsp;% Nord-Pas-de-Calais · 59 / 62
           </p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             Jusqu&apos;à 5 artisans vérifiés pour vos travaux
@@ -94,7 +94,7 @@ export default async function HomePage() {
       <section className="border-y border-slate-200 bg-white py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mb-8 text-center">
-            <h2 className="text-2xl font-bold text-slate-900">Découvrez Artipascher en action</h2>
+            <h2 className="text-2xl font-bold text-slate-900">Découvrez Nord Artisan Pro en action</h2>
             <p className="mt-2 text-slate-600">
               Présentation animée avec l&apos;interface réelle du site
             </p>

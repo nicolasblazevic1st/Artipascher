@@ -7,7 +7,7 @@ import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatPublicLocation } from "@/lib/client-address";
-import { MAX_CONTACT_UNLOCKS_PER_REQUEST } from "@/lib/contact-slots";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import { formatLocation } from "@/lib/data";
 import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
@@ -74,7 +74,7 @@ export default async function ProChantierDetailPage({ params }: Props) {
 
       <ContactSlotsBanner
         accepted={unlockCount}
-        max={MAX_CONTACT_UNLOCKS_PER_REQUEST}
+        max={resolveMaxContactArtisans(workRequest)}
         className="mt-4"
       />
 

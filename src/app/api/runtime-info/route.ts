@@ -8,7 +8,7 @@ import {
 
 /**
  * Diagnostic déploiement (pas de secret).
- * Ouvrir : https://dev.artipascher.fr/api/runtime-info
+ * Ouvrir : https://dev.nord-artisan-pro.com/api/runtime-info
  */
 export async function GET(request: NextRequest) {
   const host =

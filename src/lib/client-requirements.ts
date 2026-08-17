@@ -8,6 +8,7 @@ import type { WorkRequest } from "./store-types";
 export type ClientRequirementSource = Pick<
   WorkRequest,
   | "category"
+  | "maxContactArtisans"
   | "preferEstablishedCompany"
   | "minGoogleRating"
   | "requireActiveCompany"
@@ -24,6 +25,18 @@ export function listVisibleClientRequirements(
     items.push(`Métier : ${request.category.trim()}`);
   }
 
+  if (
+    typeof request.maxContactArtisans === "number" &&
+    request.maxContactArtisans >= 1 &&
+    request.maxContactArtisans <= 5
+  ) {
+    items.push(
+      request.maxContactArtisans === 1
+        ? "1 artisan maximum pour ce chantier"
+        : `Jusqu’à ${request.maxContactArtisans} artisans pour ce chantier`
+    );
+  }
+
   if (request.requireActiveCompany !== false) {
     items.push("Entreprise active (pas fermée)");
   }
@@ -37,9 +50,9 @@ export function listVisibleClientRequirements(
   }
 
   if (request.preferEstablishedCompany === true) {
-    items.push("Entreprise créée il y a plus de 2 ans");
+    items.push("Entreprise créée il y a 5 ans ou plus (5+)");
   } else if (request.preferEstablishedCompany === false) {
-    items.push("Entreprise créée il y a moins de 2 ans");
+    items.push("Entreprise créée il y a moins de 5 ans (0 à 5)");
   }
 
   const minRating = parseMinGoogleRating(request.minGoogleRating);

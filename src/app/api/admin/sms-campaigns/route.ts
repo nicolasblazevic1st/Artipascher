@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "@/lib/contact-slots";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import {
   approvePendingReviewBatch,
   pauseAcquisitionCampaign,
@@ -47,7 +47,7 @@ export async function GET() {
         department: wr?.department,
         auctionId: wr?.auctionId,
         acceptedCount,
-        maxAccepted: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+        maxAccepted: resolveMaxContactArtisans(wr),
         sentToday,
       };
     })

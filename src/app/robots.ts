@@ -1,22 +1,28 @@
 import type { MetadataRoute } from "next";
+import { BRAND } from "@/lib/brand";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://artipascher.fr";
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ?? BRAND.siteUrl
+  ).replace(/\/$/, "");
 
   return {
-    rules: {
-      userAgent: "*",
-      allow: [
-        "/",
-        "/favicon.ico",
-        "/favicon-48.png",
-        "/favicon-96.png",
-        "/icon.png",
-        "/apple-icon.png",
-        "/brand-icon.svg",
-        "/site.webmanifest",
-      ],
-    },
-    sitemap: `${baseUrl.replace(/\/$/, "")}/sitemap.xml`,
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: [
+          "/admin",
+          "/admin/",
+          "/pro",
+          "/pro/",
+          "/api",
+          "/api/",
+          "/particulier/espace",
+          "/particulier/espace/",
+        ],
+      },
+    ],
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

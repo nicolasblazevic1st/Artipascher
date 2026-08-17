@@ -1,3 +1,4 @@
+import { companyAgeCohort } from "./artisans-for-chantier";
 import { getArtisansNearWorkRequest } from "./artisans-nearby";
 import { addEnrichmentJob, listArtisans, upsertArtisan } from "./artisans-db";
 import {
@@ -12,7 +13,7 @@ import {
 } from "./places-quota";
 import { absoluteUrl } from "./share";
 import { formatWorkPrestationLabel } from "./pricing-tiers";
-import { MAX_ACCEPTED_ARTISANS_PER_AUCTION } from "./contact-slots";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import { isMarketingSmsWindowOpen, normalizeFrenchMobile, sendSms } from "./sms";
 import {
   addSmsCampaign,
@@ -45,8 +46,6 @@ import type {
   SmsCohort,
   WorkRequest,
 } from "./store-types";
-
-const TWO_YEARS_MS = 2 * 365.25 * 24 * 60 * 60 * 1000;
 
 export interface SmsCandidate {
   siret: string;
@@ -88,7 +87,7 @@ export interface SmsCampaignPreviewDetailed {
   auctionUrl: string;
   defaultMessage: string;
   campaignSize: number;
-  /** Pref. client : true = ≥ 2 ans, false = &lt; 2 ans, undefined = mix (historique). */
+  /** Pref. client : true = 5+, false = 0 à 5 ans, undefined = pas de filtre âge. */
   preferEstablishedCompany?: boolean;
   geoFound: boolean;
   totalNearby: number;
@@ -126,10 +125,7 @@ export type PreviewSmsCampaignOptions = {
 };
 
 function isYoungCompany(createdAt?: string): boolean {
-  if (!createdAt) return false;
-  const t = new Date(createdAt).getTime();
-  if (Number.isNaN(t)) return false;
-  return Date.now() - t < TWO_YEARS_MS;
+  return companyAgeCohort(createdAt) === "young";
 }
 
 export function buildDefaultCampaignMessage(request: WorkRequest): string {
@@ -139,7 +135,7 @@ export function buildDefaultCampaignMessage(request: WorkRequest): string {
   const url = absoluteUrl(auctionPath);
   const prestation = formatWorkPrestationLabel(request);
   return (
-    `Artipascher : ${prestation} a ${request.city} (${request.department}). ` +
+    `Nord Artisan Pro : ${prestation} a ${request.city} (${request.department}). ` +
     `Details : ${url}`
   );
 }
@@ -157,15 +153,15 @@ function cohortTargets(
   campaignSize: number,
   preferEstablishedCompany?: boolean
 ): { young: number; established: number } {
-  // Filtres exclusifs selon le choix client (plus de mix 50/50 ou 2/3).
+  // Filtres exclusifs selon le choix client — jamais de mix 0–5 / 5+.
   if (preferEstablishedCompany === true) {
     return { young: 0, established: campaignSize };
   }
   if (preferEstablishedCompany === false) {
     return { young: campaignSize, established: 0 };
   }
-  const young = Math.ceil(campaignSize / 2);
-  return { young, established: campaignSize - young };
+  // Historique sans préférence : pas de quota d'âge.
+  return { young: campaignSize, established: campaignSize };
 }
 
 function toCandidate(
@@ -374,12 +370,21 @@ async function mergeProspectPool(
     return a.companyName.localeCompare(b.companyName, "fr");
   });
 
+  const preferAge = options?.preferEstablishedCompany;
+  const ageFilteredPool =
+    preferAge === undefined
+      ? pool
+      : pool.filter((row) => {
+          const young = isYoungCompany(row.companyCreatedAt);
+          return preferAge === false ? young : !young;
+        });
+
   const artisanBySiret = new Map(
     (await listArtisans({ status: "active" })).map((a) => [a.siret, a])
   );
   const placesEnabled = isGooglePlacesEnabled();
   const maxAttempts = Math.min(80, Math.max(24, targetPhones * 6));
-  const phonesBefore = pool.filter((r) => Boolean(r.phone)).length;
+  const phonesBefore = ageFilteredPool.filter((r) => Boolean(r.phone)).length;
 
   let attempts = 0;
   let phonesFound = 0;
@@ -416,16 +421,14 @@ async function mergeProspectPool(
     return phone;
   }
 
-  function trySelect(row: ProspectPoolRow, phone: string, respectMix: boolean): boolean {
+  function trySelect(row: ProspectPoolRow, phone: string): boolean {
     if (selectedSirets.has(row.siret)) return false;
     if (selectedSirets.size >= targetPhones) return false;
 
     const cohort = classifyCohort(undefined, row.companyCreatedAt);
-    if (respectMix) {
-      if (cohort === "new_young" && nYoung >= targets.young) return false;
-      if (cohort === "new_established" && nEstablished >= targets.established) {
-        return false;
-      }
+    if (cohort === "new_young" && nYoung >= targets.young) return false;
+    if (cohort === "new_established" && nEstablished >= targets.established) {
+      return false;
     }
 
     selectedSirets.add(row.siret);
@@ -435,8 +438,9 @@ async function mergeProspectPool(
     return true;
   }
 
-  // 1) Du plus proche au plus loin : obtenir un tél (Places si besoin) et remplir N.
-  for (const row of pool) {
+  // Du plus proche au plus loin : obtenir un tél (Places si besoin) et remplir N.
+  // Pas de mix : la préférence client filtre déjà le pool / les quotas.
+  for (const row of ageFilteredPool) {
     if (selectedSirets.size >= targetPhones) break;
 
     let phone = row.phone;
@@ -444,23 +448,11 @@ async function mergeProspectPool(
       phone = await tryPlacesPhone(row);
     }
     if (!phone) continue;
-    trySelect(row, phone, true);
+    trySelect(row, phone);
   }
 
-  // 2) Compléter N en ignorant le mix si besoin (toujours plus proche d’abord).
-  if (selectedSirets.size < targetPhones) {
-    for (const row of pool) {
-      if (selectedSirets.size >= targetPhones) break;
-      if (selectedSirets.has(row.siret)) continue;
-      let phone = row.phone;
-      if (!phone) phone = await tryPlacesPhone(row);
-      if (!phone) continue;
-      trySelect(row, phone, false);
-    }
-  }
-
-  // 3) Catalogue UI : autres joignables connus (plus loin) + sans tél restants.
-  for (const row of pool) {
+  // Catalogue UI : autres joignables connus (plus loin) + sans tél restants.
+  for (const row of ageFilteredPool) {
     if (selectedSirets.has(row.siret)) continue;
     if (row.phone) {
       withPhone.push(toCandidate(row, row.phone, false));
@@ -704,7 +696,7 @@ export async function approvePendingReviewBatch(
     : 0;
 
   // Objectif atteint entre la veille et maintenant → annuler, pas d’OVH.
-  if (acceptedCount >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+  if (acceptedCount >= resolveMaxContactArtisans(request)) {
     const cancelled = await updateSmsCampaign(batchId, {
       status: "cancelled",
       sentAt: new Date().toISOString(),
@@ -831,7 +823,7 @@ export async function approvePendingReviewBatch(
         sentOnLastDate: sentToday + sentCount,
       });
       const acceptedAfter = await acceptedCountForRequest(request);
-      if (acceptedAfter >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+      if (acceptedAfter >= resolveMaxContactArtisans(request)) {
         acquisition =
           (await setSmsAcquisitionStatus(acq.id, "completed")) ?? acquisition;
       }
@@ -861,7 +853,7 @@ export async function cancelPendingBatchesIfObjectivesMet(): Promise<{
     const request = await getWorkRequestById(batch.workRequestId);
     if (!request?.auctionId) continue;
     const accepted = await countContactUnlocksForAuction(request.auctionId);
-    if (accepted < MAX_ACCEPTED_ARTISANS_PER_AUCTION) continue;
+    if (accepted < resolveMaxContactArtisans(request)) continue;
 
     await updateSmsCampaign(batch.id, {
       status: "cancelled",
@@ -1062,7 +1054,7 @@ export async function runAcquisitionCampaignTick(
   }
 
   const acceptedCount = await acceptedCountForRequest(request);
-  if (acceptedCount >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+  if (acceptedCount >= resolveMaxContactArtisans(request)) {
     const updated =
       (await setSmsAcquisitionStatus(acquisition.id, "completed")) ??
       acquisition;
@@ -1171,7 +1163,7 @@ export async function runAcquisitionCampaignTick(
   });
 
   const acceptedAfter = await acceptedCountForRequest(request);
-  if (acceptedAfter >= MAX_ACCEPTED_ARTISANS_PER_AUCTION) {
+  if (acceptedAfter >= resolveMaxContactArtisans(request)) {
     updated =
       (await setSmsAcquisitionStatus(acquisition.id, "completed")) ?? updated;
   } else if (batch.sentCount === 0) {

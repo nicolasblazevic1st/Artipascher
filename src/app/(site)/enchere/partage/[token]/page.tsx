@@ -7,7 +7,7 @@ import ProjectPhotos from "@/components/ProjectPhotos";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { resolveAuctionEndsAt } from "@/lib/auction-duration";
 import { formatPublicLocation } from "@/lib/client-address";
-import { MAX_CONTACT_UNLOCKS_PER_REQUEST } from "@/lib/contact-slots";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import {
   buildShareText,
   absoluteUrl,
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       type: "website",
       locale: "fr_FR",
-      siteName: "Artipascher",
+      siteName: "Nord Artisan Pro",
       ...(image ? { images: [{ url: image, alt: title }] } : {}),
     },
     twitter: {
@@ -97,7 +97,7 @@ export default async function SharedChantierPage({ params }: Props) {
 
         <ContactSlotsBanner
           accepted={unlockCount}
-          max={MAX_CONTACT_UNLOCKS_PER_REQUEST}
+          max={resolveMaxContactArtisans(request)}
           className="mt-5"
         />
 
@@ -120,7 +120,7 @@ export default async function SharedChantierPage({ params }: Props) {
         )}
 
         <p className="mt-8 text-center text-xs text-slate-500">
-          Artipascher · Mise en relation artisans · Nord 59 / Pas-de-Calais 62
+          Nord Artisan Pro · Mise en relation artisans · Nord 59 / Pas-de-Calais 62
         </p>
       </div>
     </div>

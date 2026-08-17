@@ -6,7 +6,7 @@ import { LEGAL_HOST, LEGAL_PUBLISHER } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Mentions légales",
   description:
-    "Mentions légales du site Artipascher — éditeur, hébergeur et contacts.",
+    "Mentions légales du site Nord Artisan Pro — éditeur, hébergeur et contacts.",
 };
 
 export default function MentionsLegalesPage() {
@@ -87,14 +87,14 @@ export default function MentionsLegalesPage() {
       <section>
         <h2>4. Nature du service</h2>
         <p className="mt-3">
-          Artipascher est une plateforme numérique de mise en relation entre
+          Nord Artisan Pro est une plateforme numérique de mise en relation entre
           particuliers (ou clients professionnels) et artisans du bâtiment
           inscrits au registre du commerce, opérant principalement dans les
           départements du Nord (59) et du Pas-de-Calais (62), via la
           publication d&apos;annonces et le déblocage de contacts.
         </p>
         <p className="mt-3">
-          Artipascher agit en qualité d&apos;<strong>intermédiaire technique</strong>{" "}
+          Nord Artisan Pro agit en qualité d&apos;<strong>intermédiaire technique</strong>{" "}
           et ne réalise pas les travaux. Le contrat de travaux et le paiement du
           chantier sont conclus directement entre le client et l&apos;artisan
           retenu, hors de la plateforme.

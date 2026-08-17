@@ -30,8 +30,8 @@ interface Stats {
 }
 
 const AGE_LABELS: Record<CompanyAgeCohort, string> = {
-  young: "< 2 ans",
-  established: "≥ 2 ans",
+  young: "0–5 ans",
+  established: "5+",
 };
 
 interface Props {
@@ -110,8 +110,8 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
             className="ml-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
           >
             <option value="all">Tous</option>
-            <option value="young">&lt; 2 ans</option>
-            <option value="established">≥ 2 ans</option>
+            <option value="young">0–5 ans</option>
+            <option value="established">5+</option>
           </select>
         </label>
         <label className="text-xs text-slate-600">
@@ -167,10 +167,10 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
               <strong>{stats.total}</strong> trouvés
             </span>
             <span>
-              &lt; 2 ans : <strong>{stats.young}</strong>
+              0–5 ans : <strong>{stats.young}</strong>
             </span>
             <span>
-              ≥ 2 ans : <strong>{stats.established}</strong>
+              5+ : <strong>{stats.established}</strong>
             </span>
             <span>
               avec tél. : <strong>{stats.withPhone}</strong>

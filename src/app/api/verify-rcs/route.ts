@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       {
         ...result,
         valid: false,
-        error: `Artipascher est réservé aux entreprises du Nord (départements ${ALLOWED_DEPARTMENTS.join(" et ")}). Siège détecté : ${result.department ?? "inconnu"}.`,
+        error: `Nord Artisan Pro est réservé aux entreprises du Nord (départements ${ALLOWED_DEPARTMENTS.join(" et ")}). Siège détecté : ${result.department ?? "inconnu"}.`,
       },
       { status: 422 }
     );

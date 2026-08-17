@@ -79,12 +79,12 @@ pm2 delete artipascher-dev 2>/dev/null || true
 pm2 start ecosystem.staging.config.cjs
 pm2 save
 
-echo "==> Nginx dev.artipascher.fr (Basic Auth)"
+echo "==> Nginx dev.nord-artisan-pro.com (Basic Auth)"
 bash deploy/apply-dev-basic-auth.sh
 
 echo ""
 echo "✅ Staging prêt"
 echo "   App      : http://127.0.0.1:3002 (local VPS)"
-echo "   Accès    : https://dev.artipascher.fr (Basic Auth — deploy/dev-basic-auth)"
+echo "   Accès    : https://dev.nord-artisan-pro.com (Basic Auth — deploy/dev-basic-auth)"
 echo "   Deploy   : cd $STAGING_DIR && bash deploy/deploy-staging.sh"
 echo "   Branche  : $BRANCH"

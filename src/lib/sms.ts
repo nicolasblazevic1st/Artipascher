@@ -81,7 +81,7 @@ async function sendViaOvh(
   const appSecret = process.env.OVH_APP_SECRET!;
   const consumerKey = process.env.OVH_CONSUMER_KEY!;
   const serviceName = process.env.OVH_SMS_SERVICE_NAME!;
-  const sender = process.env.OVH_SMS_SENDER ?? "Artipascher";
+  const sender = process.env.OVH_SMS_SENDER ?? "NordArtPro";
 
   // Marketing : STOP obligatoire (noStopClause false).
   // Transactionnel : pas de STOP pour éviter de blacklister un client après un OTP.

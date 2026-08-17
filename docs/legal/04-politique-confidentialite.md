@@ -1,4 +1,4 @@
-# Politique de confidentialité — Artipascher
+# Politique de confidentialité — Nord Artisan Pro
 
 Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
@@ -6,10 +6,10 @@ Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
 
 ## 1. Responsable du traitement
 
-Artipascher / [À COMPLÉTER : dénomination sociale]  
-Adresse : [À COMPLÉTER]  
-SIRET : [À COMPLÉTER]  
-Email : contact@artipascher.fr
+Nord Artisan Pro / Nicolas BLAZEVIC
+Adresse : 26 rue de Santes, 59320 Haubourdin
+SIRET : 108 238 924 00014
+Email : contact@nord-artisan-pro.com
 
 ## 2. Données collectées
 
@@ -17,7 +17,7 @@ Email : contact@artipascher.fr
 - Compte Pro : société, SIRET, email, téléphone, documents, métiers, crédits/enchères
 - Prospects acquisition : données d'entreprises (SIRET, NAF, ville, téléphone enrichi le cas échéant, sources publiques / enrichissement) pour prospection SMS et suivi d'opposition (STOP / déjà contacté)
 - Campagnes SMS : historique des lots / envois (destinataires, statut, date), lien éventuel avec une offre publiée, indicateurs d'attribution (ex. inscription après SMS)
-- Paiements : via Stripe (pas de numéro de carte complet stocké par Artipascher)
+- Paiements : via Stripe (pas de numéro de carte complet stocké par Nord Artisan Pro)
 - Technique : logs, cookies nécessaires, analytics si consentement
 - Communications : emails / SMS transactionnels (OTP, alertes) et SMS marketing (invitation Professionnels / prospects)
 
@@ -30,7 +30,7 @@ Email : contact@artipascher.fr
 
 ## 4. SMS
 
-Les SMS sont acheminés via le prestataire **OVH SMS** (API). Expéditeur alphanumérique lorsque disponible (ex. Artipascher).
+Les SMS sont acheminés via le prestataire **OVH SMS** (API). Expéditeur alphanumérique lorsque disponible (ex. NordArtPro).
 
 - **Transactionnels** (Clients) : code de vérification mobile ; alerte lorsqu'un Artisan demande le contact. Peuvent ne pas comporter de clause STOP afin d'éviter un désabonnement involontaire après un code ou une alerte
 - **Marketing** (Professionnels / prospects) : information sur des chantiers / invitation à s'inscrire. Campagnes manuelles ou **automatiques** lorsqu'une demande Client est validée et publiée comme offre ; éventuellement découpées en lots quotidiens jusqu'à atteinte de l'objectif de mise en relation (ex. 5 contacts)
@@ -56,7 +56,7 @@ Mesures raisonnables (accès, hash mots de passe, hébergement, hash des codes O
 ## 9. Droits
 
 Accès, rectification, effacement, limitation, opposition, portabilité, directives post-mortem.  
-Contact : contact@artipascher.fr  
+Contact : contact@nord-artisan-pro.com  
 Réclamation : CNIL (https://www.cnil.fr)
 
 ## 10. Mineurs

@@ -58,9 +58,9 @@ if [ "$STABLE" != "1" ]; then
 fi
 
 echo "==> vérifs (port $PORT)"
-TITLE="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${PORT}/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
-RUNTIME="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${PORT}/api/runtime-info" || true)"
-BUILD_TXT="$(curl -s -H "Host: dev.artipascher.fr" "http://127.0.0.1:${PORT}/build-id.txt" || true)"
+TITLE="$(curl -s -H "Host: dev.nord-artisan-pro.com" "http://127.0.0.1:${PORT}/" | grep -o '<title>[^<]*</title>' | head -1 || true)"
+RUNTIME="$(curl -s -H "Host: dev.nord-artisan-pro.com" "http://127.0.0.1:${PORT}/api/runtime-info" || true)"
+BUILD_TXT="$(curl -s -H "Host: dev.nord-artisan-pro.com" "http://127.0.0.1:${PORT}/build-id.txt" || true)"
 echo "   title: ${TITLE:-'(vide)'}"
 echo "   runtime-info: $RUNTIME"
 echo "   build-id: ${BUILD_TXT:-'(vide)'}"
@@ -75,4 +75,4 @@ if ! echo "$RUNTIME" | grep -q '"beta":false'; then
   exit 1
 fi
 
-echo "✅ Staging OK — https://dev.artipascher.fr (backend :$PORT)"
+echo "✅ Staging OK — https://dev.nord-artisan-pro.com (backend :$PORT)"

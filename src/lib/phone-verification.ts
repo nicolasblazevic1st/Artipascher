@@ -95,7 +95,7 @@ export async function sendClientPhoneVerificationSms(params: {
     };
   }
 
-  const message = `Artipascher : votre code de verification est ${code}. Valable 10 minutes.`;
+  const message = `Nord Artisan Pro : votre code de verification est ${code}. Valable 10 minutes.`;
   const sms = await sendSms(phoneE164, message, "transactional");
   if (!sms.ok) {
     // Ne pas laisser un challenge + cooldown si le SMS n'est jamais parti.
@@ -236,7 +236,7 @@ export async function sendGuestPhoneVerificationSms(params: {
     };
   }
 
-  const message = `Artipascher : votre code de verification est ${code}. Valable 10 minutes.`;
+  const message = `Nord Artisan Pro : votre code de verification est ${code}. Valable 10 minutes.`;
   const sms = await sendSms(phoneE164, message, "transactional");
   if (!sms.ok) {
     await deletePhoneVerificationChallenge({

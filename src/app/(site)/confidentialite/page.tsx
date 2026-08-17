@@ -6,7 +6,7 @@ import { LEGAL_HOST, LEGAL_PUBLISHER } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
   description:
-    "Politique de confidentialité et protection des données personnelles — Artipascher.",
+    "Politique de confidentialité et protection des données personnelles — Nord Artisan Pro.",
 };
 
 export default function ConfidentialitePage() {
@@ -105,7 +105,7 @@ export default function ConfidentialitePage() {
         <h2>4. SMS</h2>
         <p className="mt-3">
           Les SMS sont acheminés via le prestataire <strong>OVH SMS</strong>{" "}
-          (API). Expéditeur alphanumérique lorsque disponible (ex. Artipascher).
+          (API). Expéditeur alphanumérique lorsque disponible (ex. NordArtPro).
         </p>
         <ul>
           <li>

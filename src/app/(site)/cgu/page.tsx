@@ -6,7 +6,7 @@ import { LEGAL_PUBLISHER } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Conditions générales d'utilisation",
   description:
-    "Conditions générales d'utilisation de la plateforme Artipascher.",
+    "Conditions générales d'utilisation de la plateforme Nord Artisan Pro.",
 };
 
 export default function CguPage() {
@@ -68,7 +68,7 @@ export default function CguPage() {
       <section>
         <h2>3. Rôle de la Plateforme</h2>
         <p className="mt-3">
-          Artipascher est un <strong>intermédiaire de mise en relation</strong>.
+          Nord Artisan Pro est un <strong>intermédiaire de mise en relation</strong>.
           Elle met à disposition des outils numériques permettant :
         </p>
         <ul>
@@ -83,12 +83,12 @@ export default function CguPage() {
           </li>
         </ul>
         <p className="mt-3">
-          <strong>Artipascher n&apos;est pas</strong> entreprise de travaux,
+          <strong>Nord Artisan Pro n&apos;est pas</strong> entreprise de travaux,
           maître d&apos;œuvre, assureur, ni partie au contrat de chantier. Le
           prix des travaux, le devis formalisé, le planning, la facturation et
           le paiement du chantier sont conclus{" "}
           <strong>directement entre le Client et l&apos;Artisan</strong>, hors
-          Plateforme. Artipascher ne perçoit{" "}
+          Plateforme. Nord Artisan Pro ne perçoit{" "}
           <strong>aucune commission</strong> sur le montant des travaux.
         </p>
       </section>
@@ -151,8 +151,8 @@ export default function CguPage() {
           </li>
           <li>
             Le Client peut indiquer une préférence d&apos;
-            <strong>ancienneté d&apos;entreprise</strong> (&lt;&nbsp;2&nbsp;ans
-            ou ≥&nbsp;2&nbsp;ans) : ce critère filtre les Artisans qui peuvent
+            <strong>ancienneté d&apos;entreprise</strong> (0&nbsp;à&nbsp;5&nbsp;ans
+            ou 5&nbsp;ans et plus) : ce critère filtre les Artisans qui peuvent
             le contacter / être prospectés.
           </li>
           <li>
@@ -178,12 +178,12 @@ export default function CguPage() {
         <ul>
           <li>
             Une demande de travaux peut être validée par l&apos;équipe
-            Artipascher avant publication de l&apos;annonce.
+            Nord Artisan Pro avant publication de l&apos;annonce.
           </li>
           <li>
             Les devis sont établis{" "}
             <strong>directement entre le Client et l&apos;Artisan</strong>{" "}
-            (visite, échange hors Plateforme). Artipascher ne centralise pas de
+            (visite, échange hors Plateforme). Nord Artisan Pro ne centralise pas de
             devis concurrentiels.
           </li>
           <li>
@@ -374,7 +374,7 @@ export default function CguPage() {
           Conformément aux articles L.611-1 et suivants du Code de la
           consommation, le Client consommateur peut recourir gratuitement à un
           médiateur de la consommation. Coordonnées du médiateur :{" "}
-          <strong>[À COMPLÉTER : nom et site du médiateur]</strong>.
+          <strong>{LEGAL_PUBLISHER.consumerMediator}</strong>.
         </p>
       </section>
 

@@ -106,7 +106,7 @@ export default function BidPanel({
         if (session.authenticated) {
           await refreshEligibility();
         }
-        setSuccess("Enchère enregistrée après paiement de 1 €.");
+        setSuccess(`Enchère enregistrée après débit de ${BID_FEE_EUR} € (solde).`);
         window.history.replaceState({}, "", window.location.pathname);
       }
     }

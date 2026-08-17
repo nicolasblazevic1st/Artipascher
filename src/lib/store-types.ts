@@ -290,16 +290,16 @@ export interface WorkRequest {
   workOptionOtherDescription?: string;
   description: string;
   /** Prix de départ de l'enchère. Peut venir du client, d'un devis précédent,
-   *  ou du premier devis Artipascher validé. */
+   *  ou du premier devis Nord Artisan Pro validé. */
   startPrice?: number;
   /**
    * Comment le prix de départ est déterminé :
    * - client : montant fixé par le particulier
-   * - first_quote : fixé au premier devis Artipascher validé
+   * - first_quote : fixé au premier devis Nord Artisan Pro validé
    * - unspecified : non précisé (équivalent pratique au 1er devis)
    */
   startPriceMode?: "client" | "first_quote" | "unspecified";
-  /** Renseigné lorsque le prix de départ provient d'un devis Artipascher validé. */
+  /** Renseigné lorsque le prix de départ provient d'un devis Nord Artisan Pro validé. */
   startPriceQuoteId?: string;
   /** Durée d'annonce / mise en contact en heures. */
   auctionDurationHours: number;
@@ -308,9 +308,14 @@ export interface WorkRequest {
    */
   auctionDurationDays?: number;
   /**
+   * Nombre max d’artisans autorisés à débloquer le contact (choix client, 1–5).
+   * undefined (historique) = 5.
+   */
+  maxContactArtisans?: number;
+  /**
    * Ancienneté d'entreprise exigée pour les contacts / SMS :
-   * - true : uniquement ≥ 2 ans
-   * - false : uniquement &lt; 2 ans (accepte les jeunes entreprises)
+   * - true : uniquement 5+ (≥ 5 ans)
+   * - false : uniquement 0 à 5 ans (&lt; 5 ans)
    * - undefined (historique) : pas de filtre d'âge
    */
   preferEstablishedCompany?: boolean;

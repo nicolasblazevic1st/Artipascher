@@ -68,7 +68,7 @@ export function buildShareText(
   request: Pick<WorkRequest, "category" | "city" | "department" | "startPrice">
 ): string {
   const title = buildShareTitle(request);
-  return `${title}. Artisans du Nord-Pas-de-Calais : débloquez le contact sur Artipascher pour joindre le client.`;
+  return `${title}. Artisans du Nord-Pas-de-Calais : débloquez le contact sur Nord Artisan Pro pour joindre le client.`;
 }
 
 export function buildFacebookShareUrl(pageUrl: string): string {

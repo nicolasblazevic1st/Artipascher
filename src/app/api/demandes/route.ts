@@ -23,6 +23,7 @@ import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
 } from "@/lib/phone-format";
+import { parseMaxContactArtisans } from "@/lib/contact-slots";
 import { parseMinGoogleRating } from "@/lib/google-rating";
 import { clientPhoneIsVerified } from "@/lib/phone-verification";
 import {
@@ -84,6 +85,18 @@ export async function POST(request: NextRequest) {
       preferEstablishedRaw === "true" ||
       preferEstablishedRaw === "1" ||
       preferEstablishedRaw === "on";
+    const maxContactArtisans = parseMaxContactArtisans(
+      formData.get("maxContactArtisans")
+    );
+    if (maxContactArtisans == null) {
+      return NextResponse.json(
+        {
+          error:
+            "Indiquez combien d’artisans peuvent vous contacter (de 1 à 5).",
+        },
+        { status: 400 }
+      );
+    }
     const minGoogleRating = parseMinGoogleRating(
       formData.get("minGoogleRating")
     );
@@ -334,6 +347,7 @@ export async function POST(request: NextRequest) {
       description: description.trim(),
       auctionDurationHours,
       auctionDurationDays: Math.max(1, Math.round(auctionDurationHours / 24)),
+      maxContactArtisans,
       preferEstablishedCompany,
       minGoogleRating,
       requireActiveCompany: true,

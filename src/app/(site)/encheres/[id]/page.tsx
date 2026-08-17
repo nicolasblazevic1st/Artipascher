@@ -9,7 +9,7 @@ import TestBanner from "@/components/TestBanner";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { shouldShowDemoBanner } from "@/lib/demo-banners";
 import { formatPublicLocation } from "@/lib/client-address";
-import { MAX_CONTACT_UNLOCKS_PER_REQUEST } from "@/lib/contact-slots";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import {
   CATEGORY_LABELS,
@@ -89,7 +89,7 @@ export default async function ChantierDetailPage({ params }: Props) {
 
         <ContactSlotsBanner
           accepted={unlockCount}
-          max={MAX_CONTACT_UNLOCKS_PER_REQUEST}
+          max={resolveMaxContactArtisans(workRequest)}
           className="mt-5"
         />
 

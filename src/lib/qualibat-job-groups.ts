@@ -6,7 +6,7 @@ import type { ProTradeSelection } from "./store-types";
 export interface TradeGroup {
   id: string;
   label: string;
-  /** Catégorie interne Artipascher (enchères, matching). */
+  /** Catégorie interne Nord Artisan Pro (enchères, matching). */
   category: TradeCategory;
 }
 

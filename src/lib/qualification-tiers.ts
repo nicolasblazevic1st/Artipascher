@@ -49,7 +49,7 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
       {
         id: "nord",
         label: "Établissement actif en Nord (59) ou Pas-de-Calais (62)",
-        help: "Artipascher ne met en relation qu'avec des entreprises locales. Réactivité, connaissance du terrain et SAV plus simple.",
+        help: "Nord Artisan Pro ne met en relation qu'avec des entreprises locales. Réactivité, connaissance du terrain et SAV plus simple.",
       },
     ],
   },

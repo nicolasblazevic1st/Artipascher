@@ -9,7 +9,7 @@ export const CONTACT_ONLY_MODE = true;
 export const ANTI_CHURN_RETIRED = true;
 
 export const AUCTIONS_RETIRED_MESSAGE =
-  "Les enchères inversées ne sont plus proposées. Artipascher se concentre sur la mise en relation (déblocage des coordonnées client).";
+  "Les enchères inversées ne sont plus proposées. Nord Artisan Pro se concentre sur la mise en relation (déblocage des coordonnées client).";
 
 export const DEVIS_RETIRED_MESSAGE =
   "Les devis plateforme ne sont plus proposés. Après déblocage, échangez et devissez directement avec le client.";

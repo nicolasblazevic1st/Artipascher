@@ -28,7 +28,7 @@ export function isAcquisitionNaf(
   return isMappedToPlatformCategory(nafCode);
 }
 
-/** NAF déjà relié à une catégorie travaux Artipascher. */
+/** NAF déjà relié à une catégorie travaux Nord Artisan Pro. */
 export function isMappedToPlatformCategory(nafCode: string): boolean {
   return PLATFORM_CATEGORY_NAF.has(normalizeNafCode(nafCode));
 }

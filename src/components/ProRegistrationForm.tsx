@@ -561,7 +561,7 @@ export default function ProRegistrationForm() {
                     <p className="font-semibold">Garantie décennale par métier</p>
                     <p className="mt-1 text-brand-800">
                       Votre assurance décennale doit <strong>nommer chaque activité</strong>{" "}
-                      que vous exercez. Artipascher vérifie chaque attestation pour protéger
+                      que vous exercez. Nord Artisan Pro vérifie chaque attestation pour protéger
                       le client et votre responsabilité.
                     </p>
                   </div>

@@ -93,8 +93,8 @@ type ListRow =
 
 const COHORT_LABELS: Record<SmsCohort, string> = {
   returning: "Déjà contactés",
-  new_young: "< 2 ans",
-  new_established: "≥ 2 ans",
+  new_young: "0–5 ans",
+  new_established: "5+",
 };
 
 const STATUS_LABELS: Record<SmsCampaign["status"], string> = {
@@ -124,7 +124,7 @@ function LoadingBar({ label }: { label: string }) {
 
 const ACQ_STATUS_LABELS: Record<SmsAcquisitionCampaign["status"], string> = {
   active: "Active",
-  completed: "Terminée (5/5)",
+  completed: "Terminée (objectif atteint)",
   paused: "En pause",
   exhausted: "Épuisée (plus de destinataires)",
 };
@@ -597,6 +597,8 @@ export default function AdminSmsCampaignsPage() {
 
   const acceptedForSelected =
     acquisitions.find((a) => a.workRequestId === selectedId)?.acceptedCount ?? 0;
+  const maxForSelected =
+    acquisitions.find((a) => a.workRequestId === selectedId)?.maxAccepted ?? 5;
   const reviewBeforeSend = settings?.requireReviewBeforeSend !== false;
   const excludedCount =
     (preview?.platformCount ?? 0) + (preview?.alreadyMarketedCount ?? 0);
@@ -1028,7 +1030,10 @@ export default function AdminSmsCampaignsPage() {
                     {excludedCount} exclus
                   </li>
                   <li>
-                    Objectif contacts : <strong>{acceptedForSelected}/5</strong>
+                    Objectif contacts :{" "}
+                    <strong>
+                      {acceptedForSelected}/{maxForSelected}
+                    </strong>
                   </li>
                   <li>
                     Mode :{" "}
@@ -1040,13 +1045,13 @@ export default function AdminSmsCampaignsPage() {
                   </li>
                 </ul>
                 <p className="mt-2 text-xs text-slate-500">
-                  Mix proposé : {preview.suggestedCounts.new_young} &lt;2 ans /{" "}
-                  {preview.suggestedCounts.new_established} ≥2 ans
+                  Cible âge : {preview.suggestedCounts.new_young} × 0–5 ans /{" "}
+                  {preview.suggestedCounts.new_established} × 5+
                   {preview.preferEstablishedCompany === true
-                    ? " (client : uniquement ≥2 ans)"
+                    ? " (client : uniquement 5+)"
                     : preview.preferEstablishedCompany === false
-                      ? " (client : uniquement &lt;2 ans)"
-                      : ""}
+                      ? " (client : uniquement 0–5 ans)"
+                      : " (pas de filtre âge)"}
                   {" · "}sélection actuelle : {selectedByCohort.new_young} /{" "}
                   {selectedByCohort.new_established}
                   {!preview.geoFound ? " · géo approximative" : ""}

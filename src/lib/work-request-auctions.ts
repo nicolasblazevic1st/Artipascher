@@ -2,6 +2,7 @@ import { resolveAuctionEndsAt } from "./auction-duration";
 import { computeCurrentPrice } from "./auctions";
 import {
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+  resolveMaxContactArtisans,
 } from "./contact-slots";
 import {
   SAMPLE_AUCTIONS,
@@ -122,7 +123,7 @@ export async function workRequestToAuctionCard(
     currentPrice,
     bidCount: bids.length,
     acceptedArtisansCount,
-    maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+    maxAcceptedArtisans: resolveMaxContactArtisans(request),
     status: active ? "active" : "ended",
     endsAt: endsAt ?? new Date().toISOString(),
     isTest: request.isTest === true,
@@ -225,7 +226,7 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
       createdAt: request.createdAt,
       bidCount: bids.length,
       acceptedArtisansCount,
-      maxAcceptedArtisans: MAX_ACCEPTED_ARTISANS_PER_AUCTION,
+      maxAcceptedArtisans: resolveMaxContactArtisans(request),
       feesCollected: bids.reduce((sum, b) => sum + b.feeEur, 0),
       source: "workRequest",
       isTest: request.isTest === true,

@@ -5,7 +5,7 @@ import ManageCookiesButton from "@/components/ManageCookiesButton";
 export const metadata: Metadata = {
   title: "Politique de cookies",
   description:
-    "Informations sur les cookies utilisés par Artipascher et gestion de votre consentement.",
+    "Informations sur les cookies utilisés par Nord Artisan Pro et gestion de votre consentement.",
 };
 
 export default function CookiesPage() {
@@ -34,7 +34,7 @@ export default function CookiesPage() {
             Qui dépose les cookies ?
           </h2>
           <p className="mt-3">
-            Les cookies décrits ci-dessous sont déposés par Artipascher, ou par
+            Les cookies décrits ci-dessous sont déposés par Nord Artisan Pro, ou par
             Google pour la mesure d&apos;audience lorsque vous y avez consenti.
           </p>
         </section>
@@ -60,7 +60,7 @@ export default function CookiesPage() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 <tr>
                   <td className="px-4 py-3 font-mono text-xs">
-                    artipascher_client_session
+                    nap_client_session
                   </td>
                   <td className="px-4 py-3">
                     Maintien de la session de l&apos;espace particulier
@@ -69,7 +69,7 @@ export default function CookiesPage() {
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-mono text-xs">
-                    artipascher_pro_session
+                    nap_pro_session
                   </td>
                   <td className="px-4 py-3">
                     Maintien de la session de l&apos;espace professionnel
@@ -78,7 +78,7 @@ export default function CookiesPage() {
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-mono text-xs">
-                    artipascher_admin_session
+                    nap_admin_session
                   </td>
                   <td className="px-4 py-3">
                     Maintien de la session d&apos;administration
@@ -87,7 +87,7 @@ export default function CookiesPage() {
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-mono text-xs">
-                    artipascher_cookie_consent
+                    nap_cookie_consent
                   </td>
                   <td className="px-4 py-3">
                     Mémorisation de vos choix cookies (stockage local du
@@ -167,10 +167,10 @@ export default function CookiesPage() {
           <p className="mt-3">
             Pour toute question relative aux cookies :{" "}
             <a
-              href="mailto:contact@artipascher.fr"
+              href="mailto:contact@nord-artisan-pro.com"
               className="font-medium text-brand-700 underline underline-offset-2"
             >
-              contact@artipascher.fr
+              contact@nord-artisan-pro.com
             </a>
             . Voir aussi les{" "}
             <Link

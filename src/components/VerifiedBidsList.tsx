@@ -47,7 +47,7 @@ export default function VerifiedBidsList({
   if (bids.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
-        Aucune offre pour le moment. Les pros paient 1 € pour chaque enchère.
+        Aucune offre pour le moment.
       </div>
     );
   }

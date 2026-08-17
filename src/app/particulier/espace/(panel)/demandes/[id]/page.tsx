@@ -156,12 +156,20 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Artisans maximum</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              {typeof request.maxContactArtisans === "number"
+                ? request.maxContactArtisans
+                : 5}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Ancienneté souhaitée</dt>
             <dd className="mt-1 text-sm font-semibold">
               {request.preferEstablishedCompany === true
-                ? "Uniquement +2 ans"
+                ? "Uniquement 5+"
                 : request.preferEstablishedCompany === false
-                  ? "Uniquement −2 ans"
+                  ? "Uniquement 0 à 5 ans"
                   : "Peu importe"}
             </dd>
           </div>

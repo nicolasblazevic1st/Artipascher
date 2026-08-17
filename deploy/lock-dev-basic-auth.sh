@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Protège dev.artipascher.fr par Basic Auth Nginx (plus de lock IP).
+# Protège dev.nord-artisan-pro.com par Basic Auth Nginx (plus de lock IP).
 # Usage : sudo bash deploy/lock-dev-basic-auth.sh
 #
 # Identifiants (premier trouvé gagne) :
 #   - ARTIPASCHER_DEV_AUTH_USER + ARTIPASCHER_DEV_AUTH_PASS
 #   - deploy/dev-basic-auth  (une ligne : user:password)
 #
-# Le site prod (artipascher.fr) n'est pas modifié.
+# Le site prod (nord-artisan-pro.com) n'est pas modifié.
 # Stripe webhook + ACME restent sans Basic Auth.
 
 set -euo pipefail
@@ -20,7 +20,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AUTH_FILE="${ROOT}/deploy/dev-basic-auth"
 NGINX_SITE="/etc/nginx/sites-available/artipascher-dev"
 HTPASSWD_FILE="/etc/nginx/.htpasswd-artipascher-dev"
-DOMAIN="dev.artipascher.fr"
+DOMAIN="dev.nord-artisan-pro.com"
 CERT="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
 KEY="/etc/letsencrypt/live/${DOMAIN}/privkey.pem"
 WEBROOT="/var/www/html"
@@ -144,6 +144,6 @@ systemctl reload nginx
 
 echo ""
 echo "✅ ${DOMAIN} protégé par Basic Auth (user: ${AUTH_USER})"
-echo "   Prod artipascher.fr : inchangée"
+echo "   Prod nord-artisan-pro.com : inchangée"
 echo "   Webhook Stripe + ACME : sans mot de passe"
 echo "   Changer le mdp : éditer deploy/dev-basic-auth puis relancer ce script"

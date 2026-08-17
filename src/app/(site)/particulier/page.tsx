@@ -76,7 +76,7 @@ export default async function ParticulierPage() {
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h1 className="text-4xl font-bold">Réalisez vos travaux en toute simplicité</h1>
           <p className="mt-4 text-lg text-brand-100">
-            Publiez votre demande dans le Nord-Pas-de-Calais. Artipascher ne prend
+            Publiez votre demande dans le Nord-Pas-de-Calais. Nord Artisan Pro ne prend
             rien : aucun frais, aucune commission sur vos travaux. Les
             professionnels vous contactent après avoir débloqué vos coordonnées.
           </p>
@@ -111,7 +111,7 @@ export default async function ParticulierPage() {
 
       <section className="bg-white py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-3xl font-bold">Pourquoi Artipascher ?</h2>
+          <h2 className="text-center text-3xl font-bold">Pourquoi Nord Artisan Pro ?</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <FeatureCard key={f.title} {...f} />
