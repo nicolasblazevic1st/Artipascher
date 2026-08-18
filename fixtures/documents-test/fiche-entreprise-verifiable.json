@@ -1,0 +1,57 @@
+{
+  "source": {
+    "avisSirene": "https://avis-situation-sirene.insee.fr/ (PDF API INSEE)",
+    "modeleDecennale": "https://entreprendre.service-public.gouv.fr/vosdroits/R44868",
+    "registre": "https://recherche-entreprises.api.gouv.fr/"
+  },
+  "company": {
+    "companyName": "RAMERY TRAVAUX PUBLICS",
+    "siret": "61712011800170",
+    "siren": "617120118",
+    "city": "ERQUINGHEM-LYS",
+    "postalCode": "59193",
+    "department": "59",
+    "address": "740 RUE DU BAC 59193 ERQUINGHEM-LYS",
+    "naf": "42.11Z",
+    "legalRepresentatives": [
+      {
+        "fullName": "BENOIT CHENE",
+        "role": "Autre",
+        "kind": "personne_physique"
+      },
+      {
+        "fullName": "VINCENT JARRY",
+        "role": "Directeur général délégué",
+        "kind": "personne_physique"
+      },
+      {
+        "fullName": "HUGUES RIFFLART",
+        "role": "Commissaire aux comptes suppléant",
+        "kind": "personne_physique"
+      },
+      {
+        "fullName": "JEAN-LOUIS ROBART",
+        "role": "Directeur général délégué",
+        "kind": "personne_physique"
+      },
+      {
+        "fullName": "CTN-AUDIT",
+        "role": "Commissaire aux comptes titulaire",
+        "kind": "personne_morale"
+      },
+      {
+        "fullName": "RAMERY",
+        "role": "Président de SAS",
+        "kind": "personne_morale"
+      }
+    ]
+  },
+  "stripeCardTest": {
+    "number": "4242 4242 4242 4242",
+    "expiry": "12/34",
+    "cvc": "123",
+    "suggestedBillingNameMatch": "BENOIT CHENE",
+    "suggestedBillingNameMismatch": "Camille Testeur Inconnu"
+  },
+  "warning": "Les attestations RC/decennale generees sont des SPECIMENS de test Nord Artisan Pro (pas de vraie police). L'avis SIRENE et le modele Service-Public sont des documents officiels publics."
+}

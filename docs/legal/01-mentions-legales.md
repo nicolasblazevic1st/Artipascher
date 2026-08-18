@@ -1,25 +1,25 @@
-# Mentions légales — Artipascher
+# Mentions légales — Nord Artisan Pro
 
-Dernière mise à jour : 6 août 2026 · Version 1.0-brouillon
+Dernière mise à jour : 17 août 2026 · Version 1.4-brouillon
 
-> Brouillon à faire relire par un avocat. Champs `[À COMPLÉTER]` à renseigner.
+> Brouillon à faire relire par un avocat. Adresse siège + médiateur encore à finaliser.
 
 ## 1. Éditeur du site
 
-Le site **artipascher.fr** est édité par :
+Le site **nord-artisan-pro.com** est édité par :
 
-- **Nom commercial :** Artipascher
-- **Dénomination sociale :** [À COMPLÉTER]
-- **Forme juridique :** [À COMPLÉTER]
-- **Capital social :** [À COMPLÉTER]
-- **SIRET :** [À COMPLÉTER]
-- **Immatriculation :** [À COMPLÉTER]
-- **Siège / adresse :** [À COMPLÉTER]
-- **Email :** contact@artipascher.fr
+- **Nom commercial :** Nord Artisan Pro
+- **Dénomination sociale :** Nicolas BLAZEVIC
+- **Forme juridique :** Entrepreneur individuel
+- **Capital social :** N/A
+- **SIRET :** 108 238 924 00014
+- **Immatriculation :** Immatriculé au Registre National des Entreprises (RNE) — SIREN 108 238 924
+- **Siège / adresse :** 26 rue de Santes, 59320 Haubourdin
+- **Email :** contact@nord-artisan-pro.com
 
 ## 2. Directeur de la publication
 
-[À COMPLÉTER : prénom NOM]
+Nicolas BLAZEVIC
 
 ## 3. Hébergement
 
@@ -33,9 +33,9 @@ Données applicatives hébergées en France (Nord).
 
 ## 4. Nature du service
 
-Artipascher est une plateforme de mise en relation entre particuliers (ou clients professionnels) et artisans du bâtiment (RCS), principalement en 59 et 62, via enchères inversées.
+Nord Artisan Pro est une plateforme de mise en relation entre particuliers (ou clients professionnels) et artisans du bâtiment (RCS), principalement en 59 et 62, via enchères inversées.
 
-Artipascher est un **intermédiaire technique** : le contrat de travaux et le paiement du chantier sont conclus directement entre client et artisan. Aucune commission sur le montant des travaux.
+Nord Artisan Pro est un **intermédiaire technique** : le contrat de travaux et le paiement du chantier sont conclus directement entre client et artisan. Aucune commission sur le montant des travaux.
 
 ## 5. Propriété intellectuelle
 
@@ -50,4 +50,4 @@ Artipascher est un **intermédiaire technique** : le contrat de travaux et le pa
 
 ## 7. Contact
 
-contact@artipascher.fr
+contact@nord-artisan-pro.com

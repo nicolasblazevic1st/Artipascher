@@ -19,7 +19,7 @@ export interface NearbyBusiness {
   source: "gouv" | "platform";
   /** Date de création SIRENE (YYYY-MM-DD) si disponible. */
   companyCreatedAt?: string;
-  /** Disponible uniquement pour les artisans inscrits sur Artipascher. */
+  /** Disponible uniquement pour les artisans inscrits sur Nord Artisan Pro. */
   phone?: string;
   email?: string;
   proId?: string;
@@ -84,9 +84,8 @@ async function fetchGouvNearby(params: {
   lon: number;
   radiusKm: number;
   nafCodes: string[];
-  department: "59" | "62";
 }): Promise<NearbyBusiness[]> {
-  const { lat, lon, radiusKm, nafCodes, department } = params;
+  const { lat, lon, radiusKm, nafCodes } = params;
   const seen = new Set<string>();
   const results: NearbyBusiness[] = [];
 
@@ -116,7 +115,9 @@ async function fetchGouvNearby(params: {
         const establishments = company.matching_etablissements ?? [];
         for (const est of establishments) {
           if (est.etat_administratif !== "A") continue;
-          if (departmentFromEstablishment(est) !== department) continue;
+          const estDept = departmentFromEstablishment(est);
+          // Périmètre plateforme : 59 + 62 (pas de filtre = dept du chantier).
+          if (estDept !== "59" && estDept !== "62") continue;
           if (!est.siret || seen.has(est.siret)) continue;
 
           seen.add(est.siret);
@@ -125,7 +126,7 @@ async function fetchGouvNearby(params: {
             siren: company.siren,
             name: company.nom_complet ?? "Entreprise",
             city: est.libelle_commune ?? "",
-            department,
+            department: estDept,
             nafCode: est.activite_principale ?? naf,
             companyCreatedAt: company.date_creation,
             source: "gouv",
@@ -155,8 +156,11 @@ export async function findNearbyBusinesses(
     Number(process.env.NEARBY_BUSINESS_RADIUS_KM ?? DEFAULT_RADIUS_KM);
 
   const store = await readStore();
+  // Pros 59+62 (acquisition SMS exclut déjà la plateforme ; utile pour d’autres usages).
   const platformMatches = platformProsToNearby(
-    store.proRegistrations.filter((p) => p.department === options.department),
+    store.proRegistrations.filter(
+      (p) => p.department === "59" || p.department === "62"
+    ),
     options.category
   );
 
@@ -173,7 +177,6 @@ export async function findNearbyBusinesses(
     lon: coords.lon,
     radiusKm,
     nafCodes,
-    department: options.department,
   });
 
   const gouvOnly = gouvMatches.filter((b) => !platformSirets.has(b.siret));

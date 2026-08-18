@@ -1,6 +1,6 @@
 /**
  * Supprime de data/artisans-enrichment.json les établissements
- * dont le NAF principal n'est pas dans l'univers acquisition (BTP + adjacents).
+ * dont le NAF principal n'est pas l'un des 22 codes des 16 métiers plateforme.
  *
  * Usage: node scripts/purge-hors-btp.mjs [--dry-run]
  */
@@ -31,14 +31,6 @@ const CATEGORY_NAF = {
   "Nettoyage / Multi-services": ["81.21Z", "81.22Z", "81.29B"],
 };
 
-const ADJACENT = new Set([
-  "25.11Z",
-  "81.21Z",
-  "81.22Z",
-  "81.29B",
-  "81.30Z",
-]);
-
 const PLATFORM_CATEGORY_NAF = new Set(
   Object.values(CATEGORY_NAF)
     .flat()
@@ -52,17 +44,9 @@ function normalizeNaf(naf) {
     .replace(/\s/g, "");
 }
 
-function isSectionF(naf) {
-  return naf.startsWith("41.") || naf.startsWith("42.") || naf.startsWith("43.");
-}
-
+/** Uniquement les 22 NAF des 16 métiers. */
 function isAcquisitionNaf(naf) {
-  const n = normalizeNaf(naf);
-  if (!n) return false;
-  if (isSectionF(n)) return true;
-  if (ADJACENT.has(n)) return true;
-  if (PLATFORM_CATEGORY_NAF.has(n)) return true;
-  return false;
+  return PLATFORM_CATEGORY_NAF.has(normalizeNaf(naf));
 }
 
 function computeNafSecondaryForArtisans(artisans) {
@@ -123,7 +107,7 @@ async function main() {
   console.log(
     dryRun ? "Mode DRY-RUN" : "Mode WRITE",
     `\nAvant: ${before} établissements`,
-    `\nSupprimés (hors BTP): ${removed}`,
+    `\nSupprimés (hors 22 NAF métiers): ${removed}`,
     `\nAprès: ${after} (${activeAfter} actifs)`
   );
 

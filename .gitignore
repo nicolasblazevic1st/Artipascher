@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 .cursor/
+*.traineddata
+
+# tesseract leftover language packs (not used)
 
 # debug
 npm-debug.log*
@@ -38,10 +41,14 @@ yarn-error.log*
 # local data store (inscriptions / demandes)
 data/store.json
 data/admin-login-log.json
+deploy/allowed-dev-ip
+deploy/dev-basic-auth
 data/sirene/
 data/acquisition-naf-extras.json
 data/exports/
 data/*.tmp
+data/bodacc-scan-progress.json
+data/bodacc-active-procedures.json
 tmp/
 
 # uploads particuliers

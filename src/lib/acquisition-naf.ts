@@ -1,75 +1,43 @@
 /**
- * Univers NAF pour la base d’acquisition artisans (SMS / admin),
- * plus large que les catégories UI plateforme.
+ * Univers NAF pour la base d’acquisition artisans (SMS / admin).
+ * Strictement limité aux codes des 16 métiers plateforme (~22 NAF).
  */
 
-import { CONSTRUCTION_NAF_CODES } from "./artisans-types";
-import { CATEGORY_NAF_CODES } from "./naf-codes";
+import {
+  CATEGORY_NAF_CODES,
+  listPlatformCategoryNafCodes,
+} from "./naf-codes";
 import { getNafLabel, normalizeNafCode } from "./naf-trade-groups";
 
-/** NAF adjacents hors section F déjà utilisés dans les catégories plateforme. */
-export const ADJACENT_ACQUISITION_NAF = [
-  "25.11Z",
-  "81.21Z",
-  "81.22Z",
-  "81.29B",
-  "81.30Z",
-] as const;
+const PLATFORM_CATEGORY_NAF = new Set(listPlatformCategoryNafCodes());
 
-/** Allowlist mémoire (complétée au runtime via extras fichier / admin). */
-export const EXTRA_ACQUISITION_NAF_CODES: string[] = [];
-
-const PLATFORM_CATEGORY_NAF = new Set(
-  Object.values(CATEGORY_NAF_CODES)
-    .flat()
-    .map((c) => normalizeNafCode(c))
-);
-
-const ADJACENT_SET = new Set(
-  ADJACENT_ACQUISITION_NAF.map((c) => normalizeNafCode(c))
-);
-
-function extraSet(extras: readonly string[] = EXTRA_ACQUISITION_NAF_CODES) {
-  return new Set(extras.map((c) => normalizeNafCode(c)).filter(Boolean));
-}
-
-/** Section F construction : 41.*, 42.*, 43.* */
+/** @deprecated Conservé pour compat scripts ; l’acquisition n’utilise plus toute la section F. */
 export function isSectionFNaf(nafCode: string): boolean {
   const n = normalizeNafCode(nafCode);
   return n.startsWith("41.") || n.startsWith("42.") || n.startsWith("43.");
 }
 
+/**
+ * NAF autorisé en acquisition = uniquement les 22 codes des 16 métiers.
+ * Les extras admin / section F large ne sont plus acceptés.
+ */
 export function isAcquisitionNaf(
   nafCode: string,
-  extras: readonly string[] = EXTRA_ACQUISITION_NAF_CODES
+  _extras: readonly string[] = []
 ): boolean {
-  const n = normalizeNafCode(nafCode);
-  if (!n) return false;
-  if (isSectionFNaf(n)) return true;
-  if (ADJACENT_SET.has(n)) return true;
-  if (PLATFORM_CATEGORY_NAF.has(n)) return true;
-  if (extraSet(extras).has(n)) return true;
-  return false;
+  return isMappedToPlatformCategory(nafCode);
 }
 
-/** NAF déjà relié à une catégorie travaux Artipascher. */
+/** NAF déjà relié à une catégorie travaux Nord Artisan Pro. */
 export function isMappedToPlatformCategory(nafCode: string): boolean {
   return PLATFORM_CATEGORY_NAF.has(normalizeNafCode(nafCode));
 }
 
-/**
- * Codes exacts pour sync API paginée (liste F historique + catégories + adjacents + extras).
- * L’import stock utilise `isAcquisitionNaf` (préfixes 41/42/43).
- */
+/** Codes exacts pour sync API SIRENE / import stock. */
 export function listAcquisitionNafCodesForApi(
-  extras: readonly string[] = EXTRA_ACQUISITION_NAF_CODES
+  _extras: readonly string[] = []
 ): string[] {
-  const set = new Set<string>();
-  for (const c of PLATFORM_CATEGORY_NAF) set.add(c);
-  for (const c of ADJACENT_SET) set.add(c);
-  for (const c of extraSet(extras)) set.add(c);
-  for (const c of CONSTRUCTION_NAF_CODES) set.add(normalizeNafCode(c));
-  return [...set].sort();
+  return listPlatformCategoryNafCodes();
 }
 
 export function describeNaf(nafCode: string): {
@@ -86,3 +54,10 @@ export function describeNaf(nafCode: string): {
     acquisition: isAcquisitionNaf(code),
   };
 }
+
+/** Exposé pour diagnostics / UI. */
+export function platformCategoryNafCount(): number {
+  return PLATFORM_CATEGORY_NAF.size;
+}
+
+export { CATEGORY_NAF_CODES, listPlatformCategoryNafCodes };

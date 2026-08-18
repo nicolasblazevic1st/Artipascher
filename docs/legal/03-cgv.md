@@ -1,33 +1,40 @@
-# Conditions générales de vente (CGV) — Artipascher
+# Conditions générales de vente (CGV) — Nord Artisan Pro
 
-Dernière mise à jour : 6 août 2026 · Version 1.0-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.5-brouillon
 
-> Brouillon à faire relire par un avocat. CGV destinées aux **professionnels** (vente de crédits).
+> Brouillon à faire relire par un avocat. CGV destinées aux **professionnels** (vente de mises en contact à l'unité).
 
 ## 1. Objet
 
-Vente de **crédits numériques** permettant d'utiliser des services payants de la plateforme Artipascher (B2B). Ne régit pas le contrat de travaux Client/Artisan.
+Vente de **mises en contact** (déblocage des coordonnées Client) sur la plateforme Nord Artisan Pro (B2B). Ne régit pas le contrat de travaux Client/Artisan.
 
 Voir aussi les CGU.
 
 ## 2. Produits
 
-- 1 crédit = 1 € (selon régime fiscal affiché au paiement)
-- Packs : 1, 5, 10, 20 crédits
-- Usages typiques : déblocage contact 1 € ; dépôt enchère 1 €
-- Crédits non remboursables en espèces (sauf obligation légale), sans valeur hors plateforme
+- Paiement **unitaire** au moment du déblocage (pas de packs / forfaits de solde à l'achat)
+- Tarif de référence typique : **20 €** (TTC ou HT selon affichage au paiement)
+- Ticket du chantier : **15 € / 17,50 € / 20 € / 25 €** selon l'annonce
+- Un solde résiduel (parrainage, remboursement, ancien crédit) peut être débité en priorité s'il est suffisant
+- Service non remboursable en espèces (sauf obligation légale), sans valeur hors plateforme
+
+## 2 bis. Nature du service payant
+
+Le montant payé pour un **déblocage** donne accès aux **coordonnées** d'un Client ayant autorisé le contact (acceptation manuelle ou option d'alerte SMS avec acceptation automatique, dans la limite prévue).
+
+**Ne sont pas garantis** : une réponse du Client, un devis signé, un chantier, ni un volume minimal d'offres à proximité du Professionnel.
 
 ## 3. Commande et paiement
 
-Depuis l'espace Professionnel via Stripe. Vente ferme après paiement réussi et crédit du solde.
+Depuis l'espace Professionnel, au moment du déblocage, via Stripe. Vente ferme après paiement réussi et mise à disposition des coordonnées. Compte Professionnel préalablement vérifié (registre, BODACC, RC pro, décennale — CGU).
 
 ## 4. Prix et facturation
 
-Prix affichés au moment de l'achat. Facture / justificatif selon modalités techniques. SIRET vendeur : [À COMPLÉTER].
+Prix affichés au moment du paiement. Facture / justificatif selon modalités techniques. SIRET vendeur : 108 238 924 00014 — 26 rue de Santes, 59320 Haubourdin.
 
 ## 5. Exécution
 
-Crédits crédités après validation du paiement.
+Coordonnées mises à disposition après validation du paiement (ou débit d'un solde résiduel suffisant), sous réserve de places de contact disponibles.
 
 ## 6. Rétractation
 
@@ -35,19 +42,23 @@ Ventes B2B : pas de droit de rétractation consommateur. Si consommateur excepti
 
 ## 7. Remboursements
 
-Pas de remboursement des crédits sauf dysfonctionnement imputable au Vendeur. Contact : contact@artipascher.fr.
+Pas de remboursement sauf **dysfonctionnement imputable au Vendeur** (ex. impossibilité technique d'accéder aux coordonnées après déblocage, coordonnées manifestement invalides du fait de la Plateforme).
 
-## 8. Validité des crédits
+L'absence de réponse du Client, l'absence d'offres dans une zone géographique, ou le refus ultérieur de travaux **ne constituent pas** un motif de remboursement.
 
-Pas d'expiration automatique sauf mention contraire ; possibilité de fixer une durée après information préalable.
+Contact : contact@nord-artisan-pro.com.
+
+## 8. Solde résiduel
+
+Pas d'expiration automatique sauf mention contraire ; possibilité de fixer une durée après information préalable. Non remboursable en espèces (sauf obligation légale).
 
 ## 9. Responsabilité
 
-Limitée au montant des crédits concernés (hors dommages indirects), dans les limites légales. Pas de responsabilité sur les travaux Client/Artisan.
+Limitée au montant de la mise en contact concernée (hors dommages indirects), dans les limites légales. Pas de responsabilité sur les travaux Client/Artisan ni sur le volume d'opportunités.
 
 ## 10. Données
 
-Traitement pour exécution de la vente, facturation, fraude (Stripe). contact@artipascher.fr
+Traitement pour exécution de la vente, facturation, fraude (Stripe). contact@nord-artisan-pro.com
 
 ## 11. Modification
 
@@ -59,4 +70,4 @@ Droit français. Tribunaux du siège du Vendeur (B2B), sous réserve d'ordre pub
 
 ## 13. Contact
 
-contact@artipascher.fr
+contact@nord-artisan-pro.com

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
-import ProSubmitQuoteForm from "@/components/pro/ProSubmitQuoteForm";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
 interface ClientContact {
@@ -11,6 +11,7 @@ interface ClientContact {
   lastName: string;
   email: string;
   phone: string;
+  phoneVerified?: boolean;
   address: string;
   postalCode: string;
   companyName?: string;
@@ -18,28 +19,28 @@ interface ClientContact {
   clientKind?: "individual" | "company";
 }
 
-type InterestStatus = "none" | "pending" | "accepted" | "refused" | "expired";
-
 interface Props {
   auctionId: string;
   publicLocation: string;
   requestedWorkStartDate?: string;
+  unlockPriceEur?: number;
 }
 
 export default function ClientContactPanel({
   auctionId,
   publicLocation,
   requestedWorkStartDate,
+  unlockPriceEur = UNLOCK_PRICE_EUR,
 }: Props) {
+  const priceLabel = formatUnlockPriceEur(unlockPriceEur);
   const [proLoggedIn, setProLoggedIn] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [contact, setContact] = useState<ClientContact | null>(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
-  const [interestLoading, setInterestLoading] = useState(false);
-  const [interestStatus, setInterestStatus] = useState<InterestStatus>("none");
   const [error, setError] = useState<string | null>(null);
+  const [showMatchModal, setShowMatchModal] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
   const fetchContact = useCallback(async () => {
@@ -51,16 +52,6 @@ export default function ClientContactPanel({
     }
   }, [auctionId]);
 
-  const fetchInterest = useCallback(async () => {
-    const res = await fetch("/api/pro/contact-requests");
-    if (!res.ok) return;
-    const data = await res.json();
-    const match = (data.requests ?? []).find(
-      (r: { auctionId: string; status: string }) => r.auctionId === auctionId
-    );
-    setInterestStatus(match ? (match.status as InterestStatus) : "none");
-  }, [auctionId]);
-
   useEffect(() => {
     async function init() {
       const sessionRes = await fetch("/api/pro/session");
@@ -69,7 +60,7 @@ export default function ClientContactPanel({
       if (session.companyName) setCompanyName(session.companyName);
 
       if (session.authenticated) {
-        await Promise.all([fetchContact(), fetchInterest()]);
+        await fetchContact();
       }
       setLoading(false);
 
@@ -80,28 +71,12 @@ export default function ClientContactPanel({
       }
     }
     init();
-  }, [auctionId, fetchContact, fetchInterest]);
-
-  async function handleInterest() {
-    setInterestLoading(true);
-    setError(null);
-    const res = await fetch("/api/pro/contact-requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ auctionId }),
-    });
-    const data = await res.json();
-    setInterestLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Impossible d'envoyer la demande.");
-      return;
-    }
-    setInterestStatus("pending");
-  }
+  }, [auctionId, fetchContact]);
 
   async function handleUnlock(demo = false) {
     setPaying(true);
     setError(null);
+    setShowMatchModal(false);
     const res = await fetch("/api/pro/unlock-contact", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -114,8 +89,20 @@ export default function ClientContactPanel({
       window.location.href = data.checkoutUrl;
       return;
     }
-    if (data.unlocked || data.alreadyUnlocked) {
+    if (res.ok || data.unlocked || data.alreadyUnlocked) {
       await fetchContact();
+      return;
+    }
+    if (data.needsMatch) {
+      setShowMatchModal(true);
+      return;
+    }
+    if (data.needsAccountSetup) {
+      setError(
+        typeof data.error === "string" && data.error.trim()
+          ? data.error
+          : "Votre compte n’est pas prêt à contacter un client. Complétez votre dossier."
+      );
       return;
     }
     setError(data.error ?? "Paiement impossible.");
@@ -127,7 +114,6 @@ export default function ClientContactPanel({
     setUnlocked(false);
     setContact(null);
     setCompanyName("");
-    setInterestStatus("none");
   }
 
   if (loading) {
@@ -140,70 +126,113 @@ export default function ClientContactPanel({
 
   if (unlocked && contact) {
     return (
-      <>
-        <section id="contact" className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <h2 className="text-lg font-semibold text-emerald-900">
-              Coordonnées client débloquées
-            </h2>
-            <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
-            Accès · 1 crédit
-            </span>
+      <section id="contact" className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold text-emerald-900">
+            Coordonnées client débloquées
+          </h2>
+          <span className="rounded-full bg-emerald-200 px-3 py-1 text-xs font-medium text-emerald-800">
+            Accès · {priceLabel}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-emerald-700">
+          Connecté en tant que {companyName}
+        </p>
+        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+          {contact.clientKind === "company" && contact.companyName && (
+            <div className="sm:col-span-2">
+              <dt className="text-emerald-600">Entreprise</dt>
+              <dd className="font-medium text-emerald-900">
+                {contact.companyName}
+                {contact.clientSiret ? ` · SIRET ${contact.clientSiret}` : ""}
+              </dd>
+            </div>
+          )}
+          <div>
+            <dt className="text-emerald-600">Nom</dt>
+            <dd className="font-medium text-emerald-900">
+              {contact.firstName} {contact.lastName}
+            </dd>
           </div>
-          <p className="mt-1 text-xs text-emerald-700">
-            Connecté en tant que {companyName}
-          </p>
-          <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-            {contact.clientKind === "company" && contact.companyName && (
-              <div className="sm:col-span-2">
-                <dt className="text-emerald-600">Entreprise</dt>
-                <dd className="font-medium text-emerald-900">
-                  {contact.companyName}
-                  {contact.clientSiret ? ` · SIRET ${contact.clientSiret}` : ""}
-                </dd>
-              </div>
-            )}
-            <div>
-              <dt className="text-emerald-600">Contact</dt>
-              <dd className="font-medium text-emerald-900">
-                {contact.firstName} {contact.lastName}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-emerald-600">Téléphone</dt>
-              <dd className="font-medium text-emerald-900">{contact.phone}</dd>
-            </div>
-            <div>
-              <dt className="text-emerald-600">Email</dt>
-              <dd className="font-medium text-emerald-900">{contact.email}</dd>
-            </div>
-            <div>
-              <dt className="text-emerald-600">Adresse</dt>
-              <dd className="font-medium text-emerald-900">
-                {contact.address}, {contact.postalCode}
-              </dd>
-            </div>
-          </dl>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mt-4 text-xs text-emerald-700 underline"
-          >
-            Se déconnecter
-          </button>
-        </section>
-        <ProSubmitQuoteForm auctionId={auctionId} />
-      </>
+          <div>
+            <dt className="text-emerald-600">Téléphone</dt>
+            <dd className="font-medium text-emerald-900">
+              <span className="inline-flex flex-wrap items-center gap-2">
+                {contact.phone}
+                {contact.phoneVerified && (
+                  <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+                    Vérifié SMS
+                  </span>
+                )}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-emerald-600">Email</dt>
+            <dd className="font-medium text-emerald-900">{contact.email}</dd>
+          </div>
+          <div>
+            <dt className="text-emerald-600">Adresse</dt>
+            <dd className="font-medium text-emerald-900">
+              {contact.address}
+              {contact.postalCode ? ` · ${contact.postalCode}` : ""}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-4 text-xs text-emerald-800">
+          Service livré : vous disposez des coordonnées. Contactez le client,
+          convenez d’une visite et envoyez votre devis directement (hors
+          plateforme).
+        </p>
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="mt-4 text-xs text-emerald-700 underline"
+        >
+          Se déconnecter
+        </button>
+      </section>
     );
   }
 
   return (
     <section id="contact" className="mt-8 rounded-xl border border-slate-200 bg-slate-50 p-6">
+      {showMatchModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          role="presentation"
+          onClick={() => setShowMatchModal(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="match-modal-title"
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              id="match-modal-title"
+              className="text-lg font-semibold text-slate-900"
+            >
+              Déblocage impossible
+            </h3>
+            <p className="mt-3 text-sm text-slate-600">
+              Vous ne répondez pas à une des exigences du client.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowMatchModal(false)}
+              className="mt-5 w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Les photos du projet restent visibles librement (sans crédit). Manifestez
-        d&apos;abord votre intérêt. Après acceptation du client, vous pourrez débloquer
-        les coordonnées pour 1 crédit ({UNLOCK_PRICE_EUR}&nbsp;€).
+        Débloquez les coordonnées pour {priceLabel} (paiement sécurisé au ticket
+        du chantier) si votre profil correspond aux critères du client.
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -250,12 +279,11 @@ export default function ClientContactPanel({
           ) : (
             <div className="mt-2 space-y-2 rounded-lg border border-slate-200 bg-white p-4">
               <ProInlineLoginForm
-                compact
                 onSuccess={async (name) => {
                   setProLoggedIn(true);
                   setCompanyName(name);
                   setShowLogin(false);
-                  await Promise.all([fetchContact(), fetchInterest()]);
+                  await fetchContact();
                 }}
               />
               <button
@@ -273,73 +301,27 @@ export default function ClientContactPanel({
           <p className="text-sm text-slate-600">
             Connecté : <strong>{companyName}</strong>
           </p>
-
-          {interestStatus === "none" && (
-            <button
-              type="button"
-              onClick={handleInterest}
-              disabled={interestLoading}
-              className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
-            >
-              {interestLoading ? "Envoi…" : "Je suis intéressé (gratuit)"}
-            </button>
-          )}
-
-          {interestStatus === "pending" && (
-            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Demande envoyée — en attente de la réponse du client (48&nbsp;h).
-            </p>
-          )}
-
-          {interestStatus === "refused" && (
-            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
-              Le client a décliné votre demande de contact.
-            </p>
-          )}
-
-          {interestStatus === "expired" && (
-            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
-              Votre demande a expiré sans réponse du client.
-            </p>
-          )}
-
-          {interestStatus === "accepted" && (
-            <>
-              <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                Le client a accepté. Vous pouvez débloquer les coordonnées.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleUnlock(false)}
-                disabled={paying}
-                className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
-              >
-                {paying
-                  ? "Traitement…"
-                  : `Débloquer · 1 crédit (${UNLOCK_PRICE_EUR} €)`}
-              </button>
-              {process.env.NODE_ENV === "development" && (
-                <button
-                  type="button"
-                  onClick={() => handleUnlock(true)}
-                  disabled={paying}
-                  className="block text-xs text-slate-500 underline"
-                >
-                  Mode démo (dev) — débloquer sans crédit
-                </button>
-              )}
-              <a
-                href="/pro/compte#credits"
-                className="block text-xs font-medium text-brand-700 underline"
-              >
-                Acheter des crédits
-              </a>
-            </>
-          )}
-
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => handleUnlock(false)}
+            disabled={paying}
+            className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 sm:w-auto sm:px-6"
+          >
+            {paying ? "Traitement…" : `Mise en contact · ${priceLabel}`}
+          </button>
+          {process.env.NODE_ENV === "development" && (
+            <button
+              type="button"
+              onClick={() => handleUnlock(true)}
+              disabled={paying}
+              className="block text-xs text-slate-500 underline"
+            >
+              Mode démo (dev) — débloquer sans paiement
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleLogout()}
             className="block text-xs text-slate-500 underline"
           >
             Se déconnecter

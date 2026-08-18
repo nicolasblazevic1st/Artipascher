@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
-import { CATEGORY_LABELS, formatLocation, formatPrice } from "@/lib/data";
-import { getProDashboardStats, getProForSession } from "@/lib/store";
-import { BID_FEE_EUR } from "@/lib/auctions";
+import { CATEGORY_LABELS, formatLocation } from "@/lib/data";
+import { getProDashboardStats, getProForSession, hasContactUnlock } from "@/lib/store";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
+import {
+  UNLOCK_PRICE_EUR,
+} from "@/lib/client-contacts";
+import {
+  MAX_CONTACT_UNLOCKS_PER_REQUEST,
+  remainingAcceptSlots,
+} from "@/lib/contact-slots";
 
 export default async function ProDashboardPage() {
   const session = await getProSession();
@@ -15,9 +22,17 @@ export default async function ProDashboardPage() {
     getEnrichedAuctions(session.proId),
   ]);
 
-  const winningCount = auctions.filter((a) => a.isWinning).length;
-  const openAuctions = auctions.filter((a) => !a.myBestBid);
-  const outbid = auctions.filter((a) => a.myBestBid && !a.isWinning);
+  const unlockFlags = await Promise.all(
+    auctions.map((a) => hasContactUnlock(session.proId, a.id))
+  );
+  const available = auctions.filter((a, i) => {
+    if (unlockFlags[i]) return false;
+    const left = remainingAcceptSlots(
+      a.acceptedArtisansCount ?? 0,
+      a.maxAcceptedArtisans ?? MAX_CONTACT_UNLOCKS_PER_REQUEST
+    );
+    return left > 0;
+  });
 
   return (
     <div>
@@ -26,36 +41,41 @@ export default async function ProDashboardPage() {
         Bienvenue, {pro?.companyName ?? session.companyName}
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Enchères actives" value={auctions.length} href="/pro/encheres" />
-        <StatCard label="Mes offres" value={stats.totalBids} href="/pro/mes-encheres" />
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard label="Offres ouvertes" value={auctions.length} href="/pro/encheres" />
         <StatCard
-          label="Meilleur prix actuel"
-          value={winningCount}
-          href="/pro/mes-encheres"
-          highlight={winningCount > 0}
+          label="Contacts débloqués"
+          value={stats.contactUnlocks}
+          href="/pro/contacts"
         />
-        <StatCard label="Contacts débloqués" value={stats.contactUnlocks} />
+        <StatCard
+          label="€ / contact"
+          value={UNLOCK_PRICE_EUR}
+          href="/pro/compte#credits"
+        />
       </div>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Enchères à saisir</h2>
+            <h2 className="font-semibold">Offres à contacter</h2>
             <Link href="/pro/encheres" className="text-sm text-brand-600">
               Voir tout →
             </Link>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Projets actifs sans votre offre · {BID_FEE_EUR} € par enchère
+            Matching · paiement au ticket (
+            {formatUnlockPriceEur(UNLOCK_PRICE_EUR)} typique) pour une mise en
+            contact
           </p>
-          {openAuctions.length === 0 ? (
+          {available.length === 0 ? (
             <p className="mt-4 text-sm text-slate-500">
-              Vous avez déjà enchéri sur toutes les enchères actives.
+              Aucune offre disponible pour le moment, ou toutes vos places
+              pertinentes sont déjà prises / débloquées.
             </p>
           ) : (
             <ul className="mt-4 space-y-3">
-              {openAuctions.slice(0, 4).map((a) => (
+              {available.slice(0, 4).map((a) => (
                 <li key={a.id} className="rounded-lg bg-slate-50 p-3 text-sm">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -65,15 +85,12 @@ export default async function ProDashboardPage() {
                         {CATEGORY_LABELS[a.category]}
                       </p>
                     </div>
-                    <span className="shrink-0 font-bold text-brand-700">
-                      {formatPrice(a.liveCurrentPrice)}
-                    </span>
                   </div>
                   <Link
                     href={`/pro/encheres/${a.id}`}
                     className="mt-2 inline-block text-xs font-medium text-brand-600"
                   >
-                    Enchérir →
+                    Débloquer le contact →
                   </Link>
                 </li>
               ))}
@@ -82,74 +99,26 @@ export default async function ProDashboardPage() {
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Offres à reprendre</h2>
-            <Link href="/pro/mes-encheres" className="text-sm text-brand-600">
-              Mes offres →
-            </Link>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            Enchères où vous avez été surenchéri
-          </p>
-          {outbid.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">
-              Aucune surenchère pour le moment.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {outbid.slice(0, 4).map((a) => (
-                <li
-                  key={a.id}
-                  className="rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm"
-                >
-                  <p className="font-medium">{a.title}</p>
-                  <p className="mt-1 text-slate-600">
-                    Votre offre : {formatPrice(a.myBestBid!)} · Actuel :{" "}
-                    <strong className="text-brand-700">
-                      {formatPrice(a.liveCurrentPrice)}
-                    </strong>
-                  </p>
-                  <Link
-                    href={`/pro/encheres/${a.id}`}
-                    className="mt-2 inline-block text-xs font-medium text-brand-600"
-                  >
-                    Repositionner →
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          <h2 className="font-semibold">Comment ça marche</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-600">
+            <li>Parcourez les offres qui matchent votre métier et votre zone.</li>
+            <li>
+              Mise en contact (15 à 25&nbsp;€ selon le ticket, paiement Stripe)
+              tant qu’il reste une place (max. 5 artisans).
+            </li>
+            <li>
+              Contactez le client, visitez le chantier et envoyez votre devis
+              directement (hors plateforme).
+            </li>
+          </ol>
+          <Link
+            href="/pro/encheres"
+            className="mt-4 inline-block text-sm font-medium text-brand-600"
+          >
+            Voir les offres →
+          </Link>
         </section>
       </div>
-
-      {stats.recentBids.length > 0 && (
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="font-semibold">Dernières offres</h2>
-          <ul className="mt-4 divide-y divide-slate-100">
-            {stats.recentBids.map((bid) => {
-              const auction = auctions.find((a) => a.id === bid.auctionId);
-              return (
-                <li
-                  key={bid.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {auction?.title ?? `Enchère #${bid.auctionId}`}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {new Date(bid.createdAt).toLocaleString("fr-FR")}
-                    </p>
-                  </div>
-                  <span className="font-bold text-brand-700">
-                    {formatPrice(bid.amount)}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }
@@ -165,17 +134,22 @@ function StatCard({
   href?: string;
   highlight?: boolean;
 }) {
-  const content = (
+  const inner = (
     <div
-      className={`rounded-xl border bg-white p-5 ${
-        highlight ? "border-emerald-300 ring-1 ring-emerald-200" : "border-slate-200"
+      className={`rounded-xl border p-4 ${
+        highlight
+          ? "border-emerald-200 bg-emerald-50"
+          : "border-slate-200 bg-white"
       }`}
     >
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
     </div>
   );
-
-  if (href) return <Link href={href}>{content}</Link>;
-  return content;
+  if (!href) return inner;
+  return (
+    <Link href={href} className="block transition hover:opacity-90">
+      {inner}
+    </Link>
+  );
 }

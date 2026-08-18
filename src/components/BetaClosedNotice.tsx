@@ -1,22 +1,24 @@
-import Link from "next/link";
-import { BETA_CLOSED_MESSAGE, isBetaMode } from "@/lib/beta";
+"use client";
+
+import { useBetaMode } from "@/components/BetaModeProvider";
+import { BETA_CLOSED_MESSAGE } from "@/lib/beta";
 
 export default function BetaClosedNotice({
   title = "Préouverture",
+  className = "",
 }: {
   title?: string;
+  className?: string;
 }) {
-  if (!isBetaMode()) return null;
+  const beta = useBetaMode();
+  if (!beta) return null;
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950">
+    <div
+      className={`rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 ${className}`}
+    >
       <p className="font-semibold">{title}</p>
       <p className="mt-1 leading-relaxed">{BETA_CLOSED_MESSAGE}</p>
-      <p className="mt-3">
-        <Link href="/" className="font-medium text-amber-900 underline hover:no-underline">
-          Retour à l&apos;accueil
-        </Link>
-      </p>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 
 export default function SiteLogo({ compact = false }: { compact?: boolean }) {
   return (
@@ -42,14 +43,16 @@ export default function SiteLogo({ compact = false }: { compact?: boolean }) {
       <div className="min-w-0 leading-tight">
         <p
           className={`font-bold tracking-tight text-slate-900 group-hover:text-brand-700 ${
-            compact ? "text-base" : "text-lg sm:text-xl lg:text-[1.35rem]"
+            compact
+              ? "text-sm sm:text-base"
+              : "text-base sm:text-lg lg:text-xl"
           }`}
         >
-          <span className="font-semibold text-brand-700">Enchères</span>{" "}
-          <span className="text-brand-800">ARTIPASCHER</span>
+          <span className="text-brand-800">Nord Artisan</span>
+          <span className="text-brand-600"> Pro</span>
         </p>
         <p className="hidden text-[11px] text-slate-500 sm:block sm:text-xs">
-          Enchères inversées · Nord 59/62
+          {BRAND.tagline}
         </p>
       </div>
     </Link>

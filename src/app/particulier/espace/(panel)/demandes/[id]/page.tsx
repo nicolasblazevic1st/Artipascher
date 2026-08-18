@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AuctionCountdown from "@/components/AuctionCountdown";
 import ClientContactRequestsPanel from "@/components/client/ClientContactRequestsPanel";
 import ClientDemandePhotosPanel from "@/components/client/ClientDemandePhotosPanel";
 import ClientSubmitQuotePanel from "@/components/client/ClientSubmitQuotePanel";
@@ -7,10 +8,13 @@ import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatPublicLocation, formatWorkRequestAddress } from "@/lib/client-address";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import {
+  formatWorkRequestAuctionDuration,
+  resolveAuctionEndsAt,
+} from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
-import { formatPrice } from "@/lib/data";
 import { getClientSession } from "@/lib/client-auth";
+import { formatWorkPrestationLabel } from "@/lib/pricing-tiers";
 import {
   ensureWorkRequestShareToken,
   getApprovedProQuotesForAuction,
@@ -24,7 +28,7 @@ type Props = { params: Promise<{ id: string }> };
 
 const STATUS_LABELS = {
   pending: "En validation par notre équipe",
-  approved: "Enchère active",
+  approved: "Annonce active",
   rejected: "Demande refusée",
 };
 
@@ -49,6 +53,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
       ? await ensureWorkRequestShareToken(id, session.clientId)
       : null;
   const photosEditable = request.status !== "rejected";
+  const prestationLabel = formatWorkPrestationLabel(request);
 
   return (
     <div>
@@ -71,9 +76,19 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
                 ? ` · ${request.companyName}`
                 : ""}
             </p>
+            {request.nafCodes && request.nafCodes.length > 0 && (
+              <p className="mt-2 text-xs text-slate-600">
+                Spécialité NAF : {request.nafCodes.join(" · ")}
+              </p>
+            )}
+            {(request.workOptionId || request.workOptionOtherDescription) && (
+              <p className="mt-1 text-xs text-slate-600">
+                Prestation : {prestationLabel}
+              </p>
+            )}
           </div>
           {request.auctionId && request.status === "approved" && (
-            <p className="text-xs text-slate-500">Enchère active</p>
+            <p className="text-xs text-slate-500">Annonce active</p>
           )}
         </div>
 
@@ -102,7 +117,13 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
 
         {request.phone && (
           <p className="mt-2 text-sm text-slate-600">
-            <span className="font-medium text-slate-800">Téléphone :</span> {request.phone}
+            <span className="font-medium text-slate-800">Téléphone :</span>{" "}
+            {request.phone}
+            {request.phoneVerifiedAt && (
+              <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                Vérifié SMS
+              </span>
+            )}
           </p>
         )}
 
@@ -127,50 +148,82 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Prix de départ</dt>
-            <dd className="mt-1 text-xl font-semibold">
-              {request.startPrice != null
-                ? formatPrice(request.startPrice)
-                : request.startPriceMode === "unspecified"
-                  ? "Non précisé"
-                  : "En attente du 1er devis"}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Mode prix de départ</dt>
+            <dt className="text-xs text-slate-500">Durée de l&apos;annonce</dt>
             <dd className="mt-1 text-sm font-semibold">
-              {request.startPriceMode === "client"
-                ? "Fixé par vous"
-                : request.startPriceMode === "unspecified"
-                  ? "Non précisé"
-                  : "Premier devis Artipascher"}
+              {formatWorkRequestAuctionDuration(request)}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Durée enchère</dt>
+            <dt className="text-xs text-slate-500">Artisans maximum</dt>
             <dd className="mt-1 text-sm font-semibold">
-              {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
+              {typeof request.maxContactArtisans === "number"
+                ? request.maxContactArtisans
+                : 5}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Devis validés</dt>
-            <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
+            <dt className="text-xs text-slate-500">Ancienneté souhaitée</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              {request.preferEstablishedCompany === true
+                ? "Uniquement 5+"
+                : request.preferEstablishedCompany === false
+                  ? "Uniquement 0 à 5 ans"
+                  : "Peu importe"}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Note Google minimale</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              {request.minGoogleRating
+                ? `≥ ${String(request.minGoogleRating).replace(".", ",")}/5`
+                : "Peu importe"}
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Conditions obligatoires</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              Statut normal · décennale &amp; RC pro à jour
+            </dd>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <dt className="text-xs text-slate-500">Mise en contact</dt>
+            <dd className="mt-1 text-sm font-semibold">
+              Autorisée via CGU / CGV (max. 5 artisans)
+            </dd>
           </div>
         </dl>
 
-        {request.auctionEndsAt && (
-          <p className="mt-4 text-sm text-slate-600">
-            Fin de l&apos;enchère :{" "}
-            <strong>{new Date(request.auctionEndsAt).toLocaleString("fr-FR")}</strong>
-          </p>
+        {request.status === "approved" && (
+          <div className="mt-4 space-y-2">
+            <AuctionCountdown
+              endsAt={resolveAuctionEndsAt({
+                auctionEndsAt: request.auctionEndsAt,
+                auctionDurationHours: request.auctionDurationHours,
+                auctionDurationDays: request.auctionDurationDays,
+                from: request.reviewedAt ?? request.createdAt,
+              })}
+            />
+            {request.auctionEndsAt && (
+              <p className="text-sm text-slate-600">
+                Fin de l&apos;annonce :{" "}
+                <strong>
+                  {new Date(request.auctionEndsAt).toLocaleString("fr-FR")}
+                </strong>
+              </p>
+            )}
+          </div>
         )}
 
         <section className="mt-10">
-          <h2 className="text-lg font-semibold text-slate-900">Devis des artisans</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Artisans &amp; propositions
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Devis formalisés après visite sur site, validés par Artipascher.
+            Les devis se font directement avec les artisans qui vous contactent
+            après déblocage. L&apos;historique ci-dessous peut encore afficher
+            d&apos;anciennes propositions.
           </p>
           <div className="mt-4">
             <SelectArtisanPanel

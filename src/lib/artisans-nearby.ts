@@ -18,8 +18,9 @@ export async function resolveWorkRequestOrigin(
 }
 
 /**
- * Artisans actifs dans le rayon, avec enrichissement Places production
- * (non bloqué par le quota) pour ceux sans téléphone.
+ * Artisans actifs dans le rayon (59+62), triés par distance.
+ * Pas de filtre sur le département du chantier — un chantier 59
+ * limitrophe peut cibler des artisans 62 proches (et inversement).
  */
 export async function getArtisansNearWorkRequest(
   request: WorkRequest,
@@ -41,7 +42,7 @@ export async function getArtisansNearWorkRequest(
   const radiusKm = options?.radiusKm ?? defaultNearbyRadiusKm();
   const active = (await listArtisans({ status: "active" })).filter(
     (a) =>
-      a.department === request.department &&
+      (a.department === "59" || a.department === "62") &&
       !a.optedOut &&
       a.lat != null &&
       a.lon != null

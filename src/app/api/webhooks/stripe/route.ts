@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
+import { fulfillCreditPurchaseSession } from "@/lib/credit-purchase";
 import { getStripe } from "@/lib/payments";
 import {
   addBid,
   addContactUnlock,
   countProBidsForAuction,
-  creditProWallet,
   getApprovedProById,
 } from "@/lib/store";
 
@@ -34,35 +33,31 @@ export async function POST(request: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
-    if (
-      session.metadata?.type === "credit_purchase" &&
-      session.metadata.proId &&
-      session.metadata.packSize
-    ) {
-      const packSize = Number(session.metadata.packSize);
-      if (Number.isFinite(packSize) && packSize > 0) {
-        await creditProWallet({
-          proId: session.metadata.proId,
-          type: "purchase",
-          amount: packSize,
-          stripeSessionId: session.id,
-          note: `Achat pack ${packSize} crédits`,
-        });
+    // Anciens achats de packs (sessions déjà créées) — encore honorés.
+    if (session.metadata?.type === "credit_purchase") {
+      const result = await fulfillCreditPurchaseSession(session);
+      if (!result.ok) {
+        console.error("[stripe] credit_purchase fulfill failed", result.error);
       }
     }
 
-    // Legacy: paiements à l'acte (avant crédits) — encore honorés si reçus.
     if (
       session.metadata?.type === "contact_unlock" &&
       session.metadata.proId &&
       session.metadata.auctionId
     ) {
-      await addContactUnlock({
+      const amountEur = Number(session.metadata.amountEur);
+      const unlock = await addContactUnlock({
         proId: session.metadata.proId,
         auctionId: session.metadata.auctionId,
-        amountEur: UNLOCK_PRICE_EUR,
+        amountEur:
+          Number.isFinite(amountEur) && amountEur > 0 ? amountEur : 20,
+        workRequestId: session.metadata.workRequestId || undefined,
         stripeSessionId: session.id,
       });
+      if ("error" in unlock) {
+        console.error("[stripe] contact_unlock slot full", unlock.error);
+      }
     }
 
     if (

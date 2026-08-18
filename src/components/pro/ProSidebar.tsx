@@ -1,12 +1,11 @@
 import Link from "next/link";
 import NotificationBell from "@/components/NotificationBell";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import ProLogoutButton from "./ProLogoutButton";
 
 const NAV = [
   { href: "/pro", label: "Tableau de bord", icon: "📊" },
-  { href: "/pro/encheres", label: "Enchères actives", icon: "🔨" },
-  { href: "/pro/mes-encheres", label: "Mes offres", icon: "📋" },
-  { href: "/pro/mes-devis", label: "Mes devis", icon: "📄" },
+  { href: "/pro/encheres", label: "Offres", icon: "🔨" },
   { href: "/pro/contacts", label: "Contacts", icon: "📞" },
   { href: "/pro/compte", label: "Mon compte", icon: "🏢" },
 ];
@@ -18,13 +17,13 @@ export default function ProSidebar({
   companyName: string;
   creditBalance: number;
 }) {
-  const low = creditBalance < 2;
+  const low = creditBalance < 15;
 
   return (
     <aside className="flex w-56 shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100">
       <div className="border-b border-brand-900 px-5 py-5">
         <Link href="/pro" className="block">
-          <p className="text-lg font-bold text-white">Artipascher</p>
+          <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
           <p className="text-xs text-brand-200">Espace professionnel</p>
         </Link>
         <p className="mt-3 truncate text-xs font-medium text-white">{companyName}</p>
@@ -35,11 +34,11 @@ export default function ProSidebar({
               ? "bg-amber-500 text-amber-950 hover:bg-amber-400"
               : "bg-brand-700 text-white hover:bg-brand-600"
           }`}
-          title="Voir et recharger vos crédits"
+          title="Voir le solde résiduel (parrainage / historique)"
         >
-          <span className="text-xs font-medium opacity-90">Crédits</span>
+          <span className="text-xs font-medium opacity-90">Solde</span>
           <span className="text-lg font-bold tabular-nums leading-none">
-            {creditBalance}
+            {formatUnlockPriceEur(creditBalance)}
           </span>
         </Link>
       </div>
@@ -65,7 +64,7 @@ export default function ProSidebar({
           href="/encheres"
           className="block rounded-lg px-3 py-2 text-sm hover:bg-brand-700 hover:text-white"
         >
-          Voir le site public
+          Voir les chantiers publics
         </Link>
         <ProLogoutButton />
       </div>

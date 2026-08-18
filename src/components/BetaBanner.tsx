@@ -1,7 +1,7 @@
-import { isBetaMode } from "@/lib/beta";
+import { getIsBetaMode } from "@/lib/beta-server";
 
-export default function BetaBanner() {
-  if (!isBetaMode()) return null;
+export default async function BetaBanner() {
+  if (!(await getIsBetaMode())) return null;
 
   return (
     <div

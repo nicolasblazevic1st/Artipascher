@@ -3,24 +3,20 @@ export interface ProRegistrationDocumentType {
   label: string;
   help: string;
   required: boolean;
-  /** Niveau de qualification Artipascher (1 = inscription rapide). */
+  /** Niveau de qualification Nord Artisan Pro (1 = inscription rapide). */
   qualificationLevel: 1 | 2 | 3;
+  /** Exige le PDF original (attestation assureur), pas une photo. */
+  requireOriginalPdf?: boolean;
 }
 
 export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
   {
-    id: "kbis",
-    label: "KBIS / extrait RCS (< 3 mois)",
-    help: "Optionnel : le SIRET est déjà vérifié en direct au registre (RNE). Joignez un KBIS récent pour accélérer la validation.",
-    required: false,
-    qualificationLevel: 1,
-  },
-  {
     id: "rc",
     label: "Assurance responsabilité civile professionnelle",
-    help: "Attestation ou contrat en cours de validité.",
+    help: "PDF original de l’attestation envoyée par votre assureur (e-mail / espace client) — sans photo ni modification. Le SIRET est déjà contrôlé au registre + BODACC (pas de Kbis).",
     required: true,
     qualificationLevel: 1,
+    requireOriginalPdf: true,
   },
   {
     id: "rge",
@@ -56,33 +52,11 @@ export const PRO_REGISTRATION_COMPARTMENTS: ProRegistrationDocumentCompartment[]
   {
     level: 1,
     badge: "Certifié",
-    title: "Niveau 1 — Inscription rapide",
+    title: "Documents obligatoires",
     summary:
-      "Documents obligatoires pour une certification instantanée et accéder aux enchères.",
-    documentIds: ["rc", "kbis"],
+      "Documents vérifiés pour accéder aux offres et débloquer les contacts clients.",
+    documentIds: ["rc"],
     includesDecennale: true,
-  },
-  {
-    level: 2,
-    badge: "Qualifié",
-    title: "Niveau 2 — Qualifié",
-    summary:
-      "Optionnel à l'inscription — recommandé pour la rénovation énergétique et les chantiers techniques.",
-    documentIds: ["rge", "qualibat"],
-  },
-  {
-    level: 3,
-    badge: "Premium",
-    title: "Niveau 3 — Premium (en développement)",
-    summary:
-      "Réservé aux partenaires de confiance — parcours complété avec notre équipe (fonctionnalité en cours de déploiement).",
-    documentIds: [],
-    infoOnly: true,
-    infoItems: [
-      "Charte qualité Artipascher signée",
-      "Références chantiers vérifiées dans le Nord",
-      "Entretien de validation avec notre équipe",
-    ],
   },
 ];
 
@@ -108,13 +82,64 @@ export function tradeDecennaleFieldName(tradeGroupId: string) {
   return `doc_decennale_${tradeGroupId}`;
 }
 
+/** Normalise le type MIME (souvent vide ou `image/jpg` après photo téléphone). */
+export function resolveProDocumentMime(file: File): string {
+  const raw = (file.type || "").toLowerCase().trim();
+  if (raw === "image/jpg") return "image/jpeg";
+  if (
+    ALLOWED_PRO_DOCUMENT_TYPES.includes(
+      raw as (typeof ALLOWED_PRO_DOCUMENT_TYPES)[number]
+    )
+  ) {
+    return raw;
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "pdf") return "application/pdf";
+  // Capture caméra iOS/Android : parfois sans extension ni MIME fiable.
+  if (!raw && !ext) return "image/jpeg";
+  return raw;
+}
+
+export function isProDocumentPdf(file: File): boolean {
+  return resolveProDocumentMime(file) === "application/pdf";
+}
+
+export function validateProDocumentFile(
+  file: File,
+  options?: { requireOriginalPdf?: boolean }
+): string | null {
+  if (!file || file.size === 0) {
+    return "Fichier manquant.";
+  }
+  const mime = resolveProDocumentMime(file);
+  if (options?.requireOriginalPdf) {
+    if (mime !== "application/pdf") {
+      return "Envoyez le PDF original de votre assureur (pas une photo ni un scan modifié).";
+    }
+  } else if (
+    !ALLOWED_PRO_DOCUMENT_TYPES.includes(
+      mime as (typeof ALLOWED_PRO_DOCUMENT_TYPES)[number]
+    )
+  ) {
+    return "Format non accepté. Utilisez un PDF, ou JPG / PNG / WebP.";
+  }
+  if (file.size > MAX_PRO_DOCUMENT_SIZE_BYTES) {
+    return `Chaque document doit faire moins de ${MAX_PRO_DOCUMENT_SIZE_BYTES / 1024 / 1024} Mo.`;
+  }
+  return null;
+}
+
 export function validateTradeDecennaleDocuments(
   tradeGroupIds: string[],
   files: Record<string, File | null | undefined>
 ): string | null {
   for (const groupId of tradeGroupIds) {
     const file = files[groupId];
-    const error = validateProDocumentFile(file!);
+    const error = validateProDocumentFile(file!, { requireOriginalPdf: true });
     if (error) {
       const label =
         error === "Fichier manquant."
@@ -126,35 +151,22 @@ export function validateTradeDecennaleDocuments(
   return null;
 }
 
-export function validateProDocumentFile(file: File): string | null {
-  if (!file || file.size === 0) {
-    return "Fichier manquant.";
-  }
-  if (
-    !ALLOWED_PRO_DOCUMENT_TYPES.includes(
-      file.type as (typeof ALLOWED_PRO_DOCUMENT_TYPES)[number]
-    )
-  ) {
-    return "Format non accepté. Utilisez JPG, PNG, WebP ou PDF.";
-  }
-  if (file.size > MAX_PRO_DOCUMENT_SIZE_BYTES) {
-    return `Chaque document doit faire moins de ${MAX_PRO_DOCUMENT_SIZE_BYTES / 1024 / 1024} Mo.`;
-  }
-  return null;
-}
-
 export function validateProRegistrationDocuments(
   files: Record<string, File | null | undefined>
 ): string | null {
   for (const doc of PRO_REGISTRATION_DOCUMENTS) {
     const file = files[doc.id];
     if (doc.required) {
-      const error = validateProDocumentFile(file!);
+      const error = validateProDocumentFile(file!, {
+        requireOriginalPdf: doc.requireOriginalPdf,
+      });
       if (error) {
         return `${doc.label} : ${error === "Fichier manquant." ? "document obligatoire." : error}`;
       }
     } else if (file && file.size > 0) {
-      const error = validateProDocumentFile(file);
+      const error = validateProDocumentFile(file, {
+        requireOriginalPdf: doc.requireOriginalPdf,
+      });
       if (error) return `${doc.label} : ${error}`;
     }
   }

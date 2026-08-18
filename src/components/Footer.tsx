@@ -1,16 +1,18 @@
 import Link from "next/link";
 import ManageCookiesButton from "@/components/ManageCookiesButton";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
+import { getIsBetaMode } from "@/lib/beta-server";
 
-export default function Footer() {
+export default async function Footer() {
+  const beta = await getIsBetaMode();
   return (
     <footer className="border-t border-brand-900 bg-brand-950 text-brand-100">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
         <div>
-          <p className="text-lg font-bold text-white">Artipascher</p>
+          <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
           <p className="mt-2 text-sm leading-relaxed">
-            La plateforme d&apos;enchères inversées pour vos travaux dans le
-            Nord-Pas-de-Calais. Artisans vérifiés des départements 59 et 62.
+            Mise en relation entre particuliers et artisans vérifiés dans le
+            Nord-Pas-de-Calais (départements 59 et 62).
           </p>
         </div>
         <div>
@@ -28,7 +30,7 @@ export default function Footer() {
             </li>
             <li>
               <Link href="/encheres" className="hover:text-white">
-                Enchères actives
+                Offres
               </Link>
             </li>
             <li>
@@ -81,8 +83,9 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-brand-900 py-4 text-center text-xs text-brand-300">
-        © {new Date().getFullYear()} Artipascher — Version bêta (préouverture) —
-        Enchères inversées travaux Nord-Pas-de-Calais
+        © {new Date().getFullYear()} Nord Artisan Pro
+        {beta ? " — Version bêta (préouverture)" : ""} — Travaux & artisans
+        vérifiés Nord-Pas-de-Calais
       </div>
     </footer>
   );

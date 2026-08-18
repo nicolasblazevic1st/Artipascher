@@ -4,7 +4,7 @@ import {
   computeCurrentPrice,
   validateBidAmount,
 } from "@/lib/auctions";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { checkBidEligibility } from "@/lib/bid-eligibility";
 import { verifyDevisFileMatchesAmount } from "@/lib/devis-ocr";
 import { validateProofFile } from "@/lib/demandes-validation";
@@ -103,7 +103,15 @@ async function parsePlaceBidRequest(request: NextRequest): Promise<
 }
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
+
+  const { CONTACT_ONLY_MODE, AUCTIONS_RETIRED_MESSAGE, retiredFeatureJson } =
+    await import("@/lib/product-features");
+  if (CONTACT_ONLY_MODE) {
+    return NextResponse.json(retiredFeatureJson(AUCTIONS_RETIRED_MESSAGE), {
+      status: 410,
+    });
+  }
 
   const session = await getProSession();
   if (!session) {
@@ -187,14 +195,14 @@ export async function POST(request: NextRequest) {
   }
 
   const balance = await getProCreditBalance(session.proId);
-  const canSpend = balance >= 1;
+  const canSpend = balance >= BID_FEE_EUR;
   const allowDemoWithoutCredit = demo && isDemoPaymentAllowed() && !canSpend;
 
   if (!canSpend && !allowDemoWithoutCredit) {
     return NextResponse.json(
       {
         error:
-          "Solde insuffisant. Achetez des crédits (1 crédit = 1 €) dans Mon compte pour enchérir.",
+          "Solde insuffisant. Rechargez votre solde dans Mon compte pour enchérir.",
         needsCredits: true,
         balance,
       },
@@ -214,6 +222,7 @@ export async function POST(request: NextRequest) {
     const spent = await spendProCredit({
       proId: session.proId,
       type: "spend_bid",
+      amountEur: BID_FEE_EUR,
       auctionId,
       note: `Enchère ${amount} €`,
     });
@@ -264,7 +273,7 @@ export async function POST(request: NextRequest) {
       success: true,
       bid,
       currentPrice: amount,
-      creditsSpent: canSpend ? 1 : 0,
+      creditsSpent: canSpend ? BID_FEE_EUR : 0,
       balance: newBalance,
       demo: allowDemoWithoutCredit,
       bidsUsed: eligibility.bidsUsed + 1,

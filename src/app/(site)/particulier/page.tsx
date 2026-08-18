@@ -3,96 +3,100 @@ import Link from "next/link";
 import BetaClosedNotice from "@/components/BetaClosedNotice";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
-import { isBetaMode } from "@/lib/beta";
+import { getIsBetaMode } from "@/lib/beta-server";
 
 export const metadata: Metadata = {
-  title: "Particulier — Réalisez vos travaux au meilleur prix",
+  title: "Particulier — Publiez votre demande de travaux",
   description:
-    "Demandez des travaux dans le Nord-Pas-de-Calais via enchères inversées. Budget fixé, artisans locaux font baisser le prix.",
+    "Décrivez vos travaux dans le Nord-Pas-de-Calais. Les artisans vérifiés vous contactent. Compte optionnel pour suivre vos demandes.",
 };
 
+const DEMANDE_HREF = "/particulier/demande";
 const SIGNUP_HREF =
-  "/particulier/espace/inscription?from=/particulier/espace/demandes/nouvelle";
+  "/particulier/espace/inscription?from=/particulier/espace/demandes";
 const LOGIN_HREF =
-  "/particulier/espace/login?from=/particulier/espace/demandes/nouvelle";
+  "/particulier/espace/login?from=/particulier/espace/demandes";
 
 const FEATURES = [
   {
-    title: "Économies garanties",
+    title: "Gratuit pour vous",
     description:
-      "Les artisans se disputent votre projet. Le prix ne peut que baisser jusqu'au meilleur tarif du marché local. Aucune commission pour les particuliers.",
+      "Aucun frais, aucune commission sur vos travaux. Les professionnels utilisent leur solde pour obtenir vos coordonnées.",
   },
   {
     title: "Artisans RCS vérifiés",
     description:
-      "Seules les entreprises inscrites au registre du commerce (SIRET vérifié) peuvent enchérir, avec attestation décennale et assurance vérifiées. Artisans du 59 et 62 uniquement.",
+      "Seules les entreprises inscrites au registre du commerce (SIRET vérifié) peuvent vous contacter, avec documents professionnels contrôlés. Artisans du 59 et 62.",
   },
   {
     title: "Gain de temps",
     description:
-      "Une seule demande, vous comparez les offres reçues et choisissez librement l'artisan qui vous convient.",
+      "Une seule demande : les artisans correspondants vous contactent directement. Vous comparez leurs propositions.",
   },
   {
-    title: "Transparence totale",
+    title: "Compte optionnel",
     description:
-      "Suivez en temps réel les enchères, l'historique des prix et les participants.",
+      "Publiez sans créer de compte. Un espace particulier vous permet ensuite de retrouver et suivre vos demandes.",
   },
   {
     title: "Sécurité",
     description:
-      "Vos données sont protégées et hébergées chez OVH, dans un datacenter du Nord de la France. Les artisans ne voient que les infos nécessaires à leur proposition. C'est à eux de vous contacter et de prendre rendez-vous pour établir un devis gratuit sur place.",
+      "Vos données sont protégées et hébergées chez OVH, dans un datacenter du Nord de la France. Les artisans n’accèdent à vos coordonnées qu’après déblocage.",
   },
   {
-    title: "100 % gratuit pour vous",
+    title: "Mise en contact claire",
     description:
-      "Aucun frais, aucune commission, aucun pourcentage sur vos travaux. Vous ne payez que l'artisan retenu. Les professionnels paient seulement 1 € pour vous contacter.",
+      "En publiant, vous autorisez les artisans retenus à vous joindre. C’est à eux de prendre rendez-vous pour un devis sur place.",
   },
 ];
 
 const STEPS = [
   {
-    title: "Créez votre compte",
-    description:
-      "Gratuit pour vous : inscription en quelques minutes, sans commission sur les travaux. Les pros paient 1 € pour vous aborder.",
-  },
-  {
     title: "Publiez votre demande",
     description:
-      "Décrivez votre projet (ville 59/62, photos, détails). Après validation, une enchère est créée.",
+      "Décrivez votre projet (ville 59/62, photos, détails). Aucun compte obligatoire.",
   },
   {
-    title: "Vous choisissez votre artisan",
+    title: "Les artisans vous contactent",
     description:
-      "Comparez les offres (prix, profil, qualifications) et sélectionnez l'artisan qui vous convient.",
+      "Les professionnels correspondant à votre besoin débloquent vos coordonnées et vous joignent.",
+  },
+  {
+    title: "Suivez vos demandes (recommandé)",
+    description:
+      "Créez un compte gratuit pour retrouver vos demandes. Vous pouvez aussi filtrer les artisans (ancienneté, note Google).",
   },
 ];
 
-export default function ParticulierPage() {
+export default async function ParticulierPage() {
+  const beta = await getIsBetaMode();
   return (
     <>
       <section className="bg-gradient-to-br from-brand-800 to-brand-600 py-16 text-white">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
-          <h1 className="text-4xl font-bold">Réalisez vos travaux au meilleur prix</h1>
+          <h1 className="text-4xl font-bold">Réalisez vos travaux en toute simplicité</h1>
           <p className="mt-4 text-lg text-brand-100">
-            Enchères inversées dans le Nord-Pas-de-Calais. Artipascher ne prend
-            rien : aucun frais, aucune commission, aucun pourcentage sur vos
-            travaux. Les professionnels paient seulement 1&nbsp;€ pour vous
-            contacter.
+            Publiez votre demande dans le Nord-Pas-de-Calais. Nord Artisan Pro ne prend
+            rien : aucun frais, aucune commission sur vos travaux. Les
+            professionnels vous contactent après avoir débloqué vos coordonnées.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Link
-              href={SIGNUP_HREF}
+              href={beta ? "#demande" : DEMANDE_HREF}
               className="inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
             >
-              Créer mon compte
+              Demander des travaux
             </Link>
             <Link
               href={LOGIN_HREF}
               className="inline-block rounded-xl border border-white/40 px-8 py-3 font-semibold text-white hover:bg-white/10"
             >
-              J&apos;ai déjà un compte
+              Suivre mes demandes
             </Link>
           </div>
+          <p className="mt-4 text-sm text-brand-100/90">
+            Compte non obligatoire pour publier · recommandé pour le suivi
+          </p>
         </div>
       </section>
 
@@ -107,7 +111,7 @@ export default function ParticulierPage() {
 
       <section className="bg-white py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-3xl font-bold">Pourquoi Artipascher ?</h2>
+          <h2 className="text-center text-3xl font-bold">Pourquoi Nord Artisan Pro ?</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <FeatureCard key={f.title} {...f} />
@@ -116,57 +120,34 @@ export default function ParticulierPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <h2 className="text-2xl font-bold">Exemple concret</h2>
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
-          <p className="text-slate-600">
-            Budget salle de bain à Lille : <strong>5 000 €</strong>
-          </p>
-          <ul className="mt-4 space-y-2 text-sm">
-            <li>Prix de départ : 5 000 €</li>
-            <li>Artisan A : 5 200 €</li>
-            <li>Artisan B : 4 200 €</li>
-            <li>Artisan C : 3 800 €</li>
-            <li>Artisan D : 4 100 €</li>
-          </ul>
-          <p className="mt-4 text-sm text-slate-700">
-            Vous comparez les quatre offres et choisissez{" "}
-            <strong>vous-même</strong> l&apos;artisan retenu — le moins cher n&apos;est pas imposé.
-          </p>
-          <p className="mt-2 text-sm font-medium text-brand-600">
-            Économie possible jusqu&apos;à 1 200 €, avec la liberté de choisir selon vos critères.
-          </p>
-        </div>
-      </section>
-
       <section id="demande" className="bg-slate-100 py-16">
         <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
           <h2 className="text-2xl font-bold">Demander des travaux</h2>
           <p className="mt-2 text-sm text-slate-600">
-            Gratuit pour vous · Aucun % sur les travaux · Les pros paient 1&nbsp;€ pour vous contacter · 59 / 62
+            Gratuit pour vous · Compte optionnel · Pros vérifiés · 59 / 62
           </p>
-          {isBetaMode() ? (
+          {beta ? (
             <div className="mt-8 text-left">
               <BetaClosedNotice title="Demandes de travaux non ouvertes" />
             </div>
           ) : (
             <>
               <p className="mt-4 text-sm text-slate-700">
-                Créez votre compte, confirmez votre email, puis publiez votre demande depuis votre
-                espace personnel.
+                Remplissez le formulaire sans inscription. Créez un compte ensuite
+                si vous voulez retrouver et suivre vos demandes.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  href={SIGNUP_HREF}
+                  href={DEMANDE_HREF}
                   className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white hover:bg-accent-600"
                 >
-                  Créer mon compte
+                  Publier ma demande
                 </Link>
                 <Link
-                  href={LOGIN_HREF}
+                  href={SIGNUP_HREF}
                   className="rounded-xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
                 >
-                  Se connecter
+                  Créer un compte pour le suivi
                 </Link>
               </div>
             </>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { computeAuctionEndsAt } from "@/lib/auction-duration";
+import { computeAuctionEndsAt, resolveAuctionDurationHours } from "@/lib/auction-duration";
 import { createShareToken } from "@/lib/share";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { notifyClientRequestReviewed } from "@/lib/notify";
@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest) {
     if (request) {
       auctionEndsAt = computeAuctionEndsAt(
         new Date(),
-        request.auctionDurationDays ?? 30
+        resolveAuctionDurationHours(request)
       ).toISOString();
       shareToken = request.shareToken ?? createShareToken();
     }

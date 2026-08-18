@@ -1,74 +1,52 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import ApprovedQuotesList from "@/components/ApprovedQuotesList";
-import BidPanelPublicCta from "@/components/BidPanelPublicCta";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
+import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
-import VerifiedBidsList from "@/components/VerifiedBidsList";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
-import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
 import { shouldShowDemoBanner } from "@/lib/demo-banners";
-import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import {
   CATEGORY_LABELS,
   SAMPLE_AUCTIONS,
   formatLocation,
-  formatPrice,
 } from "@/lib/data";
-import { getApprovedProQuotesForAuction, getBidsForAuction, mapBidsWithQualification, mapQuotesWithQualification } from "@/lib/store";
+import { countContactUnlocksForAuction } from "@/lib/store";
 import { getWorkRequestByAuctionId, resolveAuction } from "@/lib/work-request-auctions";
+import { resolveUnlockPricing } from "@/lib/pricing-tiers";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const resolved = await resolveAuction(id);
-  if (!resolved) return { title: "Enchère introuvable" };
+  if (!resolved) return { title: "Chantier introuvable" };
   return {
     title: `${resolved.title} — ${resolved.city}`,
   };
 }
 
-export default async function EnchereDetailPage({ params }: Props) {
+export default async function ChantierDetailPage({ params }: Props) {
   const { id } = await params;
   const resolved = await resolveAuction(id);
 
   if (!resolved) notFound();
 
-  const bids = await getBidsForAuction(id);
-  const quotes = await getApprovedProQuotesForAuction(id);
   const workRequest = await getWorkRequestByAuctionId(id);
+  const unlockCount = await countContactUnlocksForAuction(id);
   const sample = SAMPLE_AUCTIONS.find((a) => a.id === id);
   const workCategory =
     workRequest?.category ??
     (sample ? CATEGORY_LABELS[sample.category] : resolved.title);
-  const bidsWithLevel = await mapBidsWithQualification(bids, workCategory);
-  const quotesWithLevel = await mapQuotesWithQualification(quotes, workCategory);
-  const anonymousBids = annotateAnonymousBids(bidsWithLevel);
-  const currentPrice = computeCurrentPrice(
-    resolved.startPrice,
-    bids.map((b) => b.amount)
-  );
-
-  const savings =
-    resolved.startPrice != null && currentPrice != null
-      ? resolved.startPrice - currentPrice
-      : 0;
-  const endsAt = resolved.endsAt
-    ? new Date(resolved.endsAt).toLocaleDateString("fr-FR", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
-
-  const categoryLabel = workCategory;
+  const unlockPricing = resolveUnlockPricing({
+    pricingTier: workRequest?.pricingTier,
+    workOptionId: workRequest?.workOptionId,
+  });
 
   const isTest = resolved.isTest === true || workRequest?.isTest === true;
   const showDemoBanner = await shouldShowDemoBanner();
@@ -76,7 +54,7 @@ export default async function EnchereDetailPage({ params }: Props) {
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
       <Link href="/encheres" className="text-sm font-medium text-brand-700">
-        ← Retour aux enchères
+        ← Retour aux chantiers
       </Link>
 
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
@@ -84,7 +62,7 @@ export default async function EnchereDetailPage({ params }: Props) {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-                {categoryLabel}
+                {workCategory}
               </span>
               {isTest && showDemoBanner && <TestBanner />}
             </div>
@@ -98,7 +76,7 @@ export default async function EnchereDetailPage({ params }: Props) {
             </p>
           </div>
           <span className="rounded-full bg-brand-50 px-4 py-1.5 text-sm font-medium text-brand-700">
-            {resolved.status === "active" ? "Enchère active" : "Enchère terminée"}
+            {resolved.status === "active" ? "Ouvert aux contacts" : "Clôturé"}
           </span>
         </div>
 
@@ -108,6 +86,16 @@ export default async function EnchereDetailPage({ params }: Props) {
           photos={workRequest?.photos ?? []}
           showPublicNote
         />
+
+        <ContactSlotsBanner
+          accepted={unlockCount}
+          max={resolveMaxContactArtisans(workRequest)}
+          className="mt-5"
+        />
+
+        {workRequest && (
+          <OfferClientRequirements request={workRequest} className="mt-5" />
+        )}
 
         {workRequest?.previousQuoteAmount != null && workRequest.previousQuoteProofUrl && (
           <div className="mt-6">
@@ -119,43 +107,15 @@ export default async function EnchereDetailPage({ params }: Props) {
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="rounded-xl bg-slate-50 p-4 text-center">
-            <dt className="text-xs text-slate-500">Prix de départ</dt>
-            <dd className="mt-1 text-xl font-semibold">
-              {resolved.startPrice != null
-                ? formatPrice(resolved.startPrice)
-                : "En attente du 1er devis"}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-brand-50 p-4 text-center">
-            <dt className="text-xs text-brand-600">Prix actuel</dt>
-            <dd className="mt-1 text-xl font-bold text-brand-700">
-              {currentPrice != null ? formatPrice(currentPrice) : "—"}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4 text-center">
-            <dt className="text-xs text-slate-500">Devis validés</dt>
-            <dd className="mt-1 text-xl font-semibold">{quotes.length}</dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4 text-center">
-            <dt className="text-xs text-slate-500">Fin</dt>
-            <dd className="mt-1 text-sm font-semibold">{endsAt}</dd>
-          </div>
-          {workRequest?.requestedWorkStartDate && (
-            <div className="rounded-xl bg-amber-50 p-4 text-center sm:col-span-2 lg:col-span-1">
+        {workRequest?.requestedWorkStartDate && (
+          <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl bg-amber-50 p-4 text-center">
               <dt className="text-xs text-amber-700">Début travaux souhaité</dt>
               <dd className="mt-1 text-sm font-semibold text-amber-900">
                 {formatRequestedWorkStartDate(workRequest.requestedWorkStartDate)}
               </dd>
             </div>
-          )}
-        </dl>
-
-        {savings > 0 && (
-          <p className="mt-4 text-center text-sm font-medium text-brand-600">
-            Économie actuelle : {formatPrice(savings)} par rapport au prix de départ
-          </p>
+          </dl>
         )}
 
         <ClientContactPublicCta
@@ -166,59 +126,12 @@ export default async function EnchereDetailPage({ params }: Props) {
               : formatLocation(resolved.city, resolved.department)
           }
           requestedWorkStartDate={workRequest?.requestedWorkStartDate}
+          unlockPriceEur={unlockPricing.unlockPriceEur}
         />
-
-        <BidPanelPublicCta
-          auctionId={id}
-          startPrice={resolved.startPrice}
-          currentPrice={currentPrice}
-        />
-
-        {quotes.length > 0 && (
-          <section className="mt-8">
-            <ApprovedQuotesList
-              title="Devis après visite (validés)"
-              quotes={quotesWithLevel.map((q) => ({
-              id: q.id,
-              amount: q.amount,
-              description: q.description,
-              visitDate: q.visitDate,
-              qualificationLevel: q.qualificationLevel,
-              decennaleVerifiedLabels: q.decennaleVerifiedLabels,
-            }))} />
-            <p className="mt-2 text-xs text-slate-500">
-              À la validation admin, un devis devient aussi une offre indicative (si le montant
-              peut entrer dans l&apos;enchère). Les repositionnements se font dans l&apos;espace
-              pro.
-            </p>
-          </section>
-        )}
-
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Offres indicatives en ligne
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Prix proposés dans l&apos;enchère (issus d&apos;un devis validé ou d&apos;une
-            surenchère). Noms masqués · max. 3 offres par artisan.
-          </p>
-          <div className="mt-4">
-            <VerifiedBidsList
-              bids={anonymousBids.map((b) => ({
-                id: b.id,
-                amount: b.amount,
-                qualificationLevel: b.qualificationLevel,
-                decennaleVerifiedLabels: b.decennaleVerifiedLabels,
-                anonymousArtisanIndex: b.anonymousArtisanIndex,
-                offerNumber: b.offerNumber,
-                anonymousLabel: b.anonymousLabel,
-              }))}
-            />
-          </div>
-        </section>
 
         <p className="mt-8 text-center text-xs text-slate-500">
-          Devis PDF OCR obligatoire à chaque enchère (montant TTC au centime près) · Artisans RCS
+          Jusqu’à 5 artisans correspondant aux attentes du client · Déblocage des
+          coordonnées avec votre solde · Artisans RCS
         </p>
       </div>
     </div>

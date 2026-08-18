@@ -10,8 +10,9 @@ export default function ClientOffresPage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Mes offres</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Prix et devis des artisans pour vos chantiers. Vous pouvez saisir un prix
-        sans justificatif depuis une demande, puis joindre le devis ici plus tard.
+        Historique des propositions éventuellement liées à vos demandes. Les
+        devis se concluent désormais directement avec les artisans qui vous
+        contactent.
       </p>
       <ClientOffersPanel />
     </div>

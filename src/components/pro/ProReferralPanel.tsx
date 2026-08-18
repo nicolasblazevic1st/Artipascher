@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  REFERRAL_REWARD_CREDITS,
+  REFERRAL_REWARD_EUR,
   REFERRAL_SPEND_THRESHOLD,
 } from "@/lib/store-types";
 
@@ -108,14 +108,13 @@ export default function ProReferralPanel() {
           <h2 className="font-semibold text-slate-900">Parrainage</h2>
           <p className="mt-1 text-sm text-slate-600">
             Invitez une entreprise vérifiée : dès qu&apos;elle dépense{" "}
-            {REFERRAL_SPEND_THRESHOLD} crédits, vous recevez{" "}
-            {REFERRAL_REWARD_CREDITS} crédits.
+            {REFERRAL_SPEND_THRESHOLD}&nbsp;€, vous recevez{" "}
+            {REFERRAL_REWARD_EUR}&nbsp;€ de solde.
           </p>
         </div>
         {data.rewardsEarned > 0 && (
           <p className="rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
-            +{data.rewardsEarned} crédit{data.rewardsEarned !== 1 ? "s" : ""} gagné
-            {data.rewardsEarned !== 1 ? "s" : ""}
+            +{data.rewardsEarned}&nbsp;€ gagnés
           </p>
         )}
       </div>
@@ -162,7 +161,7 @@ export default function ProReferralPanel() {
             Code validé — parrain : {data.referredBy.companyName}
             {data.rewardGrantedAt
               ? " · récompense déjà versée au parrain."
-              : ` · progression : ${data.spendProgress}/${data.spendThreshold} crédits dépensés.`}
+              : ` · progression : ${data.spendProgress}/${data.spendThreshold} € dépensés.`}
           </p>
         ) : (
           <form onSubmit={applyCode} className="mt-3 flex flex-col gap-3 sm:flex-row">
@@ -215,8 +214,8 @@ export default function ProReferralPanel() {
                   }
                 >
                   {row.rewardGrantedAt
-                    ? `+${REFERRAL_REWARD_CREDITS} crédits reçus`
-                    : `${row.spendProgress}/${REFERRAL_SPEND_THRESHOLD} crédits`}
+                    ? `+${REFERRAL_REWARD_EUR} € reçus`
+                    : `${row.spendProgress}/${REFERRAL_SPEND_THRESHOLD} €`}
                 </span>
               </li>
             ))}

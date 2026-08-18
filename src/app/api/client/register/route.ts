@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { validatePassword } from "@/lib/password";
 import { requestEmailVerification } from "@/lib/email-verification";
-import { ensureClientAccount } from "@/lib/store";
+import { ensureClientAccount, linkOrphanWorkRequests } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   let firstName: string;
   let lastName: string;
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  await linkOrphanWorkRequests(result.client.id, result.client.email);
   await requestEmailVerification(result.client.email, "client");
 
   return NextResponse.json(

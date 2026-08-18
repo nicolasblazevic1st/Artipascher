@@ -6,7 +6,7 @@ import { LEGAL_PUBLISHER } from "@/lib/legal";
 export const metadata: Metadata = {
   title: "Conditions générales d'utilisation",
   description:
-    "Conditions générales d'utilisation de la plateforme Artipascher.",
+    "Conditions générales d'utilisation de la plateforme Nord Artisan Pro.",
 };
 
 export default function CguPage() {
@@ -39,22 +39,30 @@ export default function CguPage() {
           <li>
             <strong>Professionnel / Artisan</strong> : entreprise du bâtiment
             inscrite au registre du commerce, vérifiée (SIRET, documents),
-            autorisée à enchérir et à contacter des Clients.
+            autorisée à consulter les annonces et à débloquer le contact des
+            Clients.
           </li>
           <li>
             <strong>Utilisateur</strong> : toute personne accédant au Site
             (visiteur, Client ou Professionnel).
           </li>
           <li>
-            <strong>Enchère inversée</strong> : mécanisme par lequel des
-            Professionnels proposent des montants décroissants sur un projet de
-            travaux publié.
+            <strong>Annonce / offre</strong> : publication d&apos;une demande de
+            travaux validée, consultable par les Professionnels (tous
+            départements du périmètre) pendant la durée choisie par le Client ;
+            le déblocage des coordonnées reste soumis aux critères définis par
+            le Client.
           </li>
           <li>
-            <strong>Crédits</strong> : unités prépayées permettant aux
-            Professionnels d&apos;utiliser certains services payants de la
-            Plateforme (voir{" "}
-            <Link href="/cgv">CGV</Link>).
+            <strong>Mise en contact / Déblocage</strong> : accès payant
+            (paiement unitaire au ticket du chantier — voir{" "}
+            <Link href="/cgv">CGV</Link>) aux coordonnées d&apos;un Client après
+            autorisation de contact.
+          </li>
+          <li>
+            <strong>Solde résiduel</strong> : éventuel crédit restant sur le
+            compte Professionnel (parrainage, remboursement, ancien achat),
+            utilisable pour un déblocage s&apos;il est suffisant.
           </li>
         </ul>
       </section>
@@ -62,13 +70,14 @@ export default function CguPage() {
       <section>
         <h2>3. Rôle de la Plateforme</h2>
         <p className="mt-3">
-          Artipascher est un <strong>intermédiaire de mise en relation</strong>.
+          Nord Artisan Pro est un <strong>intermédiaire de mise en relation</strong>.
           Elle met à disposition des outils numériques permettant :
         </p>
         <ul>
           <li>aux Clients de décrire un projet de travaux ;</li>
           <li>
-            aux Professionnels de formuler des propositions (enchères / devis) ;
+            aux Professionnels de débloquer les coordonnées d&apos;un Client
+            pour le contacter et établir un devis hors Plateforme ;
           </li>
           <li>
             au Client de choisir librement l&apos;artisan avec lequel il
@@ -76,12 +85,12 @@ export default function CguPage() {
           </li>
         </ul>
         <p className="mt-3">
-          <strong>Artipascher n&apos;est pas</strong> entreprise de travaux,
+          <strong>Nord Artisan Pro n&apos;est pas</strong> entreprise de travaux,
           maître d&apos;œuvre, assureur, ni partie au contrat de chantier. Le
           prix des travaux, le devis formalisé, le planning, la facturation et
           le paiement du chantier sont conclus{" "}
           <strong>directement entre le Client et l&apos;Artisan</strong>, hors
-          Plateforme. Artipascher ne perçoit{" "}
+          Plateforme. Nord Artisan Pro ne perçoit{" "}
           <strong>aucune commission</strong> sur le montant des travaux.
         </p>
       </section>
@@ -110,45 +119,140 @@ export default function CguPage() {
           L&apos;accès aux fonctionnalités professionnelles est réservé aux
           entreprises actives dont le SIRET est vérifié, avec siège ou
           établissement dans le périmètre géographique indiqué sur le Site
-          (notamment départements 59 et 62), et justifiant des documents
-          demandés (attestation décennale, RC pro, etc.). L&apos;Éditeur peut
-          refuser, suspendre ou retirer un compte en cas d&apos;informations
-          inexactes, de non-conformité documentaire ou d&apos;usage abusif.
+          (notamment départements 59 et 62), justifiant des documents demandés
+          (attestation décennale et RC professionnelle en PDF original), et
+          sans procédure collective active publiée au BODACC (données ouvertes
+          DILA, licence ouverte 2.0). Ces contrôles sont effectués{" "}
+          <strong>à l&apos;inscription</strong>, lors du dépôt des documents.
+          L&apos;Éditeur peut refuser, suspendre ou retirer un compte en cas
+          d&apos;informations inexactes, de non-conformité documentaire ou
+          d&apos;usage abusif.
         </p>
         <h3>5.3 Clients</h3>
         <p className="mt-3">
-          Les Clients s&apos;engagent à décrire leurs projets de bonne foi
-          (localisation, photos, description) et à ne publier aucun contenu
+          La publication d&apos;une demande peut se faire sans compte ; la
+          création d&apos;un compte Client est recommandée pour suivre les
+          demandes. Les Clients s&apos;engagent à décrire leurs projets de bonne
+          foi (localisation, photos, description) et à ne publier aucun contenu
           illicite, trompeur ou portant atteinte aux tiers.
         </p>
       </section>
 
       <section>
-        <h2>6. Fonctionnement des enchères et de la mise en relation</h2>
+        <h2>6. Demandes de travaux (Clients)</h2>
         <ul>
           <li>
-            Une demande de travaux peut être validée par l&apos;équipe
-            Artipascher avant ouverture d&apos;une enchère.
+            Une demande comporte notamment une description, des photos le cas
+            échéant, une adresse de chantier et un{" "}
+            <strong>numéro de mobile français</strong>.
           </li>
           <li>
-            Les montants proposés sur la Plateforme constituent des{" "}
-            <strong>indications</strong> ; le devis formalisé après visite du
-            Professionnel prime en principe sur les estimations en ligne.
+            Le mobile doit être{" "}
+            <strong>vérifié par code SMS</strong> avant la publication
+            d&apos;une demande.
           </li>
           <li>
-            Le Client choisit librement l&apos;Artisan ; aucun attribution
-            automatique n&apos;est imposée.
+            Le Client peut indiquer une préférence d&apos;
+            <strong>ancienneté d&apos;entreprise</strong> (0&nbsp;à&nbsp;5&nbsp;ans
+            ou 5&nbsp;ans et plus) : ce critère filtre les Artisans qui peuvent
+            le contacter / être prospectés.
           </li>
           <li>
-            Le déblocage des coordonnées et certaines actions professionnelles
-            peuvent être soumis à consommation de crédits (voir{" "}
+            Option (activée par défaut) :{" "}
+            <strong>alerte SMS</strong> lorsqu&apos;un Artisan souhaite le
+            contacter. Si cette option est activée, la demande de contact est{" "}
+            <strong>acceptée automatiquement</strong>, dans la limite de{" "}
+            <strong>5 Artisans</strong> par annonce ; le Client est informé
+            (SMS, email et/ou notification). Si l&apos;option est désactivée, le
+            Client accepte ou refuse manuellement sous 48&nbsp;h.
+          </li>
+          <li>
+            Les coordonnées du Client ne sont communiquées à un Professionnel
+            qu&apos;après autorisation de contact et{" "}
+            <strong>déblocage</strong> (paiement unitaire — voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
         </ul>
       </section>
 
       <section>
-        <h2>7. Obligations des Utilisateurs</h2>
+        <h2>7. Annonces et mise en relation</h2>
+        <ul>
+          <li>
+            Une demande de travaux peut être validée par l&apos;équipe
+            Nord Artisan Pro avant publication de l&apos;annonce.
+          </li>
+          <li>
+            Les devis sont établis{" "}
+            <strong>directement entre le Client et l&apos;Artisan</strong>{" "}
+            (visite, échange hors Plateforme). Nord Artisan Pro ne centralise pas de
+            devis concurrentiels.
+          </li>
+          <li>
+            Le Client choisit librement l&apos;Artisan ; aucune attribution
+            automatique n&apos;est imposée.
+          </li>
+          <li>
+            Le déblocage des coordonnées est soumis à la correspondance du
+            profil Professionnel avec les critères choisis par le Client
+            (métier, entreprise active, assurances, ancienneté, note Google le
+            cas échéant) et au paiement de la mise en contact (voir{" "}
+            <Link href="/cgv">CGV</Link>).
+          </li>
+          <li>
+            Le déblocage donne accès aux{" "}
+            <strong>coordonnées</strong> (identité, téléphone, email, adresse) :
+            il <strong>ne garantit pas</strong> une réponse du Client ni la
+            conclusion d&apos;un chantier.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Prospection SMS (Professionnels non inscrits)</h2>
+        <p className="mt-3">
+          L&apos;Éditeur peut envoyer des SMS d&apos;information / invitation à
+          des entreprises du bâtiment (sources publiques et/ou enrichissement)
+          pour signaler des chantiers ou inviter à s&apos;inscrire sur la
+          Plateforme.
+        </p>
+        <ul>
+          <li>
+            Ces envois peuvent être déclenchés{" "}
+            <strong>manuellement</strong> ou{" "}
+            <strong>automatiquement</strong> lorsqu&apos;une demande Client est
+            validée et publiée comme offre (enchère) destinée aux Professionnels,
+            dans la limite des places de contact prévues (notamment 5 Artisans
+            maximum par offre) ;
+          </li>
+          <li>
+            les SMS marketing sont transmis via le prestataire technique{" "}
+            <strong>OVH SMS</strong> ; dès qu&apos;un envoi est effectivement
+            soumis à ce prestataire, le message est pris en charge pour
+            livraison (sous réserve des règles du réseau) ;
+          </li>
+          <li>
+            les messages marketing comportent une mention{" "}
+            <strong>STOP</strong> permettant de s&apos;opposer aux prochains
+            envois marketing ; ils sont en principe adressés uniquement dans la
+            fenêtre indicative des SMS commerciaux en France (lundi–samedi,
+            8h–20h, heure de Paris) ;
+          </li>
+          <li>
+            un numéro / SIRET déjà contacté par SMS marketing n&apos;est en
+            principe <strong>pas relancé</strong> par ce canal.
+          </li>
+        </ul>
+        <p className="mt-3">
+          Les SMS transactionnels adressés aux Clients (vérification du mobile,
+          alertes de contact) sont distincts des SMS marketing et peuvent
+          ne pas comporter de clause STOP lorsqu&apos;ils sont liés à une action
+          de l&apos;Utilisateur ou au service demandé.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Obligations des Utilisateurs</h2>
         <p className="mt-3">Chaque Utilisateur s&apos;engage à :</p>
         <ul>
           <li>respecter les lois et règlements applicables ;</li>
@@ -162,13 +266,17 @@ export default function CguPage() {
           </li>
           <li>
             pour les Professionnels : respecter leurs obligations
-            professionnelles (assurances, règles de l&apos;art, devis, factures).
+            professionnelles (assurances, règles de l&apos;art, devis, factures) ;
+          </li>
+          <li>
+            pour les Clients : publier des projets de bonne foi et maintenir un
+            numéro de mobile joignable.
           </li>
         </ul>
       </section>
 
       <section>
-        <h2>8. Contenu publié par les Utilisateurs</h2>
+        <h2>10. Contenu publié par les Utilisateurs</h2>
         <p className="mt-3">
           Les Utilisateurs restent responsables des contenus qu&apos;ils
           publient (textes, photos, documents). Ils concèdent à l&apos;Éditeur
@@ -184,40 +292,41 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>9. Données personnelles</h2>
+        <h2>11. Données personnelles</h2>
         <p className="mt-3">
           Le traitement des données personnelles est effectué conformément au
           RGPD et à la loi Informatique et Libertés. Pour exercer vos droits
           (accès, rectification, effacement, opposition, etc.), contactez{" "}
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
           . Des informations complémentaires figurent dans la{" "}
-          <Link href="/cookies">politique de cookies</Link>. Une politique de
-          confidentialité dédiée pourra compléter ce dispositif.
+          <Link href="/confidentialite">politique de confidentialité</Link> et
+          la <Link href="/cookies">politique de cookies</Link>.
         </p>
       </section>
 
       <section>
-        <h2>10. Responsabilité</h2>
-        <h3>10.1 Intermédiaire</h3>
+        <h2>12. Responsabilité</h2>
+        <h3>12.1 Intermédiaire</h3>
         <p className="mt-3">
           L&apos;Éditeur ne garantit pas la conclusion d&apos;un contrat de
           travaux, ni la qualité, le délai ou le prix final des prestations
-          réalisées par les Artisans. Toute réclamation relative aux travaux
+          réalisées par les Artisans, ni le volume d&apos;offres disponibles
+          près d&apos;un Professionnel. Toute réclamation relative aux travaux
           doit être adressée à l&apos;Artisan concerné.
         </p>
-        <h3>10.2 Vérifications</h3>
+        <h3>12.2 Vérifications</h3>
         <p className="mt-3">
-          Les contrôles (SIRET, documents) visent à renforcer la confiance mais
-          ne constituent pas une garantie absolue. Le Client reste responsable
-          de ses vérifications avant engagement.
+          Les contrôles (SIRET, documents, vérification du téléphone) visent à
+          renforcer la confiance mais ne constituent pas une garantie absolue.
+          Le Client reste responsable de ses vérifications avant engagement.
         </p>
-        <h3>10.3 Disponibilité</h3>
+        <h3>12.3 Disponibilité</h3>
         <p className="mt-3">
           Le Site est fourni « en l&apos;état ». L&apos;Éditeur s&apos;efforce
           d&apos;assurer une disponibilité raisonnable sans obligation de
           résultat quant à une disponibilité ininterrompue.
         </p>
-        <h3>10.4 Limitation</h3>
+        <h3>12.4 Limitation</h3>
         <p className="mt-3">
           Dans les limites autorisées par la loi, la responsabilité de
           l&apos;Éditeur est limitée aux dommages directs prouvés résultant
@@ -227,7 +336,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>11. Propriété intellectuelle</h2>
+        <h2>13. Propriété intellectuelle</h2>
         <p className="mt-3">
           Les marques, logos, textes et éléments graphiques du Site sont la
           propriété de l&apos;Éditeur ou de ses partenaires. Toute utilisation
@@ -236,7 +345,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>12. Suspension et résiliation</h2>
+        <h2>14. Suspension et résiliation</h2>
         <p className="mt-3">
           L&apos;Éditeur peut suspendre ou clôturer un compte en cas de manquement
           aux CGU, de fraude, d&apos;atteinte à la sécurité ou sur demande de
@@ -247,7 +356,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>13. Modification des CGU</h2>
+        <h2>15. Modification des CGU</h2>
         <p className="mt-3">
           L&apos;Éditeur peut modifier les présentes CGU. La version applicable
           est celle publiée sur le Site à la date d&apos;utilisation. En cas de
@@ -257,7 +366,7 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>14. Droit applicable et litiges</h2>
+        <h2>16. Droit applicable et litiges</h2>
         <p className="mt-3">
           Les présentes CGU sont soumises au droit français. En cas de litige,
           et à défaut d&apos;accord amiable, les tribunaux compétents seront
@@ -267,18 +376,20 @@ export default function CguPage() {
           Conformément aux articles L.611-1 et suivants du Code de la
           consommation, le Client consommateur peut recourir gratuitement à un
           médiateur de la consommation. Coordonnées du médiateur :{" "}
-          <strong>[À COMPLÉTER : nom et site du médiateur]</strong>.
+          <strong>{LEGAL_PUBLISHER.consumerMediator}</strong>.
         </p>
       </section>
 
       <section>
-        <h2>15. Contact</h2>
+        <h2>17. Contact</h2>
         <p className="mt-3">
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
           {" · "}
           <Link href="/mentions-legales">Mentions légales</Link>
           {" · "}
           <Link href="/cgv">CGV</Link>
+          {" · "}
+          <Link href="/confidentialite">Confidentialité</Link>
         </p>
       </section>
     </LegalDocument>

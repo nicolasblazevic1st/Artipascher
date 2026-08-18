@@ -1,13 +1,20 @@
 # Redirection www → domaine principal (HTTP, avant certbot)
 server {
     listen 80;
-    server_name www.artipascher.fr;
-    return 301 http://artipascher.fr$request_uri;
+    server_name www.nord-artisan-pro.com;
+    return 301 http://nord-artisan-pro.com$request_uri;
+}
+
+# Ancien domaine → nouveau (SEO : 301). Activer quand artipascher.fr pointe encore sur ce VPS.
+server {
+    listen 80;
+    server_name artipascher.fr www.artipascher.fr;
+    return 301 http://nord-artisan-pro.com$request_uri;
 }
 
 server {
     listen 80;
-    server_name artipascher.fr;
+    server_name nord-artisan-pro.com;
 
     client_max_body_size 20M;
 
@@ -23,5 +30,5 @@ server {
     }
 }
 
-# Après certbot : HTTPS est ajouté automatiquement.
+# Après certbot : HTTPS + même logique 301 www / ancien domaine.
 # Voir deploy/DNS-OVH.md

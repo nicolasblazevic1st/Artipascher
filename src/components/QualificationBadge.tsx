@@ -1,31 +1,36 @@
-import {
-  getQualificationTier,
-  type QualificationLevel,
-} from "@/lib/qualification-tiers";
-
-const BADGE_STYLES: Record<QualificationLevel, string> = {
-  0: "bg-red-100 text-red-800 ring-red-200",
-  1: "bg-slate-100 text-slate-700 ring-slate-200",
-  2: "bg-brand-100 text-brand-800 ring-brand-200",
-  3: "bg-amber-100 text-amber-900 ring-amber-200",
-};
+import type { QualificationLevel } from "@/lib/qualification-tiers";
 
 interface Props {
   level?: QualificationLevel;
   compact?: boolean;
 }
 
-export default function QualificationBadge({ level = 1, compact = false }: Props) {
-  const tier = getQualificationTier(level);
+/** Badge unique « Certifié » (les anciens niveaux 2/3 ne sont plus affichés). */
+export default function QualificationBadge({
+  level = 1,
+  compact = false,
+}: Props) {
+  if (level === 0) {
+    return (
+      <span
+        className={`inline-flex items-center rounded-full font-semibold ring-1 bg-red-100 text-red-800 ring-red-200 ${
+          compact ? "px-2 py-0.5 text-xs" : "px-2.5 py-0.5 text-xs"
+        }`}
+        title="Certification retirée"
+      >
+        Non certifié
+      </span>
+    );
+  }
 
   return (
     <span
-      className={`inline-flex items-center rounded-full font-semibold ring-1 ${BADGE_STYLES[level]} ${
+      className={`inline-flex items-center rounded-full font-semibold ring-1 bg-slate-100 text-slate-700 ring-slate-200 ${
         compact ? "px-2 py-0.5 text-xs" : "px-2.5 py-0.5 text-xs"
       }`}
-      title={tier.title}
+      title="Documents vérifiés"
     >
-      {tier.badge}
+      Certifié
     </span>
   );
 }

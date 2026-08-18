@@ -1,9 +1,17 @@
+import {
+  DEFAULT_PRICING_TIER,
+  unlockCreditsForTier,
+  unlockPriceEurForTier,
+} from "./pricing-tiers";
+
 export interface ClientContact {
   auctionId: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
+  /** Mobile vérifié par SMS à la création de la demande. */
+  phoneVerified?: boolean;
   address: string;
   postalCode: string;
   companyName?: string;
@@ -11,7 +19,7 @@ export interface ClientContact {
   clientKind?: "individual" | "company";
 }
 
-/** Données privées — jamais exposées sans paiement 1 € par un pro approuvé. */
+/** Données privées — jamais exposées sans paiement (solde) par un pro approuvé. */
 export const CLIENT_CONTACTS: Record<string, ClientContact> = {
   "1": {
     auctionId: "1",
@@ -87,4 +95,7 @@ export function maskName(first: string, last: string): string {
   return `${first.charAt(0)}. ${last.charAt(0)}***`;
 }
 
-export const UNLOCK_PRICE_EUR = 1;
+/** @deprecated Préférer resolveUnlockPricing / unlockCreditsForTier. */
+export const UNLOCK_CREDITS_COST = unlockCreditsForTier(DEFAULT_PRICING_TIER);
+/** Montant TTC de référence (ticket élevé) si aucun ticket sur l’annonce. */
+export const UNLOCK_PRICE_EUR = unlockPriceEurForTier(DEFAULT_PRICING_TIER);

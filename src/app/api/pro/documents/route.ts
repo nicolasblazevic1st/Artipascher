@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { defaultDecennaleStatus } from "@/lib/decennale-verification";
-import { defaultDocumentVerificationStatus } from "@/lib/level1-certification";
 import { getProSession } from "@/lib/pro-auth";
 import {
   PRO_REGISTRATION_DOCUMENTS,
@@ -8,15 +6,13 @@ import {
   tradeDecennaleFieldName,
   validateProDocumentFile,
 } from "@/lib/pro-documents";
-import {
-  enrichProDocumentsWithOcr,
-  enrichTradeSelectionsWithOcr,
-} from "@/lib/process-level1-documents";
+import { processLevel1Documents } from "@/lib/process-level1-documents";
 import { getProTradeSelections } from "@/lib/pro-trades";
 import {
   getProForSession,
   setProRegistrationDocuments,
   setProTradeSelections,
+  updateProRegistration,
 } from "@/lib/store";
 import type { ProDocument } from "@/lib/store-types";
 import {
@@ -25,8 +21,9 @@ import {
 } from "@/lib/uploads";
 
 /**
- * Ajoute ou remplace des documents (KBIS, RC, RGE, Qualibat) et/ou
- * attestations décennale après inscription.
+ * Ajoute ou remplace des documents (RC, RGE, Qualibat) et/ou
+ * attestations décennale après inscription, puis rejoue la vérif niveau 1
+ * (PDF + BODACC).
  */
 export async function POST(request: NextRequest) {
   const session = await getProSession();
@@ -45,7 +42,9 @@ export async function POST(request: NextRequest) {
   for (const docType of PRO_REGISTRATION_DOCUMENTS) {
     const entry = formData.get(proDocumentFieldName(docType.id));
     if (!(entry instanceof File) || entry.size === 0) continue;
-    const error = validateProDocumentFile(entry);
+    const error = validateProDocumentFile(entry, {
+      requireOriginalPdf: docType.requireOriginalPdf,
+    });
     if (error) {
       return NextResponse.json(
         { error: `${docType.label} : ${error}` },
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
   for (const selection of tradeSelections) {
     const entry = formData.get(tradeDecennaleFieldName(selection.tradeGroupId));
     if (!(entry instanceof File) || entry.size === 0) continue;
-    const error = validateProDocumentFile(entry);
+    const error = validateProDocumentFile(entry, { requireOriginalPdf: true });
     if (error) {
       return NextResponse.json(
         {
@@ -89,16 +88,11 @@ export async function POST(request: NextRequest) {
   }
 
   let documents: ProDocument[] = [...(pro.documents ?? [])];
+  let nextSelections = tradeSelections;
 
   if (docUploads.length > 0) {
     const saved = await saveProRegistrationDocuments(pro.id, docUploads);
-    const enriched = await enrichProDocumentsWithOcr(pro, saved);
-    const withPending = enriched.map((doc) => ({
-      ...doc,
-      verificationStatus: defaultDocumentVerificationStatus(),
-    }));
-
-    for (const doc of withPending) {
+    for (const doc of saved) {
       const index = documents.findIndex((d) => d.id === doc.id);
       if (index >= 0) {
         documents[index] = doc;
@@ -106,42 +100,46 @@ export async function POST(request: NextRequest) {
         documents.push(doc);
       }
     }
-
-    await setProRegistrationDocuments(pro.id, documents);
   }
 
   if (decennaleUploads.length > 0) {
     const savedByGroup = await saveTradeDecennaleDocuments(pro.id, decennaleUploads);
-    let nextSelections = tradeSelections.map((selection) => {
+    nextSelections = tradeSelections.map((selection) => {
       const uploaded = savedByGroup[selection.tradeGroupId];
       if (!uploaded) return selection;
       return {
         ...selection,
         decennaleDocument: uploaded,
-        decennaleStatus: defaultDecennaleStatus(),
+        decennaleStatus: undefined,
         decennaleOcrHints: undefined,
         decennaleConsistencyIssues: undefined,
       };
     });
-
-    nextSelections = await enrichTradeSelectionsWithOcr(pro, nextSelections);
-    // Re-forcer le statut en attente après OCR (enrichissement peut le laisser inchangé).
-    nextSelections = nextSelections.map((selection) => {
-      if (!savedByGroup[selection.tradeGroupId]) return selection;
-      return {
-        ...selection,
-        decennaleStatus: defaultDecennaleStatus(),
-      };
-    });
-
-    await setProTradeSelections(pro.id, nextSelections);
   }
+
+  const processed = await processLevel1Documents(pro, documents, nextSelections);
+
+  await setProRegistrationDocuments(pro.id, processed.documents);
+  await setProTradeSelections(pro.id, processed.tradeSelections);
+  await updateProRegistration(pro.id, {
+    documents: processed.documents,
+    tradeSelections: processed.tradeSelections,
+    level1Audit: processed.level1Audit,
+    ...(processed.certified
+      ? {
+          qualificationLevel: 1 as const,
+          level1CertifiedAt: new Date().toISOString(),
+        }
+      : {}),
+  });
 
   const updated = await getProForSession(session);
 
   return NextResponse.json({
     success: true,
-    documents: updated?.documents ?? documents,
-    tradeSelections: updated ? getProTradeSelections(updated) : tradeSelections,
+    certified: processed.certified,
+    rejectionReasons: processed.rejectionReasons,
+    documents: updated?.documents ?? processed.documents,
+    tradeSelections: updated ? getProTradeSelections(updated) : processed.tradeSelections,
   });
 }

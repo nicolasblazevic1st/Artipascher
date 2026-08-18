@@ -5,24 +5,22 @@ import BetaClosedNotice from "@/components/BetaClosedNotice";
 import ProRegistrationForm from "@/components/ProRegistrationForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
-import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
-import { isBetaMode } from "@/lib/beta";
-import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import { getIsBetaMode } from "@/lib/beta-server";
 import {
-  REFERRAL_REWARD_CREDITS,
+  REFERRAL_REWARD_EUR,
   REFERRAL_SPEND_THRESHOLD,
 } from "@/lib/store-types";
 
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
   description:
-    "Rejoignez Artipascher, enchères inversées travaux Nord. Clients qualifiés 59/62, enchérissez sur les chantiers locaux.",
+    "Rejoignez Nord Artisan Pro : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées au ticket du chantier.",
 };
 
 const FEATURES = [
   {
     title: "Clients qualifiés",
-    description: "Budget défini, demande validée. Prospects sérieux du Nord-Pas-de-Calais.",
+    description: "Demande validée, projet clair. Prospects sérieux du Nord-Pas-de-Calais.",
   },
   {
     title: "Marché local",
@@ -33,33 +31,29 @@ const FEATURES = [
     description: "Fini la prospection. Les clients viennent avec des projets clairs.",
   },
   {
-    title: "Concurrence équitable",
+    title: "Matching métier",
     description:
-      "Proposez votre meilleur prix. Le client compare les offres et choisit librement l'artisan retenu.",
+      "Vous consultez toutes les offres ; le déblocage des coordonnées est réservé si votre profil correspond aux critères du client.",
   },
   {
-    title: "Transparence",
-    description: "Prix actuel, historique et temps restant visibles en temps réel.",
+    title: "Places limitées",
+    description: "Maximum 5 artisans par chantier — moins de concurrence inutile.",
   },
   {
     title: "Notifications",
-    description: "Alertes pour nouvelles enchères et surenchères sur vos projets.",
+    description: "Alertes pour les nouveaux chantiers dans votre zone.",
   },
   {
     title: "Parrainage",
-    description: `Invitez une entreprise vérifiée avec votre lien. Dès qu'elle dépense ${REFERRAL_SPEND_THRESHOLD} crédits, vous en recevez ${REFERRAL_REWARD_CREDITS}.`,
+    description: `Invitez une entreprise vérifiée avec votre lien. Dès qu'elle dépense ${REFERRAL_SPEND_THRESHOLD} €, vous recevez ${REFERRAL_REWARD_EUR} € de solde.`,
   },
 ];
 
 const PRICING = [
   {
-    title: `Consulter le chantier · ${UNLOCK_PRICE_EUR} €`,
+    title: `Mise en contact · 15 à 25 € selon ticket`,
     description:
-      "Débloquez les coordonnées du particulier pour visiter le chantier et établir votre devis gratuit sur place.",
-  },
-  {
-    title: `Enchérir · ${BID_FEE_EUR} € par enchère`,
-    description: `Placez une offre sur un projet. Maximum ${MAX_BIDS_PER_AUCTION} enchères par chantier. Paiement avant validation de l'offre.`,
+      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Paiement unitaire au moment du déblocage (15 à 25 € selon le ticket).",
   },
 ];
 
@@ -67,21 +61,22 @@ const STEPS = [
   {
     title: "Inscription rapide",
     description:
-      "Niveau 1 instantané : SIRET contrôlé au registre du commerce, attestation décennale et RC pro obligatoires par métier.",
+      "Niveau 1 : SIRET contrôlé au registre du commerce, attestation décennale et RC pro obligatoires par métier.",
   },
   {
-    title: "Consultez et enchérissez",
+    title: "Débloquez les contacts",
     description:
-      "Parcourez les enchères actives, contactez un client et faites-lui un devis, de préférence inférieur au prix actuel.",
+      "Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (15 à 25 € selon le ticket, max. 5 artisans).",
   },
   {
-    title: "Soyez retenu par le client",
+    title: "Concluez hors plateforme",
     description:
-      "Le particulier compare les offres et choisit l'artisan qui lui convient. Devis conforme à votre enchère.",
+      "Appelez le client, visitez le chantier et envoyez votre devis — Nord Artisan Pro ne prend aucune commission sur vos travaux.",
   },
 ];
 
-export default function ProfessionnelPage() {
+export default async function ProfessionnelPage() {
+  const beta = await getIsBetaMode();
   return (
     <>
       <section className="bg-gradient-to-br from-slate-900 to-slate-800 py-16 text-white">
@@ -90,9 +85,9 @@ export default function ProfessionnelPage() {
             Développez votre activité dans le Nord-Pas-de-Calais
           </h1>
           <p className="mt-4 text-lg text-slate-300">
-            Rejoignez Artipascher : clients qualifiés en 59 et 62, enchères
-            inversées. Accès réservé aux entreprises inscrites au registre du
-            commerce.
+            Rejoignez Nord Artisan Pro : clients qualifiés en 59 et 62, mise en
+            relation ciblée. Accès réservé aux entreprises inscrites au registre
+            du commerce.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <BetaAwareLink
@@ -111,7 +106,7 @@ export default function ProfessionnelPage() {
               href="/encheres"
               className="rounded-xl border border-slate-600 px-8 py-3 font-semibold hover:bg-slate-800"
             >
-              Voir les enchères
+              Voir les chantiers
             </Link>
           </div>
         </div>
@@ -129,7 +124,7 @@ export default function ProfessionnelPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="text-center text-3xl font-bold">Pourquoi rejoindre Artipascher ?</h2>
+        <h2 className="text-center text-3xl font-bold">Pourquoi rejoindre Nord Artisan Pro ?</h2>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
             <FeatureCard key={f.title} {...f} />
@@ -140,7 +135,7 @@ export default function ProfessionnelPage() {
       <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
         <h2 className="text-center text-2xl font-bold">Tarifs plateforme</h2>
         <p className="mt-2 text-center text-sm text-slate-600">
-          Seules facturations Artipascher — aucune commission sur vos prestations, pas
+          Seules facturations Nord Artisan Pro — aucune commission sur vos prestations, pas
           d&apos;abonnement.
         </p>
         <ul className="mt-8 space-y-4">
@@ -163,8 +158,8 @@ export default function ProfessionnelPage() {
           <h2 className="text-3xl font-bold">Parrainez une entreprise vérifiée</h2>
           <p className="mt-4 text-lg text-brand-100">
             Depuis votre espace pro, récupérez votre code ou votre lien de parrainage.
-            Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD} crédits sur
-            Artipascher, vous recevez {REFERRAL_REWARD_CREDITS} crédits.
+            Quand l&apos;entreprise invitée dépense {REFERRAL_SPEND_THRESHOLD}&nbsp;€
+            sur Nord Artisan Pro, vous recevez {REFERRAL_REWARD_EUR}&nbsp;€ de solde.
           </p>
           <ul className="mx-auto mt-8 max-w-xl space-y-3 text-left text-sm text-brand-50">
             <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">
@@ -174,7 +169,7 @@ export default function ProfessionnelPage() {
               2. Le filleul valide le code à l&apos;inscription ou dans Mon compte
             </li>
             <li className="rounded-xl border border-brand-700 bg-brand-800/60 px-4 py-3">
-              3. Après {REFERRAL_SPEND_THRESHOLD} crédits dépensés, vous êtes crédité
+              3. Après {REFERRAL_SPEND_THRESHOLD} crédit dépensé, vous êtes crédité
               automatiquement
             </li>
           </ul>
@@ -203,7 +198,7 @@ export default function ProfessionnelPage() {
             parrainage optionnel
           </p>
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6">
-            {isBetaMode() ? (
+            {beta ? (
               <BetaClosedNotice title="Inscriptions professionnelles fermées" />
             ) : (
               <ProRegistrationForm />

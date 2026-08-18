@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import type { TradeCategory } from "@/lib/data";
 import {
   PRO_REGISTRATION_DOCUMENTS,
@@ -54,7 +54,7 @@ function parseTradeSelections(raw: string): ProTradeSelection[] | null {
 }
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   try {
     const formData = await request.formData();
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Établissement hors zone Artipascher : siège en 59 (Nord) ou 62 (Pas-de-Calais) requis.",
+            "Établissement hors zone Nord Artisan Pro : siège en 59 (Nord) ou 62 (Pas-de-Calais) requis.",
         },
         { status: 400 }
       );
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     for (const selection of tradeSelections) {
       const entry = formData.get(tradeDecennaleFieldName(selection.tradeGroupId));
       const file = entry instanceof File && entry.size > 0 ? entry : null;
-      const error = validateProDocumentFile(file!);
+      const error = validateProDocumentFile(file!, { requireOriginalPdf: true });
       if (error) {
         return NextResponse.json(
           {
@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
       qualibatJobId: primary.qualibatJobId,
       qualibatJobLabel: primary.qualibatJobLabel,
       rcsVerified: true,
+      legalRepresentatives: registry.legalRepresentatives ?? [],
       level1Audit,
       passwordHash: hashPassword(password),
       documents: [],

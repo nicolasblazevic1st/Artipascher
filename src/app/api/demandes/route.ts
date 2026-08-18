@@ -1,28 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import {
   verifyBanAddress,
   banFeatureToStoredAddress,
 } from "@/lib/ban-address";
 import { validateClientAddress } from "@/lib/client-address";
 import {
-  DEFAULT_AUCTION_DURATION_DAYS,
-  validateAuctionDurationDays,
+  DEFAULT_AUCTION_DURATION_HOURS,
+  validateAuctionDurationHours,
 } from "@/lib/auction-duration";
 import {
   validateDescription,
   validatePhotoFiles,
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
-  validateClientStartPrice,
-  parseStartPriceMode,
 } from "@/lib/demandes-validation";
 import { getClientSession } from "@/lib/client-auth";
+import { validateWorkRequestNafSelection } from "@/lib/naf-codes";
+import { validatePricingSelection } from "@/lib/pricing-tiers";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
-import { formatFrenchPhoneDisplay, normalizeFrenchPhone } from "@/lib/sms";
+import {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+} from "@/lib/phone-format";
+import { parseMaxContactArtisans } from "@/lib/contact-slots";
+import { parseMinGoogleRating } from "@/lib/google-rating";
+import { clientPhoneIsVerified } from "@/lib/phone-verification";
 import {
   addWorkRequest,
+  consumeGuestPhoneVerification,
   getClientById,
+  isGuestPhoneVerified,
   linkOrphanWorkRequests,
   setWorkRequestPhotos,
   setWorkRequestPreviousQuote,
@@ -31,20 +39,10 @@ import type { ClientKind } from "@/lib/store-types";
 import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
 
   try {
     const session = await getClientSession();
-    if (!session) {
-      return NextResponse.json(
-        {
-          error:
-            "Connectez-vous à votre espace particulier pour créer une demande de travaux.",
-        },
-        { status: 401 }
-      );
-    }
-
     const formData = await request.formData();
 
     const firstName = String(formData.get("firstName") ?? "").trim();
@@ -65,14 +63,53 @@ export async function POST(request: NextRequest) {
       formData.get("requestedWorkStartDate") ?? ""
     ).trim();
     const category = String(formData.get("category") ?? "Autre").trim();
+    const nafCodesRaw = formData
+      .getAll("nafCodes")
+      .map((v) => String(v).trim())
+      .filter(Boolean);
+    const pricingTierRaw = String(formData.get("pricingTier") ?? "").trim();
+    const workOptionIdRaw = String(formData.get("workOptionId") ?? "").trim();
+    const workOptionOtherDescriptionRaw = String(
+      formData.get("workOptionOtherDescription") ?? ""
+    ).trim();
     const description = String(formData.get("description") ?? "");
     const durationRaw = String(
-      formData.get("auctionDurationDays") ?? DEFAULT_AUCTION_DURATION_DAYS
+      formData.get("auctionDurationHours") ??
+        formData.get("auctionDurationDays") ??
+        DEFAULT_AUCTION_DURATION_HOURS
     );
+    const preferEstablishedRaw = String(
+      formData.get("preferEstablishedCompany") ?? "false"
+    ).toLowerCase();
+    const preferEstablishedCompany =
+      preferEstablishedRaw === "true" ||
+      preferEstablishedRaw === "1" ||
+      preferEstablishedRaw === "on";
+    const maxContactArtisans = parseMaxContactArtisans(
+      formData.get("maxContactArtisans")
+    );
+    if (maxContactArtisans == null) {
+      return NextResponse.json(
+        {
+          error:
+            "Indiquez combien d’artisans peuvent vous contacter (de 1 à 5).",
+        },
+        { status: 400 }
+      );
+    }
+    const minGoogleRating = parseMinGoogleRating(
+      formData.get("minGoogleRating")
+    );
+    // Mise en contact autorisée via acceptation CG (plus d’opt-in SMS séparé).
+    const acceptContactTermsRaw = String(
+      formData.get("acceptContactTerms") ?? ""
+    ).toLowerCase();
+    const acceptContactTerms =
+      acceptContactTermsRaw === "true" ||
+      acceptContactTermsRaw === "1" ||
+      acceptContactTermsRaw === "on";
     const previousQuoteAmountRaw = String(formData.get("previousQuoteAmount") ?? "").trim();
     const previousQuoteNote = String(formData.get("previousQuoteNote") ?? "").trim();
-    const startPriceMode = parseStartPriceMode(formData.get("startPriceMode"));
-    const clientStartPriceRaw = String(formData.get("clientStartPrice") ?? "").trim();
 
     const photoEntries = formData.getAll("photos");
     const photos = photoEntries.filter(
@@ -99,12 +136,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const phoneNormalized = normalizeFrenchPhone(phoneRaw);
+    if (!acceptContactTerms) {
+      return NextResponse.json(
+        {
+          error:
+            "Vous devez accepter les CGU / CGV pour autoriser la mise en contact avec les artisans.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const phoneNormalized = normalizeFrenchMobile(phoneRaw);
     if (!phoneNormalized) {
       return NextResponse.json(
         {
           error:
-            "Indiquez un numéro de téléphone français valide (10 chiffres, ex. 06 12 34 56 78).",
+            "Indiquez un mobile français valide (06 ou 07), ex. 06 12 34 56 78.",
         },
         { status: 400 }
       );
@@ -148,15 +195,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: addressError }, { status: 400 });
     }
 
-    const durationError = validateAuctionDurationDays(durationRaw);
+    // Compat : anciens clients envoyaient des jours ; si valeur ≤ 90 et hors options heures, traiter comme jours.
+    let durationHours = Number(durationRaw);
+    const hoursError = validateAuctionDurationHours(durationHours);
+    if (hoursError) {
+      const asDays = Number(durationRaw);
+      if (
+        Number.isInteger(asDays) &&
+        asDays >= 1 &&
+        asDays <= 90 &&
+        !Number.isNaN(asDays)
+      ) {
+        durationHours = asDays * 24;
+      }
+    }
+    const durationError = validateAuctionDurationHours(durationHours);
     if (durationError) {
       return NextResponse.json({ error: durationError }, { status: 400 });
     }
-    const auctionDurationDays = Number(durationRaw);
+    const auctionDurationHours = durationHours;
 
     const startDateError = validateRequestedWorkStartDate(
       requestedWorkStartDate,
-      auctionDurationDays
+      auctionDurationHours
     );
     if (startDateError) {
       return NextResponse.json({ error: startDateError }, { status: 400 });
@@ -183,6 +244,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: descriptionError }, { status: 400 });
     }
 
+    const nafCheck = validateWorkRequestNafSelection(category, nafCodesRaw);
+    if (!nafCheck.ok) {
+      return NextResponse.json({ error: nafCheck.error }, { status: 400 });
+    }
+
+    const pricingCheck = validatePricingSelection({
+      pricingTier: pricingTierRaw,
+      workOptionId: workOptionIdRaw || undefined,
+      workOptionOtherDescription: workOptionOtherDescriptionRaw || undefined,
+      nafCodes: nafCheck.nafCodes,
+    });
+    if (!pricingCheck.ok) {
+      return NextResponse.json({ error: pricingCheck.error }, { status: 400 });
+    }
+
     const photosError = validatePhotoFiles(photos);
     if (photosError) {
       return NextResponse.json({ error: photosError }, { status: 400 });
@@ -196,39 +272,60 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: previousQuoteError }, { status: 400 });
     }
 
-    let clientStartPrice: number | undefined;
-    if (startPriceMode === "client") {
-      const startPriceError = validateClientStartPrice(clientStartPriceRaw);
-      if (startPriceError) {
-        return NextResponse.json({ error: startPriceError }, { status: 400 });
-      }
-      clientStartPrice = Number(clientStartPriceRaw);
-    }
+    let clientId: string | undefined;
+    let phoneVerifiedAt: string | undefined;
+    let guest = false;
 
-    const existing = await getClientById(session.clientId);
-    if (!existing) {
-      return NextResponse.json(
-        { error: "Session invalide. Reconnectez-vous." },
-        { status: 401 }
-      );
+    if (session) {
+      const existing = await getClientById(session.clientId);
+      if (!existing) {
+        return NextResponse.json(
+          { error: "Session invalide. Reconnectez-vous." },
+          { status: 401 }
+        );
+      }
+      if (existing.email.toLowerCase() !== email.toLowerCase()) {
+        return NextResponse.json(
+          {
+            error:
+              "Utilisez l'email de votre compte connecté pour créer une demande.",
+          },
+          { status: 400 }
+        );
+      }
+      if (!clientPhoneIsVerified(existing, phoneNormalized)) {
+        return NextResponse.json(
+          {
+            error:
+              "Vérifiez votre mobile par SMS avant d'envoyer la demande (bouton « Recevoir un code »).",
+          },
+          { status: 400 }
+        );
+      }
+      clientId = existing.id;
+      phoneVerifiedAt = existing.phoneVerifiedAt;
+    } else {
+      const guestOk = await isGuestPhoneVerified(phoneNormalized);
+      if (!guestOk) {
+        return NextResponse.json(
+          {
+            error:
+              "Vérifiez votre mobile par SMS avant d'envoyer la demande (bouton « Recevoir un code »).",
+          },
+          { status: 400 }
+        );
+      }
+      guest = true;
+      phoneVerifiedAt = new Date().toISOString();
     }
-    if (existing.email.toLowerCase() !== email.toLowerCase()) {
-      return NextResponse.json(
-        {
-          error:
-            "Utilisez l'email de votre compte connecté pour créer une demande.",
-        },
-        { status: 400 }
-      );
-    }
-    const client = existing;
 
     const entry = await addWorkRequest({
       firstName,
       lastName,
       email,
       phone,
-      clientId: client.id,
+      phoneVerifiedAt,
+      clientId,
       clientKind,
       companyName,
       clientSiret,
@@ -243,14 +340,28 @@ export async function POST(request: NextRequest) {
       addressVerifiedAt: new Date().toISOString(),
       requestedWorkStartDate,
       category,
+      nafCodes: nafCheck.nafCodes,
+      pricingTier: pricingCheck.pricingTier,
+      workOptionId: pricingCheck.workOptionId,
+      workOptionOtherDescription: pricingCheck.workOptionOtherDescription,
       description: description.trim(),
-      auctionDurationDays,
-      startPriceMode,
-      startPrice: clientStartPrice,
+      auctionDurationHours,
+      auctionDurationDays: Math.max(1, Math.round(auctionDurationHours / 24)),
+      maxContactArtisans,
+      preferEstablishedCompany,
+      minGoogleRating,
+      requireActiveCompany: true,
+      requireValidInsurances: true,
+      smsContactAlertsEnabled: true,
+      startPriceMode: "unspecified",
       photos: [],
     });
 
-    await linkOrphanWorkRequests(client.id, email);
+    if (clientId) {
+      await linkOrphanWorkRequests(clientId, email);
+    } else {
+      await consumeGuestPhoneVerification(phoneNormalized);
+    }
 
     const photoPaths = await saveRequestPhotos(entry.id, photos);
     await setWorkRequestPhotos(entry.id, photoPaths);
@@ -269,6 +380,7 @@ export async function POST(request: NextRequest) {
         success: true,
         id: entry.id,
         photoCount: photoPaths.length,
+        guest,
       },
       { status: 201 }
     );

@@ -9,7 +9,7 @@ export type DecennaleVerificationStatus =
   | "validé"
   | "non_couvert";
 
-/** Vérification KBIS / RC pro (niveau 1). */
+/** Vérification documents niveau 1 (RC pro, etc.). */
 export type DocumentVerificationStatus =
   | "en_attente_verification"
   | "validé"
@@ -30,6 +30,18 @@ export interface Level1ConsistencyIssue {
   severity: "warning" | "error";
 }
 
+/** Snapshot BODACC (procédures collectives — API DILA, Licence Ouverte 2.0). */
+export interface BodaccVerificationSnapshot {
+  status: "clear" | "active_procedure" | "unavailable";
+  checkedAt: string;
+  hasActiveProcedure: boolean;
+  nature?: string;
+  dateParution?: string;
+  announcementId?: string;
+  url?: string;
+  error?: string;
+}
+
 export interface ProLevel1Audit {
   rcsVerifiedAt?: string;
   geoVerified: boolean;
@@ -37,6 +49,8 @@ export interface ProLevel1Audit {
   consistencyCheckedAt?: string;
   autoValidatedAt?: string;
   globalIssues?: Level1ConsistencyIssue[];
+  /** Contrôle BODACC (procédures collectives) à l'inscription / revalidation docs. */
+  bodacc?: BodaccVerificationSnapshot;
 }
 
 export type Level1CheckStatus =
@@ -85,6 +99,51 @@ export interface ProDocument {
   consistencyIssues?: Level1ConsistencyIssue[];
 }
 
+/** Dirigeant / représentant légal issu du registre (API gouv). */
+export interface LegalRepresentative {
+  fullName: string;
+  role?: string;
+  /** personne physique | personne morale */
+  kind?: "personne_physique" | "personne_morale";
+}
+
+export type PaymentNameCheckStatus = "match" | "mismatch" | "unavailable";
+
+/** Contrôle de cohérence nom CB ↔ dirigeants / entreprise (non bloquant). */
+export interface PaymentNameCheck {
+  status: PaymentNameCheckStatus;
+  cardName?: string;
+  matchedAgainst?: string;
+  checkedAt: string;
+  stripeSessionId?: string;
+}
+
+/** @deprecated Ancien gate payant à l'achat de crédits — remplacé par BODACC à l'inscription. */
+export const KBIS_VERIFICATION_FEE_EUR = 3;
+/** @deprecated */
+export const KBIS_VERIFICATION_FEE_CENTS = KBIS_VERIFICATION_FEE_EUR * 100;
+
+export type KbisPurchaseVerificationStatus = "passed" | "failed" | "error";
+
+export type KbisPurchaseProvider = "registry" | "mock" | "infogreffe";
+
+/**
+ * @deprecated Ancien contrôle à l'achat de crédits (frais 3 €).
+ * La vérif passe désormais par registre + BODACC + PDF RC/décennale à l'inscription.
+ */
+export interface KbisPurchaseVerification {
+  status: KbisPurchaseVerificationStatus;
+  checkedAt: string;
+  stripeSessionId: string;
+  provider: KbisPurchaseProvider;
+  feeRetainedCents: number;
+  refundedCents?: number;
+  stripeRefundId?: string;
+  reason?: string;
+  companyNameAtCheck?: string;
+  bodacc?: BodaccVerificationSnapshot;
+}
+
 export interface ProRegistration {
   id: string;
   companyName: string;
@@ -108,13 +167,22 @@ export interface ProRegistration {
   /** @deprecated */
   qualibatJobLabel?: string;
   rcsVerified: boolean;
+  /** Dirigeants connus au registre au moment de la vérif SIRET. */
+  legalRepresentatives?: LegalRepresentative[];
+  /** Dernier contrôle nom CB vs dirigeants / raison sociale. */
+  paymentNameCheck?: PaymentNameCheck;
+  /**
+   * Vérif d'identité à l'achat de crédits (Kbis / registre).
+   * Tant que status !== "passed", chaque achat Stripe repasse par le gate.
+   */
+  kbisPurchaseVerification?: KbisPurchaseVerification;
   /** Audit automatique niveau 1 (RCS, géo, cohérence OCR). */
   level1Audit?: ProLevel1Audit;
   /** Date de certification niveau 1 par l'admin. */
   level1CertifiedAt?: string;
-  /** Niveau affiché (0 = démoté / non certifié, 1 = Certifié, 2 = Qualifié, 3 = Premium). */
+  /** Certification (0 = retirée, 1 = certifié ; 2/3 legacy encore tolérés en lecture). */
   qualificationLevel?: QualificationLevel;
-  /** Documents transmis à l'inscription (KBIS, assurances…). */
+  /** Documents transmis à l'inscription (RC pro, etc.). */
   documents?: ProDocument[];
   passwordHash: string;
   status: AdminReviewStatus;
@@ -137,6 +205,18 @@ export interface ProRegistration {
    */
   emailVerified?: boolean;
   emailVerifiedAt?: string;
+  /** ID client société Pennylane (API v2). */
+  pennylaneCustomerId?: number;
+  /** Factures Pennylane liées aux achats Stripe (idempotence). */
+  pennylaneInvoices?: PennylaneInvoiceRef[];
+}
+
+/** Référence facture Pennylane pour un Checkout Stripe. */
+export interface PennylaneInvoiceRef {
+  stripeSessionId: string;
+  invoiceId: number;
+  invoiceNumber?: string;
+  createdAt: string;
 }
 
 export type ClientKind = "individual" | "company";
@@ -148,6 +228,10 @@ export interface ClientAccount {
   firstName: string;
   lastName: string;
   phone?: string;
+  /** Mobile vérifié par SMS (E.164, ex. +33612345678). */
+  phoneVerifiedE164?: string;
+  /** Horodatage de la dernière vérification SMS du mobile. */
+  phoneVerifiedAt?: string;
   /** Défaut individual pour les comptes existants. */
   kind?: ClientKind;
   companyName?: string;
@@ -162,6 +246,12 @@ export interface ClientAccount {
   emailVerifiedAt?: string;
   /** Compte de démonstration (présentation / tests). */
   isTestAccount?: boolean;
+  /** Claims « client injoignable » validés (anti-churn). */
+  ghostClaimsUpheld?: number;
+  /** Client bloqué : plus de nouvelles demandes de contact / auto-accept. */
+  blockedFromContact?: boolean;
+  blockedAt?: string;
+  adminNote?: string;
   createdAt: string;
 }
 
@@ -172,6 +262,8 @@ export interface WorkRequest {
   email: string;
   /** Téléphone du client (obligatoire à la création). */
   phone?: string;
+  /** Horodatage de vérif SMS du mobile au moment de la création. */
+  phoneVerifiedAt?: string;
   clientId?: string;
   clientKind?: ClientKind;
   companyName?: string;
@@ -198,21 +290,67 @@ export interface WorkRequest {
    * Obligatoires pour la recherche d’artisans autour du chantier.
    */
   nafCodes?: string[];
+  /**
+   * Ticket de chantier (bas / moyen / élevé / premium) → prix de déblocage contact.
+   * Absent sur l’historique = ticket élevé (20 €, ancien tarif unique).
+   * Non affiché au particulier.
+   */
+  pricingTier?: "bas" | "moyen" | "eleve" | "premium";
+  /** Prestation détaillée choisie (catalogue NAF), si renseignée. */
+  workOptionId?: string;
+  /** Description courte si prestation = « Autre ». */
+  workOptionOtherDescription?: string;
   description: string;
   /** Prix de départ de l'enchère. Peut venir du client, d'un devis précédent,
-   *  ou du premier devis Artipascher validé. */
+   *  ou du premier devis Nord Artisan Pro validé. */
   startPrice?: number;
   /**
    * Comment le prix de départ est déterminé :
    * - client : montant fixé par le particulier
-   * - first_quote : fixé au premier devis Artipascher validé
+   * - first_quote : fixé au premier devis Nord Artisan Pro validé
    * - unspecified : non précisé (équivalent pratique au 1er devis)
    */
   startPriceMode?: "client" | "first_quote" | "unspecified";
-  /** Renseigné lorsque le prix de départ provient d'un devis Artipascher validé. */
+  /** Renseigné lorsque le prix de départ provient d'un devis Nord Artisan Pro validé. */
   startPriceQuoteId?: string;
-  /** Durée souhaitée de l'enchère en jours (max. 90). */
-  auctionDurationDays: number;
+  /** Durée d'annonce / mise en contact en heures. */
+  auctionDurationHours: number;
+  /**
+   * @deprecated Legacy jours — migré vers auctionDurationHours (×24).
+   */
+  auctionDurationDays?: number;
+  /**
+   * Nombre max d’artisans autorisés à débloquer le contact (choix client, 1–5).
+   * undefined (historique) = 5.
+   */
+  maxContactArtisans?: number;
+  /**
+   * Ancienneté d'entreprise exigée pour les contacts / SMS :
+   * - true : uniquement 5+ (≥ 5 ans)
+   * - false : uniquement 0 à 5 ans (&lt; 5 ans)
+   * - undefined (historique) : pas de filtre d'âge
+   */
+  preferEstablishedCompany?: boolean;
+  /**
+   * Note Google minimale souhaitée (ex. 4). Absent / 0 = pas de filtre.
+   * Appliqué au matching si une note est connue pour l’artisan.
+   */
+  minGoogleRating?: number;
+  /**
+   * Toujours true sur les nouvelles demandes : entreprise au statut normal
+   * (active, hors liquidation / cessation).
+   */
+  requireActiveCompany?: boolean;
+  /**
+   * Toujours true sur les nouvelles demandes : décennale + RC pro validées.
+   */
+  requireValidInsurances?: boolean;
+  /**
+   * Autorisation de mise en contact (acceptation CG à la création).
+   * Contact-only : toujours true pour les nouvelles demandes.
+   * undefined = true (historique).
+   */
+  smsContactAlertsEnabled?: boolean;
   photos: string[];
   status: AdminReviewStatus;
   createdAt: string;
@@ -279,13 +417,27 @@ export interface Bid {
   fromQuoteId?: string;
 }
 
+export type UnlockClaimStatus =
+  | "none"
+  | "pending"
+  | "approved"
+  | "rejected";
+
 export interface ContactUnlock {
   id: string;
   proId: string;
   auctionId: string;
+  workRequestId?: string;
   amountEur: number;
   paidAt: string;
   stripeSessionId?: string;
+  /** Recréditage anti-churn effectué. */
+  refundedAt?: string;
+  refundTxnId?: string;
+  claimStatus?: UnlockClaimStatus;
+  claimedAt?: string;
+  claimReason?: string;
+  claimResolvedAt?: string;
 }
 
 export type PasswordResetUserType = "client" | "pro";
@@ -310,9 +462,39 @@ export interface EmailVerificationToken {
   usedAt?: string;
 }
 
-export type SmsCampaignStatus = "demo" | "sent" | "failed";
+/** Challenge OTP SMS pour vérifier le mobile d'un particulier. */
+export interface PhoneVerificationChallenge {
+  id: string;
+  /**
+   * Compte client, ou `__guest__` pour une vérification hors compte
+   * (demande de travaux sans inscription).
+   */
+  clientId: string;
+  phoneE164: string;
+  codeHash: string;
+  expiresAt: string;
+  attempts: number;
+  createdAt: string;
+}
 
-export type SmsRecipientStatus = "sent" | "failed" | "skipped";
+/** Mobile vérifié sans compte (fenêtre courte pour soumettre une demande). */
+export interface GuestPhoneVerification {
+  phoneE164: string;
+  verifiedAt: string;
+  expiresAt: string;
+}
+
+/** Sujet store pour les OTP / vérifs hors compte. */
+export const GUEST_PHONE_SUBJECT_ID = "__guest__";
+
+export type SmsCampaignStatus =
+  | "demo"
+  | "sent"
+  | "failed"
+  | "pending_review"
+  | "cancelled";
+
+export type SmsRecipientStatus = "sent" | "failed" | "skipped" | "pending";
 
 export type SmsCohort = "returning" | "new_young" | "new_established";
 
@@ -328,7 +510,7 @@ export interface SmsCampaignRecipient {
   cohort?: SmsCohort;
 }
 
-/** Campagne SMS admin — alerte artisans proches d'une demande de travaux. */
+/** Batch d’envoi journalier (historique) lié à une campagne d’acquisition. */
 export interface SmsCampaign {
   id: string;
   workRequestId: string;
@@ -342,8 +524,40 @@ export interface SmsCampaign {
   failedCount: number;
   recipients: SmsCampaignRecipient[];
   trigger?: SmsCampaignTrigger;
+  /** Campagne multi-jours parente, si applicable. */
+  acquisitionCampaignId?: string;
+  /**
+   * Jour d’envoi prévu (Europe/Paris YYYY-MM-DD).
+   * En mode revue : préparé la veille pour cette date.
+   */
+  scheduledForDate?: string;
   createdAt: string;
   sentAt?: string;
+}
+
+export type SmsAcquisitionStatus =
+  | "active"
+  | "completed"
+  | "paused"
+  | "exhausted";
+
+/**
+ * Campagne d’acquisition multi-jours : budget SMS/jour jusqu’à 5/5 contacts acceptés.
+ */
+export interface SmsAcquisitionCampaign {
+  id: string;
+  workRequestId: string;
+  status: SmsAcquisitionStatus;
+  /** Snapshot du budget journalier au démarrage. */
+  smsPerDay: number;
+  totalSent: number;
+  /** Jour Europe/Paris YYYY-MM-DD du dernier lot. */
+  lastSendDate?: string;
+  sentOnLastDate: number;
+  trigger: SmsCampaignTrigger;
+  createdAt: string;
+  completedAt?: string;
+  updatedAt: string;
 }
 
 export type ContactRequestStatus = "pending" | "accepted" | "refused" | "expired";
@@ -377,6 +591,10 @@ export interface ArtisanProspect {
   phone?: string;
   source: "gouv" | "import" | "platform";
   optedOut?: boolean;
+  /**
+   * Dernier SMS marketing campagne envoyé avec succès.
+   * Si renseigné → plus jamais de SMS marketing (acquisition).
+   */
   lastContactedAt?: string;
   notes?: string;
   createdAt: string;
@@ -385,27 +603,95 @@ export interface ArtisanProspect {
 
 export interface SmsCampaignSettings {
   autoSendOnApprove: boolean;
-  defaultCampaignSize: number;
+  /** SMS marketing max par jour et par campagne d’acquisition. */
+  smsPerDay: number;
+  /**
+   * Si true (défaut) : préparation la veille en `pending_review` (sans OVH).
+   * Envoi réel seulement après validation admin, avec re-check 5/5.
+   */
+  requireReviewBeforeSend: boolean;
+  /**
+   * @deprecated Alias de smsPerDay (migration anciens stores).
+   */
+  defaultCampaignSize?: number;
   defaultMessageTemplate?: string;
   throttleMs: number;
 }
 
 export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
   autoSendOnApprove: false,
-  defaultCampaignSize: 30,
+  smsPerDay: 5,
+  defaultCampaignSize: 5,
+  requireReviewBeforeSend: true,
   throttleMs: 150,
 };
 
-/** 1 crédit = 1 € — polyvalent (contact ou enchère). */
-export const CREDIT_PRICE_EUR = 1;
+/**
+ * @deprecated Packs de solde retirés — paiement unitaire au déblocage.
+ * Conservé vide pour compat. lecture d’anciennes sessions / code legacy.
+ */
+export const CONTACT_UNLOCK_REF_EUR = 20;
 
-export const CREDIT_PACKS = [1, 5, 10, 20] as const;
-export type CreditPackSize = (typeof CREDIT_PACKS)[number];
+export interface ContactBalancePack {
+  /** Solde crédité en euros. */
+  creditEur: number;
+  /** Prix TTC payé (Stripe). */
+  payEur: number;
+}
 
-/** Crédits dépensés par le filleul avant récompense du parrain. */
-export const REFERRAL_SPEND_THRESHOLD = 5;
-/** Crédits offerts au parrain une fois le seuil atteint. */
-export const REFERRAL_REWARD_CREDITS = 5;
+/** @deprecated Plus de packs à l’achat. */
+export const CONTACT_BALANCE_PACKS: readonly ContactBalancePack[] = [] as const;
+
+export type ContactBalancePackSize = number;
+export function getContactBalancePack(
+  creditEur: number
+): ContactBalancePack | undefined {
+  return CONTACT_BALANCE_PACKS.find((p) => p.creditEur === creditEur);
+}
+
+export function contactBalancePackDiscountPercent(
+  pack: ContactBalancePack
+): number {
+  if (pack.creditEur <= 0) return 0;
+  return Math.round((1 - pack.payEur / pack.creditEur) * 100);
+}
+
+/** @deprecated Alias — préférer CONTACT_UNLOCK_REF_EUR. */
+export const CREDIT_PRICE_EUR = CONTACT_UNLOCK_REF_EUR;
+/** @deprecated Alias packs crédits → solde. */
+export type CreditPack = { credits: number; priceEur: number };
+/** @deprecated */
+export const CREDIT_PACKS = CONTACT_BALANCE_PACKS.map((p) => ({
+  credits: p.creditEur,
+  priceEur: p.payEur,
+})) as readonly CreditPack[];
+/** @deprecated */
+export type CreditPackSize = ContactBalancePackSize;
+/** @deprecated */
+export function getCreditPack(credits: number): CreditPack | undefined {
+  const pack = getContactBalancePack(credits);
+  return pack
+    ? { credits: pack.creditEur, priceEur: pack.payEur }
+    : undefined;
+}
+/** @deprecated */
+export function creditPackUnitPriceEur(pack: {
+  credits?: number;
+  priceEur: number;
+  creditEur?: number;
+  payEur?: number;
+}): number {
+  const credit = pack.creditEur ?? pack.credits ?? 1;
+  const pay = pack.payEur ?? pack.priceEur;
+  return Math.round((pay / credit) * 100) / 100;
+}
+
+/** € dépensés par le filleul avant récompense du parrain. */
+export const REFERRAL_SPEND_THRESHOLD = 20;
+/** € offerts au parrain une fois le seuil atteint. */
+export const REFERRAL_REWARD_EUR = 20;
+/** @deprecated Alias. */
+export const REFERRAL_REWARD_CREDITS = REFERRAL_REWARD_EUR;
 
 export type CreditTxnType =
   | "purchase"
@@ -420,18 +706,24 @@ export interface ProCreditTransaction {
   id: string;
   proId: string;
   type: CreditTxnType;
-  /** +N à l'achat, -1 à la dépense. */
+  /** Delta en euros (+achat, −dépense). */
   amount: number;
   balanceAfter: number;
+  /** Montant payé en euros (achats Stripe). */
+  amountEur?: number;
   auctionId?: string;
   workRequestId?: string;
   stripeSessionId?: string;
+  /** Facture Pennylane associée (achats solde). */
+  pennylaneInvoiceId?: number;
+  pennylaneInvoiceNumber?: string;
   note?: string;
   createdAt: string;
 }
 
 export interface ProCreditWallet {
   proId: string;
+  /** Solde en euros. */
   balance: number;
   updatedAt: string;
 }
@@ -475,11 +767,16 @@ export interface DataStore {
   proQuotes: ProQuote[];
   passwordResetTokens: PasswordResetToken[];
   emailVerificationTokens: EmailVerificationToken[];
+  phoneVerificationChallenges: PhoneVerificationChallenge[];
+  guestPhoneVerifications?: GuestPhoneVerification[];
   smsCampaigns: SmsCampaign[];
+  smsAcquisitionCampaigns?: SmsAcquisitionCampaign[];
   smsSettings?: SmsCampaignSettings;
   creditWallets: ProCreditWallet[];
   creditTransactions: ProCreditTransaction[];
   notifications: AppNotification[];
+  /** Une fois migré, les soldes/transactions sont en euros. */
+  walletCurrency?: "eur" | "credits";
 }
 
 export const EMPTY_STORE: DataStore = {
@@ -493,9 +790,13 @@ export const EMPTY_STORE: DataStore = {
   proQuotes: [],
   passwordResetTokens: [],
   emailVerificationTokens: [],
+  phoneVerificationChallenges: [],
+  guestPhoneVerifications: [],
   smsCampaigns: [],
+  smsAcquisitionCampaigns: [],
   smsSettings: { ...DEFAULT_SMS_SETTINGS },
   creditWallets: [],
   creditTransactions: [],
   notifications: [],
+  walletCurrency: "eur",
 };

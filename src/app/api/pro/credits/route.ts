@@ -1,23 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
-import {
-  createCreditPackCheckout,
-  isDemoPaymentAllowed,
-  isStripeConfigured,
-} from "@/lib/payments";
+import { NextResponse } from "next/server";
+import { isDemoPaymentAllowed, isStripeConfigured } from "@/lib/payments";
 import { getProSession } from "@/lib/pro-auth";
+import { CONTACT_UNLOCK_REF_EUR } from "@/lib/store-types";
 import {
-  CREDIT_PACKS,
-  CREDIT_PRICE_EUR,
-  type CreditPackSize,
-} from "@/lib/store-types";
-import {
-  creditProWallet,
-  getApprovedProById,
   getProCreditBalance,
   getProCreditTransactions,
 } from "@/lib/store";
+import { PRICING_TIERS } from "@/lib/pricing-tiers";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
+/** Consultation du solde résiduel (parrainage / ancien solde) — plus d’achat de packs. */
 export async function GET() {
   const session = await getProSession();
   if (!session) {
@@ -31,89 +23,29 @@ export async function GET() {
 
   return NextResponse.json({
     balance,
-    creditPriceEur: CREDIT_PRICE_EUR,
-    packs: CREDIT_PACKS,
+    currency: "eur",
+    unlockRefEur: CONTACT_UNLOCK_REF_EUR,
+    unlockPriceEur: UNLOCK_PRICE_EUR,
+    unlockTickets: PRICING_TIERS.map((t) => ({
+      id: t.id,
+      label: t.label,
+      unlockPriceEur: t.unlockPriceEur,
+    })),
+    packs: [],
+    packPurchaseEnabled: false,
     transactions: transactions.slice(0, 50),
     demoAllowed: isDemoPaymentAllowed(),
     stripeConfigured: isStripeConfigured(),
   });
 }
 
-export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
-
-  const session = await getProSession();
-  if (!session) {
-    return NextResponse.json({ error: "Non connecté." }, { status: 401 });
-  }
-
-  const pro = await getApprovedProById(session.proId);
-  if (!pro) {
-    return NextResponse.json({ error: "Compte non approuvé." }, { status: 403 });
-  }
-
-  let packSize: number;
-  let demo = false;
-
-  try {
-    const body = await request.json();
-    packSize = Number(body.packSize);
-    demo = body.demo === true;
-  } catch {
-    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
-  }
-
-  if (!CREDIT_PACKS.includes(packSize as CreditPackSize)) {
-    return NextResponse.json(
-      { error: `Pack invalide. Choisissez parmi : ${CREDIT_PACKS.join(", ")}.` },
-      { status: 400 }
-    );
-  }
-
-  if (demo && isDemoPaymentAllowed()) {
-    const result = await creditProWallet({
-      proId: session.proId,
-      type: "demo_grant",
-      amount: packSize,
-      note: `Pack démo ${packSize} crédits`,
-    });
-    if ("error" in result) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-    return NextResponse.json({
-      demo: true,
-      balance: result.balance,
-      credited: packSize,
-    });
-  }
-
-  if (!isStripeConfigured()) {
-    return NextResponse.json(
-      {
-        error: "Stripe non configuré. En développement, utilisez le mode démo.",
-        stripeRequired: true,
-      },
-      { status: 503 }
-    );
-  }
-
-  const origin = request.nextUrl.origin;
-  const compteUrl = `${origin}/pro/compte`;
-
-  const checkout = await createCreditPackCheckout({
-    proId: session.proId,
-    proEmail: session.email,
-    packSize,
-    successUrl: compteUrl,
-    cancelUrl: compteUrl,
-  });
-
-  if (!checkout) {
-    return NextResponse.json({ error: "Impossible de créer le paiement." }, { status: 500 });
-  }
-
-  return NextResponse.json({
-    checkoutUrl: checkout.url,
-    amountEur: packSize * CREDIT_PRICE_EUR,
-  });
+export async function POST() {
+  return NextResponse.json(
+    {
+      error:
+        "L’achat de packs de solde n’est plus proposé. Payez la mise en contact au ticket du chantier lors du déblocage.",
+      packPurchaseEnabled: false,
+    },
+    { status: 410 }
+  );
 }

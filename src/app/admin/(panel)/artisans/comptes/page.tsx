@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminImpersonateProButton from "@/components/admin/AdminImpersonateProButton";
+import {
+  bodaccAnnouncementUrl,
+  bodaccCollectiveSearchUrl,
+} from "@/lib/bodacc";
+import type { BodaccVerificationSnapshot } from "@/lib/store-types";
 
 type StatusFilter = "all" | "approved" | "pending" | "rejected" | "email_unverified";
 
@@ -29,6 +34,16 @@ interface ArtisanAccount {
   bidsCount: number;
   unlocksCount: number;
   referralsCount: number;
+  legalRepresentatives?: Array<{ fullName: string; role?: string }>;
+  paymentNameCheck?: {
+    status: "match" | "mismatch" | "unavailable";
+    cardName?: string;
+    matchedAgainst?: string;
+    checkedAt: string;
+  };
+  level1Audit?: {
+    bodacc?: BodaccVerificationSnapshot;
+  };
 }
 
 const STATUS_LABELS = {
@@ -97,7 +112,7 @@ export default function AdminComptesArtisansPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Comptes</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Suivi de tous les comptes professionnels inscrits — activité, crédits, email.
+        Suivi de tous les comptes professionnels inscrits — activité, solde, email.
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -186,6 +201,26 @@ export default function AdminComptesArtisansPage() {
                     >
                       {a.emailVerified ? "Email OK" : "Email à vérifier"}
                     </span>
+                    {a.paymentNameCheck?.status === "match" && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        Nom CB OK
+                      </span>
+                    )}
+                    {a.paymentNameCheck?.status === "mismatch" && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900">
+                        Nom CB ≠ dirigeants
+                      </span>
+                    )}
+                    {a.level1Audit?.bodacc?.status === "clear" && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        BODACC OK
+                      </span>
+                    )}
+                    {a.level1Audit?.bodacc?.status === "active_procedure" && (
+                      <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800">
+                        BODACC procédure
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-slate-600">
                     {a.email} · {a.phone}
@@ -209,17 +244,80 @@ export default function AdminComptesArtisansPage() {
                 <Row
                   label="Niveau"
                   value={
-                    a.qualificationLevel != null ? `N${a.qualificationLevel}` : "—"
+                    a.qualificationLevel === 0
+                      ? "Non certifié"
+                      : a.qualificationLevel != null
+                        ? "Certifié"
+                        : "—"
                   }
                 />
                 <Row label="Crédits" value={`${a.creditBalance} (dépensés ${a.spentCredits})`} />
                 <Row
                   label="Activité"
-                  value={`${a.bidsCount} enchères · ${a.unlocksCount} contacts`}
+                  value={`${a.unlocksCount} contact${a.unlocksCount > 1 ? "s" : ""} débloqué${a.unlocksCount > 1 ? "s" : ""}`}
                 />
                 <Row label="Parrainage" value={a.referralCode || "—"} />
                 <Row label="Filleuls" value={String(a.referralsCount)} />
+                <Row
+                  label="Dirigeants"
+                  value={
+                    a.legalRepresentatives?.length
+                      ? a.legalRepresentatives
+                          .map((r) =>
+                            r.role ? `${r.fullName} (${r.role})` : r.fullName
+                          )
+                          .join(" · ")
+                      : "—"
+                  }
+                />
+                {a.paymentNameCheck && (
+                  <Row
+                    label="Dernier paiement CB"
+                    value={
+                      a.paymentNameCheck.status === "match"
+                        ? `Cohérent${a.paymentNameCheck.cardName ? ` (${a.paymentNameCheck.cardName})` : ""}`
+                        : a.paymentNameCheck.status === "mismatch"
+                          ? `À surveiller${a.paymentNameCheck.cardName ? ` — ${a.paymentNameCheck.cardName}` : ""}`
+                          : "Nom non disponible"
+                    }
+                  />
+                )}
               </dl>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(() => {
+                  const detail = a.level1Audit?.bodacc
+                    ? bodaccAnnouncementUrl({
+                        url: a.level1Audit.bodacc.url,
+                        announcementId: a.level1Audit.bodacc.announcementId,
+                      })
+                    : null;
+                  return detail ? (
+                    <a
+                      href={detail}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                    >
+                      Annonce BODACC signalée
+                    </a>
+                  ) : null;
+                })()}
+                <a
+                  href={bodaccCollectiveSearchUrl(a.siren)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                >
+                  Consulter BODACC
+                </a>
+                <Link
+                  href="/admin/artisans/certification"
+                  className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-800 hover:bg-brand-100"
+                >
+                  Voir dossier / PDFs
+                </Link>
+              </div>
             </li>
           ))}
         </ul>

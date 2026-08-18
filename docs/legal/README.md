@@ -1,20 +1,20 @@
-# Documents légaux Artipascher — brouillon
+# Documents légaux Nord Artisan Pro — brouillon
 
-**Version :** 1.0-brouillon  
-**Date :** 6 août 2026  
+**Version :** 1.5-brouillon  
+**Date :** 18 août 2026  
 
 > Documents opérationnels à faire relire par un avocat.  
-> Compléter l’identité de l’éditeur dans `src/lib/legal.ts` (SIRET, adresse, etc.).
+> Source site : `src/lib/legal.ts`.
 
 ## Pages en ligne
 
 | Document | URL |
 |----------|-----|
-| Mentions légales | https://artipascher.fr/mentions-legales |
-| CGU | https://artipascher.fr/cgu |
-| CGV | https://artipascher.fr/cgv |
-| Confidentialité | https://artipascher.fr/confidentialite |
-| Cookies | https://artipascher.fr/cookies |
+| Mentions légales | https://nord-artisan-pro.com/mentions-legales |
+| CGU | https://nord-artisan-pro.com/cgu |
+| CGV | https://nord-artisan-pro.com/cgv |
+| Confidentialité | https://nord-artisan-pro.com/confidentialite |
+| Cookies | https://nord-artisan-pro.com/cookies |
 
 ## Fichiers de ce dossier
 
@@ -23,12 +23,12 @@
 - `03-cgv.md`
 - `04-politique-confidentialite.md`
 
-## À compléter avant ouverture commerciale
+## Checklist ouverture commerciale
 
-- [ ] Dénomination sociale / forme / capital
-- [ ] SIRET / RCS
-- [ ] Adresse du siège
-- [ ] Directeur de la publication
-- [ ] Médiateur de la consommation (CGU)
+- [x] Dénomination / forme / capital (EI — Nicolas BLAZEVIC)
+- [x] SIRET / RNE
+- [x] Adresse du siège (26 rue de Santes, 59320 Haubourdin)
+- [x] Directeur de la publication
+- [x] Médiateur de la consommation (FEVAD — à confirmer que l’adhésion couvre bien la médiation)
 - [ ] Relire avec un avocat
 - [ ] Enlever le bandeau « brouillon » et passer `version` à `1.0`

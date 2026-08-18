@@ -21,7 +21,6 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/artisans/certification", label: "Certification" },
       { href: "/admin/artisans/comptes", label: "Comptes" },
       { href: "/admin/artisans/documents", label: "Documents" },
-      { href: "/admin/artisans/devis", label: "Devis" },
     ],
   },
   {
@@ -29,14 +28,16 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/particuliers/comptes", label: "Comptes" },
       { href: "/admin/particuliers/demandes", label: "Demandes travaux" },
-      { href: "/admin/particuliers/encheres", label: "Enchères" },
+      { href: "/admin/particuliers/encheres", label: "Offres publiées" },
     ],
   },
   {
     title: "Acquisition",
     items: [
       { href: "/admin/base-artisans", label: "Base artisans NPC" },
+      { href: "/admin/bodacc", label: "BODACC procédures" },
       { href: "/admin/campagnes-sms", label: "Campagnes SMS" },
+      { href: "/admin/conversions-sms", label: "Conversions SMS" },
     ],
   },
 ];
@@ -53,7 +54,7 @@ export default function AdminSidebar() {
     <aside className="flex w-60 shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-slate-300">
       <div className="border-b border-slate-800 px-5 py-5">
         <Link href="/admin" className="block">
-          <p className="text-lg font-bold text-white">Artipascher</p>
+          <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
           <p className="text-xs text-slate-400">Administration</p>
         </Link>
       </div>

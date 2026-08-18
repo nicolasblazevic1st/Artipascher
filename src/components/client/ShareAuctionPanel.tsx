@@ -87,7 +87,7 @@ export default function ShareAuctionPanel({
 
   return (
     <section className="rounded-xl border border-brand-200 bg-brand-50 p-5">
-      <h2 className="text-lg font-semibold text-slate-900">Partager mon enchère</h2>
+      <h2 className="text-lg font-semibold text-slate-900">Partager mon annonce</h2>
       <p className="mt-1 text-sm text-slate-600">
         Diffusez votre projet sur les réseaux sociaux pour attirer plus d&apos;artisans du Nord-Pas-de-Calais.
       </p>

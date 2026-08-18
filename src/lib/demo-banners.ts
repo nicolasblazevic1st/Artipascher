@@ -1,7 +1,7 @@
 import type { ProSession } from "./pro-auth";
 import { getProSession } from "./pro-auth";
 
-export const TEST_ACCOUNT_EMAIL_SUFFIX = "@test.artipascher.fr";
+export const TEST_ACCOUNT_EMAIL_SUFFIX = "@test.nord-artisan-pro.com";
 
 export function isTestAccountEmail(email: string): boolean {
   return email.trim().toLowerCase().endsWith(TEST_ACCOUNT_EMAIL_SUFFIX);

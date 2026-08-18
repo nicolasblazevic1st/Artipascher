@@ -1,4 +1,21 @@
 import { createHash, randomBytes } from "crypto";
+import {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+  normalizeFrenchPhone,
+} from "@/lib/phone-format";
+
+export {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+  normalizeFrenchPhone,
+};
+
+/**
+ * - transactional : OTP, alertes contact client — pas de STOP (usage lié à une action).
+ * - marketing : campagnes / prospection — STOP obligatoire + horaires FR.
+ */
+export type SmsPurpose = "transactional" | "marketing";
 
 export interface SendSmsResult {
   ok: boolean;
@@ -21,41 +38,26 @@ export function isDemoSmsAllowed(): boolean {
   return process.env.OVH_SMS_ENABLED !== "true" || process.env.NODE_ENV === "development";
 }
 
-/** Normalise un numéro français vers +33XXXXXXXXX. */
-export function normalizeFrenchMobile(phone: string): string | null {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10 && digits.startsWith("0")) {
-    return `+33${digits.slice(1)}`;
-  }
-  if (digits.length === 11 && digits.startsWith("33")) {
-    return `+${digits}`;
-  }
-  if (digits.length === 12 && digits.startsWith("330")) {
-    return `+${digits.slice(1)}`;
-  }
-  return null;
-}
+/**
+ * Fenêtre légale indicative FR pour SMS commerciaux :
+ * lun–sam, 8h–20h (Europe/Paris). Dimanche = hors fenêtre.
+ * Les jours fériés ne sont pas listés ici (contrôle manuel / admin).
+ */
+export function isMarketingSmsWindowOpen(now = new Date()): boolean {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Paris",
+    weekday: "short",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(now);
 
-/** Accepte mobile ou fixe français (10 chiffres commençant par 0). */
-export function normalizeFrenchPhone(phone: string): string | null {
-  const digits = phone.replace(/\D/g, "");
-  let national: string | null = null;
-  if (digits.length === 10 && digits.startsWith("0")) {
-    national = digits;
-  } else if (digits.length === 11 && digits.startsWith("33")) {
-    national = `0${digits.slice(2)}`;
-  } else if (digits.length === 12 && digits.startsWith("330")) {
-    national = `0${digits.slice(3)}`;
-  }
-  if (!national || !/^0[1-9]\d{8}$/.test(national)) return null;
-  return `+33${national.slice(1)}`;
-}
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const hourRaw = parts.find((p) => p.type === "hour")?.value ?? "0";
+  const hour = Number(hourRaw === "24" ? "0" : hourRaw);
 
-export function formatFrenchPhoneDisplay(phone: string): string {
-  const normalized = normalizeFrenchPhone(phone);
-  if (!normalized) return phone.trim();
-  const national = `0${normalized.slice(3)}`;
-  return national.replace(/(\d{2})(?=\d)/g, "$1 ").trim();
+  if (weekday === "Sun") return false;
+  if (!Number.isFinite(hour)) return false;
+  return hour >= 8 && hour < 20;
 }
 
 function ovhSignature(
@@ -70,12 +72,20 @@ function ovhSignature(
   return `$1$${createHash("sha1").update(toSign).digest("hex")}`;
 }
 
-async function sendViaOvh(to: string, message: string): Promise<SendSmsResult> {
+async function sendViaOvh(
+  to: string,
+  message: string,
+  purpose: SmsPurpose
+): Promise<SendSmsResult> {
   const appKey = process.env.OVH_APP_KEY!;
   const appSecret = process.env.OVH_APP_SECRET!;
   const consumerKey = process.env.OVH_CONSUMER_KEY!;
   const serviceName = process.env.OVH_SMS_SERVICE_NAME!;
-  const sender = process.env.OVH_SMS_SENDER ?? "Artipascher";
+  const sender = process.env.OVH_SMS_SENDER ?? "NordArtPro";
+
+  // Marketing : STOP obligatoire (noStopClause false).
+  // Transactionnel : pas de STOP pour éviter de blacklister un client après un OTP.
+  const noStopClause = purpose === "transactional";
 
   const path = `/sms/${serviceName}/jobs`;
   const url = `https://eu.api.ovh.com/1.0${path}`;
@@ -83,7 +93,7 @@ async function sendViaOvh(to: string, message: string): Promise<SendSmsResult> {
     message,
     receivers: [to],
     sender,
-    noStopClause: false,
+    noStopClause,
   });
   const timestamp = Math.floor(Date.now() / 1000);
   const signature = ovhSignature(appSecret, consumerKey, "POST", url, body, timestamp);
@@ -121,7 +131,11 @@ async function sendViaOvh(to: string, message: string): Promise<SendSmsResult> {
   }
 }
 
-export async function sendSms(to: string, message: string): Promise<SendSmsResult> {
+export async function sendSms(
+  to: string,
+  message: string,
+  purpose: SmsPurpose
+): Promise<SendSmsResult> {
   const normalized = normalizeFrenchMobile(to);
   if (!normalized) {
     return { ok: false, demo: false, error: "Numéro de mobile invalide." };
@@ -135,12 +149,27 @@ export async function sendSms(to: string, message: string): Promise<SendSmsResul
     return { ok: false, demo: false, error: "Message trop long (max 640 caractères)." };
   }
 
+  if (purpose === "marketing" && !isMarketingSmsWindowOpen()) {
+    return {
+      ok: false,
+      demo: false,
+      error:
+        "SMS marketing hors horaires autorisés (lun–sam 8h–20h, heure de Paris). Réessayez plus tard.",
+    };
+  }
+
   if (isSmsConfigured()) {
-    return sendViaOvh(normalized, message.trim());
+    return sendViaOvh(normalized, message.trim(), purpose);
   }
 
   if (isDemoSmsAllowed()) {
-    console.info("[SMS demo]", normalized, message.trim());
+    console.info(
+      "[SMS demo]",
+      purpose,
+      purpose === "transactional" ? "noSTOP" : "STOP",
+      normalized,
+      message.trim()
+    );
     return { ok: true, demo: true, providerId: `demo-${randomBytes(4).toString("hex")}` };
   }
 

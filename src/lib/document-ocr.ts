@@ -3,14 +3,17 @@ import path from "path";
 
 import type { Level1ConsistencyIssue, Level1OcrHints } from "./store-types";
 
+/**
+ * Extraction documents pro : PDF texte uniquement (pdf-parse), puis regex.
+ * Pas d’OCR image / Tesseract — les attestations doivent être le PDF original.
+ */
+
 const SIREN_PATTERN = /\b(\d{3}\s?\d{3}\s?\d{3})\b/g;
 const SIRET_PATTERN = /\b(\d{3}\s?\d{3}\s?\d{3}\s?\d{5})\b/g;
 const DATE_PATTERN =
   /\b(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{1,2}\s+(?:janv|févr|fevr|mars|avr|mai|juin|juil|août|aout|sept|oct|nov|déc|dec)[a-z.]*\s+\d{4})\b/gi;
 
 const INSURER_KEYWORDS = [
-  "assurance",
-  "assureur",
   "axa",
   "allianz",
   "maif",
@@ -25,6 +28,9 @@ const INSURER_KEYWORDS = [
   "covea",
   "zurich",
   "hiscox",
+  // Génériques en dernier (souvent présents sans nom de marque).
+  "assureur",
+  "assurance",
 ];
 
 function normalizeDigits(value: string): string {
@@ -71,6 +77,7 @@ async function extractTextFromUpload(fileUrl: string): Promise<string> {
     return extractPdfText(filePath);
   }
 
+  // Image / scan : pas d’extraction — seuls les PDF texte + regex sont utilisés.
   return "";
 }
 
@@ -125,7 +132,8 @@ export function checkDocumentConsistency(
     return [
       {
         field: documentLabel,
-        message: "Texte non extrait (image ou PDF scanné) — document non validé automatiquement.",
+        message:
+          "Texte non lisible — utilisez le PDF original de l’assureur (pas une photo ni un scan).",
         severity: "warning",
       },
     ];

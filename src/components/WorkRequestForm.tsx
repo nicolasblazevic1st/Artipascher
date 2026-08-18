@@ -1,69 +1,116 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
-  MIN_DESCRIPTION_LENGTH,
-  MAX_PHOTOS,
+  LISTING_DURATION_OPTIONS,
+  DEFAULT_LISTING_DURATION_HOURS,
+} from "@/lib/auction-duration";
+import {
   minRequestedWorkStartDate,
   maxRequestedWorkStartDate,
   validateDescription,
   validatePhotoFiles,
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
-  validateClientStartPrice,
-  type StartPriceMode,
+  MIN_DESCRIPTION_LENGTH,
+  MAX_PHOTOS,
 } from "@/lib/demandes-validation";
-import BanAddressAutocomplete, {
-  type SelectedBanAddress,
-} from "@/components/BanAddressAutocomplete";
 import {
-  AUCTION_DURATION_OPTIONS,
-  DEFAULT_AUCTION_DURATION_DAYS,
-} from "@/lib/auction-duration";
+  getNafOptionsForCategory,
+  validateWorkRequestNafSelection,
+} from "@/lib/naf-codes";
+import {
+  getWorkOptionsForNafCodes,
+  OTHER_WORK_DESCRIPTION_MAX,
+  OTHER_WORK_DESCRIPTION_MIN,
+  OTHER_WORK_OPTION_ID,
+  type PricingTierId,
+  validatePricingSelection,
+} from "@/lib/pricing-tiers";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
+import {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+} from "@/lib/phone-format";
 import {
   isValidSiretFormat,
   normalizeSiret,
   type RcsVerificationResult,
 } from "@/lib/rcs";
+import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/google-rating";
+import BanAddressAutocomplete, {
+  type SelectedBanAddress,
+} from "@/components/BanAddressAutocomplete";
 
 export interface WorkRequestFormDefaults {
   firstName: string;
   lastName: string;
   email: string;
   phone?: string;
+  phoneVerifiedE164?: string;
+  phoneVerifiedAt?: string;
 }
 
 interface Props {
   defaults?: WorkRequestFormDefaults;
   /** Lien après succès (espace client). */
   successHref?: string;
+  /**
+   * Demande sans compte : champs contact éditables, OTP invité,
+   * puis invitation à créer un espace pour suivre les demandes.
+   */
+  guestMode?: boolean;
 }
 
 export default function WorkRequestForm({
   defaults,
   successHref = "/particulier/espace/demandes",
+  guestMode = false,
 }: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
+  const [submittedContact, setSubmittedContact] = useState<{
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [category, setCategory] = useState("");
+  const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>([]);
+  const [workOptionId, setWorkOptionId] = useState("");
+  const [pricingTier, setPricingTier] = useState<PricingTierId | "">("");
+  const [workOptionOtherDescription, setWorkOptionOtherDescription] =
+    useState("");
   const [hasPreviousQuote, setHasPreviousQuote] = useState(false);
   const [previousQuoteAmount, setPreviousQuoteAmount] = useState("");
   const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
   const [previousQuoteNote, setPreviousQuoteNote] = useState("");
   const [proofPreview, setProofPreview] = useState<string | null>(null);
-  const [startPriceMode, setStartPriceMode] = useState<StartPriceMode>("first_quote");
-  const [clientStartPrice, setClientStartPrice] = useState("");
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
-  const [auctionDurationDays, setAuctionDurationDays] = useState(DEFAULT_AUCTION_DURATION_DAYS);
+  const [listingDurationHours, setListingDurationHours] = useState(
+    DEFAULT_LISTING_DURATION_HOURS
+  );
+  const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
+  const [maxContactArtisans, setMaxContactArtisans] = useState(5);
+  const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
+  const [acceptContactTerms, setAcceptContactTerms] = useState(false);
+  const [phone, setPhone] = useState(defaults?.phone ?? "");
+  const [phoneVerifiedE164, setPhoneVerifiedE164] = useState(
+    defaults?.phoneVerifiedE164 ?? ""
+  );
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpMessage, setOtpMessage] = useState<string | null>(null);
+  const [otpCooldown, setOtpCooldown] = useState(0);
   const [isCompany, setIsCompany] = useState(false);
   const [clientSiret, setClientSiret] = useState("");
   const [companyVerification, setCompanyVerification] =
@@ -72,8 +119,137 @@ export default function WorkRequestForm({
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const photosOk = photoFiles.length >= 1;
-  const minStartDate = minRequestedWorkStartDate(auctionDurationDays);
+  const minStartDate = minRequestedWorkStartDate(listingDurationHours);
   const maxStartDate = maxRequestedWorkStartDate();
+  const nafOptions = category ? getNafOptionsForCategory(category) : [];
+  const requiresNafChoice = nafOptions.length > 1;
+  const effectiveNafCodes =
+    selectedNafCodes.length > 0
+      ? selectedNafCodes
+      : nafOptions.length === 1
+        ? [nafOptions[0].code]
+        : [];
+  const workOptions = getWorkOptionsForNafCodes(effectiveNafCodes);
+  const phoneE164 = normalizeFrenchMobile(phone);
+  const phoneVerified =
+    Boolean(phoneE164) &&
+    Boolean(phoneVerifiedE164) &&
+    phoneE164 === phoneVerifiedE164;
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const id = window.setInterval(() => {
+      setOtpCooldown((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [otpCooldown]);
+
+  function handleCategoryChange(next: string) {
+    setCategory(next);
+    const options = getNafOptionsForCategory(next);
+    setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
+    setWorkOptionId("");
+    setPricingTier("");
+    setWorkOptionOtherDescription("");
+    setError(null);
+  }
+
+  function toggleNafCode(code: string) {
+    setSelectedNafCodes((prev) => {
+      const next = prev.includes(code)
+        ? prev.filter((c) => c !== code)
+        : [...prev, code];
+      return next;
+    });
+    setWorkOptionId("");
+    setPricingTier("");
+    setWorkOptionOtherDescription("");
+    setError(null);
+  }
+
+  function selectWorkOption(id: string) {
+    const opt = workOptions.find((o) => o.id === id);
+    setWorkOptionId(id);
+    if (opt) {
+      setPricingTier(opt.tier);
+      setWorkOptionOtherDescription("");
+    }
+    setError(null);
+  }
+
+  function selectOtherWorkOption() {
+    setWorkOptionId(OTHER_WORK_OPTION_ID);
+    setPricingTier("bas");
+    setError(null);
+  }
+
+  function handlePhoneChange(value: string) {
+    setPhone(value);
+    setOtpMessage(null);
+    const next = normalizeFrenchMobile(value);
+    if (!next || next !== phoneVerifiedE164) {
+      // Ne pas effacer phoneVerifiedE164 du compte : on recalcule phoneVerified
+      // via la comparaison avec la saisie courante.
+    }
+  }
+
+  async function sendPhoneOtp() {
+    setOtpSending(true);
+    setOtpMessage(null);
+    setError(null);
+    const endpoint = guestMode
+      ? "/api/guest/phone-verification/send"
+      : "/api/client/phone-verification/send";
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+    setOtpSending(false);
+    if (!res.ok) {
+      if (typeof data.cooldownSeconds === "number") {
+        setOtpCooldown(data.cooldownSeconds);
+      }
+      // En mode invité, un 409 signifie déjà vérifié : on peut continuer.
+      if (guestMode && res.status === 409) {
+        const e164 = normalizeFrenchMobile(phone);
+        if (e164) setPhoneVerifiedE164(e164);
+        setOtpMessage(data.error ?? "Mobile déjà vérifié.");
+        return;
+      }
+      setOtpMessage(data.error ?? "Envoi du SMS impossible.");
+      return;
+    }
+    if (typeof data.cooldownSeconds === "number") {
+      setOtpCooldown(data.cooldownSeconds);
+    }
+    setOtpMessage(data.message ?? "Code envoyé par SMS.");
+  }
+
+  async function verifyPhoneOtp() {
+    setOtpVerifying(true);
+    setOtpMessage(null);
+    setError(null);
+    const endpoint = guestMode
+      ? "/api/guest/phone-verification/verify"
+      : "/api/client/phone-verification/verify";
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, code: otpCode }),
+    });
+    const data = await res.json();
+    setOtpVerifying(false);
+    if (!res.ok) {
+      setOtpMessage(data.error ?? "Code incorrect.");
+      return;
+    }
+    setPhoneVerifiedE164(data.phoneVerifiedE164 ?? "");
+    if (data.phoneDisplay) setPhone(data.phoneDisplay);
+    setOtpCode("");
+    setOtpMessage("Mobile vérifié.");
+  }
 
   function syncDescriptionLength(value: string) {
     setDescriptionLength(value.trim().length);
@@ -146,7 +322,7 @@ export default function WorkRequestForm({
 
     const startDateError = validateRequestedWorkStartDate(
       requestedWorkStartDate,
-      auctionDurationDays
+      listingDurationHours
     );
     if (startDateError) {
       setError(startDateError);
@@ -154,11 +330,19 @@ export default function WorkRequestForm({
       return;
     }
 
-    const phoneValue = String(
-      (form.elements.namedItem("phone") as HTMLInputElement | null)?.value ?? ""
-    ).trim();
+    const phoneValue = phone.trim();
     if (!phoneValue) {
       setError("Le numéro de téléphone est obligatoire.");
+      setStatus("error");
+      return;
+    }
+    if (!normalizeFrenchMobile(phoneValue)) {
+      setError("Indiquez un mobile français valide (06 ou 07).");
+      setStatus("error");
+      return;
+    }
+    if (!phoneVerified) {
+      setError("Vérifiez votre mobile par SMS avant d'envoyer la demande.");
       setStatus("error");
       return;
     }
@@ -171,31 +355,85 @@ export default function WorkRequestForm({
       }
     }
 
-    if (startPriceMode === "client") {
-      const startPriceError = validateClientStartPrice(clientStartPrice);
-      if (startPriceError) {
-        setError(startPriceError);
-        setStatus("error");
-        return;
-      }
+    if (!acceptContactTerms) {
+      setError(
+        "Vous devez accepter les CGU / CGV pour autoriser la mise en contact avec les artisans."
+      );
+      setStatus("error");
+      return;
+    }
+
+    if (!category) {
+      setError("Choisissez un type de travaux.");
+      setStatus("error");
+      return;
+    }
+
+    const nafCheck = validateWorkRequestNafSelection(category, selectedNafCodes);
+    if (!nafCheck.ok) {
+      setError(nafCheck.error);
+      setStatus("error");
+      return;
+    }
+
+    const pricingCheck = validatePricingSelection({
+      pricingTier,
+      workOptionId: workOptionId || undefined,
+      workOptionOtherDescription:
+        workOptionId === OTHER_WORK_OPTION_ID
+          ? workOptionOtherDescription
+          : undefined,
+      nafCodes: nafCheck.nafCodes,
+    });
+    if (!pricingCheck.ok) {
+      setError(pricingCheck.error);
+      setStatus("error");
+      return;
     }
 
     setStatus("submitting");
 
     const formData = new FormData(form);
+    formData.delete("nafCodes");
+    for (const code of nafCheck.nafCodes) {
+      formData.append("nafCodes", code);
+    }
+    formData.set("pricingTier", pricingCheck.pricingTier);
+    if (pricingCheck.workOptionId) {
+      formData.set("workOptionId", pricingCheck.workOptionId);
+    } else {
+      formData.delete("workOptionId");
+    }
+    if (pricingCheck.workOptionOtherDescription) {
+      formData.set(
+        "workOptionOtherDescription",
+        pricingCheck.workOptionOtherDescription
+      );
+    } else {
+      formData.delete("workOptionOtherDescription");
+    }
     formData.set("description", getDescriptionValue().trim());
     formData.set("addressLine", selectedAddress.addressLine);
     formData.set("postalCode", selectedAddress.postalCode);
     formData.set("city", selectedAddress.city);
     formData.set("banAddressId", selectedAddress.banAddressId);
     formData.set("requestedWorkStartDate", requestedWorkStartDate);
-    formData.set("auctionDurationDays", String(auctionDurationDays));
-    formData.set("startPriceMode", startPriceMode);
-    if (startPriceMode === "client") {
-      formData.set("clientStartPrice", clientStartPrice.trim());
+    formData.set("phone", phoneValue);
+    formData.set("auctionDurationHours", String(listingDurationHours));
+    formData.set(
+      "preferEstablishedCompany",
+      preferEstablishedCompany ? "true" : "false"
+    );
+    formData.set("maxContactArtisans", String(maxContactArtisans));
+    if (minGoogleRating !== "") {
+      formData.set("minGoogleRating", String(minGoogleRating));
     } else {
-      formData.delete("clientStartPrice");
+      formData.delete("minGoogleRating");
     }
+    formData.set("acceptContactTerms", acceptContactTerms ? "true" : "false");
+    formData.delete("smsContactAlertsEnabled");
+    formData.delete("startPriceMode");
+    formData.delete("clientStartPrice");
     formData.set("clientKind", isCompany ? "company" : "individual");
     if (isCompany && companyVerification) {
       formData.set("clientSiret", companyVerification.siret);
@@ -231,8 +469,14 @@ export default function WorkRequestForm({
       return;
     }
 
-    const body = (await res.json()) as { id?: string };
+    const body = (await res.json()) as { id?: string; guest?: boolean };
     setCreatedRequestId(body.id ?? null);
+    setSubmittedContact({
+      email: String(formData.get("email") ?? "").trim(),
+      firstName: String(formData.get("firstName") ?? "").trim(),
+      lastName: String(formData.get("lastName") ?? "").trim(),
+      phone: String(formData.get("phone") ?? "").trim(),
+    });
     setStatus("success");
     if (descriptionRef.current) {
       descriptionRef.current.value = "";
@@ -246,8 +490,7 @@ export default function WorkRequestForm({
     setPreviousQuoteAmount("");
     setPreviousQuoteProof(null);
     setPreviousQuoteNote("");
-    setStartPriceMode("first_quote");
-    setClientStartPrice("");
+    setAcceptContactTerms(false);
     if (proofPreview) URL.revokeObjectURL(proofPreview);
     setProofPreview(null);
     setSelectedAddress(null);
@@ -295,15 +538,14 @@ export default function WorkRequestForm({
     <div className="mt-8 space-y-6">
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
       <div className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
-        <p className="font-medium">Pour une enchère de qualité :</p>
+        <p className="font-medium">Pour une annonce de qualité :</p>
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
           <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
-          <li>Téléphone obligatoire pour être joint par l&apos;artisan choisi</li>
+          <li>Mobile vérifié par SMS pour être joint par les artisans</li>
           <li>Adresse du chantier vérifiée via la Base Adresse Nationale (État)</li>
           <li>Date souhaitée de début des travaux</li>
-          <li>Prix de départ : devis précédent (si fourni) ou 1er devis Artipascher validé</li>
-          <li>Option : joindre un devis déjà reçu (montant + justificatif)</li>
+          <li>Option : joindre un devis déjà reçu (montant + justificatif) pour contextualiser</li>
         </ul>
       </div>
 
@@ -379,7 +621,7 @@ export default function WorkRequestForm({
           className={inputClass}
           required
           defaultValue={defaults?.firstName ?? ""}
-          readOnly
+          readOnly={!guestMode}
         />
         <input
           name="lastName"
@@ -388,7 +630,7 @@ export default function WorkRequestForm({
           className={inputClass}
           required
           defaultValue={defaults?.lastName ?? ""}
-          readOnly
+          readOnly={!guestMode}
         />
       </div>
       <input
@@ -398,22 +640,83 @@ export default function WorkRequestForm({
         className={inputClass}
         required
         defaultValue={defaults?.email ?? ""}
-        readOnly
+        readOnly={!guestMode}
       />
-      <input
-        name="phone"
-        type="tel"
-        inputMode="tel"
-        placeholder="Téléphone (ex. 06 12 34 56 78)"
-        className={inputClass}
-        required
-        autoComplete="tel"
-        defaultValue={defaults?.phone ?? ""}
-      />
-      <p className="-mt-2 text-xs text-slate-500">
-        Numéro français obligatoire — communiqué aux artisans uniquement après acceptation et
-        déblocage.
-      </p>
+      <div>
+        <input
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          placeholder="Mobile (ex. 06 12 34 56 78)"
+          className={inputClass}
+          required
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => handlePhoneChange(e.target.value)}
+        />
+        <p className="mt-1 text-xs text-slate-500">
+          Mobile français obligatoire, vérifié par SMS — communiqué aux artisans
+          uniquement après mise en contact.
+        </p>
+        {phoneVerified ? (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            ✓ Mobile vérifié
+            {phoneE164
+              ? ` — ${formatFrenchPhoneDisplay(phoneE164)}`
+              : ""}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void sendPhoneOtp()}
+                disabled={otpSending || otpCooldown > 0 || !phoneE164}
+                className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {otpSending
+                  ? "Envoi…"
+                  : otpCooldown > 0
+                    ? `Renvoyer (${otpCooldown}s)`
+                    : "Recevoir un code"}
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="Code à 6 chiffres"
+                value={otpCode}
+                onChange={(e) =>
+                  setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                className="min-w-[9rem] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => void verifyPhoneOtp()}
+                disabled={otpVerifying || otpCode.length !== 6}
+                className="rounded-lg border border-brand-600 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+              >
+                {otpVerifying ? "Vérif…" : "Vérifier"}
+              </button>
+            </div>
+            {otpMessage && (
+              <p
+                className={`text-xs ${
+                  otpMessage.includes("vérifié") ||
+                  otpMessage.includes("envoyé") ||
+                  otpMessage.includes("démo")
+                    ? "text-emerald-700"
+                    : "text-amber-800"
+                }`}
+              >
+                {otpMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       <BanAddressAutocomplete
         inputClass={inputClass}
@@ -448,19 +751,19 @@ export default function WorkRequestForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label
-            htmlFor="auctionDurationDays"
+            htmlFor="listingDurationHours"
             className="mb-1 block text-sm font-medium text-slate-700"
           >
-            Durée de l&apos;enchère <span className="text-red-500">*</span>
+            Durée de l&apos;annonce <span className="text-red-500">*</span>
           </label>
           <select
-            id="auctionDurationDays"
-            name="auctionDurationDays"
+            id="listingDurationHours"
+            name="auctionDurationHours"
             className={`${inputClass} text-slate-700`}
-            value={auctionDurationDays}
+            value={listingDurationHours}
             onChange={(e) => {
               const next = Number(e.target.value);
-              setAuctionDurationDays(next);
+              setListingDurationHours(next);
               const minDate = minRequestedWorkStartDate(next);
               if (requestedWorkStartDate && requestedWorkStartDate < minDate) {
                 setRequestedWorkStartDate("");
@@ -468,14 +771,15 @@ export default function WorkRequestForm({
             }}
             required
           >
-            {AUCTION_DURATION_OPTIONS.map((option) => (
+            {LISTING_DURATION_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
           <p className="mt-1 text-xs text-slate-500">
-            Période pendant laquelle les artisans peuvent enchérir (max. 3 mois).
+            Période pendant laquelle les artisans peuvent débloquer votre contact
+            (de 6&nbsp;h à 3 mois, max. 5 artisans).
           </p>
         </div>
         <div>
@@ -497,13 +801,12 @@ export default function WorkRequestForm({
                 setRequestedWorkStartDate("");
                 return;
               }
-              // Bloque toute date avant J + durée (calendrier natif + saisie clavier).
               if (next < minStartDate || next > maxStartDate) {
                 setRequestedWorkStartDate("");
                 setError(
                   `Choisissez une date à partir du ${new Date(
                     `${minStartDate}T12:00:00`
-                  ).toLocaleDateString("fr-FR")} (fin d'enchère).`
+                  ).toLocaleDateString("fr-FR")} (fin d'annonce).`
                 );
                 return;
               }
@@ -516,16 +819,168 @@ export default function WorkRequestForm({
             required
           />
           <p className="mt-1 text-xs text-slate-500">
-            Le calendrier bloque les dates avant la fin de l&apos;enchère (
+            Le calendrier bloque les dates avant la fin de l&apos;annonce (
             {new Date(`${minStartDate}T12:00:00`).toLocaleDateString("fr-FR")}).
           </p>
         </div>
       </div>
 
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-slate-700">
+          Nombre d&apos;artisans <span className="text-red-500">*</span>
+        </legend>
+        <p className="mb-2 text-xs text-slate-500">
+          Combien d&apos;artisans maximum pourront débloquer vos coordonnées
+          et vous contacter (1 à 5).
+        </p>
+        <div className="grid grid-cols-5 gap-2">
+          {([1, 2, 3, 4, 5] as const).map((n) => (
+            <label
+              key={n}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border px-2 py-3 text-sm ${
+                maxContactArtisans === n
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-slate-200 bg-white"
+              }`}
+            >
+              <input
+                type="radio"
+                name="maxContactArtisans"
+                value={n}
+                checked={maxContactArtisans === n}
+                onChange={() => setMaxContactArtisans(n)}
+                className="sr-only"
+              />
+              <span className="text-lg font-semibold text-slate-900">{n}</span>
+              <span className="text-[10px] text-slate-500">
+                {n === 1 ? "artisan" : "artisans"}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-slate-700">
+          Ancienneté de l&apos;entreprise <span className="text-red-500">*</span>
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+              !preferEstablishedCompany
+                ? "border-brand-500 bg-brand-50"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            <input
+              type="radio"
+              name="preferEstablishedCompany"
+              value="false"
+              checked={!preferEstablishedCompany}
+              onChange={() => setPreferEstablishedCompany(false)}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-semibold text-slate-900">
+                0 à 5 ans d&apos;existence
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Uniquement des entreprises créées il y a moins de 5 ans.
+              </span>
+            </span>
+          </label>
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+              preferEstablishedCompany
+                ? "border-brand-500 bg-brand-50"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            <input
+              type="radio"
+              name="preferEstablishedCompany"
+              value="true"
+              checked={preferEstablishedCompany}
+              onChange={() => setPreferEstablishedCompany(true)}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-semibold text-slate-900">
+                5 ans et plus (5+)
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Uniquement des entreprises créées il y a 5 ans ou plus.
+              </span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-slate-700">
+          Note Google minimale
+        </legend>
+        <p className="mb-2 text-xs text-slate-500">
+          Optionnel. Les artisans dont la note Google connue est inférieure au
+          seuil ne pourront pas débloquer vos coordonnées.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+              minGoogleRating === ""
+                ? "border-brand-500 bg-brand-50"
+                : "border-slate-200 bg-white"
+            }`}
+          >
+            <input
+              type="radio"
+              name="minGoogleRating"
+              value=""
+              checked={minGoogleRating === ""}
+              onChange={() => setMinGoogleRating("")}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-semibold text-slate-900">Peu importe</span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Pas de filtre sur la note Google.
+              </span>
+            </span>
+          </label>
+          {MIN_GOOGLE_RATING_OPTIONS.map((value) => (
+            <label
+              key={value}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+                minGoogleRating === value
+                  ? "border-brand-500 bg-brand-50"
+                  : "border-slate-200 bg-white"
+              }`}
+            >
+              <input
+                type="radio"
+                name="minGoogleRating"
+                value={String(value)}
+                checked={minGoogleRating === value}
+                onChange={() => setMinGoogleRating(value)}
+                className="mt-1"
+              />
+              <span>
+                <span className="font-semibold text-slate-900">
+                  ≥ {String(value).replace(".", ",")}/5
+                </span>
+                <span className="mt-0.5 block text-xs text-slate-500">
+                  Note Google minimale souhaitée.
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <select
         name="category"
         value={category}
-        onChange={(e) => setCategory(e.target.value)}
+        onChange={(e) => handleCategoryChange(e.target.value)}
         className={`${inputClass} text-slate-600`}
         required
       >
@@ -538,6 +993,146 @@ export default function WorkRequestForm({
           </option>
         ))}
       </select>
+
+      {requiresNafChoice && (
+        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-900">
+            Spécialité NAF <span className="text-red-500">*</span>
+          </legend>
+          <p className="mt-1 text-xs text-slate-600">
+            Ce type de travaux couvre plusieurs activités. Cochez celles qui
+            correspondent à votre chantier (au moins une).
+          </p>
+          <ul className="mt-3 space-y-2">
+            {nafOptions.map((opt) => {
+              const checked = selectedNafCodes.includes(opt.code);
+              return (
+                <li key={opt.code}>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                    <input
+                      type="checkbox"
+                      name="nafCodes"
+                      value={opt.code}
+                      checked={checked}
+                      onChange={() => toggleNafCode(opt.code)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="font-medium text-slate-900">
+                        {opt.code}
+                      </span>
+                      <span className="mt-0.5 block text-slate-600">
+                        {opt.label}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          {selectedNafCodes.length === 0 && (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Sélection obligatoire pour continuer.
+            </p>
+          )}
+        </fieldset>
+      )}
+
+      {category && effectiveNafCodes.length > 0 && (
+        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-900">
+            Type de prestation <span className="text-red-500">*</span>
+          </legend>
+          <p className="mt-1 text-xs text-slate-600">
+            Indiquez la nature des travaux pour mieux matcher les artisans.
+          </p>
+
+          <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+            {workOptions.map((opt) => {
+              const checked = workOptionId === opt.id;
+              return (
+                <li key={opt.id}>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                    <input
+                      type="radio"
+                      name="workOptionId"
+                      value={opt.id}
+                      checked={checked}
+                      onChange={() => selectWorkOption(opt.id)}
+                      className="mt-1"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium text-slate-900">
+                        {opt.name}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-slate-600">
+                        {opt.detail}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+            <li>
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                <input
+                  type="radio"
+                  name="workOptionId"
+                  value={OTHER_WORK_OPTION_ID}
+                  checked={workOptionId === OTHER_WORK_OPTION_ID}
+                  onChange={() => selectOtherWorkOption()}
+                  className="mt-1"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-slate-900">Autre</span>
+                  <span className="mt-0.5 block text-xs text-slate-600">
+                    Prestation non listée — décrivez-la brièvement
+                  </span>
+                </span>
+              </label>
+            </li>
+          </ul>
+
+          {workOptionId === OTHER_WORK_OPTION_ID && (
+            <div className="mt-3">
+              <label className="mb-1 block text-xs font-medium text-slate-700">
+                Courte description <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="workOptionOtherDescription"
+                value={workOptionOtherDescription}
+                onChange={(e) =>
+                  setWorkOptionOtherDescription(e.target.value.slice(0, OTHER_WORK_DESCRIPTION_MAX))
+                }
+                placeholder="Ex. débouchage WC + remplacement robinet cuisine"
+                className={inputClass}
+                required
+                minLength={OTHER_WORK_DESCRIPTION_MIN}
+                maxLength={OTHER_WORK_DESCRIPTION_MAX}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                {workOptionOtherDescription.trim().length} /{" "}
+                {OTHER_WORK_DESCRIPTION_MIN} car. min. (max.{" "}
+                {OTHER_WORK_DESCRIPTION_MAX})
+              </p>
+            </div>
+          )}
+
+          {workOptionId && workOptionId !== OTHER_WORK_OPTION_ID && (
+            <input type="hidden" name="pricingTier" value={pricingTier} />
+          )}
+          {workOptionId === OTHER_WORK_OPTION_ID && (
+            <input type="hidden" name="pricingTier" value="bas" />
+          )}
+
+          {!workOptionId && (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Sélectionnez une prestation pour continuer.
+            </p>
+          )}
+        </fieldset>
+      )}
 
       <ClientQualificationGuide selectedCategory={category} />
 
@@ -596,96 +1191,6 @@ export default function WorkRequestForm({
         )}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <p className="text-sm font-medium text-slate-800">
-          Prix de départ de l&apos;enchère
-        </p>
-        <p className="mt-0.5 text-xs text-slate-500">
-          Choisissez comment démarrer l&apos;enchère inversée.
-        </p>
-        <fieldset className="mt-3 space-y-3">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="radio"
-              name="startPriceMode"
-              value="client"
-              checked={startPriceMode === "client"}
-              onChange={() => {
-                setStartPriceMode("client");
-                setError(null);
-              }}
-              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
-            />
-            <span className="flex-1">
-              <span className="block text-sm font-medium text-slate-800">
-                Je fixe mon prix de départ
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Les artisans pourront proposer moins que ce montant.
-              </span>
-              {startPriceMode === "client" && (
-                <input
-                  name="clientStartPrice"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={clientStartPrice}
-                  onChange={(e) => setClientStartPrice(e.target.value)}
-                  placeholder="Ex. 4500"
-                  className={`${inputClass} mt-2`}
-                  required
-                />
-              )}
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="radio"
-              name="startPriceMode"
-              value="first_quote"
-              checked={startPriceMode === "first_quote"}
-              onChange={() => {
-                setStartPriceMode("first_quote");
-                setClientStartPrice("");
-                setError(null);
-              }}
-              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-800">
-                Partir du premier devis Artipascher
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Le prix de départ sera fixé au premier devis validé après visite.
-              </span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="radio"
-              name="startPriceMode"
-              value="unspecified"
-              checked={startPriceMode === "unspecified"}
-              onChange={() => {
-                setStartPriceMode("unspecified");
-                setClientStartPrice("");
-                setError(null);
-              }}
-              className="mt-1 h-4 w-4 border-slate-300 text-brand-600"
-            />
-            <span>
-              <span className="block text-sm font-medium text-slate-800">
-                Ne pas préciser
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Aucun prix annoncé pour l&apos;instant ; il pourra être fixé plus
-                tard (ex. au premier devis).
-              </span>
-            </span>
-          </label>
-        </fieldset>
-      </div>
-
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <label className="flex cursor-pointer items-start gap-3">
           <input
@@ -709,9 +1214,8 @@ export default function WorkRequestForm({
               J&apos;ai déjà reçu un devis d&apos;un autre artisan
             </span>
             <span className="mt-0.5 block text-xs text-slate-500">
-              Optionnel — justificatif visible par Artipascher. Si vous n&apos;avez
-              pas fixé de prix ci-dessus, ce montant pourra servir de départ à
-              l&apos;ouverture.
+              Optionnel — justificatif visible par Nord Artisan Pro, utile pour
+              contextualiser votre projet.
             </span>
           </span>
         </label>
@@ -782,13 +1286,110 @@ export default function WorkRequestForm({
         )}
       </div>
 
+      <fieldset className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <legend className="px-1 text-sm font-medium text-slate-700">
+          Conditions obligatoires{" "}
+          <span className="font-normal text-slate-500">(non modifiables)</span>
+        </legend>
+        <p className="mb-3 text-xs text-slate-500">
+          Seuls les artisans respectant ces critères pourront débloquer vos
+          coordonnées.
+        </p>
+        <ul className="space-y-2">
+          <li className="flex items-start gap-3 text-sm text-slate-800">
+            <input
+              type="checkbox"
+              checked
+              disabled
+              readOnly
+              className="mt-1"
+              aria-label="Entreprise au statut normal obligatoire"
+            />
+            <span>
+              <span className="font-semibold">
+                Entreprise au statut normal
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Active au registre — hors liquidation, dissolution ou cessation
+                d&apos;activité.
+              </span>
+            </span>
+          </li>
+          <li className="flex items-start gap-3 text-sm text-slate-800">
+            <input
+              type="checkbox"
+              checked
+              disabled
+              readOnly
+              className="mt-1"
+              aria-label="Décennale et assurance RC pro à jour obligatoires"
+            />
+            <span>
+              <span className="font-semibold">
+                Décennale et assurance RC pro à jour
+              </span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Attestations validées par Nord Artisan Pro pour le métier concerné.
+              </span>
+            </span>
+          </li>
+        </ul>
+        <input type="hidden" name="requireActiveCompany" value="true" />
+        <input type="hidden" name="requireValidInsurances" value="true" />
+      </fieldset>
+
+      <label
+        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+          acceptContactTerms
+            ? "border-brand-500 bg-brand-50"
+            : "border-slate-200 bg-white"
+        }`}
+      >
+        <input
+          type="checkbox"
+          name="acceptContactTerms"
+          checked={acceptContactTerms}
+          onChange={(e) => {
+            setAcceptContactTerms(e.target.checked);
+            setError(null);
+          }}
+          className="mt-1"
+          required
+        />
+        <span>
+          <span className="font-semibold text-slate-900">
+            J&apos;accepte les CGU / CGV et j&apos;autorise la mise en contact{" "}
+            <span className="text-red-500">*</span>
+          </span>
+          <span className="mt-0.5 block text-xs text-slate-500">
+            En cochant cette case, vous acceptez les{" "}
+            <Link href="/cgu" className="underline" target="_blank">
+              CGU
+            </Link>{" "}
+            et{" "}
+            <Link href="/cgv" className="underline" target="_blank">
+              CGV
+            </Link>
+            , et vous autorisez jusqu&apos;à 5 artisans correspondant à votre
+            demande à débloquer vos coordonnées pour vous contacter (SMS, email
+            ou téléphone).
+          </span>
+        </span>
+      </label>
+
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
       <button
         type="submit"
-        disabled={status === "submitting" || status === "success" || !descriptionOk || !photosOk}
+        disabled={
+          status === "submitting" ||
+          status === "success" ||
+          !descriptionOk ||
+          !photosOk ||
+          !acceptContactTerms
+        }
         className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === "submitting"
@@ -799,24 +1400,65 @@ export default function WorkRequestForm({
       </button>
 
       {status === "success" && (
-        <div className="space-y-2 text-center text-sm text-brand-700">
+        <div className="space-y-3 text-center text-sm text-brand-700">
           <p className="font-semibold">Demande envoyée.</p>
-          <p>
-            <Link
-              href={
-                createdRequestId
-                  ? `/particulier/espace/demandes/${createdRequestId}`
-                  : successHref
-              }
-              className="font-semibold underline"
-            >
-              Voir ma demande
-            </Link>
-            {" · "}
-            <Link href="/particulier/espace/demandes" className="underline">
-              Mes demandes
-            </Link>
-          </p>
+          {guestMode ? (
+            <>
+              <p className="text-slate-700">
+                Créez un compte gratuit pour suivre vos demandes et les artisans
+                qui vous contactent. Ce n&apos;est pas obligatoire, mais
+                recommandé.
+              </p>
+              <p className="flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={(() => {
+                    const params = new URLSearchParams({
+                      from: "/particulier/espace/demandes",
+                    });
+                    if (submittedContact?.email) {
+                      params.set("email", submittedContact.email);
+                    }
+                    if (submittedContact?.firstName) {
+                      params.set("firstName", submittedContact.firstName);
+                    }
+                    if (submittedContact?.lastName) {
+                      params.set("lastName", submittedContact.lastName);
+                    }
+                    if (submittedContact?.phone) {
+                      params.set("phone", submittedContact.phone);
+                    }
+                    return `/particulier/espace/inscription?${params.toString()}`;
+                  })()}
+                  className="rounded-lg bg-client-600 px-4 py-2 text-sm font-semibold text-white hover:bg-client-700"
+                >
+                  Créer mon compte
+                </Link>
+                <Link
+                  href="/particulier"
+                  className="text-sm font-medium underline"
+                >
+                  Retour à l&apos;accueil
+                </Link>
+              </p>
+            </>
+          ) : (
+            <p>
+              <Link
+                href={
+                  createdRequestId
+                    ? `/particulier/espace/demandes/${createdRequestId}`
+                    : successHref
+                }
+                className="font-semibold underline"
+              >
+                Voir ma demande
+              </Link>
+              {" · "}
+              <Link href="/particulier/espace/demandes" className="underline">
+                Mes demandes
+              </Link>
+            </p>
+          )}
         </div>
       )}
       </form>

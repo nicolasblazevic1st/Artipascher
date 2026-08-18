@@ -1,9 +1,14 @@
+import { isSmsContactAlertsEnabled } from "@/lib/contact-slots";
 import {
   createAppNotification,
   resolveClientUserIdForRequest,
 } from "@/lib/store";
 import type { WorkRequest } from "@/lib/store-types";
 import { formatPrice } from "@/lib/data";
+import { absoluteUrl } from "@/lib/share";
+import { sendSms } from "@/lib/sms";
+
+export { isSmsContactAlertsEnabled };
 
 async function notifyClient(
   workRequest: WorkRequest,
@@ -49,12 +54,55 @@ async function notifyPro(
 export async function notifyClientContactInterest(params: {
   workRequest: WorkRequest;
   companyName: string;
+  /** Acceptation auto (option alerte SMS client). */
+  autoAccepted?: boolean;
+  acceptedCount?: number;
+  maxAccepted?: number;
 }) {
-  await notifyClient(params.workRequest, {
+  const { workRequest, companyName, autoAccepted } = params;
+  const slots =
+    params.acceptedCount != null && params.maxAccepted != null
+      ? ` (${params.acceptedCount}/${params.maxAccepted} places contact)`
+      : "";
+
+  await notifyClient(workRequest, {
     kind: "contact_interest",
-    title: "Un artisan souhaite vous contacter",
-    body: `${params.companyName} a manifesté son intérêt pour ${params.workRequest.category} à ${params.workRequest.city}. Vous avez 48 h pour répondre.`,
+    title: autoAccepted
+      ? "Un artisan peut vous contacter"
+      : "Un artisan souhaite vous contacter",
+    body: autoAccepted
+      ? `${companyName} a demandé à vous contacter pour ${workRequest.category} à ${workRequest.city}${slots}. Votre alerte SMS était activée : l'accès est ouvert (déblocage crédit côté artisan).`
+      : `${companyName} a manifesté son intérêt pour ${workRequest.category} à ${workRequest.city}. Vous avez 48 h pour répondre.`,
   });
+
+  // SMS uniquement si l'option alerte client est active.
+  if (!isSmsContactAlertsEnabled(workRequest)) return;
+
+  const phone = workRequest.phone?.trim();
+  if (!phone) {
+    console.warn(
+      "[notify] contact interest SMS skipped: no phone on request",
+      workRequest.id
+    );
+    return;
+  }
+
+  const url = absoluteUrl(`/particulier/espace/demandes/${workRequest.id}`);
+  const message = autoAccepted
+    ? `Nord Artisan Pro : ${companyName} peut vous contacter pour ${workRequest.category} a ${workRequest.city}${slots}. Details : ${url}`
+    : `Nord Artisan Pro : ${companyName} souhaite vous contacter pour ${workRequest.category} a ${workRequest.city}. ` +
+      `Repondez sous 48h : ${url}`;
+
+  const result = await sendSms(phone, message, "transactional");
+  if (!result.ok) {
+    console.error(
+      "[notify] contact interest SMS failed",
+      workRequest.id,
+      result.error
+    );
+  } else if (result.demo) {
+    console.info("[notify] contact interest SMS demo", workRequest.id);
+  }
 }
 
 export async function notifyProContactDecision(params: {
@@ -104,7 +152,7 @@ export async function notifyClientRequestReviewed(params: {
         : "Votre demande a été refusée",
     body:
       params.status === "approved"
-        ? `Votre chantier ${params.workRequest.category} à ${params.workRequest.city} est en enchère.`
+        ? `Votre chantier ${params.workRequest.category} à ${params.workRequest.city} est publié : les artisans correspondants peuvent vous contacter.`
         : `Votre demande ${params.workRequest.category} à ${params.workRequest.city} n'a pas été validée.`,
   });
 }
@@ -179,7 +227,7 @@ export async function notifyClientBidPlaced(params: {
 }) {
   await notifyClient(params.workRequest, {
     kind: "bid_placed",
-    title: "Nouvelle offre sur votre enchère",
+    title: "Nouvelle proposition reçue",
     body: `${params.companyName} propose ${formatPrice(params.amount)}.`,
   });
 }

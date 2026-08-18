@@ -34,7 +34,7 @@ function getSmtpConfig() {
 }
 
 function getFromAddress(): string {
-  return process.env.EMAIL_FROM ?? "noreply@artipascher.fr";
+  return process.env.EMAIL_FROM ?? "noreply@nord-artisan-pro.com";
 }
 
 function getResetPath(userType: PasswordResetUserType): string {
@@ -103,7 +103,7 @@ function brandedEmailHtml(params: {
           <tr>
             <td style="background:${palette.header};padding:28px 32px;text-align:left;">
               <p style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:rgba(255,255,255,0.85);">${palette.badge}</p>
-              <p style="margin:0;font-size:22px;font-weight:700;color:${palette.headerText};">Artipascher</p>
+              <p style="margin:0;font-size:22px;font-weight:700;color:${palette.headerText};">Nord Artisan Pro</p>
             </td>
           </tr>
           <tr>
@@ -126,7 +126,7 @@ function brandedEmailHtml(params: {
           </tr>
           <tr>
             <td style="padding:16px 32px 24px;border-top:1px solid ${BRAND.border};">
-              <p style="margin:0;font-size:12px;color:${BRAND.muted};">Artipascher · Nord 59 · Pas-de-Calais 62</p>
+              <p style="margin:0;font-size:12px;color:${BRAND.muted};">Nord Artisan Pro · Nord 59 · Pas-de-Calais 62</p>
             </td>
           </tr>
         </table>
@@ -145,27 +145,27 @@ export async function sendPasswordResetEmail(
 ): Promise<void> {
   const resetUrl = absoluteUrl(`${getResetPath(userType)}?token=${encodeURIComponent(token)}`);
   const accountLabel = getAccountLabel(userType);
-  const subject = "Réinitialisation de votre mot de passe Artipascher";
+  const subject = "Réinitialisation de votre mot de passe Nord Artisan Pro";
   const text = [
     "Bonjour,",
     "",
-    `Vous avez demandé la réinitialisation du mot de passe de votre espace ${accountLabel} sur Artipascher.`,
+    `Vous avez demandé la réinitialisation du mot de passe de votre espace ${accountLabel} sur Nord Artisan Pro.`,
     "",
     "Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe (valable 1 heure) :",
     resetUrl,
     "",
     "Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
     "",
-    "L'équipe Artipascher",
+    "L'équipe Nord Artisan Pro",
   ].join("\n");
 
   const html = `
     <p>Bonjour,</p>
-    <p>Vous avez demandé la réinitialisation du mot de passe de votre espace ${accountLabel} sur Artipascher.</p>
+    <p>Vous avez demandé la réinitialisation du mot de passe de votre espace ${accountLabel} sur Nord Artisan Pro.</p>
     <p><a href="${resetUrl}">Cliquez ici pour choisir un nouveau mot de passe</a> (lien valable 1 heure).</p>
     <p>Si le lien ne fonctionne pas, copiez cette adresse dans votre navigateur :<br>${resetUrl}</p>
     <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
-    <p>L'équipe Artipascher</p>
+    <p>L'équipe Nord Artisan Pro</p>
   `.trim();
 
   const smtp = getSmtpConfig();
@@ -224,24 +224,24 @@ export async function sendEmailVerificationEmail(
     `${getVerifyPath(userType)}?token=${encodeURIComponent(token)}`
   );
   const accountLabel = getAccountLabel(userType);
-  const subject = "Confirmez votre adresse email — Artipascher";
+  const subject = "Confirmez votre adresse email — Nord Artisan Pro";
   const text = [
     "Bonjour,",
     "",
-    `Bienvenue sur Artipascher. Confirmez votre adresse email pour activer votre espace ${accountLabel}.`,
+    `Bienvenue sur Nord Artisan Pro. Confirmez votre adresse email pour activer votre espace ${accountLabel}.`,
     "",
     "Cliquez sur le lien ci-dessous (valable 48 heures) :",
     verifyUrl,
     "",
     "Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email.",
     "",
-    "L'équipe Artipascher",
+    "L'équipe Nord Artisan Pro",
   ].join("\n");
 
   const html = brandedEmailHtml({
     userType,
     title: "Confirmez votre adresse email",
-    intro: `Bienvenue sur Artipascher. Pour activer votre espace ${accountLabel}, validez votre adresse en un clic.`,
+    intro: `Bienvenue sur Nord Artisan Pro. Pour activer votre espace ${accountLabel}, validez votre adresse en un clic.`,
     bodyLines: [
       "Ce lien est valable <strong>48 heures</strong>.",
       "Sans confirmation, vous ne pourrez pas vous connecter à votre espace.",
@@ -265,7 +265,7 @@ export async function sendContactInterestEmailToClient(params: {
   workRequestId: string;
 }): Promise<void> {
   const url = absoluteUrl(`/particulier/espace/demandes/${params.workRequestId}`);
-  const subject = "Un artisan souhaite vous contacter — Artipascher";
+  const subject = "Un artisan souhaite vous contacter — Nord Artisan Pro";
   const text = [
     `Bonjour ${params.clientFirstName},`,
     "",
@@ -276,14 +276,14 @@ export async function sendContactInterestEmailToClient(params: {
     "",
     "Vous avez 48 heures pour répondre.",
     "",
-    "L'équipe Artipascher",
+    "L'équipe Nord Artisan Pro",
   ].join("\n");
   const html = `
     <p>Bonjour ${params.clientFirstName},</p>
     <p>L'entreprise <strong>${params.proCompanyName}</strong> (SIRET ${params.proSiret}) souhaite vous contacter pour votre chantier <strong>${params.category}</strong> à ${params.city}.</p>
     <p><a href="${url}">Ouvrir mon espace pour accepter ou refuser</a></p>
     <p>Vous avez 48 heures pour répondre.</p>
-    <p>L'équipe Artipascher</p>
+    <p>L'équipe Nord Artisan Pro</p>
   `.trim();
   await sendMail({ to: params.clientEmail, subject, text, html });
 }
@@ -296,7 +296,7 @@ export async function sendContactRecallEmailToPro(params: {
   auctionId: string;
 }): Promise<void> {
   const auctionUrl = absoluteUrl(`/encheres/${params.auctionId}`);
-  const subject = "Le client vous a rappelé — Artipascher";
+  const subject = "Le client vous a rappelé — Nord Artisan Pro";
   const text = [
     `Bonjour ${params.proCompanyName},`,
     "",
@@ -305,7 +305,7 @@ export async function sendContactRecallEmailToPro(params: {
     "",
     `Voir le chantier : ${auctionUrl}`,
     "",
-    "L'équipe Artipascher",
+    "L'équipe Nord Artisan Pro",
   ].join("\n");
   await sendMail({
     to: params.proEmail,
@@ -329,7 +329,7 @@ export async function sendContactDecisionEmailToPro(params: {
     refused: "a décliné votre demande de contact",
     expired: "n'a pas répondu à temps (demande expirée)",
   } as const;
-  const subject = `Demande de contact ${params.decision === "accepted" ? "acceptée" : params.decision === "refused" ? "refusée" : "expirée"} — Artipascher`;
+  const subject = `Demande de contact ${params.decision === "accepted" ? "acceptée" : params.decision === "refused" ? "refusée" : "expirée"} — Nord Artisan Pro`;
   const text = [
     `Bonjour ${params.proCompanyName},`,
     "",
@@ -338,7 +338,7 @@ export async function sendContactDecisionEmailToPro(params: {
       ? `Vous pouvez maintenant débloquer les coordonnées : ${auctionUrl}`
       : "",
     "",
-    "L'équipe Artipascher",
+    "L'équipe Nord Artisan Pro",
   ]
     .filter(Boolean)
     .join("\n");

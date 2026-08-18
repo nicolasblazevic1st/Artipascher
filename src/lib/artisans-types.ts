@@ -36,6 +36,11 @@ export interface EnrichedArtisan {
   lon?: number;
   phone?: string;
   website?: string;
+  /** Note Google (Places), si enrichie. */
+  googleRating?: number;
+  /** Nombre d’avis Google (Places), si enrichi. */
+  googleUserRatingCount?: number;
+  googlePlaceId?: string;
   enrichmentStatus: EnrichmentStatus;
   enrichedAt?: string;
   lastVerifiedAt?: string;
@@ -54,6 +59,11 @@ export interface QuotaTracking {
   requestsEnrichment: number;
   /** Consommation production par jour (YYYY-MM-DD). */
   dailyProductionLog: Record<string, number>;
+  /**
+   * Bonus enrichissement exceptionnel par jour (YYYY-MM-DD → requêtes Places).
+   * S’ajoute au budget nuit/jour calculé (base + report − prod).
+   */
+  dailyEnrichmentBonus?: Record<string, number>;
   enrichmentCarryover: number;
   enrichmentPaused: boolean;
   paidOverageEnabled: boolean;
@@ -63,7 +73,9 @@ export interface QuotaTracking {
 export type EnrichmentJobKind =
   | "sirene_weekly"
   | "places_daily"
-  | "places_production";
+  | "places_production"
+  | "geocode_backfill"
+  | "purge_unmapped_naf";
 
 export interface EnrichmentJob {
   id: string;

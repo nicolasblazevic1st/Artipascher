@@ -2,6 +2,7 @@ import {
   addEnrichmentJob,
   bulkUpsertArtisans,
   markArtisansClosed,
+  purgeArtisansOutsidePlatformNaf,
 } from "./artisans-db";
 import { listAcquisitionNafCodesForApi } from "./acquisition-naf";
 import { readAcquisitionNafExtras } from "./acquisition-naf-extras";
@@ -315,6 +316,10 @@ export async function syncSireneWeekly(
 
   await flushBatch();
 
+  // Ferme les fiches actives hors des 22 NAF des 16 métiers.
+  const purge = await purgeArtisansOutsidePlatformNaf({ mode: "close" });
+  closed += purge.removed;
+
   await addEnrichmentJob({
     kind: "sirene_weekly",
     ranAt: now,
@@ -322,7 +327,7 @@ export async function syncSireneWeekly(
     processed: upserted,
     skipped: 0,
     errors,
-    note: `pages=${pages} geocoded=${geocoded} closed=${closed}`,
+    note: `pages=${pages} geocoded=${geocoded} closed=${closed} purgedOutside22=${purge.removed}`,
   });
 
   return { upserted, geocoded, closed, errors, pages };

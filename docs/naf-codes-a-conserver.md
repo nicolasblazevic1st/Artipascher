@@ -1,4 +1,4 @@
-# Codes NAF — choix par métier Artipascher
+# Codes NAF — choix par métier Nord Artisan Pro
 
 Base artisans NPC (59/62) · généré le 07/08/2026
 
@@ -8,7 +8,7 @@ Base artisans NPC (59/62) · généré le 07/08/2026
 
 - Coche `[x]` les codes NAF à **garder** dans la base d'acquisition.
 - Laisse `[ ]` vide pour **exclure**.
-- Regroupement par **métier Artipascher** (catégories travaux de la plateforme).
+- Regroupement par **métier Nord Artisan Pro** (catégories travaux de la plateforme).
 - Compte = nombre d'**établissements** (SIRET) avec ce NAF principal.
 - Un même code peut apparaître sous plusieurs métiers (colonne « Aussi dans ») — **le choix porte sur le code NAF**, pas sur le métier.
 

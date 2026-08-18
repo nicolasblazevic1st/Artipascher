@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import HelpTooltip from "@/components/HelpTooltip";
+import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
 import {
   PRO_REGISTRATION_COMPARTMENTS,
   PRO_REGISTRATION_DOCUMENTS,
@@ -19,6 +20,10 @@ import {
 import { primaryTradeCategory } from "@/lib/pro-trades";
 import { applyRcsActivitiesToTradeSelection } from "@/lib/naf-trade-groups";
 import { isValidSiretFormat, normalizeSiret, type RcsVerificationResult } from "@/lib/rcs";
+import {
+  REFERRAL_REWARD_EUR,
+  REFERRAL_SPEND_THRESHOLD,
+} from "@/lib/store-types";
 
 type FormStatus = "idle" | "verifying" | "verified" | "submitting" | "success" | "error";
 
@@ -184,7 +189,9 @@ export default function ProRegistrationForm() {
     }
 
     for (const groupId of activeGroupIds) {
-      const decennaleError = validateProDocumentFile(decennaleByGroup[groupId]!);
+      const decennaleError = validateProDocumentFile(decennaleByGroup[groupId]!, {
+        requireOriginalPdf: true,
+      });
       if (decennaleError) {
         const group = GROUPED_QUALIBAT_JOBS.find((g) => g.group.id === groupId)?.group;
         setError(
@@ -269,7 +276,8 @@ export default function ProRegistrationForm() {
         <p className="font-semibold">Accès réservé aux entreprises inscrites au RCS</p>
         <p className="mt-1 text-amber-800">
           Seules les entreprises vérifiées au registre du commerce (SIRET valide,
-          établissement actif, siège en 59 ou 62) peuvent s&apos;inscrire et enchérir.
+          établissement actif, siège en 59 ou 62) peuvent s&apos;inscrire et
+          débloquer des contacts.
           Joignez vos documents dès l&apos;inscription pour accélérer la validation.
         </p>
       </div>
@@ -349,7 +357,7 @@ export default function ProRegistrationForm() {
       {!fieldsEnabled && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
           Vérifiez votre SIRET pour débloquer la suite : coordonnées, métiers,
-          documents par niveau de qualification et mot de passe.
+          documents obligatoires et mot de passe.
         </p>
       )}
 
@@ -478,10 +486,10 @@ export default function ProRegistrationForm() {
       <section className={`space-y-4 ${!fieldsEnabled ? "opacity-60" : ""}`}>
         <div>
           <h3 className="text-sm font-semibold text-slate-900">
-            Documents par niveau de qualification
+            Documents obligatoires
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            JPG, PNG, WebP ou PDF · max 10 Mo par fichier.
+            RC pro et décennale : PDF original de l&apos;assureur · max 10 Mo.
             {!fieldsEnabled && (
               <span className="mt-1 block font-medium text-slate-600">
                 Disponible après vérification RCS réussie.
@@ -490,7 +498,8 @@ export default function ProRegistrationForm() {
           </p>
         </div>
 
-        {PRO_REGISTRATION_COMPARTMENTS.map((compartment) => {
+        {PRO_REGISTRATION_COMPARTMENTS.filter((c) => c.level === 1).map(
+          (compartment) => {
           const docs = PRO_REGISTRATION_DOCUMENTS.filter((doc) =>
             compartment.documentIds.includes(doc.id)
           );
@@ -552,7 +561,7 @@ export default function ProRegistrationForm() {
                     <p className="font-semibold">Garantie décennale par métier</p>
                     <p className="mt-1 text-brand-800">
                       Votre assurance décennale doit <strong>nommer chaque activité</strong>{" "}
-                      que vous exercez. Artipascher vérifie chaque attestation pour protéger
+                      que vous exercez. Nord Artisan Pro vérifie chaque attestation pour protéger
                       le client et votre responsabilité.
                     </p>
                   </div>
@@ -569,26 +578,19 @@ export default function ProRegistrationForm() {
                           Attestation décennale — « {group?.label} »{" "}
                           <span className="text-red-500">*</span>
                         </label>
-                        <input
+                        <ProDocumentFilePicker
                           id={`decennale-${groupId}`}
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp,application/pdf"
-                          required={fieldsEnabled}
                           disabled={!fieldsEnabled}
-                          onChange={(e) => {
+                          originalPdfOnly
+                          selectedFileName={decennaleByGroup[groupId]?.name}
+                          onChange={(file) => {
                             setDecennaleByGroup((prev) => ({
                               ...prev,
-                              [groupId]: e.target.files?.[0] ?? null,
+                              [groupId]: file,
                             }));
                             setError(null);
                           }}
-                          className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
                         />
-                        {decennaleByGroup[groupId] && (
-                          <p className="mt-1 text-xs text-brand-700">
-                            Fichier sélectionné : {decennaleByGroup[groupId]!.name}
-                          </p>
-                        )}
                       </div>
                     );
                   })}
@@ -613,22 +615,13 @@ export default function ProRegistrationForm() {
                         {doc.required && <span className="text-red-500">*</span>}
                         <HelpTooltip label={doc.label} content={doc.help} />
                       </label>
-                      <input
+                      <ProDocumentFilePicker
                         id={proDocumentFieldName(doc.id)}
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,application/pdf"
-                        required={doc.required && fieldsEnabled}
                         disabled={!fieldsEnabled}
-                        onChange={(e) =>
-                          handleDocumentChange(doc.id, e.target.files?.[0] ?? null)
-                        }
-                        className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 disabled:cursor-not-allowed"
+                        originalPdfOnly={Boolean(doc.requireOriginalPdf)}
+                        selectedFileName={documents[doc.id]?.name}
+                        onChange={(file) => handleDocumentChange(doc.id, file)}
                       />
-                      {documents[doc.id] && (
-                        <p className="mt-1 text-xs text-brand-700">
-                          Fichier sélectionné : {documents[doc.id]!.name}
-                        </p>
-                      )}
                     </li>
                   ))}
                 </ul>
@@ -659,7 +652,8 @@ export default function ProRegistrationForm() {
         />
         <p className="mt-1 text-xs text-slate-500">
           Si une entreprise vérifiée vous a invité, saisissez son code. Après{" "}
-          5 crédits dépensés, votre parrain reçoit 5 crédits.
+          {REFERRAL_SPEND_THRESHOLD}&nbsp;€ dépensés, votre parrain reçoit{" "}
+          {REFERRAL_REWARD_EUR}&nbsp;€ de solde.
         </p>
       </div>
 
@@ -719,7 +713,7 @@ export default function ProRegistrationForm() {
 
       {status === "success" && (
         <div className="space-y-2 text-center text-sm text-emerald-700">
-          <p className="font-semibold">Certification niveau 1 obtenue.</p>
+          <p className="font-semibold">Certification obtenue.</p>
           <p>
             Un email de confirmation vient de vous être envoyé. Validez votre adresse
             puis{" "}

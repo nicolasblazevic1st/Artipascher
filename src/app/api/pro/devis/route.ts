@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { betaClosedJsonResponse, isBetaMode } from "@/lib/beta";
+import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { checkDecennaleForWorkCategory } from "@/lib/decennale-verification";
 import { validateProQuote } from "@/lib/devis-validation";
 import { notifyClientQuoteSubmitted } from "@/lib/notify";
@@ -30,7 +30,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (isBetaMode()) return betaClosedJsonResponse();
+  if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
+
+  const { CONTACT_ONLY_MODE, DEVIS_RETIRED_MESSAGE, retiredFeatureJson } =
+    await import("@/lib/product-features");
+  if (CONTACT_ONLY_MODE) {
+    return NextResponse.json(retiredFeatureJson(DEVIS_RETIRED_MESSAGE), {
+      status: 410,
+    });
+  }
 
   const session = await getProSession();
   if (!session) {

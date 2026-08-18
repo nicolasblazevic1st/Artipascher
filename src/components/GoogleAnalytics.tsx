@@ -1,7 +1,8 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import {
   COOKIE_CONSENT_CHANGE_EVENT,
   readCookieConsent,
@@ -25,6 +26,30 @@ function applyAnalyticsConsent(granted: boolean) {
   });
 }
 
+function sendPageView(url: string) {
+  if (typeof window.gtag !== "function") return;
+  window.gtag("event", "page_view", {
+    page_path: url,
+    page_location: window.location.href,
+    page_title: document.title,
+  });
+}
+
+/** Envoie un page_view à chaque navigation client (App Router). */
+function GaPageViews({ enabled }: { enabled: boolean }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!enabled) return;
+    const query = searchParams.toString();
+    const url = query ? `${pathname}?${query}` : pathname;
+    sendPageView(url);
+  }, [enabled, pathname, searchParams]);
+
+  return null;
+}
+
 export default function GoogleAnalytics() {
   const enableAnalytics =
     process.env.NODE_ENV === "production" ||
@@ -32,6 +57,7 @@ export default function GoogleAnalytics() {
 
   const [consent, setConsent] = useState<CookieConsentChoice | null>(null);
   const [ready, setReady] = useState(false);
+  const [gaReady, setGaReady] = useState(false);
 
   useEffect(() => {
     setConsent(readCookieConsent());
@@ -39,8 +65,9 @@ export default function GoogleAnalytics() {
 
     const onChange = (event: Event) => {
       const detail = (event as CustomEvent<CookieConsentChoice>).detail;
-      setConsent(detail);
       applyAnalyticsConsent(detail.analytics);
+      setConsent(detail);
+      if (!detail.analytics) setGaReady(false);
     };
 
     window.addEventListener(COOKIE_CONSENT_CHANGE_EVENT, onChange);
@@ -59,7 +86,11 @@ export default function GoogleAnalytics() {
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
       />
-      <Script id="google-analytics" strategy="afterInteractive">
+      <Script
+        id="google-analytics"
+        strategy="afterInteractive"
+        onReady={() => setGaReady(true)}
+      >
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
@@ -70,9 +101,15 @@ export default function GoogleAnalytics() {
             ad_user_data: 'denied',
             ad_personalization: 'denied'
           });
-          gtag('config', '${GA_MEASUREMENT_ID}', { anonymize_ip: true });
+          gtag('config', '${GA_MEASUREMENT_ID}', {
+            anonymize_ip: true,
+            send_page_view: false
+          });
         `}
       </Script>
+      <Suspense fallback={null}>
+        <GaPageViews enabled={gaReady} />
+      </Suspense>
     </>
   );
 }

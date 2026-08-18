@@ -32,11 +32,11 @@ export default function BidPanelPublicCta({
         <p className="mt-2 text-sm text-slate-600">
           Prix actuel :{" "}
           <strong className="text-brand-700">{formatPrice(currentPrice)}</strong>
-          {" · "}1 crédit ({BID_FEE_EUR} €) par enchère · max. 3 offres par artisan
+          {" · "}{BID_FEE_EUR}&nbsp;€ (solde) par enchère · max. 3 offres par artisan
         </p>
       )}
       <p className="mt-3 text-sm text-slate-600">
-        Les enchères se gèrent depuis votre espace professionnel (devis, PDF OCR, crédits).
+        Les enchères se gèrent depuis votre espace professionnel (devis, PDF OCR, solde).
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
         <Link

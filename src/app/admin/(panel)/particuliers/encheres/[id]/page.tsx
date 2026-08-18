@@ -4,26 +4,25 @@ import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
-import { formatPrice } from "@/lib/data";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { formatNafList } from "@/lib/naf-trade-groups";
 import {
-  getApprovedProQuotesForAuction,
-  getBidsForAuction,
   getWorkRequestById,
+  listContactUnlocksForAuction,
 } from "@/lib/store";
 import { getAdminAuctionView } from "@/lib/work-request-auctions";
 
 type Props = { params: Promise<{ id: string }> };
 
-export default async function AdminEnchereDetailPage({ params }: Props) {
+export default async function AdminOffreDetailPage({ params }: Props) {
   const { id } = await params;
   const auction = await getAdminAuctionView(id);
   if (!auction) notFound();
 
-  const [bids, quotes] = await Promise.all([
-    getBidsForAuction(id),
-    getApprovedProQuotesForAuction(id),
-  ]);
+  const unlocks = await listContactUnlocksForAuction(id);
+  const activeUnlocks = unlocks.filter((u) => !u.refundedAt);
 
   const workRequest = auction.workRequestId
     ? await getWorkRequestById(auction.workRequestId)
@@ -46,7 +45,7 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
         href="/admin/particuliers/encheres"
         className="text-sm font-medium text-brand-700 hover:underline"
       >
-        ← Retour aux enchères
+        ← Retour aux offres publiées
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -70,22 +69,24 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-bold text-slate-900">{auction.title}</h1>
-          <p className="mt-1 text-sm text-slate-500">Fin de l&apos;enchère : {endsLabel}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Fin d&apos;annonce : {endsLabel}
+            {workRequest && (
+              <>
+                {" "}
+                · durée {formatWorkRequestAuctionDuration(workRequest)}
+              </>
+            )}
+          </p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-slate-500">Prix actuel</p>
+          <p className="text-sm text-slate-500">Contacts débloqués</p>
           <p className="text-2xl font-bold text-brand-700">
-            {auction.currentPrice != null
-              ? formatPrice(auction.currentPrice)
-              : auction.startPrice != null
-                ? formatPrice(auction.startPrice)
-                : "—"}
+            {activeUnlocks.length}/{auction.maxAcceptedArtisans}
           </p>
-          {auction.startPrice != null && (
-            <p className="text-xs text-slate-400">
-              Départ {formatPrice(auction.startPrice)}
-            </p>
-          )}
+          <p className="text-xs text-slate-400">
+            {formatUnlockPriceEur(UNLOCK_PRICE_EUR)} typique / mise en contact
+          </p>
         </div>
       </div>
 
@@ -108,6 +109,12 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
                   <dd className="text-slate-700">{workRequest.requestedWorkStartDate}</dd>
                 </div>
               )}
+              <div>
+                <dt className="text-xs text-slate-400">Mise en contact</dt>
+                <dd className="text-slate-700">
+                  Autorisée (CGU / CGV) · max. {auction.maxAcceptedArtisans} artisans
+                </dd>
+              </div>
               <div>
                 <dt className="text-xs text-slate-400">Id demande</dt>
                 <dd className="font-mono text-xs text-slate-500">{workRequest.id}</dd>
@@ -176,7 +183,7 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
             </dl>
           ) : (
             <p className="mt-3 text-sm text-slate-500">
-              Enchère du catalogue démo — pas de client réel associé.
+              Annonce du catalogue démo — pas de client réel associé.
             </p>
           )}
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
@@ -208,73 +215,37 @@ export default async function AdminEnchereDetailPage({ params }: Props) {
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-semibold text-slate-900">
-          Offres ({bids.length}) · {auction.feesCollected} € de frais
+          Contacts débloqués ({activeUnlocks.length}/{auction.maxAcceptedArtisans})
         </h2>
-        {bids.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">Aucune offre pour le moment.</p>
+        {unlocks.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">
+            Aucun artisan n&apos;a encore débloqué ce contact.
+          </p>
         ) : (
           <ul className="mt-4 divide-y divide-slate-100">
-            {[...bids]
-              .sort((a, b) => a.amount - b.amount)
-              .map((bid) => (
-                <li
-                  key={bid.id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
-                >
-                  <div>
-                    <p className="font-medium text-slate-900">{bid.companyName}</p>
-                    <p className="text-xs text-slate-400">
-                      {new Date(bid.createdAt).toLocaleString("fr-FR")} · {bid.feeEur} €
-                    </p>
-                    {bid.ocrAmount != null && (
-                      <p className="mt-0.5 text-xs text-emerald-700">
-                        OCR devis : {formatPrice(bid.ocrAmount)}
-                        {bid.ocrMatchedLabel ? ` (${bid.ocrMatchedLabel})` : ""}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {bid.devisProofUrl && (
-                      <a
-                        href={bid.devisProofUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-medium text-brand-700 underline"
-                      >
-                        Devis PDF
-                      </a>
-                    )}
-                    <span className="text-lg font-bold text-brand-700">
-                      {formatPrice(bid.amount)}
-                    </span>
-                  </div>
-                </li>
-              ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="font-semibold text-slate-900">
-          Devis après visite validés ({quotes.length})
-        </h2>
-        {quotes.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">Aucun devis formalisé validé.</p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {quotes.map((quote) => (
+            {unlocks.map((unlock) => (
               <li
-                key={quote.id}
-                className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm"
+                key={unlock.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium text-slate-900">{quote.companyName}</p>
-                  <p className="font-bold text-brand-700">{formatPrice(quote.amount)}</p>
+                <div>
+                  <p className="font-medium text-slate-900">{unlock.companyName}</p>
+                  <p className="text-xs text-slate-400">
+                    {unlock.proEmail}
+                    {" · "}
+                    {new Date(unlock.paidAt).toLocaleString("fr-FR")}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">
-                  Visite : {quote.visitDate}
-                </p>
-                <p className="mt-2 line-clamp-3 text-slate-600">{quote.description}</p>
+                <div className="text-right">
+                  <p className="font-semibold text-brand-700">
+                    {unlock.amountEur}&nbsp;€
+                  </p>
+                  {unlock.refundedAt ? (
+                    <p className="text-xs text-slate-500">Recrédité (legacy)</p>
+                  ) : (
+                    <p className="text-xs text-emerald-700">Actif</p>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

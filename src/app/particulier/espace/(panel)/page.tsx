@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { getClientSession } from "@/lib/client-auth";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
-import { formatPrice } from "@/lib/data";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import { getClientDashboardStats } from "@/lib/store";
 
 const STATUS_LABELS = {
   pending: { text: "En validation", className: "bg-amber-100 text-amber-800" },
-  approved: { text: "Enchère active", className: "bg-client-100 text-client-800" },
+  approved: { text: "Annonce active", className: "bg-client-100 text-client-800" },
   rejected: { text: "Refusée", className: "bg-red-100 text-red-800" },
 };
 
@@ -26,7 +25,7 @@ export default async function ClientDashboardPage() {
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Mes demandes" value={stats.totalRequests} href="/particulier/espace/demandes" />
         <StatCard label="En validation" value={stats.pending} />
-        <StatCard label="Enchères en cours" value={stats.active} highlight={stats.active > 0} />
+        <StatCard label="Annonces en cours" value={stats.active} highlight={stats.active > 0} />
         <StatCard label="Artisan choisi" value={stats.chosen} />
       </div>
 
@@ -62,10 +61,8 @@ export default async function ClientDashboardPage() {
                         {request.category} · {request.city}
                       </p>
                       <p className="mt-1 text-slate-500">
-                        {request.startPrice != null
-                          ? `Prix de départ ${formatPrice(request.startPrice)}`
-                          : "Prix de départ : en attente du 1er devis"}{" "}
-                        · {formatAuctionDurationDays(request.auctionDurationDays ?? 30)}
+                        Annonce :{" "}
+                        {formatWorkRequestAuctionDuration(request)}
                       </p>
                     </div>
                     <span

@@ -1,10 +1,44 @@
 import { randomBytes } from "crypto";
 import type { WorkRequest } from "./store-types";
-import { formatPrice } from "./data";
 
-export function getSiteOrigin(): string {
-  const url = process.env.NEXT_PUBLIC_SITE_URL;
-  if (url) return url.replace(/\/$/, "");
+function isUsablePublicOrigin(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (!host || host === "0.0.0.0" || host === "::" || host === "[::]") {
+      return false;
+    }
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Origine publique (jamais 0.0.0.0 — Next bind souvent sur cette adresse). */
+export function getSiteOrigin(request?: {
+  headers: Headers;
+  nextUrl?: { origin: string };
+}): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  if (fromEnv && isUsablePublicOrigin(fromEnv)) return fromEnv;
+
+  if (request) {
+    const forwardedHost =
+      request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+    const proto =
+      request.headers.get("x-forwarded-proto") ??
+      (forwardedHost?.includes("localhost") ? "http" : "https");
+    if (forwardedHost) {
+      const host = forwardedHost.split(",")[0]?.trim();
+      if (host) {
+        const candidate = `${proto}://${host}`.replace(/\/$/, "");
+        if (isUsablePublicOrigin(candidate)) return candidate;
+      }
+    }
+    const origin = request.nextUrl?.origin;
+    if (origin && isUsablePublicOrigin(origin)) return origin.replace(/\/$/, "");
+  }
+
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }
@@ -27,17 +61,14 @@ export function getPublicShareUrl(shareToken: string): string {
 }
 
 export function buildShareTitle(request: Pick<WorkRequest, "category" | "city" | "department">): string {
-  return `Enchère inversée : ${request.category} à ${request.city} (${request.department})`;
+  return `Offre travaux : ${request.category} à ${request.city} (${request.department})`;
 }
 
 export function buildShareText(
   request: Pick<WorkRequest, "category" | "city" | "department" | "startPrice">
 ): string {
   const title = buildShareTitle(request);
-  if (request.startPrice != null) {
-    return `${title} — prix de départ ${formatPrice(request.startPrice)}. Artisans du Nord-Pas-de-Calais, enchérissez sur Artipascher !`;
-  }
-  return `${title}. Artisans du Nord-Pas-de-Calais, déposez votre devis sur Artipascher !`;
+  return `${title}. Artisans du Nord-Pas-de-Calais : débloquez le contact sur Nord Artisan Pro pour joindre le client.`;
 }
 
 export function buildFacebookShareUrl(pageUrl: string): string {

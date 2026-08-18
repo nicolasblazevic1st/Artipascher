@@ -5,6 +5,7 @@ import { NafCodeList } from "@/components/NafCodeLabel";
 import NafMultiSelect, {
   type NafFilterOption,
 } from "@/components/admin/NafMultiSelect";
+import { readAdminJson } from "@/lib/admin-fetch-json";
 import { formatNafWithLabel } from "@/lib/naf-trade-groups";
 
 interface ArtisanCompanyRow {
@@ -36,6 +37,8 @@ interface Stats {
   pendingEnrichment: number;
   invalidPhone: number;
   unmappedCategory: number;
+  geocoded: number;
+  withoutGeocode: number;
   byDepartment: Record<string, number>;
   topNaf: Array<{ naf: string; count: number; mapped: boolean; label?: string }>;
   nafOptions?: NafFilterOption[];
@@ -47,7 +50,13 @@ interface Stats {
     requestsEnrichment: number;
     enrichmentPaused: boolean;
   };
-  dailyBudget: { budget: number; paused: boolean };
+  dailyBudget: {
+    budget: number;
+    paused: boolean;
+    bonusToday?: number;
+    base?: number;
+    carryover?: number;
+  };
 }
 
 const ENRICH_LABELS: Record<string, string> = {
@@ -77,6 +86,7 @@ export default function AdminBaseArtisansPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [phoneDrafts, setPhoneDrafts] = useState<Record<string, string>>({});
   const [showAdd, setShowAdd] = useState(false);
+  const [placesBoost, setPlacesBoost] = useState("100");
   const [addForm, setAddForm] = useState({
     siret: "",
     companyName: "",
@@ -186,7 +196,43 @@ export default function AdminBaseArtisansPage() {
     );
   }
 
-  async function runAction(kind: "sirene" | "sirene-full" | "places") {
+  async function purgeOutsidePlatformNaf() {
+    if (
+      !window.confirm(
+        "Fermer tous les artisans actifs hors des 22 codes NAF des 16 métiers ? Ils disparaîtront des listes actives (statut closed)."
+      )
+    ) {
+      return;
+    }
+    setBusy("purge-naf");
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/artisans/purge-unmapped-naf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "close" }),
+      });
+      const data = await readAdminJson<{
+        error?: string;
+        result?: { removed?: number; kept?: number };
+      }>(res);
+      if (!res.ok) throw new Error(data.error ?? "Purge impossible");
+      setSuccess(
+        `Purge NAF: ${data.result?.removed ?? 0} fermés · ${data.result?.kept ?? "?"} actifs restants (22 codes métiers)`
+      );
+      await loadStats();
+      await loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function runAction(
+    kind: "sirene" | "sirene-full" | "places" | "geocode"
+  ) {
     setBusy(kind);
     setError(null);
     setSuccess(null);
@@ -195,10 +241,33 @@ export default function AdminBaseArtisansPage() {
         const res = await fetch("/api/admin/artisans/enrich-places", {
           method: "POST",
         });
-        const data = await res.json();
+        const data = await readAdminJson<{
+          error?: string;
+          result?: { processed?: number; spent?: number; budget?: number };
+        }>(res);
         if (!res.ok) throw new Error(data.error ?? "Échec Places");
         setSuccess(
           `Places: traités ${data.result?.processed ?? 0}, requêtes ${data.result?.spent ?? 0}, budget ${data.result?.budget ?? "?"}`
+        );
+      } else if (kind === "geocode") {
+        const res = await fetch("/api/admin/artisans/geocode-backfill", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 200 }),
+        });
+        const data = await readAdminJson<{
+          error?: string;
+          result?: {
+            geocoded?: number;
+            failed?: number;
+            remaining?: number;
+            attempted?: number;
+          };
+        }>(res);
+        if (!res.ok) throw new Error(data.error ?? "Échec géocode BAN");
+        const r = data.result;
+        setSuccess(
+          `Géocode BAN: ${r?.geocoded ?? 0} OK · ${r?.failed ?? 0} échecs · ${r?.remaining ?? "?"} restants (lot ${r?.attempted ?? 0})`
         );
       } else {
         const res = await fetch("/api/admin/artisans/extract-sirene", {
@@ -207,17 +276,62 @@ export default function AdminBaseArtisansPage() {
           body: JSON.stringify(
             kind === "sirene-full"
               ? { full: true, geocodeMissing: false }
-              : { maxPagesPerNaf: 4 }
+              : { maxPagesPerNaf: 4, geocodeMissing: false }
           ),
         });
-        const data = await res.json();
+        const data = await readAdminJson<{
+          error?: string;
+          started?: boolean;
+          message?: string;
+          result?: { upserted?: number; pages?: number };
+        }>(res);
         if (!res.ok) throw new Error(data.error ?? "Échec SIRENE");
-        setSuccess(
-          `SIRENE: upsert ${data.result?.upserted ?? 0}, pages ${data.result?.pages ?? 0}`
-        );
+        if (data.started) {
+          setSuccess(
+            data.message ??
+              "Sync SIRENE lancée en arrière-plan. Rechargez la liste dans une à deux minutes."
+          );
+        } else {
+          setSuccess(
+            `SIRENE: upsert ${data.result?.upserted ?? 0}, pages ${data.result?.pages ?? 0}`
+          );
+        }
       }
       await loadStats();
       await loadList();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function boostPlacesQuota() {
+    const extra = Math.floor(Number(placesBoost));
+    if (!Number.isFinite(extra) || extra < 1) {
+      setError("Indiquez un nombre de requêtes Places ≥ 1.");
+      return;
+    }
+    setBusy("places-boost");
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/artisans/places-quota-boost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ extra }),
+      });
+      const data = await readAdminJson<{
+        error?: string;
+        added?: number;
+        bonusToday?: number;
+        budget?: number;
+      }>(res);
+      if (!res.ok) throw new Error(data.error ?? "Boost impossible");
+      setSuccess(
+        `Budget Places du jour +${data.added ?? extra} req · bonus jour ${data.bonusToday ?? "?"} · budget actuel ${data.budget ?? "?"}`
+      );
+      await loadStats();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -272,24 +386,49 @@ export default function AdminBaseArtisansPage() {
             disabled={Boolean(busy)}
             onClick={() => void runAction("sirene")}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+            title="Mise à jour rapide SIRENE (quelques pages par métier NAF). Idéal au quotidien."
           >
-            Sync SIRENE
+            Sync rapide SIRENE
           </button>
           <button
             type="button"
             disabled={Boolean(busy)}
             onClick={() => void runAction("sirene-full")}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+            title="Parcourt tout SIRENE pour les métiers NPC (plusieurs minutes). À lancer rarement, ex. première charge ou rattrapage."
           >
-            Sync complète
+            Sync SIRENE complète
+          </button>
+          <button
+            type="button"
+            disabled={
+              Boolean(busy) ||
+              !stats ||
+              (stats.withoutGeocode ?? 0) === 0
+            }
+            onClick={() => void runAction("geocode")}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+            title="Complète lat/lon via l’API Adresse (BAN) — lots de 200"
+          >
+            Géocoder les manquants
           </button>
           <button
             type="button"
             disabled={Boolean(busy) || stats?.placesEnabled === false}
             onClick={() => void runAction("places")}
             className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-medium text-white hover:bg-brand-800 disabled:opacity-50"
+            title="Cherche les numéros de téléphone manquants via Google Places"
           >
             Enrichir Places
+          </button>
+          <button
+            type="button"
+            disabled={Boolean(busy) || (stats?.unmappedCategory ?? 0) === 0}
+            onClick={() => void purgeOutsidePlatformNaf()}
+            className="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-medium text-red-900 hover:bg-red-100 disabled:opacity-50"
+            title="Ferme les actifs hors des 22 NAF des 16 métiers"
+          >
+            Garder 22 NAF métiers
           </button>
           <button
             type="button"
@@ -300,6 +439,11 @@ export default function AdminBaseArtisansPage() {
           </button>
         </div>
       </div>
+      <p className="text-xs text-slate-500">
+        <strong>Sync rapide</strong> : mise à jour courte (quelques pages / métier).{" "}
+        <strong>Sync SIRENE complète</strong> : toute la base NPC, plusieurs
+        minutes — à lancer rarement.
+      </p>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -318,8 +462,17 @@ export default function AdminBaseArtisansPage() {
       )}
 
       {stats && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard label="Actifs" value={stats.active} hint={`Total fiches ${stats.total}`} />
+          <StatCard
+            label="Avec GPS"
+            value={stats.geocoded ?? 0}
+            hint={
+              stats.active > 0
+                ? `${(((stats.geocoded ?? 0) / stats.active) * 100).toFixed(1)} % · ${stats.withoutGeocode ?? 0} sans coords`
+                : "Aucun actif"
+            }
+          />
           <StatCard
             label="Avec téléphone"
             value={stats.withPhone}
@@ -333,8 +486,46 @@ export default function AdminBaseArtisansPage() {
           <StatCard
             label="Quota Places"
             value={stats.remaining}
-            hint={`Budget jour ${stats.dailyBudget?.budget ?? 0}${stats.quota.enrichmentPaused ? " · pause" : ""}`}
+            hint={`Budget jour ${stats.dailyBudget?.budget ?? 0}${
+              (stats.dailyBudget?.bonusToday ?? 0) > 0
+                ? ` · bonus ${stats.dailyBudget.bonusToday}`
+                : ""
+            }${stats.quota.enrichmentPaused ? " · pause" : ""}`}
           />
+        </div>
+      )}
+
+      {stats && (
+        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="min-w-[12rem] flex-1">
+            <p className="text-sm font-semibold text-slate-900">
+              Boost Places (exceptionnel)
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Ajoute des requêtes au budget d&apos;enrichissement d&apos;aujourd&apos;hui
+              uniquement (max 2000 / boost). Débloque aussi une pause mensuelle.
+            </p>
+          </div>
+          <label className="block text-xs text-slate-600">
+            Requêtes à ajouter
+            <input
+              type="number"
+              min={1}
+              max={2000}
+              step={10}
+              value={placesBoost}
+              onChange={(e) => setPlacesBoost(e.target.value)}
+              className="mt-1 block w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={Boolean(busy) || stats.placesEnabled === false}
+            onClick={() => void boostPlacesQuota()}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
+          >
+            {busy === "places-boost" ? "Ajout…" : "Augmenter le budget jour"}
+          </button>
         </div>
       )}
 

@@ -1,36 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import BidPanel from "@/components/BidPanel";
 import ClientContactPanel from "@/components/ClientContactPanel";
+import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
-import VerifiedBidsList from "@/components/VerifiedBidsList";
-import { annotateAnonymousBids } from "@/lib/anonymize-artisan";
-import { computeCurrentPrice } from "@/lib/auctions";
 import { formatPublicLocation } from "@/lib/client-address";
-import { formatLocation, formatPrice } from "@/lib/data";
+import { resolveMaxContactArtisans } from "@/lib/contact-slots";
+import { formatLocation } from "@/lib/data";
 import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
-import {
-  getBidsForAuction,
-  mapBidsWithQualification,
-} from "@/lib/store";
+import { countContactUnlocksForAuction } from "@/lib/store";
 import {
   getWorkRequestByAuctionId,
   resolveAuction,
 } from "@/lib/work-request-auctions";
+import { resolveUnlockPricing } from "@/lib/pricing-tiers";
 
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const resolved = await resolveAuction(id);
-  if (!resolved) return { title: "Enchère introuvable" };
-  return { title: `Enchérir — ${resolved.title}` };
+  if (!resolved) return { title: "Chantier introuvable" };
+  return { title: `Contact — ${resolved.title}` };
 }
 
-export default async function ProEnchereDetailPage({ params }: Props) {
+export default async function ProChantierDetailPage({ params }: Props) {
   const session = await getProSession();
   if (!session) return null;
 
@@ -39,23 +36,17 @@ export default async function ProEnchereDetailPage({ params }: Props) {
   if (!resolved) notFound();
 
   const workRequest = await getWorkRequestByAuctionId(id);
-  const bids = await getBidsForAuction(id);
-  const bidsWithLevel = await mapBidsWithQualification(
-    bids,
-    workRequest?.category
-  );
-  const anonymousBids = annotateAnonymousBids(bidsWithLevel);
-  const currentPrice = computeCurrentPrice(
-    resolved.startPrice,
-    bids.map((b) => b.amount)
-  );
-
+  const unlockCount = await countContactUnlocksForAuction(id);
   const showDemoBanner = shouldShowDemoBannerForProSession(session);
+  const unlockPricing = resolveUnlockPricing({
+    pricingTier: workRequest?.pricingTier,
+    workOptionId: workRequest?.workOptionId,
+  });
 
   return (
     <div>
       <Link href="/pro/encheres" className="text-sm font-medium text-brand-700">
-        ← Retour aux enchères
+        ← Retour aux chantiers
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -70,17 +61,9 @@ export default async function ProEnchereDetailPage({ params }: Props) {
               : formatLocation(resolved.city, resolved.department)}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-slate-500">Prix actuel</p>
-          <p className="text-xl font-bold text-brand-700">
-            {currentPrice != null ? formatPrice(currentPrice) : "—"}
-          </p>
-          {resolved.startPrice != null && (
-            <p className="text-xs text-slate-400">
-              Départ {formatPrice(resolved.startPrice)}
-            </p>
-          )}
-        </div>
+        <span className="rounded-full bg-brand-50 px-4 py-1.5 text-sm font-medium text-brand-700">
+          Mise en relation
+        </span>
       </div>
 
       <p className="mt-4 text-sm leading-relaxed text-slate-600">
@@ -88,6 +71,16 @@ export default async function ProEnchereDetailPage({ params }: Props) {
       </p>
 
       <ProjectPhotos photos={workRequest?.photos ?? []} showPublicNote />
+
+      <ContactSlotsBanner
+        accepted={unlockCount}
+        max={resolveMaxContactArtisans(workRequest)}
+        className="mt-4"
+      />
+
+      {workRequest && (
+        <OfferClientRequirements request={workRequest} className="mt-4" />
+      )}
 
       <ClientContactPanel
         auctionId={id}
@@ -97,41 +90,8 @@ export default async function ProEnchereDetailPage({ params }: Props) {
             : formatLocation(resolved.city, resolved.department)
         }
         requestedWorkStartDate={workRequest?.requestedWorkStartDate}
+        unlockPriceEur={unlockPricing.unlockPriceEur}
       />
-
-      <BidPanel
-        auctionId={id}
-        startPrice={resolved.startPrice}
-        initialCurrentPrice={currentPrice}
-        initialBids={anonymousBids.map((b) => ({
-          id: b.id,
-          label: b.anonymousLabel,
-          offerNumber: b.offerNumber,
-          amount: b.amount,
-          createdAt: b.createdAt,
-          qualificationLevel: b.qualificationLevel,
-        }))}
-        requiresQuote={workRequest !== null}
-      />
-
-      <section className="mt-8 rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Offres indicatives (anonymisées)
-        </h2>
-        <div className="mt-4">
-          <VerifiedBidsList
-            bids={anonymousBids.map((b) => ({
-              id: b.id,
-              amount: b.amount,
-              qualificationLevel: b.qualificationLevel,
-              decennaleVerifiedLabels: b.decennaleVerifiedLabels,
-              anonymousArtisanIndex: b.anonymousArtisanIndex,
-              offerNumber: b.offerNumber,
-              anonymousLabel: b.anonymousLabel,
-            }))}
-          />
-        </div>
-      </section>
 
       <p className="mt-4 text-center text-xs text-slate-500">
         <Link href={`/encheres/${id}`} className="text-brand-700 underline">

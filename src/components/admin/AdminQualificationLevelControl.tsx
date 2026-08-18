@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { QualificationLevel } from "@/lib/qualification-tiers";
-
-const ACTIVE_LEVELS = [
-  { value: 1 as const, label: "1 — Certifié" },
-  { value: 2 as const, label: "2 — Qualifié" },
-  { value: 3 as const, label: "3 — Premium" },
-];
 
 interface Props {
   proId: string;
@@ -19,54 +13,36 @@ interface Props {
   showDemote?: boolean;
 }
 
-function resolveActiveLevel(
-  status: Props["status"],
-  qualificationLevel?: QualificationLevel
-): 1 | 2 | 3 {
-  if (status === "rejected") return 1;
-  if (qualificationLevel === 2 || qualificationLevel === 3) return qualificationLevel;
-  return 1;
-}
-
 /**
- * Contrôle simple du niveau affiché (1 / 2 / 3) + option niveau 0 séparée.
+ * Certification binaire : certifié (niveau 1) ou retiré (niveau 0).
  */
 export default function AdminQualificationLevelControl({
   proId,
   companyName,
   status,
-  qualificationLevel,
   onSaved,
   showDemote = true,
 }: Props) {
-  const saved = resolveActiveLevel(status, qualificationLevel);
-  const [draft, setDraft] = useState<1 | 2 | 3>(saved);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    setDraft(resolveActiveLevel(status, qualificationLevel));
-  }, [status, qualificationLevel, proId]);
-
-  const dirty = status !== "rejected" && draft !== saved;
   const needsReinstate = status === "rejected";
 
-  async function saveLevel() {
-    if (!needsReinstate && !dirty) return;
+  async function reinstate() {
     setBusy(true);
     setMessage(null);
     try {
       const res = await fetch("/api/admin/professionnels", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: proId, qualificationLevel: draft }),
+        body: JSON.stringify({ id: proId, qualificationLevel: 1 }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setMessage(data.error ?? "Enregistrement impossible.");
         return;
       }
-      setMessage(needsReinstate ? "Compte réintégré." : "Niveau enregistré.");
+      setMessage("Compte réintégré (certifié).");
       await onSaved();
     } finally {
       setBusy(false);
@@ -75,7 +51,7 @@ export default function AdminQualificationLevelControl({
 
   async function demoteToZero() {
     const ok = window.confirm(
-      `Renvoyer « ${companyName} » au niveau 0 ?\n\nLe compte sera refusé, la certification retirée, et la connexion bloquée.`
+      `Retirer la certification de « ${companyName} » ?\n\nLe compte sera refusé et la connexion bloquée.`
     );
     if (!ok) return;
     setBusy(true);
@@ -91,7 +67,7 @@ export default function AdminQualificationLevelControl({
         setMessage(data.error ?? "Action impossible.");
         return;
       }
-      setMessage("Compte renvoyé au niveau 0.");
+      setMessage("Certification retirée.");
       await onSaved();
     } finally {
       setBusy(false);
@@ -100,34 +76,22 @@ export default function AdminQualificationLevelControl({
 
   return (
     <div className="flex flex-col items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <label className="text-xs font-medium text-slate-600">
-        Niveau artisan
-        <select
-          value={draft}
-          disabled={busy}
-          onChange={(e) => setDraft(Number(e.target.value) as 1 | 2 | 3)}
-          className="mt-1 block min-w-[11rem] rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm disabled:opacity-60"
-        >
-          {ACTIVE_LEVELS.map((level) => (
-            <option key={level.value} value={level.value}>
-              {level.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <p className="text-xs font-medium text-slate-600">Certification</p>
 
-      <button
-        type="button"
-        disabled={busy || (!dirty && !needsReinstate)}
-        onClick={() => void saveLevel()}
-        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-      >
-        {busy
-          ? "Enregistrement…"
-          : needsReinstate
-            ? "Réintégrer à ce niveau"
-            : "Enregistrer le niveau"}
-      </button>
+      {needsReinstate ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void reinstate()}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          {busy ? "Enregistrement…" : "Réintégrer (certifié)"}
+        </button>
+      ) : (
+        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+          Certifié
+        </span>
+      )}
 
       {showDemote && status !== "rejected" && (
         <button
@@ -136,18 +100,13 @@ export default function AdminQualificationLevelControl({
           onClick={() => void demoteToZero()}
           className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
         >
-          Renvoyer au niveau 0
+          Retirer la certification
         </button>
       )}
 
-      {dirty && !needsReinstate && (
-        <p className="max-w-[12rem] text-right text-xs text-amber-700">
-          Modification non enregistrée.
-        </p>
-      )}
       {needsReinstate && (
         <p className="max-w-[12rem] text-right text-xs text-red-700">
-          Compte au niveau 0 — choisissez un niveau puis réintégrez.
+          Certification retirée — réintégrez pour rétablir l&apos;accès.
         </p>
       )}
       {message && (

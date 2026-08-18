@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { BID_FEE_EUR } from "./auctions";
-import { UNLOCK_PRICE_EUR } from "./client-contacts";
+import { formatUnlockPriceEur } from "./pricing-tiers";
 
 export function isStripeConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
@@ -16,39 +16,54 @@ export function getStripe(): Stripe | null {
   return new Stripe(key);
 }
 
+/** Paiement unitaire d’une mise en contact (ticket du chantier). */
 export async function createContactUnlockCheckout(params: {
   proId: string;
   proEmail: string;
   auctionId: string;
   auctionTitle: string;
+  unlockPriceEur: number;
+  pricingTier?: string;
+  workRequestId?: string;
   successUrl: string;
   cancelUrl: string;
 }): Promise<{ url: string; sessionId: string } | null> {
   const stripe = getStripe();
   if (!stripe) return null;
 
+  const amountCents = Math.round(params.unlockPriceEur * 100);
+  if (!Number.isFinite(amountCents) || amountCents <= 0) return null;
+
+  const priceLabel = formatUnlockPriceEur(params.unlockPriceEur);
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: params.proEmail,
+    billing_address_collection: "auto",
     line_items: [
       {
         price_data: {
           currency: "eur",
-          unit_amount: UNLOCK_PRICE_EUR * 100,
+          unit_amount: amountCents,
           product_data: {
-            name: "Accès coordonnées client",
-            description: `Enchère : ${params.auctionTitle}`,
+            name: `Mise en contact client · ${priceLabel}`,
+            description: `Offre : ${params.auctionTitle}`,
           },
         },
         quantity: 1,
       },
     ],
     metadata: {
+      type: "contact_unlock",
       proId: params.proId,
       auctionId: params.auctionId,
-      type: "contact_unlock",
+      amountEur: String(params.unlockPriceEur),
+      ...(params.pricingTier ? { pricingTier: params.pricingTier } : {}),
+      ...(params.workRequestId
+        ? { workRequestId: params.workRequestId }
+        : {}),
     },
-    success_url: `${params.successUrl}?unlocked=1`,
+    success_url: `${params.successUrl}?unlocked=1&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: params.cancelUrl,
   });
 
@@ -91,47 +106,6 @@ export async function createBidCheckout(params: {
       bidAmount: String(params.bidAmount),
     },
     success_url: `${params.successUrl}?bid=success`,
-    cancel_url: params.cancelUrl,
-  });
-
-  if (!session.url) return null;
-  return { url: session.url, sessionId: session.id };
-}
-
-export async function createCreditPackCheckout(params: {
-  proId: string;
-  proEmail: string;
-  packSize: number;
-  successUrl: string;
-  cancelUrl: string;
-}): Promise<{ url: string; sessionId: string } | null> {
-  const stripe = getStripe();
-  if (!stripe) return null;
-
-  const amountEur = params.packSize * UNLOCK_PRICE_EUR;
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer_email: params.proEmail,
-    line_items: [
-      {
-        price_data: {
-          currency: "eur",
-          unit_amount: amountEur * 100,
-          product_data: {
-            name: `${params.packSize} crédit${params.packSize > 1 ? "s" : ""} Artipascher`,
-            description: "1 crédit = 1 € — utilisable pour débloquer un contact ou enchérir",
-          },
-        },
-        quantity: 1,
-      },
-    ],
-    metadata: {
-      type: "credit_purchase",
-      proId: params.proId,
-      packSize: String(params.packSize),
-    },
-    success_url: `${params.successUrl}?credits=1`,
     cancel_url: params.cancelUrl,
   });
 

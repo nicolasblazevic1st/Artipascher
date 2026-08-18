@@ -22,6 +22,7 @@ async function resolveClientContact(auctionId: string): Promise<ClientContact | 
     lastName: request.lastName,
     email: request.email,
     phone: request.phone?.trim() || "Non renseigné",
+    phoneVerified: Boolean(request.phoneVerifiedAt),
     address,
     postalCode,
     companyName: request.companyName,
@@ -44,7 +45,11 @@ export async function GET(
 
   if (!unlocked) {
     return NextResponse.json(
-      { error: "Accès non débloqué. Payez 1 € pour voir les coordonnées.", unlocked: false },
+      {
+        error:
+          "Accès non débloqué. Une mise en contact (solde selon le ticket du chantier) est requise.",
+        unlocked: false,
+      },
       { status: 403 }
     );
   }

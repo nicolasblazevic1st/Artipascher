@@ -3,7 +3,7 @@ import AdminSectionNav from "@/components/admin/AdminSectionNav";
 const TABS = [
   { href: "/admin/particuliers/comptes", label: "Comptes" },
   { href: "/admin/particuliers/demandes", label: "Demandes travaux" },
-  { href: "/admin/particuliers/encheres", label: "Enchères" },
+  { href: "/admin/particuliers/encheres", label: "Offres publiées" },
 ];
 
 export default function AdminParticuliersLayout({
@@ -13,7 +13,7 @@ export default function AdminParticuliersLayout({
     <div>
       <AdminSectionNav
         title="Particuliers & chantiers"
-        description="Comptes clients, demandes de travaux et enchères associées."
+        description="Comptes clients, demandes de travaux et offres publiées (mise en contact)."
         tabs={TABS}
       />
       {children}

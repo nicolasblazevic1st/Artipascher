@@ -1,7 +1,7 @@
 import Link from "next/link";
 import BetaClosedNotice from "@/components/BetaClosedNotice";
 import WorkRequestForm from "@/components/WorkRequestForm";
-import { isBetaMode } from "@/lib/beta";
+import { getIsBetaMode } from "@/lib/beta-server";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientById } from "@/lib/store";
 
@@ -9,7 +9,10 @@ export default async function NouvelleDemandePage() {
   const session = await getClientSession();
   if (!session) return null;
 
-  const client = await getClientById(session.clientId);
+  const [client, beta] = await Promise.all([
+    getClientById(session.clientId),
+    getIsBetaMode(),
+  ]);
 
   return (
     <div>
@@ -24,7 +27,7 @@ export default async function NouvelleDemandePage() {
         Décrivez votre projet : il restera dans votre espace particulier.
       </p>
 
-      {isBetaMode() ? (
+      {beta ? (
         <div className="mt-6">
           <BetaClosedNotice title="Création de demandes fermée" />
         </div>
@@ -36,6 +39,8 @@ export default async function NouvelleDemandePage() {
             lastName: client?.lastName ?? session.lastName,
             email: client?.email ?? session.email,
             phone: client?.phone,
+            phoneVerifiedE164: client?.phoneVerifiedE164,
+            phoneVerifiedAt: client?.phoneVerifiedAt,
           }}
         />
       )}

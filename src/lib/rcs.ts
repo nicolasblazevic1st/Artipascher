@@ -4,6 +4,7 @@ import {
   buildRcsRegisteredActivities,
   type RcsRegisteredActivity,
 } from "./naf-trade-groups";
+import type { LegalRepresentative } from "./store-types";
 
 export interface RcsVerificationResult {
   valid: boolean;
@@ -15,6 +16,8 @@ export interface RcsVerificationResult {
   isActive?: boolean;
   /** Activités NAF déclarées au registre (établissement vérifié). */
   registeredActivities?: RcsRegisteredActivity[];
+  /** Dirigeants / représentants légaux (API recherche-entreprises). */
+  legalRepresentatives?: LegalRepresentative[];
   error?: string;
 }
 
@@ -52,11 +55,21 @@ export function isAllowedDepartment(code: string | undefined): boolean {
   return (ALLOWED_DEPARTMENTS as readonly string[]).includes(code);
 }
 
+interface GouvDirigeant {
+  nom?: string | null;
+  prenoms?: string | null;
+  qualite?: string | null;
+  type_dirigeant?: string | null;
+  denomination?: string | null;
+  siren?: string | null;
+}
+
 export interface GouvEntrepriseResult {
   results?: Array<{
     nom_complet?: string;
     etat_administratif?: string;
     activite_principale?: string;
+    dirigeants?: GouvDirigeant[];
     siege?: {
       libelle_commune?: string;
       code_postal?: string;
@@ -68,6 +81,45 @@ export interface GouvEntrepriseResult {
       activite_principale?: string;
     }>;
   }>;
+}
+
+export function mapGouvDirigeants(
+  dirigeants: GouvDirigeant[] | undefined
+): LegalRepresentative[] {
+  if (!dirigeants?.length) return [];
+
+  const mapped: LegalRepresentative[] = [];
+  for (const d of dirigeants) {
+    const isMoral =
+      d.type_dirigeant === "personne morale" ||
+      d.type_dirigeant === "personne_morale" ||
+      Boolean(d.denomination && !d.nom);
+
+    const fullName = isMoral
+      ? (d.denomination ?? "").trim()
+      : [d.prenoms, d.nom]
+          .filter(Boolean)
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim();
+
+    if (!fullName) continue;
+
+    mapped.push({
+      fullName,
+      role: d.qualite?.trim() || undefined,
+      kind: isMoral ? "personne_morale" : "personne_physique",
+    });
+  }
+
+  // Dédupliquer par nom normalisé
+  const seen = new Set<string>();
+  return mapped.filter((rep) => {
+    const key = rep.fullName.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function collectRegisteredNafCodes(
@@ -158,6 +210,7 @@ export async function verifyWithRegistry(
     const registeredActivities = buildRcsRegisteredActivities(
       collectRegisteredNafCodes(company, normalized)
     );
+    const legalRepresentatives = mapGouvDirigeants(company.dirigeants);
 
     return {
       valid: true,
@@ -168,6 +221,7 @@ export async function verifyWithRegistry(
       department,
       isActive: true,
       registeredActivities,
+      legalRepresentatives,
     };
   } catch {
     return {

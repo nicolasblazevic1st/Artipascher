@@ -5,15 +5,14 @@ import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
-import { formatAuctionDurationDays } from "@/lib/auction-duration";
+import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
-import { formatPrice } from "@/lib/data";
 import { formatNafList } from "@/lib/naf-trade-groups";
 import type { WorkRequest } from "@/lib/store-types";
 
 const STATUS_LABELS = {
   pending: { text: "En attente", className: "bg-amber-100 text-amber-800" },
-  approved: { text: "Enchère créée", className: "bg-emerald-100 text-emerald-800" },
+  approved: { text: "Annonce publiée", className: "bg-emerald-100 text-emerald-800" },
   rejected: { text: "Refusée", className: "bg-red-100 text-red-800" },
 };
 
@@ -50,8 +49,8 @@ export default function AdminDemandesPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Demandes de travaux</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Validez les demandes pour créer une enchère inversée — puis suivez-les dans l&apos;onglet
-        Enchères.
+        Validez les demandes pour publier une annonce de mise en contact — puis
+        suivez-les dans l&apos;onglet Offres publiées.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -150,41 +149,54 @@ export default function AdminDemandesPage() {
                       )}
                     </div>
                     <div>
-                      Prix de départ :{" "}
-                      {r.startPrice != null
-                        ? formatPrice(r.startPrice)
-                        : r.startPriceMode === "unspecified"
-                          ? "Non précisé"
-                          : "En attente du 1er devis Artipascher"}
-                      {r.startPrice != null && r.startPriceMode === "client" && (
-                        <span className="text-client-700"> · fixé par le client</span>
-                      )}
-                      {r.startPrice != null &&
-                        r.previousQuoteAmount != null &&
-                        r.startPriceQuoteId == null &&
-                        r.startPriceMode !== "client" && (
-                          <span className="text-amber-700"> · devis précédent</span>
-                        )}
-                      {r.startPriceQuoteId != null && (
-                        <span className="text-emerald-700"> · devis Artipascher</span>
-                      )}
+                      Durée annonce :{" "}
+                      {formatWorkRequestAuctionDuration(r)}
                     </div>
                     <div>
-                      Durée enchère :{" "}
-                      {formatAuctionDurationDays(r.auctionDurationDays ?? 30)}
+                      Artisans max :{" "}
+                      {typeof r.maxContactArtisans === "number"
+                        ? r.maxContactArtisans
+                        : 5}
+                    </div>
+                    <div>
+                      Ancienneté :{" "}
+                      {r.preferEstablishedCompany === true
+                        ? "uniquement 5+"
+                        : r.preferEstablishedCompany === false
+                          ? "uniquement 0–5 ans"
+                          : "âge non précisé"}
+                    </div>
+                    <div>
+                      Note Google :{" "}
+                      {r.minGoogleRating
+                        ? `≥ ${String(r.minGoogleRating).replace(".", ",")}/5`
+                        : "peu importe"}
+                    </div>
+                    <div>
+                      Obligatoire : statut normal · décennale &amp; RC pro
+                    </div>
+                    <div>
+                      Mise en contact : autorisée (CGU / CGV · max.{" "}
+                      {typeof r.maxContactArtisans === "number"
+                        ? r.maxContactArtisans
+                        : 5}
+                      )
                     </div>
                     <div>{r.email}</div>
-                    <div>Tél : {r.phone?.trim() || "Non renseigné"}</div>
+                    <div>
+                      Tél : {r.phone?.trim() || "Non renseigné"}
+                      {r.phoneVerifiedAt ? " · vérifié SMS" : ""}
+                    </div>
                   </dl>
                   {r.auctionEndsAt && (
                     <p className="mt-2 text-xs text-emerald-600">
-                      Fin prévue :{" "}
+                      Fin d&apos;annonce :{" "}
                       {new Date(r.auctionEndsAt).toLocaleString("fr-FR")}
                     </p>
                   )}
                   {r.auctionId && (
                     <p className="mt-2 text-xs text-emerald-600">
-                      Enchère :{" "}
+                      Annonce :{" "}
                       <a
                         href={`/admin/particuliers/encheres/${r.auctionId}`}
                         className="font-medium underline"
@@ -208,7 +220,7 @@ export default function AdminDemandesPage() {
                       onClick={() => handleReview(r.id, "approved")}
                       className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                     >
-                      Créer l&apos;enchère
+                      Publier l&apos;annonce
                     </button>
                     <button
                       type="button"
