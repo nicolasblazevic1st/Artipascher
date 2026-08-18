@@ -40,6 +40,8 @@ export interface ResolvedAuction {
   shareToken?: string;
   source: "sample" | "workRequest";
   isTest?: boolean;
+  isCopropriete?: boolean;
+  workScope?: "privatif" | "commun";
 }
 
 export function getWorkRequestStartPrice(request: WorkRequest): number | undefined {
@@ -63,6 +65,8 @@ function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
     shareToken: request.shareToken,
     source: "workRequest",
     isTest: request.isTest === true,
+    isCopropriete: request.clientKind === "copropriete",
+    workScope: request.workScope,
   };
 }
 
@@ -78,6 +82,8 @@ function fromSample(auction: Auction): ResolvedAuction {
     endsAt: auction.endsAt,
     source: "sample",
     isTest: auction.isTest === true,
+    isCopropriete: auction.isCopropriete === true,
+    workScope: auction.workScope,
   };
 }
 
@@ -127,6 +133,8 @@ export async function workRequestToAuctionCard(
     status: active ? "active" : "ended",
     endsAt: endsAt ?? new Date().toISOString(),
     isTest: request.isTest === true,
+    isCopropriete: request.clientKind === "copropriete",
+    workScope: request.workScope,
     coverPhotoUrl: request.photos?.[0],
     latitude,
     longitude,
@@ -182,6 +190,8 @@ export interface AdminAuctionView {
   feesCollected: number;
   source: "workRequest" | "sample";
   isTest: boolean;
+  isCopropriete?: boolean;
+  workScope?: "privatif" | "commun";
   workRequestId?: string;
   clientName?: string;
   clientEmail?: string;
@@ -230,6 +240,8 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
       feesCollected: bids.reduce((sum, b) => sum + b.feeEur, 0),
       source: "workRequest",
       isTest: request.isTest === true,
+      isCopropriete: request.clientKind === "copropriete",
+      workScope: request.workScope,
       workRequestId: request.id,
       clientName: `${request.firstName} ${request.lastName}`.trim(),
       clientEmail: request.email,

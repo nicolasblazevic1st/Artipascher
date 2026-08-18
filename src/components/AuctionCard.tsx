@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AuctionCountdown from "@/components/AuctionCountdown";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import TestBanner from "@/components/TestBanner";
 import {
   Auction,
@@ -49,6 +50,9 @@ export default function AuctionCard({
               {CATEGORY_LABELS[auction.category]}
             </span>
             {auction.isTest && showDemoBanner && <TestBanner />}
+            {auction.isCopropriete && (
+              <CoproprieteBanner workScope={auction.workScope} />
+            )}
           </div>
           <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
             Active

@@ -35,6 +35,10 @@ export interface Auction {
   /** Coordonnées chantier (filtrable par distance). */
   latitude?: number;
   longitude?: number;
+  /** Bandeau public « Copropriété » — sans identité de l’immeuble. */
+  isCopropriete?: boolean;
+  /** Parties communes / lot privatif (copropriété uniquement). */
+  workScope?: "privatif" | "commun";
 }
 
 export const CATEGORY_LABELS: Record<TradeCategory, string> = {

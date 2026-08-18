@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ProInlineLoginForm from "@/components/pro/ProInlineLoginForm";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
+import type { ClientKind, WorkScope } from "@/lib/store-types";
 
 interface ClientContact {
   firstName: string;
@@ -16,7 +18,8 @@ interface ClientContact {
   postalCode: string;
   companyName?: string;
   clientSiret?: string;
-  clientKind?: "individual" | "company";
+  clientKind?: ClientKind;
+  workScope?: WorkScope;
 }
 
 interface Props {
@@ -138,6 +141,11 @@ export default function ClientContactPanel({
         <p className="mt-1 text-xs text-emerald-700">
           Connecté en tant que {companyName}
         </p>
+        {contact.clientKind === "copropriete" && (
+          <div className="mt-3">
+            <CoproprieteBanner workScope={contact.workScope} />
+          </div>
+        )}
         <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           {contact.clientKind === "company" && contact.companyName && (
             <div className="sm:col-span-2">
@@ -149,7 +157,12 @@ export default function ClientContactPanel({
             </div>
           )}
           <div>
-            <dt className="text-emerald-600">Nom</dt>
+            <dt className="text-emerald-600">
+              {contact.clientKind === "copropriete" ||
+              contact.clientKind === "company"
+                ? "Interlocuteur"
+                : "Nom"}
+            </dt>
             <dd className="font-medium text-emerald-900">
               {contact.firstName} {contact.lastName}
             </dd>

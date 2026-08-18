@@ -36,6 +36,7 @@ import {
   setWorkRequestPreviousQuote,
 } from "@/lib/store";
 import type { ClientKind } from "@/lib/store-types";
+import { parseClientKind, parseWorkScope } from "@/lib/copropriete";
 import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
 
 export async function POST(request: NextRequest) {
@@ -49,9 +50,11 @@ export async function POST(request: NextRequest) {
     const lastName = String(formData.get("lastName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const phoneRaw = String(formData.get("phone") ?? "").trim();
-    const clientKindRaw = String(formData.get("clientKind") ?? "individual").trim();
-    const clientKind: ClientKind =
-      clientKindRaw === "company" ? "company" : "individual";
+    const clientKind: ClientKind = parseClientKind(formData.get("clientKind"));
+    const workScope =
+      clientKind === "copropriete"
+        ? parseWorkScope(formData.get("workScope"))
+        : undefined;
     const clientSiretRaw = String(formData.get("clientSiret") ?? "").trim();
     const companyNameRaw = String(formData.get("companyName") ?? "").trim();
     const addressLine = String(formData.get("addressLine") ?? "").trim();
@@ -183,6 +186,16 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+    }
+
+    if (clientKind === "copropriete" && !workScope) {
+      return NextResponse.json(
+        {
+          error:
+            "Indiquez si les travaux concernent les parties communes ou un lot privatif.",
+        },
+        { status: 400 }
+      );
     }
 
     const addressError = validateClientAddress({
@@ -329,6 +342,7 @@ export async function POST(request: NextRequest) {
       clientKind,
       companyName,
       clientSiret,
+      workScope,
       addressLine: verifiedAddress.addressLine,
       addressLine2: addressLine2 || undefined,
       postalCode: verifiedAddress.postalCode,

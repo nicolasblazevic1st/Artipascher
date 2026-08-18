@@ -1,4 +1,5 @@
 import Link from "next/link";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import TestBanner from "@/components/TestBanner";
 import { formatLocation } from "@/lib/data";
 import { listAdminAuctionViews } from "@/lib/work-request-auctions";
@@ -40,6 +41,9 @@ export default async function AdminOffresPage() {
                       {auction.categoryLabel}
                     </span>
                     {auction.isTest && <TestBanner />}
+                    {auction.isCopropriete && (
+                      <CoproprieteBanner workScope={auction.workScope} />
+                    )}
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         auction.status === "active"

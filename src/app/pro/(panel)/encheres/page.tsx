@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import TestBanner from "@/components/TestBanner";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
@@ -66,6 +67,9 @@ export default async function ProChantiersPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium text-slate-900">{auction.title}</p>
                       {auction.isTest && showDemoBanner && <TestBanner />}
+                      {auction.isCopropriete && (
+                        <CoproprieteBanner workScope={auction.workScope} />
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-slate-500 sm:hidden">
                       {formatLocation(auction.city, auction.department)}
