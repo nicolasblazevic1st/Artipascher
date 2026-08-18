@@ -151,12 +151,12 @@ export const FAQ_ITEMS = [
   {
     question: "Combien coûte le déblocage pour le professionnel ?",
     answer:
-      "Le déblocage débite le solde du professionnel selon le ticket du chantier (15 €, 17,50 €, 20 € ou 25 €). Des packs de solde à tarif dégressif sont proposés. Chaque demande est limitée à 5 mises en contact maximum.",
+      "Le déblocage se paie à l'unité selon le ticket du chantier (15 €, 17,50 €, 20 € ou 25 €), via Stripe au moment de la mise en contact. Aucun pack de solde n'est proposé. Chaque demande est limitée à 5 mises en contact maximum.",
   },
   {
     question: "Les coordonnées du client sont-elles visibles par tous ?",
     answer:
-      "Non. Nom, téléphone, email et adresse exacte restent masqués. Seuls les artisans inscrits au RCS, approuvés, et correspondant au besoin peuvent débloquer les coordonnées (débit du solde selon le ticket).",
+      "Non. Nom, téléphone, email et adresse exacte restent masqués. Seuls les artisans inscrits au RCS, approuvés, et correspondant au besoin peuvent débloquer les coordonnées (paiement du ticket du chantier).",
   },
   {
     question: "Comment choisir mon artisan ?",

@@ -14,7 +14,7 @@ import {
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
   description:
-    "Rejoignez Nord Artisan Pro : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées avec votre solde.",
+    "Rejoignez Nord Artisan Pro : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées au ticket du chantier.",
 };
 
 const FEATURES = [
@@ -53,7 +53,7 @@ const PRICING = [
   {
     title: `Mise en contact · 15 à 25 € selon ticket`,
     description:
-      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Packs de solde à tarif dégressif.",
+      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Paiement unitaire au moment du déblocage (15 à 25 € selon le ticket).",
   },
 ];
 

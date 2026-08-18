@@ -45,7 +45,7 @@ export default function ConfidentialitePage() {
           <li>
             <strong>Compte Professionnel</strong> : raison sociale, SIRET/SIREN,
             email, téléphone, documents (décennale, RC pro…), métiers,
-            historique de déblocages et de solde ;
+            historique de déblocages et éventuel solde résiduel ;
           </li>
           <li>
             <strong>Prospects acquisition</strong> : données d&apos;entreprises
@@ -84,7 +84,7 @@ export default function ConfidentialitePage() {
           <li>
             Exécution du contrat / mesures précontractuelles : création de
             compte, vérification du mobile Client, mise en relation, gestion des
-            annonces, vente de solde, alertes de contact ;
+            annonces, ventes de mises en contact, alertes de contact ;
           </li>
           <li>
             Intérêt légitime : sécurité, prévention de la fraude, amélioration
@@ -107,40 +107,70 @@ export default function ConfidentialitePage() {
           Les SMS sont acheminés via le prestataire <strong>OVH SMS</strong>{" "}
           (API). Expéditeur alphanumérique lorsque disponible (ex. NordArtPro).
         </p>
+
+        <h3 className="mt-4">4.1 SMS transactionnels (Clients)</h3>
+        <p className="mt-2">
+          Code de vérification du mobile ; alerte lorsqu&apos;un Artisan demande
+          le contact. Ces messages sont liés au service demandé ; ils peuvent ne
+          pas comporter de clause STOP afin d&apos;éviter un désabonnement
+          involontaire après un code ou une alerte.
+        </p>
+
+        <h3 className="mt-4">4.2 Marketing SMS (prospection B2B)</h3>
+        <p className="mt-2">
+          L&apos;Éditeur peut envoyer des SMS d&apos;information / invitation à
+          des <strong>entreprises du bâtiment</strong> (Professionnels non
+          encore inscrits ou prospects), à partir de{" "}
+          <strong>sources publiques</strong> et/ou d&apos;un enrichissement
+          (SIRET, NAF, ville, téléphone), pour signaler des chantiers ou
+          inviter à s&apos;inscrire sur la Plateforme. Cette prospection relève
+          de l&apos;
+          <strong>intérêt légitime</strong> du responsable du traitement
+          (développement B2B), sous réserve du droit d&apos;opposition.
+        </p>
         <ul>
           <li>
-            <strong>Transactionnels (Clients)</strong> : code de vérification
-            du mobile ; alerte lorsqu&apos;un Artisan demande le contact. Ces
-            messages sont liés au service ; ils peuvent ne pas comporter de
-            clause STOP afin d&apos;éviter un désabonnement involontaire après
-            un code ou une alerte ;
+            déclenchement <strong>manuel</strong> ou{" "}
+            <strong>automatique</strong> lorsqu&apos;une demande Client est
+            validée et publiée comme offre destinée aux Professionnels, dans la
+            limite des places de contact (notamment 5 Artisans maximum par
+            offre) ;
           </li>
           <li>
-            <strong>Marketing (Professionnels / prospects)</strong> :
-            information sur des chantiers et/ou invitation à s&apos;inscrire.
-            Les campagnes peuvent être lancées manuellement ou{" "}
-            <strong>automatiquement</strong> lorsqu&apos;une demande Client est
-            validée et publiée comme offre. Elles peuvent être découpées en
-            lots quotidiens jusqu&apos;à atteinte de l&apos;objectif de mise en
-            relation (ex. 5 contacts) ;
+            campagnes éventuellement découpées en{" "}
+            <strong>lots quotidiens</strong> jusqu&apos;à atteinte de
+            l&apos;objectif de mise en relation ;
           </li>
           <li>
-            les SMS marketing comportent une mention <strong>STOP</strong> ;
-            l&apos;opposition est prise en compte pour les prochains envois
-            marketing. Envoi en principe limité à la fenêtre indicative des SMS
-            commerciaux (lundi–samedi, 8h–20h, heure de Paris) ;
+            transmission via <strong>OVH SMS</strong> ; dès qu&apos;un envoi
+            est effectivement soumis au prestataire, le message est pris en
+            charge pour livraison (sous réserve des règles du réseau). Une phase
+            de préparation / validation interne peut précéder cet envoi réel ;
           </li>
           <li>
-            un SIRET / numéro déjà contacté par SMS marketing n&apos;est en
-            principe plus relancé par ce canal ;
+            chaque message marketing comporte une mention{" "}
+            <strong>STOP</strong> permettant de s&apos;opposer aux prochains
+            envois marketing ; l&apos;opposition est enregistrée et respectée ;
           </li>
           <li>
-            dès qu&apos;un envoi marketing est effectivement soumis à OVH, le
-            message est pris en charge pour livraison (crédits OVH débités selon
-            le contrat du prestataire). Une phase de préparation / validation
-            interne peut précéder cet envoi réel.
+            envoi en principe limité à la fenêtre indicative des SMS
+            commerciaux en France (lundi–samedi, 8h–20h, heure de Paris) ;
+          </li>
+          <li>
+            un numéro / SIRET déjà contacté par SMS marketing n&apos;est en
+            principe <strong>pas relancé</strong> par ce canal ;
+          </li>
+          <li>
+            conservation de l&apos;historique des campagnes et du statut « déjà
+            contacté » / opposition pour la durée nécessaire à éviter les
+            relances et à démontrer le respect du droit d&apos;opposition.
           </li>
         </ul>
+        <p className="mt-3">
+          Les SMS transactionnels adressés aux Clients sont distincts des SMS
+          marketing. Pour le cadre contractuel de la prospection, voir aussi
+          les <Link href="/cgu">CGU</Link> (prospection SMS).
+        </p>
       </section>
 
       <section>
@@ -220,6 +250,14 @@ export default function ConfidentialitePage() {
           droit de définir des directives relatives au sort de vos données après
           décès. Vous pouvez aussi retirer votre consentement aux cookies non
           essentiels à tout moment.
+        </p>
+        <p className="mt-3">
+          Concernant la <strong>prospection SMS marketing</strong>, vous pouvez
+          vous opposer à tout moment en répondant <strong>STOP</strong> au
+          message reçu, ou en écrivant à{" "}
+          <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
+          . L&apos;exercice du droit d&apos;opposition n&apos;affecte pas la
+          licéité du traitement effectué avant l&apos;opposition.
         </p>
         <p className="mt-3">
           Pour exercer vos droits :{" "}

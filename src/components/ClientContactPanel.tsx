@@ -231,8 +231,8 @@ export default function ClientContactPanel({
       )}
       <h2 className="text-lg font-semibold text-slate-900">Coordonnées client</h2>
       <p className="mt-2 text-sm text-slate-600">
-        Débloquez les coordonnées pour {priceLabel} (débit sur votre solde) si
-        votre profil correspond aux critères du client.
+        Débloquez les coordonnées pour {priceLabel} (paiement sécurisé au ticket
+        du chantier) si votre profil correspond aux critères du client.
       </p>
 
       <dl className="mt-4 rounded-lg bg-white p-4 text-sm">
@@ -316,15 +316,9 @@ export default function ClientContactPanel({
               disabled={paying}
               className="block text-xs text-slate-500 underline"
             >
-              Mode démo (dev) — débloquer sans solde
+              Mode démo (dev) — débloquer sans paiement
             </button>
           )}
-          <a
-            href="/pro/compte#credits"
-            className="block text-xs font-medium text-brand-700 underline"
-          >
-            Recharger mon solde
-          </a>
           <button
             type="button"
             onClick={() => void handleLogout()}

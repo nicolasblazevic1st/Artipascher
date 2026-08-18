@@ -1,40 +1,40 @@
 # Conditions générales de vente (CGV) — Nord Artisan Pro
 
-Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.5-brouillon
 
-> Brouillon à faire relire par un avocat. CGV destinées aux **professionnels** (vente de crédits).
+> Brouillon à faire relire par un avocat. CGV destinées aux **professionnels** (vente de mises en contact à l'unité).
 
 ## 1. Objet
 
-Vente de **crédits numériques** permettant d'utiliser des services payants de la plateforme Nord Artisan Pro (B2B). Ne régit pas le contrat de travaux Client/Artisan.
+Vente de **mises en contact** (déblocage des coordonnées Client) sur la plateforme Nord Artisan Pro (B2B). Ne régit pas le contrat de travaux Client/Artisan.
 
 Voir aussi les CGU.
 
 ## 2. Produits
 
-- 1 crédit = 20 € au tarif unitaire de référence (selon régime fiscal et packs affichés au paiement ; packs à tarif dégressif possibles)
-- 1 crédit = 1 mise en contact (déblocage des coordonnées Client)
-- Packs : selon affichage en vigueur sur le Site
-- Usages typiques : déblocage contact 1 crédit ; certaines actions (ex. dépôt d'enchère) peuvent aussi consommer des crédits selon l'affichage
-- Crédits non remboursables en espèces (sauf obligation légale), sans valeur hors plateforme
+- Paiement **unitaire** au moment du déblocage (pas de packs / forfaits de solde à l'achat)
+- Tarif de référence typique : **20 €** (TTC ou HT selon affichage au paiement)
+- Ticket du chantier : **15 € / 17,50 € / 20 € / 25 €** selon l'annonce
+- Un solde résiduel (parrainage, remboursement, ancien crédit) peut être débité en priorité s'il est suffisant
+- Service non remboursable en espèces (sauf obligation légale), sans valeur hors plateforme
 
 ## 2 bis. Nature du service payant
 
-Le crédit consommé pour un **déblocage** donne accès aux **coordonnées** d'un Client ayant autorisé le contact (acceptation manuelle ou option d'alerte SMS avec acceptation automatique, dans la limite prévue).
+Le montant payé pour un **déblocage** donne accès aux **coordonnées** d'un Client ayant autorisé le contact (acceptation manuelle ou option d'alerte SMS avec acceptation automatique, dans la limite prévue).
 
 **Ne sont pas garantis** : une réponse du Client, un devis signé, un chantier, ni un volume minimal d'offres à proximité du Professionnel.
 
 ## 3. Commande et paiement
 
-Depuis l'espace Professionnel via Stripe. Vente ferme après paiement réussi et crédit du solde.
+Depuis l'espace Professionnel, au moment du déblocage, via Stripe. Vente ferme après paiement réussi et mise à disposition des coordonnées. Compte Professionnel préalablement vérifié (registre, BODACC, RC pro, décennale — CGU).
 
 ## 4. Prix et facturation
 
-Prix affichés au moment de l'achat. Facture / justificatif selon modalités techniques. SIRET vendeur : 108 238 924 00014.
+Prix affichés au moment du paiement. Facture / justificatif selon modalités techniques. SIRET vendeur : 108 238 924 00014 — 26 rue de Santes, 59320 Haubourdin.
 
 ## 5. Exécution
 
-Crédits crédités après validation du paiement.
+Coordonnées mises à disposition après validation du paiement (ou débit d'un solde résiduel suffisant), sous réserve de places de contact disponibles.
 
 ## 6. Rétractation
 
@@ -42,19 +42,19 @@ Ventes B2B : pas de droit de rétractation consommateur. Si consommateur excepti
 
 ## 7. Remboursements
 
-Pas de remboursement des crédits sauf **dysfonctionnement imputable au Vendeur** (ex. impossibilité technique d'accéder à des coordonnées après déblocage, coordonnées manifestement invalides du fait de la Plateforme).
+Pas de remboursement sauf **dysfonctionnement imputable au Vendeur** (ex. impossibilité technique d'accéder aux coordonnées après déblocage, coordonnées manifestement invalides du fait de la Plateforme).
 
 L'absence de réponse du Client, l'absence d'offres dans une zone géographique, ou le refus ultérieur de travaux **ne constituent pas** un motif de remboursement.
 
-Le Vendeur peut, à titre commercial, recréditer un crédit dans certains cas (ex. désengagement Client après déblocage), sans obligation générale. Contact : contact@nord-artisan-pro.com.
+Contact : contact@nord-artisan-pro.com.
 
-## 8. Validité des crédits
+## 8. Solde résiduel
 
-Pas d'expiration automatique sauf mention contraire ; possibilité de fixer une durée après information préalable.
+Pas d'expiration automatique sauf mention contraire ; possibilité de fixer une durée après information préalable. Non remboursable en espèces (sauf obligation légale).
 
 ## 9. Responsabilité
 
-Limitée au montant des crédits concernés (hors dommages indirects), dans les limites légales. Pas de responsabilité sur les travaux Client/Artisan ni sur le volume d'opportunités.
+Limitée au montant de la mise en contact concernée (hors dommages indirects), dans les limites légales. Pas de responsabilité sur les travaux Client/Artisan ni sur le volume d'opportunités.
 
 ## 10. Données
 

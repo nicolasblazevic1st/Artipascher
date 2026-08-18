@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation (CGU) — Nord Artisan Pro
 
-Dernière mise à jour : 10 août 2026 · Version 1.2-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.5-brouillon
 
 > Brouillon à faire relire par un avocat.
 
@@ -15,9 +15,8 @@ Toute utilisation implique l'acceptation des CGU.
 - **Client** : particulier ou société publiant une demande de travaux
 - **Professionnel / Artisan** : entreprise du bâtiment RCS vérifiée
 - **Utilisateur** : visiteur, Client ou Professionnel
-- **Enchère inversée** : propositions de montants décroissants
-- **Crédits** : unités prépayées pour services payants (voir CGV)
-- **Déblocage** : accès payant (crédits) aux coordonnées d'un Client après autorisation de contact
+- **Mise en contact / Déblocage** : accès payant (paiement unitaire au ticket du chantier, voir CGV) aux coordonnées d'un Client après autorisation de contact
+- **Solde résiduel** : éventuel crédit restant sur le compte Professionnel (parrainage, remboursement, ancien achat) utilisable pour un déblocage s'il est suffisant
 
 ## 3. Rôle de la Plateforme
 
@@ -38,12 +37,12 @@ Informations exactes et à jour. Professionnels : SIRET vérifié, périmètre 5
 - Description, photos, adresse chantier et **mobile français** requis.
 - Le mobile doit être **vérifié par code SMS** avant publication d'une demande.
 - Le Client peut indiquer une préférence d'**ancienneté d'entreprise** (0 à 5 ans ou 5 ans et plus) : critère de ciblage / prospection, **sans garantie** sur le profil final des Artisans.
-- Option (activée par défaut) : **alerte SMS** lorsqu'un Artisan souhaite le contacter. Si activée, la demande de contact est **acceptée automatiquement**, dans la limite de **5 Artisans** par enchère ; le Client est informé (SMS, email, notification). Si désactivée, le Client accepte ou refuse manuellement sous 48 h.
-- Les coordonnées du Client ne sont communiquées à un Professionnel qu'après autorisation de contact et **déblocage** (crédits).
+- Option (activée par défaut) : **alerte SMS** lorsqu'un Artisan souhaite le contacter. Si activée, la demande de contact est **acceptée automatiquement**, dans la limite de **5 Artisans** par annonce ; le Client est informé (SMS, email, notification). Si désactivée, le Client accepte ou refuse manuellement sous 48 h.
+- Les coordonnées du Client ne sont communiquées à un Professionnel qu'après autorisation de contact et **déblocage** (paiement — voir CGV).
 
-## 7. Enchères et mise en relation
+## 7. Annonces et mise en relation
 
-Demandes validables par l'équipe. Montants en ligne = indications ; devis après visite prime. Choix libre de l'artisan. Certaines actions pro = crédits (CGV).
+Demandes validables par l'équipe. Devis hors Plateforme après visite. Choix libre de l'artisan. Le déblocage est soumis au paiement unitaire du ticket (CGV).
 
 Le déblocage donne accès aux **coordonnées** (identité, téléphone, email, adresse) : il **ne garantit pas** une réponse du Client ni la conclusion d'un chantier.
 

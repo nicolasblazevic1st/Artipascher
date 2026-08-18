@@ -376,7 +376,7 @@ export default function BidPanel({
             </button>
           )}
           <a href="/pro/compte#credits" className="block text-xs text-brand-700 underline">
-            Acheter du solde
+            Voir mon solde résiduel
           </a>
         </div>
       )}

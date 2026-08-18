@@ -64,8 +64,9 @@ export default async function ProDashboardPage() {
             </Link>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Matching + solde ({formatUnlockPriceEur(UNLOCK_PRICE_EUR)} typique)
-            pour une mise en contact
+            Matching · paiement au ticket (
+            {formatUnlockPriceEur(UNLOCK_PRICE_EUR)} typique) pour une mise en
+            contact
           </p>
           {available.length === 0 ? (
             <p className="mt-4 text-sm text-slate-500">
@@ -102,7 +103,7 @@ export default async function ProDashboardPage() {
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-600">
             <li>Parcourez les offres qui matchent votre métier et votre zone.</li>
             <li>
-              Mise en contact (15 à 25&nbsp;€ selon le ticket, débit solde)
+              Mise en contact (15 à 25&nbsp;€ selon le ticket, paiement Stripe)
               tant qu’il reste une place (max. 5 artisans).
             </li>
             <li>
@@ -111,10 +112,10 @@ export default async function ProDashboardPage() {
             </li>
           </ol>
           <Link
-            href="/pro/compte#credits"
+            href="/pro/encheres"
             className="mt-4 inline-block text-sm font-medium text-brand-600"
           >
-            Recharger mon solde →
+            Voir les offres →
           </Link>
         </section>
       </div>

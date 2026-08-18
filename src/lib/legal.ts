@@ -32,9 +32,9 @@ export const LEGAL_PUBLISHER = {
   consumerMediator:
     "Médiateur de la consommation FEVAD — BP 20015, 75362 Paris Cedex 8 — https://www.mediateurfevad.fr",
   /** Date de dernière mise à jour des documents */
-  lastUpdated: "17 août 2026",
+  lastUpdated: "18 août 2026",
   /** Version des documents */
-  version: "1.4-brouillon",
+  version: "1.5-brouillon",
 } as const;
 
 /** Hébergeur (OVH) — données publiques usuelles */

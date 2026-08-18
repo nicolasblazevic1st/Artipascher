@@ -205,6 +205,18 @@ export interface ProRegistration {
    */
   emailVerified?: boolean;
   emailVerifiedAt?: string;
+  /** ID client société Pennylane (API v2). */
+  pennylaneCustomerId?: number;
+  /** Factures Pennylane liées aux achats Stripe (idempotence). */
+  pennylaneInvoices?: PennylaneInvoiceRef[];
+}
+
+/** Référence facture Pennylane pour un Checkout Stripe. */
+export interface PennylaneInvoiceRef {
+  stripeSessionId: string;
+  invoiceId: number;
+  invoiceNumber?: string;
+  createdAt: string;
 }
 
 export type ClientKind = "individual" | "company";
@@ -615,8 +627,8 @@ export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
 };
 
 /**
- * Solde pro en euros pour l’achat de mises en contact.
- * Les packs créditent plus que le prix payé (tarif dégressif).
+ * @deprecated Packs de solde retirés — paiement unitaire au déblocage.
+ * Conservé vide pour compat. lecture d’anciennes sessions / code legacy.
  */
 export const CONTACT_UNLOCK_REF_EUR = 20;
 
@@ -627,17 +639,10 @@ export interface ContactBalancePack {
   payEur: number;
 }
 
-/** Packs solde : payer payEur → recevoir creditEur. */
-export const CONTACT_BALANCE_PACKS: readonly ContactBalancePack[] = [
-  { creditEur: 20, payEur: 20 },
-  { creditEur: 60, payEur: 54 },
-  { creditEur: 100, payEur: 85 },
-  { creditEur: 200, payEur: 150 },
-] as const;
+/** @deprecated Plus de packs à l’achat. */
+export const CONTACT_BALANCE_PACKS: readonly ContactBalancePack[] = [] as const;
 
-export type ContactBalancePackSize =
-  (typeof CONTACT_BALANCE_PACKS)[number]["creditEur"];
-
+export type ContactBalancePackSize = number;
 export function getContactBalancePack(
   creditEur: number
 ): ContactBalancePack | undefined {
@@ -709,6 +714,9 @@ export interface ProCreditTransaction {
   auctionId?: string;
   workRequestId?: string;
   stripeSessionId?: string;
+  /** Facture Pennylane associée (achats solde). */
+  pennylaneInvoiceId?: number;
+  pennylaneInvoiceNumber?: string;
   note?: string;
   createdAt: string;
 }

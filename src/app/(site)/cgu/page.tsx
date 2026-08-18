@@ -54,13 +54,15 @@ export default function CguPage() {
             le Client.
           </li>
           <li>
-            <strong>Solde</strong> : montant prépayé en euros permettant aux
-            Professionnels d&apos;utiliser certains services payants de la
-            Plateforme (voir <Link href="/cgv">CGV</Link>).
+            <strong>Mise en contact / Déblocage</strong> : accès payant
+            (paiement unitaire au ticket du chantier — voir{" "}
+            <Link href="/cgv">CGV</Link>) aux coordonnées d&apos;un Client après
+            autorisation de contact.
           </li>
           <li>
-            <strong>Déblocage</strong> : accès payant (solde) aux coordonnées
-            d&apos;un Client après autorisation de contact.
+            <strong>Solde résiduel</strong> : éventuel crédit restant sur le
+            compte Professionnel (parrainage, remboursement, ancien achat),
+            utilisable pour un déblocage s&apos;il est suffisant.
           </li>
         </ul>
       </section>
@@ -167,7 +169,7 @@ export default function CguPage() {
           <li>
             Les coordonnées du Client ne sont communiquées à un Professionnel
             qu&apos;après autorisation de contact et{" "}
-            <strong>déblocage</strong> (solde — voir{" "}
+            <strong>déblocage</strong> (paiement unitaire — voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
         </ul>
@@ -194,7 +196,7 @@ export default function CguPage() {
             Le déblocage des coordonnées est soumis à la correspondance du
             profil Professionnel avec les critères choisis par le Client
             (métier, entreprise active, assurances, ancienneté, note Google le
-            cas échéant) et à la consommation de solde (voir{" "}
+            cas échéant) et au paiement de la mise en contact (voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
           <li>

@@ -36,8 +36,10 @@ export default async function ProComptePage() {
     <div>
       <h1 className="text-2xl font-bold text-slate-900">Mon compte</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Informations de votre entreprise vérifiée au RCS · solde{" "}
-        {formatUnlockPriceEur(creditBalance)}
+        Informations de votre entreprise vérifiée au RCS
+        {creditBalance > 0
+          ? ` · solde résiduel ${formatUnlockPriceEur(creditBalance)}`
+          : ""}
       </p>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">

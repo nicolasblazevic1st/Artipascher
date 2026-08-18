@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import { BID_FEE_EUR, MAX_BIDS_PER_AUCTION } from "@/lib/auctions";
 import { fulfillCreditPurchaseSession } from "@/lib/credit-purchase";
 import { getStripe } from "@/lib/payments";
@@ -34,24 +33,26 @@ export async function POST(request: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
+    // Anciens achats de packs (sessions déjà créées) — encore honorés.
     if (session.metadata?.type === "credit_purchase") {
-      // Identité / BODACC / RC-décennale : contrôlés à l'inscription (gratuit).
       const result = await fulfillCreditPurchaseSession(session);
       if (!result.ok) {
         console.error("[stripe] credit_purchase fulfill failed", result.error);
       }
     }
 
-    // Legacy: paiements à l'acte (avant crédits) — encore honorés si reçus.
     if (
       session.metadata?.type === "contact_unlock" &&
       session.metadata.proId &&
       session.metadata.auctionId
     ) {
+      const amountEur = Number(session.metadata.amountEur);
       const unlock = await addContactUnlock({
         proId: session.metadata.proId,
         auctionId: session.metadata.auctionId,
-        amountEur: UNLOCK_PRICE_EUR,
+        amountEur:
+          Number.isFinite(amountEur) && amountEur > 0 ? amountEur : 20,
+        workRequestId: session.metadata.workRequestId || undefined,
         stripeSessionId: session.id,
       });
       if ("error" in unlock) {

@@ -13,7 +13,12 @@ import {
   resolveUnlockPricing,
 } from "@/lib/pricing-tiers";
 import { getProSession } from "@/lib/pro-auth";
-import { isDemoPaymentAllowed } from "@/lib/payments";
+import {
+  createContactUnlockCheckout,
+  isDemoPaymentAllowed,
+  isStripeConfigured,
+} from "@/lib/payments";
+import { getSiteOrigin } from "@/lib/share";
 import {
   addContactUnlock,
   countContactUnlocksForAuction,
@@ -133,23 +138,58 @@ export async function POST(request: NextRequest) {
   const priceLabel = formatUnlockPriceEur(unlockPriceEur);
 
   const balance = await getProCreditBalance(session.proId);
-  const needsBalance = balance + 0.0001 < unlockPriceEur;
-  if (needsBalance && !(demo && isDemoPaymentAllowed())) {
-    return NextResponse.json(
-      {
-        error: `Solde insuffisant. Il faut ${priceLabel} pour une mise en contact (solde actuel : ${formatUnlockPriceEur(balance)}).`,
-        needsCredits: true,
-        balance,
-        requiredEur: unlockPriceEur,
-        unlockPriceEur,
-        pricingTier: pricing.tier,
-      },
-      { status: 402 }
-    );
+  const canPayWithBalance = balance + 0.0001 >= unlockPriceEur;
+  const demoUnlock = demo && isDemoPaymentAllowed();
+
+  // Paiement unitaire Stripe si pas assez de solde résiduel (parrainage / ancien solde).
+  if (!canPayWithBalance && !demoUnlock) {
+    if (!isStripeConfigured()) {
+      return NextResponse.json(
+        {
+          error:
+            "Paiement indisponible. Stripe n’est pas configuré. En développement, utilisez le mode démo.",
+          stripeRequired: true,
+          unlockPriceEur,
+        },
+        { status: 503 }
+      );
+    }
+
+    const auctionTitle =
+      workRequest?.category ??
+      sampleAuction?.title ??
+      "Demande de travaux";
+    const origin = getSiteOrigin(request);
+    const returnUrl = `${origin}/pro/encheres/${auctionId}`;
+
+    const checkout = await createContactUnlockCheckout({
+      proId: session.proId,
+      proEmail: session.email,
+      auctionId,
+      auctionTitle,
+      unlockPriceEur,
+      pricingTier: pricing.tier,
+      workRequestId: workRequest?.id,
+      successUrl: returnUrl,
+      cancelUrl: returnUrl,
+    });
+
+    if (!checkout) {
+      return NextResponse.json(
+        { error: "Impossible de créer le paiement." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      checkoutUrl: checkout.url,
+      unlockPriceEur,
+      pricingTier: pricing.tier,
+    });
   }
 
   let spentEur = 0;
-  if (!needsBalance) {
+  if (canPayWithBalance) {
     const spent = await spendProCredit({
       proId: session.proId,
       type: "spend_unlock",
@@ -160,7 +200,7 @@ export async function POST(request: NextRequest) {
     });
     if ("error" in spent) {
       return NextResponse.json(
-        { error: spent.error, needsCredits: true, balance },
+        { error: spent.error, balance },
         { status: 402 }
       );
     }
@@ -198,6 +238,6 @@ export async function POST(request: NextRequest) {
     unlockPriceEur,
     pricingTier: pricing.tier,
     balance: newBalance,
-    demo: demo && needsBalance,
+    demo: demoUnlock,
   });
 }
