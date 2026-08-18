@@ -4,6 +4,7 @@ const TABS = [
   { href: "/admin/artisans/certification", label: "Certification" },
   { href: "/admin/artisans/comptes", label: "Comptes" },
   { href: "/admin/artisans/documents", label: "Documents" },
+  { href: "/admin/artisans/test-documents", label: "Test OCR" },
 ];
 
 export default function AdminArtisansLayout({

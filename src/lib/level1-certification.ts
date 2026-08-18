@@ -205,11 +205,13 @@ export function canUnlockContacts(pro: ProRegistration): {
     return {
       ok: false,
       reason:
-        "Certification niveau 1 non obtenue. Vérifiez vos documents (RC pro et décennale) et réinscrivez-vous si besoin.",
+        pro.status === "pending"
+          ? "Votre dossier est en cours de vérification par notre équipe. L’accès aux contacts s’ouvrira après validation des documents."
+          : "Certification niveau 1 non obtenue. Vérifiez vos documents (RC pro et garanties) auprès de l’administrateur.",
       missingItems:
         missingItems.length > 0
           ? missingItems
-          : ["RC professionnelle", "Décennale"],
+          : ["RC professionnelle", "Garantie / décennale"],
     };
   }
 

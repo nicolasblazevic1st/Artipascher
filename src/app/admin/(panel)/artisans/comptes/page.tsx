@@ -256,8 +256,6 @@ export default function AdminComptesArtisansPage() {
                   label="Activité"
                   value={`${a.unlocksCount} contact${a.unlocksCount > 1 ? "s" : ""} débloqué${a.unlocksCount > 1 ? "s" : ""}`}
                 />
-                <Row label="Parrainage" value={a.referralCode || "—"} />
-                <Row label="Filleuls" value={String(a.referralsCount)} />
                 <Row
                   label="Dirigeants"
                   value={

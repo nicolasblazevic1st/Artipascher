@@ -1,6 +1,6 @@
 # Conditions générales de vente (CGV) — Nord Artisan Pro
 
-Dernière mise à jour : 18 août 2026 · Version 1.5-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.6-brouillon
 
 > Brouillon à faire relire par un avocat. CGV destinées aux **professionnels** (vente de mises en contact à l'unité).
 
@@ -15,7 +15,7 @@ Voir aussi les CGU.
 - Paiement **unitaire** au moment du déblocage (pas de packs / forfaits de solde à l'achat)
 - Tarif de référence typique : **20 €** (TTC ou HT selon affichage au paiement)
 - Ticket du chantier : **15 € / 17,50 € / 20 € / 25 €** selon l'annonce
-- Un solde résiduel (parrainage, remboursement, ancien crédit) peut être débité en priorité s'il est suffisant
+- Un solde résiduel (remboursement, ancien crédit) peut être débité en priorité s'il est suffisant
 - Service non remboursable en espèces (sauf obligation légale), sans valeur hors plateforme
 
 ## 2 bis. Nature du service payant
@@ -26,7 +26,7 @@ Le montant payé pour un **déblocage** donne accès aux **coordonnées** d'un C
 
 ## 3. Commande et paiement
 
-Depuis l'espace Professionnel, au moment du déblocage, via Stripe. Vente ferme après paiement réussi et mise à disposition des coordonnées. Compte Professionnel préalablement vérifié (registre, BODACC, RC pro, décennale — CGU).
+Depuis l'espace Professionnel, au moment du déblocage, via Stripe. Vente ferme après paiement réussi et mise à disposition des coordonnées. Compte Professionnel préalablement vérifié (registre, BODACC, RC pro, garantie adaptée aux activités — CGU).
 
 ## 4. Prix et facturation
 

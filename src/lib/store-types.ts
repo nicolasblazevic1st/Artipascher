@@ -47,7 +47,16 @@ export interface ProLevel1Audit {
   geoVerified: boolean;
   geoDepartment?: string;
   consistencyCheckedAt?: string;
+  /** @deprecated Remplacé par ocrSuggest + revue manuelle admin. */
   autoValidatedAt?: string;
+  /** Inscription / re-upload : OCR fait, validation humaine requise. */
+  manualReviewRequired?: boolean;
+  /** Suggestion OCR (ne certifie pas le compte). */
+  ocrSuggest?: {
+    wouldCertify: boolean;
+    reasons: string[];
+    suggestedAt: string;
+  };
   globalIssues?: Level1ConsistencyIssue[];
   /** Contrôle BODACC (procédures collectives) à l'inscription / revalidation docs. */
   bodacc?: BodaccVerificationSnapshot;

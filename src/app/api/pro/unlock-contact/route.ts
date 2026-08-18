@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
   const canPayWithBalance = balance + 0.0001 >= unlockPriceEur;
   const demoUnlock = demo && isDemoPaymentAllowed();
 
-  // Paiement unitaire Stripe si pas assez de solde résiduel (parrainage / ancien solde).
+  // Paiement unitaire Stripe si pas assez de solde résiduel (ancien solde).
   if (!canPayWithBalance && !demoUnlock) {
     if (!isStripeConfigured()) {
       return NextResponse.json(

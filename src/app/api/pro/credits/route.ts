@@ -9,7 +9,7 @@ import {
 import { PRICING_TIERS } from "@/lib/pricing-tiers";
 import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 
-/** Consultation du solde résiduel (parrainage / ancien solde) — plus d’achat de packs. */
+/** Consultation du solde résiduel (ancien crédit / remboursement) — plus d’achat de packs. */
 export async function GET() {
   const session = await getProSession();
   if (!session) {

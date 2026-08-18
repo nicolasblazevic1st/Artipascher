@@ -121,23 +121,38 @@ export async function POST(request: NextRequest) {
 
   await setProRegistrationDocuments(pro.id, processed.documents);
   await setProTradeSelections(pro.id, processed.tradeSelections);
-  await updateProRegistration(pro.id, {
+
+  const patch: Parameters<typeof updateProRegistration>[1] = {
     documents: processed.documents,
     tradeSelections: processed.tradeSelections,
     level1Audit: processed.level1Audit,
-    ...(processed.certified
-      ? {
-          qualificationLevel: 1 as const,
-          level1CertifiedAt: new Date().toISOString(),
-        }
-      : {}),
-  });
+  };
+
+  if (processed.blocked) {
+    patch.status = "rejected";
+    patch.level1CertifiedAt = undefined;
+    patch.adminNote = processed.rejectionReasons.join(" · ");
+    patch.reviewedAt = new Date().toISOString();
+  } else if (pro.status === "approved" && pro.level1CertifiedAt) {
+    // Nouveau document = re-revue : retire la certification jusqu’à validation admin.
+    patch.status = "pending";
+    patch.level1CertifiedAt = undefined;
+    patch.adminNote =
+      "Nouveaux documents reçus — certification suspendue en attendant validation admin.";
+  } else if (pro.status === "rejected" && !processed.blocked) {
+    patch.status = "pending";
+    patch.adminNote = "Documents mis à jour — en attente de validation admin.";
+  }
+
+  await updateProRegistration(pro.id, patch);
 
   const updated = await getProForSession(session);
 
   return NextResponse.json({
     success: true,
-    certified: processed.certified,
+    certified: false,
+    pendingReview: true,
+    blocked: processed.blocked,
     rejectionReasons: processed.rejectionReasons,
     documents: updated?.documents ?? processed.documents,
     tradeSelections: updated ? getProTradeSelections(updated) : processed.tradeSelections,

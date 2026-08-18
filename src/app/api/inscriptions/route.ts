@@ -18,8 +18,6 @@ import type { ProTradeSelection } from "@/lib/store-types";
 import { requestEmailVerification } from "@/lib/email-verification";
 import {
   addProRegistration,
-  applyReferralCodeToPro,
-  ensureProReferralCode,
   setProRegistrationDocuments,
   setProTradeSelections,
   updateProRegistration,
@@ -67,7 +65,6 @@ export async function POST(request: NextRequest) {
     const tradeSelectionsRaw = String(formData.get("tradeSelections") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
-    const referralCode = String(formData.get("referralCode") ?? "").trim();
 
     const documentFiles: Record<string, File | null> = {};
     for (const doc of PRO_REGISTRATION_DOCUMENTS) {
@@ -227,7 +224,7 @@ export async function POST(request: NextRequest) {
       enrichedSelections
     );
 
-    if (!processed.certified) {
+    if (processed.blocked) {
       await updateProRegistration(entry.id, {
         status: "rejected",
         documents: processed.documents,
@@ -241,7 +238,7 @@ export async function POST(request: NextRequest) {
         {
           error:
             processed.rejectionReasons[0] ??
-            "Certification niveau 1 refusée : documents non conformes ou illisibles.",
+            "Inscription refusée : procédure collective BODACC.",
           details: processed.rejectionReasons,
         },
         { status: 422 }
@@ -249,38 +246,28 @@ export async function POST(request: NextRequest) {
     }
 
     await updateProRegistration(entry.id, {
-      status: "approved",
+      status: "pending",
       qualificationLevel: 1,
-      level1CertifiedAt: new Date().toISOString(),
       documents: processed.documents,
       tradeSelections: processed.tradeSelections,
       level1Audit: processed.level1Audit,
-      reviewedAt: new Date().toISOString(),
+      adminNote: processed.ocrSuggest?.wouldCertify
+        ? "OCR : suggestion favorable — validation manuelle requise."
+        : processed.ocrSuggest?.reasons?.length
+          ? `OCR : points à vérifier — ${processed.ocrSuggest.reasons.slice(0, 3).join(" · ")}`
+          : "Documents reçus — en attente de validation admin.",
     });
 
-    await ensureProReferralCode(entry.id);
     await requestEmailVerification(email, "pro");
-
-    let referralApplied = false;
-    let referralError: string | undefined;
-    if (referralCode) {
-      const referral = await applyReferralCodeToPro(entry.id, referralCode);
-      if (referral.ok) {
-        referralApplied = true;
-      } else {
-        referralError = referral.error;
-      }
-    }
 
     return NextResponse.json(
       {
         success: true,
         id: entry.id,
-        level1Certified: true,
-        referralApplied,
-        referralError,
+        level1Certified: false,
+        pendingReview: true,
         message:
-          "Certification niveau 1 obtenue. Vérifiez votre email pour activer la connexion à votre espace pro.",
+          "Inscription enregistrée. Vos documents sont en cours de vérification par notre équipe. Vérifiez votre email, puis connectez-vous : l’accès aux contacts sera ouvert après validation.",
       },
       { status: 201 }
     );

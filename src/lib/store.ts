@@ -12,6 +12,7 @@ import {
   generateReferralCode,
   isValidReferralCodeFormat,
   normalizeReferralCode,
+  REFERRAL_ENABLED,
 } from "./referral";
 import { createShareToken } from "./share";
 import { formatWorkRequestAddress } from "./client-address";
@@ -567,11 +568,25 @@ export async function getApprovedProByEmail(
   );
 }
 
+/** Connexion pro : compte approuvé ou en attente de validation docs (pas niveau 0). */
+export async function getLoginEligibleProByEmail(
+  email: string
+): Promise<ProRegistration | null> {
+  const store = await readStore();
+  return (
+    store.proRegistrations.find(
+      (p) =>
+        (p.status === "approved" || p.status === "pending") &&
+        p.email.toLowerCase() === email.toLowerCase()
+    ) ?? null
+  );
+}
+
 export async function authenticatePro(
   email: string,
   password: string
 ): Promise<ProRegistration | null> {
-  const pro = await getApprovedProByEmail(email);
+  const pro = await getLoginEligibleProByEmail(email);
   if (!pro?.passwordHash) return null;
   if (!verifyPassword(password, pro.passwordHash)) return null;
   return pro;
@@ -2891,6 +2906,7 @@ function allocateUniqueReferralCode(store: DataStore): string {
 }
 
 function ensureReferralCodeInStore(store: DataStore, proId: string): string | null {
+  if (!REFERRAL_ENABLED) return null;
   const pro = store.proRegistrations.find((p) => p.id === proId);
   if (!isEligibleReferrer(pro)) return null;
   if (pro.referralCode) return normalizeReferralCode(pro.referralCode);
@@ -2900,6 +2916,7 @@ function ensureReferralCodeInStore(store: DataStore, proId: string): string | nu
 }
 
 export async function ensureProReferralCode(proId: string): Promise<string | null> {
+  if (!REFERRAL_ENABLED) return null;
   const store = await readStore();
   const code = ensureReferralCodeInStore(store, proId);
   if (!code) return null;
@@ -2910,6 +2927,7 @@ export async function ensureProReferralCode(proId: string): Promise<string | nul
 export async function findProByReferralCode(
   rawCode: string
 ): Promise<ProRegistration | null> {
+  if (!REFERRAL_ENABLED) return null;
   const code = normalizeReferralCode(rawCode);
   if (!isValidReferralCodeFormat(code)) return null;
   const store = await readStore();
@@ -2930,6 +2948,9 @@ export async function applyReferralCodeToPro(
   filleulProId: string,
   rawCode: string
 ): Promise<ApplyReferralResult> {
+  if (!REFERRAL_ENABLED) {
+    return { ok: false, error: "Le programme de parrainage n'est plus disponible." };
+  }
   const code = normalizeReferralCode(rawCode);
   if (!code) return { ok: false, error: "Saisissez un code de parrainage." };
   if (!isValidReferralCodeFormat(code)) {
@@ -2977,6 +2998,7 @@ async function maybeGrantReferralRewardInStore(
   store: DataStore,
   spenderProId: string
 ): Promise<void> {
+  if (!REFERRAL_ENABLED) return;
   const spender = store.proRegistrations.find((p) => p.id === spenderProId);
   if (!spender?.referredByProId || spender.referralRewardGrantedAt) return;
 

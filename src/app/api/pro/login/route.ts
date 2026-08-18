@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "Email ou mot de passe incorrect, ou compte non encore approuvé par l'administrateur.",
+          "Email ou mot de passe incorrect, ou compte refusé / désactivé.",
       },
       { status: 401 }
     );

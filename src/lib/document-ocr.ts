@@ -55,14 +55,22 @@ function companyNamesMatch(a: string | undefined, b: string | undefined): boolea
   return na.includes(nb) || nb.includes(na);
 }
 
-async function extractPdfText(filePath: string): Promise<string> {
+async function extractPdfTextFromBuffer(buffer: Buffer): Promise<string> {
   try {
     const { PDFParse } = await import("pdf-parse");
-    const buffer = await fs.readFile(filePath);
     const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
     await parser.destroy();
     return result.text ?? "";
+  } catch {
+    return "";
+  }
+}
+
+async function extractPdfText(filePath: string): Promise<string> {
+  try {
+    const buffer = await fs.readFile(filePath);
+    return extractPdfTextFromBuffer(buffer);
   } catch {
     return "";
   }
@@ -121,6 +129,22 @@ export function parseOcrHintsFromText(text: string): Level1OcrHints {
 export async function analyzeDocumentFile(fileUrl: string): Promise<Level1OcrHints> {
   const text = await extractTextFromUpload(fileUrl);
   return parseOcrHintsFromText(text);
+}
+
+/** Analyse un PDF en mémoire (bac à sable admin — pas de fichier public). */
+export async function analyzeDocumentBuffer(
+  buffer: Buffer,
+  filename: string
+): Promise<{ hints: Level1OcrHints; textLength: number }> {
+  const ext = path.extname(filename).toLowerCase();
+  if (ext !== ".pdf") {
+    return { hints: {}, textLength: 0 };
+  }
+  const text = await extractPdfTextFromBuffer(buffer);
+  return {
+    hints: parseOcrHintsFromText(text),
+    textLength: text.trim().length,
+  };
 }
 
 export function checkDocumentConsistency(

@@ -1,6 +1,6 @@
 # Politique de confidentialité — Nord Artisan Pro
 
-Dernière mise à jour : 18 août 2026 · Version 1.5-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.6-brouillon
 
 > Brouillon à faire relire par un avocat / DPO.
 
@@ -15,16 +15,17 @@ Email : contact@nord-artisan-pro.com
 
 - Compte Client : identité, email, téléphone (mobile), statut de vérification SMS, mot de passe hashé, adresse chantier, description/photos, préférences (ex. ancienneté entreprise, alerte SMS contact), éventuel SIRET
 - Compte Pro : société, SIRET, email, téléphone, documents, métiers, mises en contact, solde résiduel éventuel
-- Prospects acquisition : données d'entreprises (SIRET, NAF, ville, téléphone enrichi le cas échéant, sources publiques / enrichissement) pour prospection SMS et suivi d'opposition (STOP / déjà contacté)
+- Prospects acquisition : données d'entreprises (SIRET, NAF, ville, téléphone enrichi le cas échéant, sources publiques / enrichissement) pour prospection **SMS et/ou téléphonique** et suivi d'opposition (STOP SMS / opposition téléphone / déjà contacté)
 - Campagnes SMS : historique des lots / envois (destinataires, statut, date), lien éventuel avec une offre publiée, indicateurs d'attribution (ex. inscription après SMS)
+- Prospection téléphonique : traces de contact / opposition (numéro, SIRET, date, résultat indicatif) pour éviter les relances non souhaitées
 - Paiements : via Stripe (pas de numéro de carte complet stocké par Nord Artisan Pro)
 - Technique : logs, cookies nécessaires, analytics si consentement
-- Communications : emails / SMS transactionnels (OTP, alertes) et SMS marketing (invitation Professionnels / prospects)
+- Communications : emails / SMS transactionnels (OTP, alertes), SMS marketing et appels de prospection B2B (invitation Professionnels / prospects)
 
 ## 3. Finalités et bases légales
 
 - Contrat / précontractuel : compte, vérification du mobile Client, mise en relation, paiements de contact, alertes contact
-- Intérêt légitime : sécurité, fraude, amélioration, statistiques agrégées, **prospection B2B d'entreprises** (SMS marketing manuels ou automatiques à la publication d'une offre, avec droit d'opposition STOP)
+- Intérêt légitime : sécurité, fraude, amélioration, statistiques agrégées, **prospection B2B d'entreprises** (SMS marketing et/ou appels téléphoniques, manuels ou liés à la publication d'une offre, avec droit d'opposition)
 - Obligation légale : conservation comptable le cas échéant
 - Consentement : cookies non essentiels
 
@@ -50,7 +51,20 @@ L'Éditeur peut envoyer des SMS d'information / invitation à des **entreprises 
 - Un numéro / SIRET déjà contacté n'est en principe **pas relancé** par ce canal
 - Conservation de l'historique des campagnes et du statut « déjà contacté » / opposition pour la durée nécessaire à éviter les relances et démontrer le respect de l'opposition
 
-Les SMS transactionnels Clients sont distincts des SMS marketing. Voir aussi les CGU (prospection SMS).
+Les SMS transactionnels Clients sont distincts des SMS marketing. Voir aussi les CGU (prospection commerciale).
+
+## 4 bis. Prospection téléphonique (B2B)
+
+L'Éditeur peut contacter par **téléphone** des entreprises du bâtiment (Professionnels non inscrits / prospects), à partir des mêmes catégories de données (SIRET, NAF, ville, numéro professionnel public ou enrichi), pour présenter la Plateforme, signaler des chantiers ou inviter à l'inscription.
+
+**Base légale :** intérêt légitime (développement B2B), sous réserve du droit d'opposition.
+
+- Appels en principe aux heures ouvrées raisonnables (indicatif : jours ouvrés, 9h–18h, heure de Paris)
+- Identification de l'appelant (Nord Artisan Pro) et objet du contact
+- Opposition possible à tout moment lors de l'appel ou par écrit à contact@nord-artisan-pro.com ; opposition enregistrée et respectée
+- Conservation des traces d'opposition / « ne plus appeler » pour la durée nécessaire à éviter les relances
+
+Voir aussi les CGU (§ 8.2).
 
 ## 5. Destinataires
 
@@ -62,7 +76,7 @@ Hébergement principal France (OVH). Certains sous-traitants peuvent impliquer h
 
 ## 7. Durées de conservation
 
-Comptes actifs puis archivage/suppression raisonnable ; codes OTP à courte durée ; historique de campagnes SMS et statut « déjà contacté » / opposition pour éviter les relances ; durées légales comptables ; cookies selon politique cookies.
+Comptes actifs puis archivage/suppression raisonnable ; codes OTP à courte durée ; historique de campagnes SMS, traces de prospection téléphonique et statut « déjà contacté » / opposition pour éviter les relances ; durées légales comptables ; cookies selon politique cookies.
 
 ## 8. Sécurité
 
@@ -72,7 +86,11 @@ Mesures raisonnables (accès, hash mots de passe, hébergement, hash des codes O
 
 Accès, rectification, effacement, limitation, opposition, portabilité, directives post-mortem.
 
-**Opposition à la prospection SMS marketing :** répondre **STOP** au message, ou écrire à contact@nord-artisan-pro.com. L'opposition n'affecte pas la licéité du traitement antérieur.
+**Opposition à la prospection SMS marketing :** répondre **STOP** au message, ou écrire à contact@nord-artisan-pro.com.
+
+**Opposition à la prospection téléphonique :** le dire lors de l'appel, ou écrire à contact@nord-artisan-pro.com.
+
+L'opposition n'affecte pas la licéité du traitement antérieur.
 
 Contact : contact@nord-artisan-pro.com  
 Réclamation : CNIL (https://www.cnil.fr)
