@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { readStore, setClientContactBlock } from "@/lib/store";
+import {
+  deleteClientAccountByAdmin,
+  readStore,
+  setClientContactBlock,
+} from "@/lib/store";
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -80,5 +84,50 @@ export async function PATCH(request: NextRequest) {
     clientId: result.id,
     blockedFromContact: Boolean(result.blockedFromContact),
     ghostClaimsUpheld: result.ghostClaimsUpheld ?? 0,
+  });
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  }
+
+  let clientId = "";
+  let confirmEmail = "";
+  try {
+    const body = await request.json();
+    clientId = String(body.clientId ?? "").trim();
+    confirmEmail = String(body.confirmEmail ?? "").trim().toLowerCase();
+  } catch {
+    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+  }
+
+  if (!clientId || !confirmEmail) {
+    return NextResponse.json(
+      { error: "clientId et confirmEmail requis." },
+      { status: 400 }
+    );
+  }
+
+  const store = await readStore();
+  const client = store.clientAccounts.find((c) => c.id === clientId);
+  if (!client) {
+    return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
+  }
+  if (client.email.toLowerCase() !== confirmEmail) {
+    return NextResponse.json(
+      { error: "L'email de confirmation ne correspond pas." },
+      { status: 400 }
+    );
+  }
+
+  const result = await deleteClientAccountByAdmin(clientId);
+  if ("error" in result) {
+    return NextResponse.json({ error: result.error }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    anonymizedRequests: result.anonymizedRequests,
   });
 }

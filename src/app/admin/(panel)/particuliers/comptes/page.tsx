@@ -227,6 +227,46 @@ export default function AdminComptesParticuliersPage() {
                       ? "Lever la blacklist"
                       : "Blacklister (contact)"}
                   </button>
+                  <button
+                    type="button"
+                    disabled={busyId === a.id}
+                    onClick={async () => {
+                      const typed = window.prompt(
+                        `Supprimer définitivement le compte de ${a.firstName} ${a.lastName} ?\n\nTapez l'email exact pour confirmer :\n${a.email}`
+                      );
+                      if (!typed) return;
+                      if (typed.trim().toLowerCase() !== a.email.toLowerCase()) {
+                        window.alert("Email incorrect — suppression annulée.");
+                        return;
+                      }
+                      if (
+                        !window.confirm(
+                          "Dernière confirmation : le compte sera effacé et les demandes liées anonymisées."
+                        )
+                      ) {
+                        return;
+                      }
+                      setBusyId(a.id);
+                      const res = await fetch("/api/admin/comptes-particuliers", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          clientId: a.id,
+                          confirmEmail: a.email,
+                        }),
+                      });
+                      const data = await res.json();
+                      setBusyId(null);
+                      if (!res.ok) {
+                        window.alert(data.error ?? "Suppression impossible.");
+                        return;
+                      }
+                      await load();
+                    }}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-900 ring-1 ring-red-300 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Supprimer le compte
+                  </button>
                 </div>
               </div>
 

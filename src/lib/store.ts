@@ -1097,6 +1097,125 @@ export async function setClientContactBlock(data: {
   return client;
 }
 
+/**
+ * Suppression admin d'un compte client : retire le compte, anonymise les
+ * demandes liées, purge tokens / notifs / challenges téléphone.
+ */
+export async function deleteClientAccountByAdmin(
+  clientId: string
+): Promise<{ ok: true; anonymizedRequests: number } | { error: string }> {
+  const store = await readStore();
+  const index = store.clientAccounts.findIndex((c) => c.id === clientId);
+  if (index === -1) return { error: "Compte client introuvable." };
+
+  const client = store.clientAccounts[index];
+  const emailLower = client.email.toLowerCase();
+
+  const requestIds: string[] = [];
+  for (const req of store.workRequests) {
+    const linked =
+      req.clientId === clientId ||
+      (!req.clientId && req.email.toLowerCase() === emailLower);
+    if (!linked) continue;
+    requestIds.push(req.id);
+    req.clientId = undefined;
+    req.firstName = "Compte";
+    req.lastName = "supprimé";
+    req.email = `deleted+${req.id.slice(0, 8)}@invalid.local`;
+    req.phone = undefined;
+    req.phoneVerifiedAt = undefined;
+    req.companyName = undefined;
+    req.clientSiret = undefined;
+    req.addressLine = undefined;
+    req.addressLine2 = undefined;
+    req.photos = [];
+  }
+
+  store.clientAccounts.splice(index, 1);
+
+  store.passwordResetTokens = store.passwordResetTokens.filter(
+    (t) => !(t.userType === "client" && t.userId === clientId)
+  );
+  store.emailVerificationTokens = store.emailVerificationTokens.filter(
+    (t) => !(t.userType === "client" && t.userId === clientId)
+  );
+  store.phoneVerificationChallenges = store.phoneVerificationChallenges.filter(
+    (c) => c.clientId !== clientId
+  );
+  store.notifications = store.notifications.filter(
+    (n) => !(n.audience === "client" && n.userId === clientId)
+  );
+
+  for (const q of store.proQuotes) {
+    if (q.uploadedByClientId === clientId) {
+      q.uploadedByClientId = undefined;
+    }
+  }
+
+  await writeStore(store);
+
+  const { removeRequestUploadDir } = await import("./uploads");
+  await Promise.all(requestIds.map((id) => removeRequestUploadDir(id)));
+
+  return { ok: true, anonymizedRequests: requestIds.length };
+}
+
+/**
+ * Suppression admin d'un compte pro : retire le compte et le portefeuille,
+ * anonymise l'historique marketplace, purge tokens / notifs.
+ */
+export async function deleteProAccountByAdmin(
+  proId: string
+): Promise<{ ok: true } | { error: string }> {
+  const store = await readStore();
+  const index = store.proRegistrations.findIndex((p) => p.id === proId);
+  if (index === -1) return { error: "Compte professionnel introuvable." };
+
+  store.proRegistrations.splice(index, 1);
+
+  store.creditWallets = store.creditWallets.filter((w) => w.proId !== proId);
+  store.creditTransactions = store.creditTransactions.filter(
+    (t) => t.proId !== proId
+  );
+
+  for (const bid of store.bids) {
+    if (bid.proId === proId) {
+      bid.companyName = "[compte supprimé]";
+      bid.devisProofUrl = undefined;
+      bid.ocrSnippet = undefined;
+    }
+  }
+  for (const quote of store.proQuotes) {
+    if (quote.proId === proId) {
+      quote.companyName = "[compte supprimé]";
+      quote.proofUrl = undefined;
+    }
+  }
+
+  store.passwordResetTokens = store.passwordResetTokens.filter(
+    (t) => !(t.userType === "pro" && t.userId === proId)
+  );
+  store.emailVerificationTokens = store.emailVerificationTokens.filter(
+    (t) => !(t.userType === "pro" && t.userId === proId)
+  );
+  store.notifications = store.notifications.filter(
+    (n) => !(n.audience === "pro" && n.userId === proId)
+  );
+
+  for (const p of store.proRegistrations) {
+    if (p.referredByProId === proId) {
+      p.referredByProId = undefined;
+    }
+  }
+
+  await writeStore(store);
+
+  const { removeProUploadDir } = await import("./uploads");
+  await removeProUploadDir(proId);
+
+  return { ok: true };
+}
+
 export async function getBidsForAuction(auctionId: string): Promise<Bid[]> {
   const store = await readStore();
   return store.bids

@@ -43,8 +43,8 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
       },
       {
         id: "decennale",
-        label: "Assurance décennale",
-        help: "Obligatoire pour les travaux structurels (toiture, murs, étanchéité…). Vous êtes protégé 10 ans en cas de malfaçon grave.",
+        label: "Garantie adaptée au métier",
+        help: "Décennale, biennale / bon fonctionnement, ou RC pro seule selon l'activité déclarée — vérifiée à l'inscription.",
       },
       {
         id: "nord",

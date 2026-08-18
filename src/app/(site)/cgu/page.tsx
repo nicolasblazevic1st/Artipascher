@@ -122,21 +122,39 @@ export default function CguPage() {
           établissement dans le périmètre géographique indiqué sur le Site
           (notamment départements 59 et 62), justifiant des{" "}
           <strong>attestations d&apos;assurance en PDF original</strong> :
-          responsabilité civile professionnelle (RC pro), et une{" "}
-          <strong>garantie adaptée aux activités déclarées</strong>. Selon la
-          nature des travaux, cette garantie peut être une assurance{" "}
-          <strong>décennale</strong> (travaux relevant du régime de
-          responsabilité décennale) ou une autre attestation de garantie
-          applicable (par exemple garantie de bon fonctionnement / biennale
-          pour certains équipements ou menuiseries). L&apos;Éditeur peut
-          exiger le document correspondant à chaque corps de métier coché.
-          L&apos;entreprise ne doit pas faire l&apos;objet d&apos;une procédure
-          collective active publiée au BODACC (données ouvertes DILA, licence
-          ouverte 2.0). Ces contrôles sont effectués{" "}
-          <strong>à l&apos;inscription</strong>, lors du dépôt des documents.
-          L&apos;Éditeur peut refuser, suspendre ou retirer un compte en cas
-          d&apos;informations inexactes, de non-conformité documentaire ou
-          d&apos;usage abusif.
+          responsabilité civile professionnelle (RC pro){" "}
+          <strong>obligatoire</strong>, et le cas échéant une{" "}
+          <strong>garantie adaptée aux activités déclarées</strong>. Selon le
+          corps de métier, l&apos;Éditeur exige :
+        </p>
+        <ul className="mt-3 list-disc space-y-1 pl-5">
+          <li>
+            une attestation <strong>décennale</strong> lorsque l&apos;activité
+            relève, selon la politique de la Plateforme, du régime de
+            responsabilité décennale ;
+          </li>
+          <li>
+            une attestation <strong>biennale / bon fonctionnement</strong>{" "}
+            (éléments dissociables) lorsque applicable ;
+          </li>
+          <li>
+            ou, pour certaines activités sans attestation de ce type exigée sur
+            la Plateforme (ex. travaux à dominante esthétique / entretien,
+            certains VRD), la <strong>RC pro seule</strong>.
+          </li>
+        </ul>
+        <p className="mt-3">
+          L&apos;Éditeur applique ces exigences{" "}
+          <strong>par corps de métier</strong> à l&apos;inscription et peut
+          refuser un dossier non conforme. Cette classification plateforme est{" "}
+          <strong>indicative</strong> et ne se substitue pas aux obligations
+          légales de l&apos;Artisan envers ses clients. L&apos;entreprise ne
+          doit pas faire l&apos;objet d&apos;une procédure collective active
+          publiée au BODACC (données ouvertes DILA, licence ouverte 2.0). Ces
+          contrôles sont effectués <strong>à l&apos;inscription</strong>, lors
+          du dépôt des documents. L&apos;Éditeur peut refuser, suspendre ou
+          retirer un compte en cas d&apos;informations inexactes, de
+          non-conformité documentaire ou d&apos;usage abusif.
         </p>
         <h3>5.3 Clients</h3>
         <p className="mt-3">

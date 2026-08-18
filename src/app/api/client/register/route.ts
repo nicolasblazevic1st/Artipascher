@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { validatePassword } from "@/lib/password";
 import { requestEmailVerification } from "@/lib/email-verification";
-import { ensureClientAccount, linkOrphanWorkRequests } from "@/lib/store";
+import { normalizeFrenchMobile } from "@/lib/phone-format";
+import {
+  consumeGuestPhoneVerification,
+  ensureClientAccount,
+  isGuestPhoneVerified,
+  linkOrphanWorkRequests,
+  markClientPhoneVerified,
+} from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
@@ -12,7 +19,7 @@ export async function POST(request: NextRequest) {
   let email: string;
   let password: string;
   let passwordConfirm: string;
-  let phone: string | undefined;
+  let phoneRaw: string;
 
   try {
     const body = await request.json();
@@ -21,15 +28,38 @@ export async function POST(request: NextRequest) {
     email = String(body.email ?? "").trim();
     password = String(body.password ?? "");
     passwordConfirm = String(body.passwordConfirm ?? "");
-    const phoneRaw = String(body.phone ?? "").trim();
-    phone = phoneRaw || undefined;
+    phoneRaw = String(body.phone ?? "").trim();
   } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
   }
 
-  if (!firstName || !lastName || !email || !password) {
+  if (!firstName || !lastName || !email || !password || !phoneRaw) {
     return NextResponse.json(
-      { error: "Prénom, nom, email et mot de passe sont obligatoires." },
+      {
+        error:
+          "Prénom, nom, email, mobile et mot de passe sont obligatoires.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const phoneE164 = normalizeFrenchMobile(phoneRaw);
+  if (!phoneE164) {
+    return NextResponse.json(
+      {
+        error:
+          "Indiquez un mobile français valide (06 ou 07), ex. 06 12 34 56 78.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (!(await isGuestPhoneVerified(phoneE164))) {
+    return NextResponse.json(
+      {
+        error:
+          "Vérifiez votre mobile par SMS avant de créer le compte (bouton « Recevoir un code »).",
+      },
       { status: 400 }
     );
   }
@@ -50,7 +80,7 @@ export async function POST(request: NextRequest) {
     password,
     firstName,
     lastName,
-    phone,
+    phone: phoneE164,
   });
 
   if ("error" in result) {
@@ -67,6 +97,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  await markClientPhoneVerified(result.client.id, phoneE164);
+  await consumeGuestPhoneVerification(phoneE164);
   await linkOrphanWorkRequests(result.client.id, result.client.email);
   await requestEmailVerification(result.client.email, "client");
 
@@ -74,6 +106,7 @@ export async function POST(request: NextRequest) {
     {
       success: true,
       emailVerificationSent: true,
+      phoneVerified: true,
       email: result.client.email,
     },
     { status: 201 }

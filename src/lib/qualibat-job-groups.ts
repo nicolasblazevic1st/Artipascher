@@ -2,6 +2,10 @@ import type { TradeCategory } from "./data";
 import { QUALIBAT_JOBS, type QualibatJob } from "./qualibat-jobs";
 import { defaultDecennaleStatus } from "./decennale-verification";
 import type { ProTradeSelection } from "./store-types";
+import {
+  getTradeGuaranteeType,
+  tradeRequiresGuaranteeDocument,
+} from "./trade-guarantees";
 
 export interface TradeGroup {
   id: string;
@@ -159,13 +163,17 @@ export function resolveMultipleTradeSelections(
     const resolved = resolveTradeSelection(entry.tradeGroupId, entry.qualibatJobId);
     if (!resolved) return null;
 
+    const guaranteeType = getTradeGuaranteeType(resolved.group.id);
     selections.push({
       tradeGroupId: resolved.group.id,
       tradeGroupLabel: resolved.group.label,
       qualibatJobId: resolved.job.id,
       qualibatJobLabel: resolved.job.label,
       category: resolved.category,
-      decennaleStatus: defaultDecennaleStatus(),
+      guaranteeType,
+      decennaleStatus: tradeRequiresGuaranteeDocument(guaranteeType)
+        ? defaultDecennaleStatus()
+        : "validé",
     });
   }
 

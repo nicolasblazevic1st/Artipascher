@@ -15,6 +15,11 @@ import { resolveMultipleTradeSelections } from "@/lib/qualibat-job-groups";
 import { defaultDecennaleStatus } from "@/lib/decennale-verification";
 import { isAllowedDepartment, verifyWithRegistry } from "@/lib/rcs";
 import type { ProTradeSelection } from "@/lib/store-types";
+import {
+  getTradeGuaranteeType,
+  guaranteeTypeUploadLabel,
+  tradeRequiresGuaranteeDocument,
+} from "@/lib/trade-guarantees";
 import { requestEmailVerification } from "@/lib/email-verification";
 import {
   addProRegistration,
@@ -119,6 +124,9 @@ export async function POST(request: NextRequest) {
     }
 
     for (const selection of tradeSelections) {
+      const guaranteeType =
+        selection.guaranteeType ?? getTradeGuaranteeType(selection.tradeGroupId);
+      if (!tradeRequiresGuaranteeDocument(guaranteeType)) continue;
       const entry = formData.get(tradeDecennaleFieldName(selection.tradeGroupId));
       const file = entry instanceof File && entry.size > 0 ? entry : null;
       const error = validateProDocumentFile(file!, { requireOriginalPdf: true });
@@ -127,7 +135,7 @@ export async function POST(request: NextRequest) {
           {
             error: `${selection.tradeGroupLabel} : ${
               error === "Fichier manquant."
-                ? "attestation décennale couvrant ce métier obligatoire."
+                ? `${guaranteeTypeUploadLabel(guaranteeType).toLowerCase()} obligatoire.`
                 : error
             }`,
           },
@@ -192,21 +200,45 @@ export async function POST(request: NextRequest) {
     const savedDocuments = await saveProRegistrationDocuments(entry.id, filesToSave);
     await setProRegistrationDocuments(entry.id, savedDocuments);
 
-    const decennaleFiles = tradeSelections.map((selection) => {
-      const file = formData.get(tradeDecennaleFieldName(selection.tradeGroupId)) as File;
+    const decennaleFiles = tradeSelections
+      .filter((selection) =>
+        tradeRequiresGuaranteeDocument(
+          selection.guaranteeType ?? getTradeGuaranteeType(selection.tradeGroupId)
+        )
+      )
+      .map((selection) => {
+        const file = formData.get(
+          tradeDecennaleFieldName(selection.tradeGroupId)
+        ) as File;
+        return {
+          tradeGroupId: selection.tradeGroupId,
+          tradeGroupLabel: selection.tradeGroupLabel,
+          file,
+        };
+      });
+
+    const decennaleByGroup =
+      decennaleFiles.length > 0
+        ? await saveTradeDecennaleDocuments(entry.id, decennaleFiles)
+        : {};
+    const enrichedSelections = tradeSelections.map((selection) => {
+      const guaranteeType =
+        selection.guaranteeType ?? getTradeGuaranteeType(selection.tradeGroupId);
+      if (!tradeRequiresGuaranteeDocument(guaranteeType)) {
+        return {
+          ...selection,
+          guaranteeType,
+          decennaleStatus: "validé" as const,
+          decennaleDocument: undefined,
+        };
+      }
       return {
-        tradeGroupId: selection.tradeGroupId,
-        tradeGroupLabel: selection.tradeGroupLabel,
-        file,
+        ...selection,
+        guaranteeType,
+        decennaleStatus: defaultDecennaleStatus(),
+        decennaleDocument: decennaleByGroup[selection.tradeGroupId],
       };
     });
-
-    const decennaleByGroup = await saveTradeDecennaleDocuments(entry.id, decennaleFiles);
-    const enrichedSelections = tradeSelections.map((selection) => ({
-      ...selection,
-      decennaleStatus: defaultDecennaleStatus(),
-      decennaleDocument: decennaleByGroup[selection.tradeGroupId],
-    }));
     await setProTradeSelections(entry.id, enrichedSelections);
 
     const proForOcr = {

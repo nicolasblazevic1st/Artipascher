@@ -53,7 +53,7 @@ const STEPS = [
   {
     title: "Inscription rapide",
     description:
-      "Niveau 1 : SIRET contrôlé au registre du commerce, attestation décennale et RC pro obligatoires par métier.",
+      "Niveau 1 : SIRET contrôlé au registre du commerce, RC pro obligatoire, et garantie adaptée au métier (décennale, biennale / bon fonctionnement, ou RC seule selon l'activité).",
   },
   {
     title: "Débloquez les contacts",

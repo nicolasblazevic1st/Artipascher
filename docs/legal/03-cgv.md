@@ -1,6 +1,6 @@
 # Conditions générales de vente (CGV) — Nord Artisan Pro
 
-Dernière mise à jour : 18 août 2026 · Version 1.6-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.7-brouillon
 
 > Brouillon à faire relire par un avocat. CGV destinées aux **professionnels** (vente de mises en contact à l'unité).
 

@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { readStore } from "@/lib/store";
+import { deleteProAccountByAdmin, readStore } from "@/lib/store";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
 
 export async function GET() {
@@ -53,4 +53,46 @@ export async function GET() {
       emailUnverified: accounts.filter((a) => a.emailVerified === false).length,
     },
   });
+}
+
+export async function DELETE(request: NextRequest) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  }
+
+  let proId = "";
+  let confirmEmail = "";
+  try {
+    const body = await request.json();
+    proId = String(body.proId ?? "").trim();
+    confirmEmail = String(body.confirmEmail ?? "").trim().toLowerCase();
+  } catch {
+    return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+  }
+
+  if (!proId || !confirmEmail) {
+    return NextResponse.json(
+      { error: "proId et confirmEmail requis." },
+      { status: 400 }
+    );
+  }
+
+  const store = await readStore();
+  const pro = store.proRegistrations.find((p) => p.id === proId);
+  if (!pro) {
+    return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
+  }
+  if (pro.email.toLowerCase() !== confirmEmail) {
+    return NextResponse.json(
+      { error: "L'email de confirmation ne correspond pas." },
+      { status: 400 }
+    );
+  }
+
+  const result = await deleteProAccountByAdmin(proId);
+  if ("error" in result) {
+    return NextResponse.json({ error: result.error }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

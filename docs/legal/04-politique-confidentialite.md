@@ -1,6 +1,6 @@
 # Politique de confidentialité — Nord Artisan Pro
 
-Dernière mise à jour : 18 août 2026 · Version 1.6-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.7-brouillon
 
 > Brouillon à faire relire par un avocat / DPO.
 

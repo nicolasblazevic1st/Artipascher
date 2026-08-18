@@ -16,13 +16,18 @@ import {
 } from "@/lib/store";
 import type { ProDocument } from "@/lib/store-types";
 import {
+  getTradeGuaranteeType,
+  guaranteeTypeUploadLabel,
+  tradeRequiresGuaranteeDocument,
+} from "@/lib/trade-guarantees";
+import {
   saveProRegistrationDocuments,
   saveTradeDecennaleDocuments,
 } from "@/lib/uploads";
 
 /**
  * Ajoute ou remplace des documents (RC, RGE, Qualibat) et/ou
- * attestations décennale après inscription, puis rejoue la vérif niveau 1
+ * attestations de garantie après inscription, puis rejoue la vérif niveau 1
  * (PDF + BODACC).
  */
 export async function POST(request: NextRequest) {
@@ -62,13 +67,16 @@ export async function POST(request: NextRequest) {
   }> = [];
 
   for (const selection of tradeSelections) {
+    const guaranteeType =
+      selection.guaranteeType ?? getTradeGuaranteeType(selection.tradeGroupId);
+    if (!tradeRequiresGuaranteeDocument(guaranteeType)) continue;
     const entry = formData.get(tradeDecennaleFieldName(selection.tradeGroupId));
     if (!(entry instanceof File) || entry.size === 0) continue;
     const error = validateProDocumentFile(entry, { requireOriginalPdf: true });
     if (error) {
       return NextResponse.json(
         {
-          error: `Décennale « ${selection.tradeGroupLabel} » : ${error}`,
+          error: `${guaranteeTypeUploadLabel(guaranteeType)} « ${selection.tradeGroupLabel} » : ${error}`,
         },
         { status: 400 }
       );

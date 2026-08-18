@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+} from "@/lib/phone-format";
 
 export default function ClientRegisterForm() {
   const searchParams = useSearchParams();
@@ -25,6 +29,98 @@ export default function ClientRegisterForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpMessage, setOtpMessage] = useState<string | null>(null);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [phoneVerifiedE164, setPhoneVerifiedE164] = useState("");
+
+  const phoneE164 = normalizeFrenchMobile(phone);
+  const phoneVerified =
+    Boolean(phoneE164) &&
+    Boolean(phoneVerifiedE164) &&
+    phoneE164 === phoneVerifiedE164;
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const t = window.setTimeout(() => setOtpCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => window.clearTimeout(t);
+  }, [otpCooldown]);
+
+  function handlePhoneChange(value: string) {
+    setPhone(value);
+    const next = normalizeFrenchMobile(value);
+    if (!next || next !== phoneVerifiedE164) {
+      setPhoneVerifiedE164("");
+      setOtpCode("");
+      setOtpMessage(null);
+    }
+  }
+
+  async function sendPhoneOtp() {
+    setOtpMessage(null);
+    setError(null);
+    if (!phoneE164) {
+      setError("Indiquez un mobile français valide (06 ou 07).");
+      return;
+    }
+    setOtpSending(true);
+    const res = await fetch("/api/guest/phone-verification/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone }),
+    });
+    const data = (await res.json()) as {
+      error?: string;
+      cooldownSeconds?: number;
+      demo?: boolean;
+      phoneDisplay?: string;
+    };
+    setOtpSending(false);
+    if (!res.ok) {
+      if (res.status === 409) {
+        // Déjà vérifié côté guest (ex. demande récente) — on accepte.
+        setPhoneVerifiedE164(phoneE164);
+        setOtpMessage("✓ Mobile déjà vérifié.");
+        return;
+      }
+      setError(data.error ?? "Impossible d'envoyer le SMS.");
+      if (data.cooldownSeconds) setOtpCooldown(data.cooldownSeconds);
+      return;
+    }
+    setOtpCooldown(data.cooldownSeconds ?? 60);
+    setOtpMessage(
+      data.demo
+        ? `Code envoyé (mode démo) vers ${data.phoneDisplay ?? phone}.`
+        : `Code envoyé par SMS vers ${data.phoneDisplay ?? phone}.`
+    );
+  }
+
+  async function verifyPhoneOtp() {
+    setOtpMessage(null);
+    setError(null);
+    if (!phoneE164 || otpCode.length !== 6) return;
+    setOtpVerifying(true);
+    const res = await fetch("/api/guest/phone-verification/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, code: otpCode }),
+    });
+    const data = (await res.json()) as {
+      error?: string;
+      phoneVerifiedE164?: string;
+    };
+    setOtpVerifying(false);
+    if (!res.ok) {
+      setError(data.error ?? "Code invalide.");
+      return;
+    }
+    setPhoneVerifiedE164(data.phoneVerifiedE164 ?? phoneE164);
+    setOtpMessage("✓ Mobile vérifié");
+    setOtpCode("");
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -36,6 +132,18 @@ export default function ClientRegisterForm() {
       return;
     }
 
+    if (!phoneE164) {
+      setError("Indiquez un mobile français valide (06 ou 07).");
+      setLoading(false);
+      return;
+    }
+
+    if (!phoneVerified) {
+      setError("Vérifiez votre mobile par SMS avant de créer le compte.");
+      setLoading(false);
+      return;
+    }
+
     const res = await fetch("/api/client/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,7 +151,7 @@ export default function ClientRegisterForm() {
         firstName,
         lastName,
         email,
-        phone: phone.trim() || undefined,
+        phone: phoneE164,
         password,
         passwordConfirm,
       }),
@@ -64,9 +172,9 @@ export default function ClientRegisterForm() {
     return (
       <div className="space-y-4 text-center">
         <p className="rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-800">
-          Compte créé. Un email de confirmation vient de vous être envoyé. Validez
-          votre adresse, puis connectez-vous pour suivre vos demandes (y compris
-          celles déjà envoyées avec le même email).
+          Compte créé. Votre mobile est vérifié. Un email de confirmation vient
+          de vous être envoyé : validez votre adresse, puis connectez-vous pour
+          suivre vos demandes.
         </p>
         <Link
           href={loginHref}
@@ -129,17 +237,68 @@ export default function ClientRegisterForm() {
 
       <div>
         <label htmlFor="reg-phone" className="mb-1 block text-sm font-medium text-slate-700">
-          Téléphone <span className="font-normal text-slate-400">(optionnel)</span>
+          Mobile <span className="text-red-500">*</span>
         </label>
         <input
           id="reg-phone"
           type="tel"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
+          onChange={(e) => handlePhoneChange(e.target.value)}
           className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm"
           placeholder="06 12 34 56 78"
+          required
           autoComplete="tel"
         />
+        <p className="mt-1 text-xs text-slate-500">
+          Mobile français (06/07) obligatoire — un code SMS de vérification vous
+          sera envoyé.
+        </p>
+        {phoneVerified ? (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            ✓ Mobile vérifié
+            {phoneE164 ? ` — ${formatFrenchPhoneDisplay(phoneE164)}` : ""}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void sendPhoneOtp()}
+                disabled={otpSending || otpCooldown > 0 || !phoneE164}
+                className="rounded-lg bg-client-600 px-3 py-2 text-xs font-semibold text-white hover:bg-client-700 disabled:opacity-50"
+              >
+                {otpSending
+                  ? "Envoi…"
+                  : otpCooldown > 0
+                    ? `Renvoyer (${otpCooldown}s)`
+                    : "Recevoir un code"}
+              </button>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="Code à 6 chiffres"
+                value={otpCode}
+                onChange={(e) =>
+                  setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                className="min-w-[9rem] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => void verifyPhoneOtp()}
+                disabled={otpVerifying || otpCode.length !== 6}
+                className="rounded-lg border border-client-600 px-3 py-2 text-xs font-semibold text-client-700 hover:bg-client-50 disabled:opacity-50"
+              >
+                {otpVerifying ? "Vérif…" : "Vérifier"}
+              </button>
+            </div>
+            {otpMessage && (
+              <p className="text-xs text-emerald-700">{otpMessage}</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div>
@@ -184,7 +343,7 @@ export default function ClientRegisterForm() {
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || !phoneVerified}
         className="w-full rounded-lg bg-client-600 py-2.5 text-sm font-semibold text-white hover:bg-client-700 disabled:opacity-50"
       >
         {loading ? "Création…" : "Créer mon compte"}

@@ -64,6 +64,7 @@ export default function AdminComptesArtisansPage() {
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/comptes-artisans");
@@ -234,6 +235,46 @@ export default function AdminComptesArtisansPage() {
                     proId={a.id}
                     companyName={a.companyName}
                   />
+                  <button
+                    type="button"
+                    disabled={busyId === a.id}
+                    onClick={async () => {
+                      const typed = window.prompt(
+                        `Supprimer définitivement le compte pro « ${a.companyName} » ?\n\nTapez l'email exact pour confirmer :\n${a.email}`
+                      );
+                      if (!typed) return;
+                      if (typed.trim().toLowerCase() !== a.email.toLowerCase()) {
+                        window.alert("Email incorrect — suppression annulée.");
+                        return;
+                      }
+                      if (
+                        !window.confirm(
+                          "Dernière confirmation : le compte, le solde et les documents seront effacés. L'historique marketplace sera anonymisé."
+                        )
+                      ) {
+                        return;
+                      }
+                      setBusyId(a.id);
+                      const res = await fetch("/api/admin/comptes-artisans", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          proId: a.id,
+                          confirmEmail: a.email,
+                        }),
+                      });
+                      const data = await res.json();
+                      setBusyId(null);
+                      if (!res.ok) {
+                        window.alert(data.error ?? "Suppression impossible.");
+                        return;
+                      }
+                      await load();
+                    }}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-900 ring-1 ring-red-300 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Supprimer le compte
+                  </button>
                 </div>
               </div>
 
