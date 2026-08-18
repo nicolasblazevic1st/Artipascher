@@ -46,6 +46,13 @@ import BanAddressAutocomplete, {
   type SelectedBanAddress,
 } from "@/components/BanAddressAutocomplete";
 
+const LEAD_FORM_CONVERSION_EVENT = "manual_event_SUBMIT_LEAD_FORM";
+
+function trackLeadFormConversion() {
+  if (typeof window.gtag !== "function") return;
+  window.gtag("event", LEAD_FORM_CONVERSION_EVENT);
+}
+
 export interface WorkRequestFormDefaults {
   firstName: string;
   lastName: string;
@@ -486,6 +493,7 @@ export default function WorkRequestForm({
     }
 
     const body = (await res.json()) as { id?: string; guest?: boolean };
+    trackLeadFormConversion();
     setCreatedRequestId(body.id ?? null);
     setSubmittedContact({
       email: String(formData.get("email") ?? "").trim(),
