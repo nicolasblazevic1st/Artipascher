@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { isLevel1DocumentsValidated } from "@/lib/level1-certification";
 import {
   demoteProToLevelZero,
   readStore,
@@ -81,6 +82,11 @@ type PatchBody =
       action: "restore_approved";
       proId: string;
       adminNote?: string;
+    }
+  | {
+      action: "reject_application";
+      proId: string;
+      adminNote?: string;
     };
 
 export async function PATCH(request: NextRequest) {
@@ -158,12 +164,47 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (body.action === "restore_approved") {
+    const store = await readStore();
+    const pro = store.proRegistrations.find((p) => p.id === body.proId);
+    if (!pro) {
+      return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
+    }
+    if (!isLevel1DocumentsValidated(pro)) {
+      return NextResponse.json(
+        {
+          error:
+            "Validez d’abord tous les documents (RC + garanties) avant de certifier le compte.",
+        },
+        { status: 400 }
+      );
+    }
+    if (pro.level1Audit?.bodacc?.status === "active_procedure") {
+      return NextResponse.json(
+        { error: "Impossible : procédure collective BODACC active." },
+        { status: 400 }
+      );
+    }
     const updated = await updateProRegistration(body.proId, {
       status: "approved",
       qualificationLevel: 1,
       level1CertifiedAt: new Date().toISOString(),
-      adminNote: body.adminNote?.trim() || "Réintégré après contrôle documents.",
+      adminNote:
+        body.adminNote?.trim() ||
+        "Documents validés manuellement — compte certifié.",
+      reviewedAt: new Date().toISOString(),
     });
+    if (!updated) {
+      return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
+    }
+    const { passwordHash: _, ...safe } = updated;
+    return NextResponse.json({ registration: safe });
+  }
+
+  if (body.action === "reject_application") {
+    const updated = await demoteProToLevelZero(
+      body.proId,
+      body.adminNote?.trim() || "Dossier refusé après contrôle documents."
+    );
     if (!updated) {
       return NextResponse.json({ error: "Compte introuvable." }, { status: 404 });
     }

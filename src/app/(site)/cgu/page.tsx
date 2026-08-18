@@ -61,7 +61,7 @@ export default function CguPage() {
           </li>
           <li>
             <strong>Solde résiduel</strong> : éventuel crédit restant sur le
-            compte Professionnel (parrainage, remboursement, ancien achat),
+            compte Professionnel (remboursement, ancien crédit),
             utilisable pour un déblocage s&apos;il est suffisant.
           </li>
         </ul>
@@ -80,8 +80,9 @@ export default function CguPage() {
             pour le contacter et établir un devis hors Plateforme ;
           </li>
           <li>
-            au Client de choisir librement l&apos;artisan avec lequel il
-            souhaite poursuivre.
+            au Client d&apos;être contacté par le genre d&apos;artisan qu&apos;il
+            a choisi, selon les critères définis dans sa demande (métier,
+            ancienneté, etc.).
           </li>
         </ul>
         <p className="mt-3">
@@ -119,10 +120,19 @@ export default function CguPage() {
           L&apos;accès aux fonctionnalités professionnelles est réservé aux
           entreprises actives dont le SIRET est vérifié, avec siège ou
           établissement dans le périmètre géographique indiqué sur le Site
-          (notamment départements 59 et 62), justifiant des documents demandés
-          (attestation décennale et RC professionnelle en PDF original), et
-          sans procédure collective active publiée au BODACC (données ouvertes
-          DILA, licence ouverte 2.0). Ces contrôles sont effectués{" "}
+          (notamment départements 59 et 62), justifiant des{" "}
+          <strong>attestations d&apos;assurance en PDF original</strong> :
+          responsabilité civile professionnelle (RC pro), et une{" "}
+          <strong>garantie adaptée aux activités déclarées</strong>. Selon la
+          nature des travaux, cette garantie peut être une assurance{" "}
+          <strong>décennale</strong> (travaux relevant du régime de
+          responsabilité décennale) ou une autre attestation de garantie
+          applicable (par exemple garantie de bon fonctionnement / biennale
+          pour certains équipements ou menuiseries). L&apos;Éditeur peut
+          exiger le document correspondant à chaque corps de métier coché.
+          L&apos;entreprise ne doit pas faire l&apos;objet d&apos;une procédure
+          collective active publiée au BODACC (données ouvertes DILA, licence
+          ouverte 2.0). Ces contrôles sont effectués{" "}
           <strong>à l&apos;inscription</strong>, lors du dépôt des documents.
           L&apos;Éditeur peut refuser, suspendre ou retirer un compte en cas
           d&apos;informations inexactes, de non-conformité documentaire ou
@@ -189,8 +199,8 @@ export default function CguPage() {
             devis concurrentiels.
           </li>
           <li>
-            Le Client choisit librement l&apos;Artisan ; aucune attribution
-            automatique n&apos;est imposée.
+            Après contact, le Client reste libre de poursuivre ou non avec
+            l&apos;Artisan ; aucune attribution automatique n&apos;est imposée.
           </li>
           <li>
             Le déblocage des coordonnées est soumis à la correspondance du
@@ -209,13 +219,18 @@ export default function CguPage() {
       </section>
 
       <section>
-        <h2>8. Prospection SMS (Professionnels non inscrits)</h2>
+        <h2>8. Prospection commerciale (Professionnels non inscrits)</h2>
         <p className="mt-3">
-          L&apos;Éditeur peut envoyer des SMS d&apos;information / invitation à
-          des entreprises du bâtiment (sources publiques et/ou enrichissement)
-          pour signaler des chantiers ou inviter à s&apos;inscrire sur la
-          Plateforme.
+          L&apos;Éditeur peut contacter des{" "}
+          <strong>entreprises du bâtiment</strong> (Professionnels non inscrits
+          / prospects), à partir de <strong>sources publiques</strong> et/ou
+          d&apos;un enrichissement (SIRET, NAF, ville, téléphone), pour
+          signaler des chantiers ou inviter à s&apos;inscrire sur la Plateforme.
+          Cette prospection B2B peut prendre la forme de <strong>SMS</strong>{" "}
+          et/ou d&apos;<strong>appels téléphoniques</strong>.
         </p>
+
+        <h3 className="mt-4">8.1 Prospection par SMS</h3>
         <ul>
           <li>
             Ces envois peuvent être déclenchés{" "}
@@ -248,6 +263,46 @@ export default function CguPage() {
           alertes de contact) sont distincts des SMS marketing et peuvent
           ne pas comporter de clause STOP lorsqu&apos;ils sont liés à une action
           de l&apos;Utilisateur ou au service demandé.
+        </p>
+
+        <h3 className="mt-4">8.2 Prospection téléphonique</h3>
+        <p className="mt-3">
+          L&apos;Éditeur peut également procéder à une{" "}
+          <strong>prospection téléphonique</strong> auprès d&apos;entreprises du
+          bâtiment (numéros professionnels issus de sources publiques et/ou
+          d&apos;enrichissement), pour présenter la Plateforme, signaler des
+          chantiers disponibles ou inviter à l&apos;inscription.
+        </p>
+        <ul>
+          <li>
+            les appels sont effectués dans un cadre <strong>B2B</strong>{" "}
+            (entreprises), en principe aux heures ouvrées raisonnables
+            (indicatif : jours ouvrés, 9h–18h, heure de Paris) ;
+          </li>
+          <li>
+            l&apos;appelant s&apos;identifie comme relevant de{" "}
+            <strong>Nord Artisan Pro</strong> et indique l&apos;objet du
+            contact ;
+          </li>
+          <li>
+            le destinataire peut <strong>s&apos;opposer</strong> à tout moment
+            aux prochains appels de prospection (lors de l&apos;appel, ou par
+            écrit à{" "}
+            <a href={`mailto:${LEGAL_PUBLISHER.email}`}>
+              {LEGAL_PUBLISHER.email}
+            </a>
+            ) ; l&apos;opposition est enregistrée et respectée ;
+          </li>
+          <li>
+            un numéro / SIRET ayant fait l&apos;objet d&apos;une opposition
+            n&apos;est en principe <strong>plus relancé</strong> par téléphone
+            à des fins de prospection.
+          </li>
+        </ul>
+        <p className="mt-3">
+          La prospection téléphonique est distincte des appels ou SMS liés au
+          service une fois le Professionnel inscrit (compte, support, alertes
+          de chantier).
         </p>
       </section>
 

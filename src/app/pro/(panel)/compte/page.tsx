@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getProSession } from "@/lib/pro-auth";
 import ProCreditsPanel from "@/components/pro/ProCreditsPanel";
-import ProReferralPanel from "@/components/pro/ProReferralPanel";
 import ProDocumentsManager from "@/components/pro/ProDocumentsManager";
 import { CATEGORY_LABELS } from "@/lib/data";
 import { formatProTradeSelections, getProTradeSelections } from "@/lib/pro-trades";
@@ -47,10 +46,6 @@ export default async function ProComptePage() {
           <ProCreditsPanel />
         </div>
 
-        <div className="lg:col-span-2">
-          <ProReferralPanel />
-        </div>
-
         <section className="rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="font-semibold text-slate-900">Entreprise</h2>
           <dl className="mt-4 space-y-3 text-sm">
@@ -75,7 +70,13 @@ export default async function ProComptePage() {
             <Row label="Téléphone" value={pro.phone} />
           </dl>
           <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-            ✓ Compte approuvé · RCS vérifié
+            ✓ Compte{" "}
+            {pro.status === "approved"
+              ? "approuvé"
+              : pro.status === "pending"
+                ? "en attente de validation documents"
+                : pro.status}{" "}
+            · RCS vérifié
           </p>
         </section>
 

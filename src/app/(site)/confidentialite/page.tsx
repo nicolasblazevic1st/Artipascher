@@ -51,14 +51,19 @@ export default function ConfidentialitePage() {
             <strong>Prospects acquisition</strong> : données d&apos;entreprises
             (SIRET, code NAF, ville, téléphone enrichi le cas échéant, sources
             publiques type annuaire / enrichissement) utilisées pour la
-            prospection SMS et le suivi d&apos;opposition (STOP / déjà
-            contacté) ;
+            prospection SMS et/ou téléphonique et le suivi d&apos;opposition
+            (STOP SMS / opposition téléphone / déjà contacté) ;
           </li>
           <li>
             <strong>Campagnes SMS</strong> : historique des lots / envois
             (destinataires, statut, date), lien éventuel avec une offre
             publiée, et indicateurs d&apos;attribution (ex. inscription après
             SMS) ;
+          </li>
+          <li>
+            <strong>Prospection téléphonique</strong> : traces de contact /
+            opposition (numéro, SIRET, date, résultat indicatif) pour éviter
+            les relances non souhaitées ;
           </li>
           <li>
             <strong>Paiements</strong> : données de transaction via le
@@ -72,8 +77,8 @@ export default function ConfidentialitePage() {
           </li>
           <li>
             <strong>Communications</strong> : emails et SMS transactionnels
-            (code de vérification, alertes de contact) et SMS marketing
-            (invitation Professionnels / prospects).
+            (code de vérification, alertes de contact), SMS marketing et appels
+            de prospection B2B (invitation Professionnels / prospects).
           </li>
         </ul>
       </section>
@@ -89,8 +94,8 @@ export default function ConfidentialitePage() {
           <li>
             Intérêt légitime : sécurité, prévention de la fraude, amélioration
             du service, statistiques agrégées, prospection B2B d&apos;entreprises
-            (SMS marketing manuels ou automatiques à la publication d&apos;une
-            offre, avec possibilité d&apos;opposition STOP) ;
+            (SMS marketing et/ou appels téléphoniques, manuels ou liés à la
+            publication d&apos;une offre, avec droit d&apos;opposition) ;
           </li>
           <li>
             Obligation légale : conservation comptable / fiscale le cas échéant ;
@@ -169,7 +174,46 @@ export default function ConfidentialitePage() {
         <p className="mt-3">
           Les SMS transactionnels adressés aux Clients sont distincts des SMS
           marketing. Pour le cadre contractuel de la prospection, voir aussi
-          les <Link href="/cgu">CGU</Link> (prospection SMS).
+          les <Link href="/cgu">CGU</Link> (prospection commerciale).
+        </p>
+      </section>
+
+      <section>
+        <h2>4 bis. Prospection téléphonique (B2B)</h2>
+        <p className="mt-3">
+          L&apos;Éditeur peut contacter par <strong>téléphone</strong> des
+          entreprises du bâtiment (Professionnels non inscrits / prospects), à
+          partir des mêmes catégories de données (SIRET, NAF, ville, numéro
+          professionnel public ou enrichi), pour présenter la Plateforme,
+          signaler des chantiers ou inviter à l&apos;inscription. Cette
+          prospection relève de l&apos;
+          <strong>intérêt légitime</strong> du responsable du traitement
+          (développement B2B), sous réserve du droit d&apos;opposition.
+        </p>
+        <ul>
+          <li>
+            appels en principe aux heures ouvrées raisonnables (indicatif :
+            jours ouvrés, 9h–18h, heure de Paris) ;
+          </li>
+          <li>
+            identification de l&apos;appelant (Nord Artisan Pro) et objet du
+            contact ;
+          </li>
+          <li>
+            opposition possible à tout moment lors de l&apos;appel ou par écrit
+            à{" "}
+            <a href={`mailto:${LEGAL_PUBLISHER.email}`}>
+              {LEGAL_PUBLISHER.email}
+            </a>{" "}
+            ; l&apos;opposition est enregistrée et respectée ;
+          </li>
+          <li>
+            conservation des traces d&apos;opposition / « ne plus appeler »
+            pour la durée nécessaire à éviter les relances.
+          </li>
+        </ul>
+        <p className="mt-3">
+          Voir aussi les <Link href="/cgu">CGU</Link> (§ 8.2).
         </p>
       </section>
 
@@ -219,8 +263,9 @@ export default function ConfidentialitePage() {
             vérification ;
           </li>
           <li>
-            Historique de campagnes SMS et statut « déjà contacté » : durée
-            nécessaire pour éviter les relances marketing ;
+            Historique de campagnes SMS, traces de prospection téléphonique et
+            statut « déjà contacté » / opposition : durée nécessaire pour
+            éviter les relances marketing ;
           </li>
           <li>
             Facturation / paiements : durées légales comptables ;
@@ -255,6 +300,12 @@ export default function ConfidentialitePage() {
           Concernant la <strong>prospection SMS marketing</strong>, vous pouvez
           vous opposer à tout moment en répondant <strong>STOP</strong> au
           message reçu, ou en écrivant à{" "}
+          <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
+          .
+        </p>
+        <p className="mt-3">
+          Concernant la <strong>prospection téléphonique</strong>, vous pouvez
+          vous opposer lors de l&apos;appel ou en écrivant à{" "}
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
           . L&apos;exercice du droit d&apos;opposition n&apos;affecte pas la
           licéité du traitement effectué avant l&apos;opposition.

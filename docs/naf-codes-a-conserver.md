@@ -37,7 +37,7 @@ Base artisans NPC (59/62) · généré le 07/08/2026
 
 | Garder | Code | Libellé | Établ. | Aussi dans |
 |:------:|:-----|:--------|-------:|:-----------|
-| [x] | **43.21A** | Travaux d'installation électrique | 4 427 | Chauffage / Pompe à chaleur, Rénovation énergétique |
+| [x] | **43.21A** | Travaux d'installation électrique | 4 427 | Électricité, Rénovation énergétique |
 
 ## Maçonnerie
 
@@ -59,11 +59,10 @@ Base artisans NPC (59/62) · généré le 07/08/2026
 
 ## Chauffage / Pompe à chaleur
 
-*2 code(s) présent(s) · 6 120 établissements*
+*1 code · équipements thermiques / clim uniquement (pas l’électricité 43.21A)*
 
 | Garder | Code | Libellé | Établ. | Aussi dans |
 |:------:|:-----|:--------|-------:|:-----------|
-| [x] | **43.21A** | Travaux d'installation électrique | 4 427 | Électricité, Rénovation énergétique |
 | [x] | **43.22B** | Travaux d'installation d'équipements thermiques et de climatisation | 1 693 | Plomberie |
 
 ## Rénovation énergétique
@@ -72,7 +71,7 @@ Base artisans NPC (59/62) · généré le 07/08/2026
 
 | Garder | Code | Libellé | Établ. | Aussi dans |
 |:------:|:-----|:--------|-------:|:-----------|
-| [x] | **43.21A** | Travaux d'installation électrique | 4 427 | Électricité, Chauffage / Pompe à chaleur |
+| [x] | **43.21A** | Travaux d'installation électrique | 4 427 | Électricité, Rénovation énergétique |
 | [x] | **43.34Z** | Travaux de peinture et vitrerie | 2 667 | Peinture, Rénovation complète |
 | [x] | **43.29A** | Travaux d'isolation | 349 | Isolation |
 

@@ -20,7 +20,7 @@ const TXN_LABELS: Record<string, string> = {
   refund_unlock: "Remboursement contact",
   admin_adjust: "Ajustement",
   demo_grant: "Solde démo",
-  referral_reward: "Parrainage",
+  referral_reward: "Ancien crédit (parrainage)",
 };
 
 /** Solde résiduel + historique — plus d’achat de packs. */
@@ -56,7 +56,7 @@ export default function ProCreditsPanel() {
             Chaque mise en contact se paie au ticket du chantier (
             {CONTACT_UNLOCK_REF_EUR - 5}&nbsp;€ à {CONTACT_UNLOCK_REF_EUR + 5}
             &nbsp;€) via Stripe au moment du déblocage. Un solde résiduel
-            (parrainage ou ancien crédit) est débité en priorité s’il est
+            (remboursement ou ancien crédit) est débité en priorité s’il est
             suffisant.
           </p>
         </div>

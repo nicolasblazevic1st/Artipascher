@@ -58,7 +58,7 @@ export default function CgvPage() {
           <li>
             <strong>aucun pack</strong> ni forfait de solde prépayé n&apos;est
             proposé à l&apos;achat. Un solde résiduel éventuellement présent sur
-            le compte (parrainage, remboursement, ancien crédit) peut être
+            le compte (remboursement, ancien crédit) peut être
             utilisé en priorité pour un déblocage si son montant est suffisant.
           </li>
         </ul>
@@ -100,7 +100,8 @@ export default function CgvPage() {
           email et/ou affichée dans l&apos;espace compte. L&apos;accès au
           service suppose un compte Professionnel{" "}
           <strong>préalablement vérifié</strong> à l&apos;inscription (registre,
-          BODACC, attestations RC pro et décennale — voir CGU).
+          BODACC, attestations RC pro et garantie adaptée aux activités —
+          voir CGU).
         </p>
       </section>
 
@@ -175,7 +176,7 @@ export default function CgvPage() {
         <h2>8. Solde résiduel</h2>
         <p className="mt-3">
           Un éventuel solde résiduel sur le compte Professionnel (notamment
-          parrainage ou ancien crédit) n&apos;a pas de date d&apos;expiration
+          remboursement ou ancien crédit) n&apos;a pas de date d&apos;expiration
           automatique, sauf mention contraire. L&apos;Éditeur se réserve
           toutefois le droit, après information préalable raisonnable, de fixer
           une durée de validité ou de procéder à une clôture de service

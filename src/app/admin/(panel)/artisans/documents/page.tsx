@@ -146,8 +146,13 @@ export default function AdminDocumentsArtisansPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Documents</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Consultez les pièces, changez le niveau (1 / 2 / 3), et renvoyez un compte
-        frauduleux au niveau 0 si besoin.
+        Validez ou refusez chaque pièce (RC, garanties). La certification du
+        compte n&apos;est plus automatique : utilisez « Certifier le compte »
+        quand tous les documents sont validés. Bac à sable OCR :{" "}
+        <Link href="/admin/artisans/test-documents" className="text-brand-700 underline">
+          Test OCR
+        </Link>
+        .
       </p>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -241,6 +246,25 @@ export default function AdminDocumentsArtisansPage() {
                     {r.adminNote && (
                       <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
                         Note admin : {r.adminNote}
+                      </p>
+                    )}
+                    {r.level1Audit?.ocrSuggest && (
+                      <p
+                        className={`mt-2 rounded-lg px-3 py-2 text-xs ${
+                          r.level1Audit.ocrSuggest.wouldCertify
+                            ? "bg-emerald-50 text-emerald-900"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        Suggestion OCR :{" "}
+                        {r.level1Audit.ocrSuggest.wouldCertify
+                          ? "favorable"
+                          : "à vérifier"}
+                        {r.level1Audit.ocrSuggest.reasons.length > 0
+                          ? ` — ${r.level1Audit.ocrSuggest.reasons.slice(0, 2).join(" · ")}`
+                          : ""}
+                        {" "}
+                        (indicatif, validation manuelle requise)
                       </p>
                     )}
                   </div>
@@ -436,7 +460,40 @@ export default function AdminDocumentsArtisansPage() {
                     className="mt-3 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm"
                   />
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {r.status !== "rejected" && (
+                    {(r.status === "pending" ||
+                      (r.status === "approved" && !r.level1CertifiedAt)) && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          patch({
+                            action: "restore_approved",
+                            proId: r.id,
+                            adminNote: noteByPro[r.id]?.trim() || undefined,
+                          })
+                        }
+                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        {busy ? "Traitement…" : "Certifier le compte"}
+                      </button>
+                    )}
+                    {r.status === "pending" && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          patch({
+                            action: "reject_application",
+                            proId: r.id,
+                            adminNote: noteByPro[r.id]?.trim() || undefined,
+                          })
+                        }
+                        className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Refuser le dossier
+                      </button>
+                    )}
+                    {r.status !== "rejected" && r.status !== "pending" && (
                       <button
                         type="button"
                         disabled={busy}

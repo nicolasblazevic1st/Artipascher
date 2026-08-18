@@ -34,7 +34,7 @@ export default function ProSidebar({
               ? "bg-amber-500 text-amber-950 hover:bg-amber-400"
               : "bg-brand-700 text-white hover:bg-brand-600"
           }`}
-          title="Voir le solde résiduel (parrainage / historique)"
+          title="Voir le solde résiduel"
         >
           <span className="text-xs font-medium opacity-90">Solde</span>
           <span className="text-lg font-bold tabular-nums leading-none">

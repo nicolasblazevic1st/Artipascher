@@ -1,5 +1,8 @@
 import { randomBytes } from "crypto";
 
+/** Programme de parrainage désactivé (trop de risques / litiges). */
+export const REFERRAL_ENABLED = false;
+
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 /** Normalise un code saisi (casse, espaces, tirets). */

@@ -8,7 +8,7 @@ export const CATEGORY_NAF_CODES: Record<string, string[]> = {
   Électricité: ["43.21A"],
   Maçonnerie: ["43.99C", "43.11Z"],
   Isolation: ["43.29A", "43.29B"],
-  "Chauffage / Pompe à chaleur": ["43.22B", "43.21A"],
+  "Chauffage / Pompe à chaleur": ["43.22B"],
   "Rénovation énergétique": ["43.21A", "43.29A", "43.34Z"],
   "Rénovation complète": ["43.99C", "41.20A", "43.34Z"],
   "Menuiserie (fenêtres, portes, volets)": ["43.32A", "43.32B"],
@@ -98,17 +98,24 @@ export function validateWorkRequestNafSelection(
   return { ok: true, nafCodes: picked };
 }
 
-/** NAF stockés sur l’annonce, sinon dérivés de la catégorie. */
+/** NAF stockés sur l’annonce, sinon dérivés de la catégorie.
+ *  Les codes hors liste actuelle de la catégorie sont ignorés (ex. ancien mapping). */
 export function resolveWorkRequestNafCodes(request: {
   category: string;
   nafCodes?: string[];
 }): string[] {
+  const allowed = getNafCodesForCategory(request.category).map(normalizeNafCode);
+  const allowedSet = new Set(allowed);
+
   if (request.nafCodes && request.nafCodes.length > 0) {
-    return [
+    const picked = [
       ...new Set(
-        request.nafCodes.map((c) => normalizeNafCode(c)).filter(Boolean)
+        request.nafCodes
+          .map((c) => normalizeNafCode(c))
+          .filter((c) => Boolean(c) && allowedSet.has(c))
       ),
     ];
+    if (picked.length > 0) return picked;
   }
-  return getNafCodesForCategory(request.category).map(normalizeNafCode);
+  return allowed;
 }

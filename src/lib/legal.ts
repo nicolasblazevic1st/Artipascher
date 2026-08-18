@@ -34,7 +34,7 @@ export const LEGAL_PUBLISHER = {
   /** Date de dernière mise à jour des documents */
   lastUpdated: "18 août 2026",
   /** Version des documents */
-  version: "1.5-brouillon",
+  version: "1.6-brouillon",
 } as const;
 
 /** Hébergeur (OVH) — données publiques usuelles */
