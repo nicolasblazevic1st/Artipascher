@@ -4,7 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AdminImpersonateProButton from "@/components/admin/AdminImpersonateProButton";
 import AdminQualificationLevelControl from "@/components/admin/AdminQualificationLevelControl";
-import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
+import {
+  guaranteeStatusLabel,
+  resolveSelectionGuaranteeType,
+} from "@/lib/decennale-verification";
+import {
+  guaranteeTypeShortLabel,
+  tradeRequiresGuaranteeDocument,
+} from "@/lib/trade-guarantees";
 import { getProTradeSelections } from "@/lib/pro-trades";
 import type {
   DecennaleVerificationStatus,
@@ -371,13 +378,18 @@ export default function AdminDocumentsArtisansPage() {
                 {trades.length > 0 && (
                   <section className="mt-5">
                     <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Décennale par métier
+                      Garanties par métier
                     </h3>
                     <ul className="mt-3 space-y-3">
                       {trades.map((selection) => {
+                        const guaranteeType =
+                          resolveSelectionGuaranteeType(selection);
+                        const needsDoc =
+                          tradeRequiresGuaranteeDocument(guaranteeType);
                         const status =
-                          selection.decennaleStatus ?? "en_attente_verification";
-                        const meta = DECENNALE_STATUS_LABELS[status];
+                          selection.decennaleStatus ??
+                          (needsDoc ? "en_attente_verification" : "validé");
+                        const meta = guaranteeStatusLabel(status, guaranteeType);
                         return (
                           <li
                             key={selection.tradeGroupId}
@@ -389,7 +401,8 @@ export default function AdminDocumentsArtisansPage() {
                                   {selection.tradeGroupLabel}
                                 </p>
                                 <p className="text-xs text-slate-500">
-                                  {selection.qualibatJobLabel}
+                                  {selection.qualibatJobLabel} ·{" "}
+                                  {guaranteeTypeShortLabel(guaranteeType)}
                                 </p>
                                 <span
                                   className={`mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${meta.className}`}
@@ -408,31 +421,32 @@ export default function AdminDocumentsArtisansPage() {
                                     Voir l&apos;attestation
                                   </a>
                                 )}
-                                {(
-                                  [
-                                    ["validé", "Valider"],
-                                    ["en_attente_verification", "À vérifier"],
-                                    ["non_couvert", "Non couvert"],
-                                  ] as const
-                                ).map(([value, label]) => (
-                                  <button
-                                    key={value}
-                                    type="button"
-                                    disabled={busy}
-                                    onClick={() =>
-                                      patch({
-                                        action: "set_decennale_status",
-                                        proId: r.id,
-                                        tradeGroupId: selection.tradeGroupId,
-                                        decennaleStatus:
-                                          value as DecennaleVerificationStatus,
-                                      })
-                                    }
-                                    className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                                  >
-                                    {label}
-                                  </button>
-                                ))}
+                                {needsDoc &&
+                                  (
+                                    [
+                                      ["validé", "Valider"],
+                                      ["en_attente_verification", "À vérifier"],
+                                      ["non_couvert", "Non couvert"],
+                                    ] as const
+                                  ).map(([value, label]) => (
+                                    <button
+                                      key={value}
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() =>
+                                        patch({
+                                          action: "set_decennale_status",
+                                          proId: r.id,
+                                          tradeGroupId: selection.tradeGroupId,
+                                          decennaleStatus:
+                                            value as DecennaleVerificationStatus,
+                                        })
+                                      }
+                                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                                    >
+                                      {label}
+                                    </button>
+                                  ))}
                               </div>
                             </div>
                           </li>

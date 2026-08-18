@@ -1,3 +1,12 @@
+import {
+  getTradeGuaranteeType,
+  guaranteeTypeShortLabel,
+  tradeRequiresGuaranteeDocument,
+  type TradeGuaranteeType,
+} from "./trade-guarantees";
+
+export type { TradeGuaranteeType };
+
 export interface ProRegistrationDocumentType {
   id: string;
   label: string;
@@ -39,9 +48,9 @@ export interface ProRegistrationDocumentCompartment {
   badge: string;
   title: string;
   summary: string;
-  /** Documents uploadables dans ce compartiment (hors décennale par métier). */
+  /** Documents uploadables dans ce compartiment (hors garanties par métier). */
   documentIds: string[];
-  /** Attestations décennale par corps de métier (niveau 1 uniquement). */
+  /** Attestations de garantie par corps de métier (niveau 1, selon type). */
   includesDecennale?: boolean;
   /** Compartiment informatif sans upload à l'inscription. */
   infoOnly?: boolean;
@@ -77,7 +86,7 @@ export function proDocumentFieldName(id: string) {
   return `doc_${id}`;
 }
 
-/** Champ upload attestation décennale par corps de métier (ex. doc_decennale_peinture). */
+/** Champ upload document de garantie par corps de métier (ex. doc_decennale_peinture). */
 export function tradeDecennaleFieldName(tradeGroupId: string) {
   return `doc_decennale_${tradeGroupId}`;
 }
@@ -133,22 +142,33 @@ export function validateProDocumentFile(
   return null;
 }
 
-export function validateTradeDecennaleDocuments(
+export function validateTradeGuaranteeDocuments(
   tradeGroupIds: string[],
   files: Record<string, File | null | undefined>
 ): string | null {
   for (const groupId of tradeGroupIds) {
+    const type = getTradeGuaranteeType(groupId);
+    if (!tradeRequiresGuaranteeDocument(type)) continue;
     const file = files[groupId];
     const error = validateProDocumentFile(file!, { requireOriginalPdf: true });
     if (error) {
+      const kind = guaranteeTypeShortLabel(type).toLowerCase();
       const label =
         error === "Fichier manquant."
-          ? "attestation décennale obligatoire pour chaque corps de métier coché."
+          ? `attestation ${kind} obligatoire pour ce corps de métier.`
           : error;
       return `Corps de métier « ${groupId} » : ${label}`;
     }
   }
   return null;
+}
+
+/** @deprecated Prefer validateTradeGuaranteeDocuments */
+export function validateTradeDecennaleDocuments(
+  tradeGroupIds: string[],
+  files: Record<string, File | null | undefined>
+): string | null {
+  return validateTradeGuaranteeDocuments(tradeGroupIds, files);
 }
 
 export function validateProRegistrationDocuments(

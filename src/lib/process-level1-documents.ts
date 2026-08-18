@@ -8,7 +8,8 @@ import {
 } from "./document-ocr";
 import { defaultDocumentVerificationStatus } from "./level1-certification";
 import { applyLevel1AutoValidation } from "./level1-auto-validation";
-import { defaultDecennaleStatus } from "./decennale-verification";
+import { defaultDecennaleStatus, resolveSelectionGuaranteeType } from "./decennale-verification";
+import { tradeRequiresGuaranteeDocument } from "./trade-guarantees";
 import type {
   BodaccVerificationSnapshot,
   ProDocument,
@@ -52,9 +53,19 @@ export async function enrichTradeSelectionsWithOcr(
 ): Promise<ProTradeSelection[]> {
   return Promise.all(
     selections.map(async (selection) => {
+      const guaranteeType = resolveSelectionGuaranteeType(selection);
+      if (!tradeRequiresGuaranteeDocument(guaranteeType)) {
+        return {
+          ...selection,
+          guaranteeType,
+          decennaleStatus: "validé" as const,
+        };
+      }
+
       if (!selection.decennaleDocument) {
         return {
           ...selection,
+          guaranteeType,
           decennaleStatus: defaultDecennaleStatus(),
         };
       }
@@ -67,11 +78,12 @@ export async function enrichTradeSelectionsWithOcr(
           siret: pro.siret,
           companyName: pro.companyName,
         },
-        `Décennale ${selection.tradeGroupLabel}`
+        `Garantie ${selection.tradeGroupLabel}`
       );
 
       return {
         ...selection,
+        guaranteeType,
         decennaleStatus: defaultDecennaleStatus(),
         decennaleOcrHints: ocrHints,
         decennaleConsistencyIssues,

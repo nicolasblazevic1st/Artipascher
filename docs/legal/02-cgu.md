@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation (CGU) — Nord Artisan Pro
 
-Dernière mise à jour : 18 août 2026 · Version 1.6-brouillon
+Dernière mise à jour : 18 août 2026 · Version 1.7-brouillon
 
 > Brouillon à faire relire par un avocat.
 
@@ -30,7 +30,7 @@ Certaines fonctionnalités peuvent être indisponibles. L'Éditeur peut modifier
 
 ## 5. Inscription et comptes
 
-Informations exactes et à jour. Professionnels : SIRET vérifié, périmètre 59/62, RC pro + garantie adaptée aux activités (décennale si applicable, sinon autre attestation de garantie — ex. biennale / bon fonctionnement). BODACC sans procédure collective active. L'Éditeur peut refuser ou suspendre un compte.
+Informations exactes et à jour. Professionnels : SIRET vérifié, périmètre 59/62, **RC pro obligatoire**, et garantie adaptée aux activités déclarées selon la politique plateforme : **décennale**, **biennale / bon fonctionnement** (éléments dissociables), ou **RC pro seule** pour certaines activités (ex. esthétique / entretien, certains VRD). Classification indicative, sans se substituer aux obligations légales de l'Artisan. BODACC sans procédure collective active. L'Éditeur peut refuser ou suspendre un compte.
 
 ## 6. Demandes de travaux (Clients)
 

@@ -1,5 +1,6 @@
 import type { TradeCategory } from "./data";
 import type { ProRegistration, ProTradeSelection } from "./store-types";
+import { getTradeGuaranteeType } from "./trade-guarantees";
 
 /** Champs métier utiles — sans exiger passwordHash (vues admin sécurisées). */
 export type ProTradeSource = Pick<
@@ -14,21 +15,33 @@ export type ProTradeSource = Pick<
 
 /** Sélections métier d'un pro (plusieurs corps de métier possibles). */
 export function getProTradeSelections(pro: ProTradeSource): ProTradeSelection[] {
-  if (pro.tradeSelections?.length) {
-    return pro.tradeSelections;
-  }
-  if (pro.tradeGroupId && pro.qualibatJobId != null && pro.tradeGroupLabel && pro.qualibatJobLabel) {
-    return [
-      {
-        tradeGroupId: pro.tradeGroupId,
-        tradeGroupLabel: pro.tradeGroupLabel,
-        qualibatJobId: pro.qualibatJobId,
-        qualibatJobLabel: pro.qualibatJobLabel,
-        category: pro.category,
-      },
-    ];
-  }
-  return [];
+  const raw: ProTradeSelection[] = (() => {
+    if (pro.tradeSelections?.length) {
+      return pro.tradeSelections;
+    }
+    if (
+      pro.tradeGroupId &&
+      pro.qualibatJobId != null &&
+      pro.tradeGroupLabel &&
+      pro.qualibatJobLabel
+    ) {
+      return [
+        {
+          tradeGroupId: pro.tradeGroupId,
+          tradeGroupLabel: pro.tradeGroupLabel,
+          qualibatJobId: pro.qualibatJobId,
+          qualibatJobLabel: pro.qualibatJobLabel,
+          category: pro.category,
+        },
+      ];
+    }
+    return [];
+  })();
+
+  return raw.map((s) => ({
+    ...s,
+    guaranteeType: s.guaranteeType ?? getTradeGuaranteeType(s.tradeGroupId),
+  }));
 }
 
 export function formatProTradeSelections(pro: ProTradeSource): string {

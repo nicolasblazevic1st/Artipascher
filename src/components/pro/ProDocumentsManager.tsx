@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DOCUMENT_STATUS_LABELS } from "@/lib/level1-certification";
-import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
+import {
+  guaranteeStatusLabel,
+} from "@/lib/decennale-verification";
 import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
 import {
   PRO_REGISTRATION_COMPARTMENTS,
@@ -17,6 +19,12 @@ import type {
   ProDocument,
   ProTradeSelection,
 } from "@/lib/store-types";
+import {
+  getTradeGuaranteeType,
+  guaranteeTypeShortLabel,
+  guaranteeTypeUploadLabel,
+  tradeRequiresGuaranteeDocument,
+} from "@/lib/trade-guarantees";
 
 interface Props {
   documents: ProDocument[];
@@ -205,10 +213,11 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
             {isLevel1 && tradeSelections.length > 0 && (
               <div className="border-t border-brand-100 px-4 py-3">
                 <p className="text-xs font-semibold text-slate-900">
-                  Attestations décennale
+                  Garanties par métier
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Une attestation par corps de métier déclaré.
+                  Décennale, biennale / bon fonctionnement, ou RC seule selon
+                  l&apos;activité.
                 </p>
               </div>
             )}
@@ -216,9 +225,14 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
             {isLevel1 && tradeSelections.length > 0 && (
               <ul className="divide-y divide-slate-100 border-t border-brand-100">
                 {tradeSelections.map((selection) => {
+                  const guaranteeType =
+                    selection.guaranteeType ??
+                    getTradeGuaranteeType(selection.tradeGroupId);
+                  const needsUpload = tradeRequiresGuaranteeDocument(guaranteeType);
                   const status: DecennaleVerificationStatus =
-                    selection.decennaleStatus ?? "en_attente_verification";
-                  const meta = DECENNALE_STATUS_LABELS[status];
+                    selection.decennaleStatus ??
+                    (needsUpload ? "en_attente_verification" : "validé");
+                  const meta = guaranteeStatusLabel(status, guaranteeType);
                   const field = tradeDecennaleFieldName(selection.tradeGroupId);
 
                   return (
@@ -229,7 +243,8 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
                             {selection.tradeGroupLabel}
                           </p>
                           <p className="text-xs text-slate-500">
-                            {selection.qualibatJobLabel}
+                            {selection.qualibatJobLabel} ·{" "}
+                            {guaranteeTypeShortLabel(guaranteeType)}
                           </p>
                           {selection.decennaleDocument && (
                             <a
@@ -249,12 +264,24 @@ export default function ProDocumentsManager({ documents, tradeSelections }: Prop
                           {meta.text}
                         </span>
                       </div>
-                      <ProDocumentFilePicker
-                        id={field}
-                        originalPdfOnly
-                        selectedFileName={files[field]?.name}
-                        onChange={(file) => setFile(field, file)}
-                      />
+                      {needsUpload ? (
+                        <>
+                          <p className="text-[11px] text-slate-500">
+                            {guaranteeTypeUploadLabel(guaranteeType)}
+                          </p>
+                          <ProDocumentFilePicker
+                            id={field}
+                            originalPdfOnly
+                            selectedFileName={files[field]?.name}
+                            onChange={(file) => setFile(field, file)}
+                          />
+                        </>
+                      ) : (
+                        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                          Aucune attestation décennale / biennale à téléverser
+                          pour ce métier.
+                        </p>
+                      )}
                     </li>
                   );
                 })}

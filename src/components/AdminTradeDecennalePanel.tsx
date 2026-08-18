@@ -1,6 +1,10 @@
 "use client";
 
-import { DECENNALE_STATUS_LABELS } from "@/lib/decennale-verification";
+import {
+  guaranteeStatusLabel,
+  resolveSelectionGuaranteeType,
+} from "@/lib/decennale-verification";
+import { guaranteeTypeShortLabel } from "@/lib/trade-guarantees";
 import type { ProTradeSelection } from "@/lib/store-types";
 
 interface Props {
@@ -13,12 +17,13 @@ export default function AdminTradeDecennalePanel({ selections }: Props) {
   return (
     <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Décennale par corps de métier (OCR)
+        Garanties par corps de métier (OCR)
       </p>
       <ul className="mt-3 space-y-3">
         {selections.map((selection) => {
+          const guaranteeType = resolveSelectionGuaranteeType(selection);
           const status = selection.decennaleStatus ?? "en_attente_verification";
-          const statusMeta = DECENNALE_STATUS_LABELS[status];
+          const statusMeta = guaranteeStatusLabel(status, guaranteeType);
           return (
             <li
               key={selection.tradeGroupId}
@@ -27,7 +32,10 @@ export default function AdminTradeDecennalePanel({ selections }: Props) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-medium text-slate-900">{selection.tradeGroupLabel}</p>
-                  <p className="text-xs text-slate-500">{selection.qualibatJobLabel}</p>
+                  <p className="text-xs text-slate-500">
+                    {selection.qualibatJobLabel} ·{" "}
+                    {guaranteeTypeShortLabel(guaranteeType)}
+                  </p>
                   <span
                     className={`mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusMeta.className}`}
                   >

@@ -64,6 +64,24 @@ export function getProUploadDir(proId: string): string {
   return path.join(PRO_UPLOADS_ROOT, proId);
 }
 
+/** Supprime le dossier d'uploads d'un pro (best-effort). */
+export async function removeProUploadDir(proId: string): Promise<void> {
+  try {
+    await fs.rm(getProUploadDir(proId), { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Supprime le dossier d'uploads d'une demande (best-effort). */
+export async function removeRequestUploadDir(requestId: string): Promise<void> {
+  try {
+    await fs.rm(getRequestUploadDir(requestId), { recursive: true, force: true });
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function saveProRegistrationDocuments(
   proId: string,
   files: Array<{ id: string; label: string; file: File }>

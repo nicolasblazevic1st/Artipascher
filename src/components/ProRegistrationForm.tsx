@@ -13,6 +13,12 @@ import {
   validateProRegistrationDocuments,
 } from "@/lib/pro-documents";
 import {
+  getTradeGuaranteeType,
+  guaranteeTypeHelp,
+  guaranteeTypeUploadLabel,
+  tradeRequiresGuaranteeDocument,
+} from "@/lib/trade-guarantees";
+import {
   GROUPED_QUALIBAT_JOBS,
   getJobsForTradeGroup,
   resolveMultipleTradeSelections,
@@ -178,6 +184,8 @@ export default function ProRegistrationForm() {
     }
 
     for (const groupId of activeGroupIds) {
+      const guaranteeType = getTradeGuaranteeType(groupId);
+      if (!tradeRequiresGuaranteeDocument(guaranteeType)) continue;
       const decennaleError = validateProDocumentFile(decennaleByGroup[groupId]!, {
         requireOriginalPdf: true,
       });
@@ -186,7 +194,7 @@ export default function ProRegistrationForm() {
         setError(
           `${group?.label ?? "Corps de métier"} : ${
             decennaleError === "Fichier manquant."
-              ? "attestation décennale couvrant ce métier obligatoire."
+              ? `${guaranteeTypeUploadLabel(guaranteeType).toLowerCase()} obligatoire.`
               : decennaleError
           }`
         );
@@ -475,7 +483,9 @@ export default function ProRegistrationForm() {
             Documents obligatoires
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            RC pro et décennale : PDF original de l&apos;assureur · max 10 Mo.
+            RC pro toujours obligatoire · garantie selon le métier (décennale,
+            biennale / bon fonctionnement, ou RC seule) · PDF original · max
+            10&nbsp;Mo.
             {!fieldsEnabled && (
               <span className="mt-1 block font-medium text-slate-600">
                 Disponible après vérification RCS réussie.
@@ -544,39 +554,61 @@ export default function ProRegistrationForm() {
               {compartment.includesDecennale && activeGroupIds.length > 0 && (
                 <div className="mt-4 space-y-3 border-t border-brand-100 pt-4">
                   <div className="rounded-lg border border-brand-200 bg-white p-3 text-xs leading-relaxed text-brand-900">
-                    <p className="font-semibold">Garantie décennale par métier</p>
+                    <p className="font-semibold">Garanties par métier</p>
                     <p className="mt-1 text-brand-800">
-                      Votre assurance décennale doit <strong>nommer chaque activité</strong>{" "}
-                      que vous exercez. Nord Artisan Pro vérifie chaque attestation pour protéger
-                      le client et votre responsabilité.
+                      Selon votre activité, Nord Artisan Pro exige une attestation{" "}
+                      <strong>décennale</strong>, une attestation{" "}
+                      <strong>biennale / bon fonctionnement</strong>, ou uniquement
+                      la <strong>RC pro</strong>. Chaque document demandé doit
+                      nommer l&apos;activité concernée.
                     </p>
                   </div>
                   {activeGroupIds.map((groupId) => {
                     const group = GROUPED_QUALIBAT_JOBS.find(
                       (g) => g.group.id === groupId
                     )?.group;
+                    const guaranteeType = getTradeGuaranteeType(groupId);
+                    const needsUpload = tradeRequiresGuaranteeDocument(guaranteeType);
                     return (
-                      <div key={`decennale-${groupId}`}>
-                        <label
-                          htmlFor={`decennale-${groupId}`}
-                          className="mb-1 block text-xs font-medium text-slate-700"
-                        >
-                          Attestation décennale — « {group?.label} »{" "}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        <ProDocumentFilePicker
-                          id={`decennale-${groupId}`}
-                          disabled={!fieldsEnabled}
-                          originalPdfOnly
-                          selectedFileName={decennaleByGroup[groupId]?.name}
-                          onChange={(file) => {
-                            setDecennaleByGroup((prev) => ({
-                              ...prev,
-                              [groupId]: file,
-                            }));
-                            setError(null);
-                          }}
-                        />
+                      <div key={`guarantee-${groupId}`}>
+                        {needsUpload ? (
+                          <>
+                            <label
+                              htmlFor={`decennale-${groupId}`}
+                              className="mb-1 block text-xs font-medium text-slate-700"
+                            >
+                              {guaranteeTypeUploadLabel(guaranteeType)} — «{" "}
+                              {group?.label} »{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <p className="mb-2 text-[11px] text-slate-500">
+                              {guaranteeTypeHelp(guaranteeType)}
+                            </p>
+                            <ProDocumentFilePicker
+                              id={`decennale-${groupId}`}
+                              disabled={!fieldsEnabled}
+                              originalPdfOnly
+                              selectedFileName={decennaleByGroup[groupId]?.name}
+                              onChange={(file) => {
+                                setDecennaleByGroup((prev) => ({
+                                  ...prev,
+                                  [groupId]: file,
+                                }));
+                                setError(null);
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                            <p className="font-medium">
+                              « {group?.label} » — pas d&apos;attestation
+                              décennale / biennale exigée
+                            </p>
+                            <p className="mt-1 text-slate-600">
+                              {guaranteeTypeHelp(guaranteeType)}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -585,7 +617,8 @@ export default function ProRegistrationForm() {
 
               {compartment.includesDecennale && activeGroupIds.length === 0 && fieldsEnabled && (
                 <p className="mt-3 text-xs text-amber-700">
-                  Cochez au moins un corps de métier pour joindre vos attestations décennale.
+                  Cochez au moins un corps de métier pour voir les garanties
+                  demandées.
                 </p>
               )}
 

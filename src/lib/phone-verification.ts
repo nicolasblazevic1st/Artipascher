@@ -204,7 +204,7 @@ export async function sendGuestPhoneVerificationSms(params: {
   if (await isGuestPhoneVerified(phoneE164)) {
     return {
       ok: false,
-      error: "Ce mobile est déjà vérifié. Vous pouvez envoyer votre demande.",
+      error: "Ce mobile est déjà vérifié.",
       status: 409,
     };
   }

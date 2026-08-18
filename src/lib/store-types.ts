@@ -88,11 +88,16 @@ export interface ProTradeSelection {
   qualibatJobId: number;
   qualibatJobLabel: string;
   category: TradeCategory;
-  /** Statut de vérification de l'attestation décennale pour CE corps de métier. */
+  /**
+   * Type de garantie exigée pour ce corps de métier (politique plateforme).
+   * Absent sur d’anciens comptes → traité comme décennale.
+   */
+  guaranteeType?: "decennale" | "biennale" | "none";
+  /** Statut de vérification du document de garantie (décennale ou biennale) pour CE métier. */
   decennaleStatus?: DecennaleVerificationStatus;
-  /** Attestation décennale couvrant ce corps de métier. */
+  /** Document de garantie couvrant ce corps de métier (décennale ou biennale). */
   decennaleDocument?: ProTradeDocument;
-  /** Indices OCR sur l'attestation décennale. */
+  /** Indices OCR sur le document de garantie. */
   decennaleOcrHints?: Level1OcrHints;
   decennaleConsistencyIssues?: Level1ConsistencyIssue[];
 }

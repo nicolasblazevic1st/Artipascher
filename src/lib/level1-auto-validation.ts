@@ -2,6 +2,8 @@ import type { Level1ConsistencyIssue, Level1OcrHints } from "./store-types";
 import type { DecennaleVerificationStatus, DocumentVerificationStatus } from "./store-types";
 import type { ProDocument, ProRegistration, ProTradeSelection } from "./store-types";
 import { isAllowedDepartment } from "./rcs";
+import { isTradeGuaranteeSatisfied } from "./trade-guarantees";
+import { resolveSelectionGuaranteeType } from "./decennale-verification";
 
 const RC_KEYWORDS = [
   "responsabilit",
@@ -18,6 +20,21 @@ const DECENNALE_KEYWORDS = [
   "dommage",
   "ouvrage",
 ];
+
+const BIENNALE_KEYWORDS = [
+  "biennale",
+  "bon fonctionnement",
+  "garantie de bon fonctionnement",
+  "elements dissociables",
+  "éléments dissociables",
+  "garantie",
+  "assurance",
+];
+
+function keywordsForGuaranteeType(type: "decennale" | "biennale" | "none"): string[] {
+  if (type === "biennale") return BIENNALE_KEYWORDS;
+  return DECENNALE_KEYWORDS;
+}
 
 function hasBlockingIssues(issues: Level1ConsistencyIssue[] | undefined): boolean {
   return (issues ?? []).some((issue) => issue.severity === "error");
@@ -78,29 +95,37 @@ export function autoValidateDecennaleDocument(
   hints: Level1OcrHints | undefined,
   issues: Level1ConsistencyIssue[] | undefined,
   expectedSiren: string,
-  tradeLabel: string
+  tradeLabel: string,
+  guaranteeType: "decennale" | "biennale" | "none" = "decennale"
 ): { status: DecennaleVerificationStatus; reason?: string } {
+  if (guaranteeType === "none") {
+    return { status: "validé" };
+  }
+
+  const kind = guaranteeType === "biennale" ? "Biennale" : "Décennale";
+  const keywords = keywordsForGuaranteeType(guaranteeType);
+
   if (hasBlockingIssues(issues)) {
     const first = issues?.find((i) => i.severity === "error");
     return {
       status: "non_couvert",
-      reason: first?.message ?? `Décennale ${tradeLabel} : incohérence SIREN.`,
+      reason: first?.message ?? `${kind} ${tradeLabel} : incohérence SIREN.`,
     };
   }
 
   if (!documentHasReadableText(hints)) {
     return {
       status: "non_couvert",
-      reason: `Décennale « ${tradeLabel} » illisible. Envoyez le PDF original texte de votre assureur.`,
+      reason: `${kind} « ${tradeLabel} » illisible. Envoyez le PDF original texte de votre assureur.`,
     };
   }
 
   const text = hints!.rawSnippet!;
   const sirenOk = sirenMatches(hints, expectedSiren);
   const hasInsurer = Boolean(hints?.insurer);
-  const hasDecennaleKeyword = textMatchesKeywords(text, DECENNALE_KEYWORDS);
+  const hasKeyword = textMatchesKeywords(text, keywords);
 
-  if (sirenOk && (hasDecennaleKeyword || hasInsurer)) {
+  if (sirenOk && (hasKeyword || hasInsurer)) {
     return { status: "validé" };
   }
 
@@ -108,13 +133,13 @@ export function autoValidateDecennaleDocument(
     return { status: "validé" };
   }
 
-  if (hasDecennaleKeyword && hasInsurer) {
+  if (hasKeyword && hasInsurer) {
     return { status: "validé" };
   }
 
   return {
     status: "non_couvert",
-    reason: `Décennale « ${tradeLabel} » : SIREN ou mention décennale non détectée.`,
+    reason: `${kind} « ${tradeLabel} » : SIREN ou mention de garantie non détectée.`,
   };
 }
 
@@ -151,21 +176,35 @@ export function applyLevel1AutoValidation(
   });
 
   const validatedSelections = tradeSelections.map((selection) => {
+    const guaranteeType = resolveSelectionGuaranteeType(selection);
+    if (guaranteeType === "none") {
+      return {
+        ...selection,
+        guaranteeType,
+        decennaleStatus: "validé" as const,
+      };
+    }
     const result = autoValidateDecennaleDocument(
       selection.decennaleOcrHints,
       selection.decennaleConsistencyIssues,
       pro.siren,
-      selection.tradeGroupLabel
+      selection.tradeGroupLabel,
+      guaranteeType
     );
     if (result.status === "non_couvert" && result.reason) {
       rejectionReasons.push(result.reason);
     }
-    return { ...selection, decennaleStatus: result.status };
+    return { ...selection, guaranteeType, decennaleStatus: result.status };
   });
 
   const rcDoc = validatedDocuments.find((d) => d.id === "rc");
   const rcOk = rcDoc?.verificationStatus === "validé";
-  const decennaleOk = validatedSelections.every((s) => s.decennaleStatus === "validé");
+  const decennaleOk = validatedSelections.every((s) =>
+    isTradeGuaranteeSatisfied({
+      guaranteeType: resolveSelectionGuaranteeType(s),
+      decennaleStatus: s.decennaleStatus,
+    })
+  );
   const baseOk = Boolean(
     pro.rcsVerified &&
       (isAllowedDepartment(pro.department) || pro.level1Audit?.geoVerified)

@@ -7,6 +7,12 @@ import type {
   ProDocument,
   ProRegistration,
 } from "./store-types";
+import {
+  guaranteeTypeShortLabel,
+  isTradeGuaranteeSatisfied,
+  tradeRequiresGuaranteeDocument,
+} from "./trade-guarantees";
+import { resolveSelectionGuaranteeType } from "./decennale-verification";
 
 export const DOCUMENT_STATUS_LABELS: Record<
   DocumentVerificationStatus,
@@ -103,10 +109,21 @@ export function getLevel1Checks(pro: ProRegistration): Level1CheckItem[] {
   });
 
   for (const selection of getProTradeSelections(pro)) {
+    const guaranteeType = resolveSelectionGuaranteeType(selection);
+    if (!tradeRequiresGuaranteeDocument(guaranteeType)) {
+      checks.push({
+        id: `decennale-${selection.tradeGroupId}`,
+        label: `${guaranteeTypeShortLabel(guaranteeType)} · ${selection.tradeGroupLabel}`,
+        status: "ok",
+        detail: "Aucune attestation métier exigée",
+        automatic: true,
+      });
+      continue;
+    }
     const decStatus = selection.decennaleStatus ?? "en_attente_verification";
     checks.push({
       id: `decennale-${selection.tradeGroupId}`,
-      label: `Décennale · ${selection.tradeGroupLabel}`,
+      label: `${guaranteeTypeShortLabel(guaranteeType)} · ${selection.tradeGroupLabel}`,
       status:
         decStatus === "validé"
           ? "ok"
@@ -148,15 +165,22 @@ export function listMissingVerificationDocuments(
   if (legacyApproved) {
     const trades = getProTradeSelections(pro);
     for (const s of trades) {
-      if (s.decennaleStatus && s.decennaleStatus !== "validé") {
-        const trade =
-          s.qualibatJobLabel || s.tradeGroupLabel || "votre métier";
-        missing.push(
-          s.decennaleStatus === "non_couvert"
-            ? `Décennale (${trade}) — à renvoyer`
-            : `Décennale (${trade}) — en cours de validation`
-        );
+      const type = resolveSelectionGuaranteeType(s);
+      if (
+        isTradeGuaranteeSatisfied({
+          guaranteeType: type,
+          decennaleStatus: s.decennaleStatus,
+        })
+      ) {
+        continue;
       }
+      const trade = s.qualibatJobLabel || s.tradeGroupLabel || "votre métier";
+      const kind = guaranteeTypeShortLabel(type);
+      missing.push(
+        s.decennaleStatus === "non_couvert"
+          ? `${kind} (${trade}) — à renvoyer`
+          : `${kind} (${trade}) — en cours de validation`
+      );
     }
     return missing;
   }
@@ -172,15 +196,24 @@ export function listMissingVerificationDocuments(
 
   const trades = getProTradeSelections(pro);
   if (trades.length === 0) {
-    missing.push("Décennale");
+    missing.push("Corps de métier / garantie");
   } else {
     for (const s of trades) {
-      if (s.decennaleStatus === "validé") continue;
+      const type = resolveSelectionGuaranteeType(s);
+      if (
+        isTradeGuaranteeSatisfied({
+          guaranteeType: type,
+          decennaleStatus: s.decennaleStatus,
+        })
+      ) {
+        continue;
+      }
       const trade = s.qualibatJobLabel || s.tradeGroupLabel || "votre métier";
-      if (!s.decennaleStatus) missing.push(`Décennale (${trade})`);
+      const kind = guaranteeTypeShortLabel(type);
+      if (!s.decennaleStatus) missing.push(`${kind} (${trade})`);
       else if (s.decennaleStatus === "non_couvert")
-        missing.push(`Décennale (${trade}) — à renvoyer`);
-      else missing.push(`Décennale (${trade}) — en cours de validation`);
+        missing.push(`${kind} (${trade}) — à renvoyer`);
+      else missing.push(`${kind} (${trade}) — en cours de validation`);
     }
   }
 
