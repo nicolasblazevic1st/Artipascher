@@ -561,7 +561,10 @@ export default function WorkRequestForm({
 
   return (
     <div className="mt-8 space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
+      >
       <div className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
         <p className="font-medium">Pour une annonce de qualité :</p>
         <ul className="mt-1 list-inside list-disc text-brand-800">
