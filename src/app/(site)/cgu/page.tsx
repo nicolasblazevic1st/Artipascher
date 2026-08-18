@@ -33,8 +33,11 @@ export default function CguPage() {
         <h2>2. Définitions</h2>
         <ul>
           <li>
-            <strong>Client</strong> : particulier ou société utilisant la
-            Plateforme pour publier une demande de travaux.
+            <strong>Client</strong> : particulier, société ou copropriété
+            (syndicat / syndic) utilisant la Plateforme pour publier une demande
+            de travaux. Les coordonnées du Client restent masquées jusqu&apos;au
+            déblocage par un Professionnel ; une demande de copropriété est
+            signalée par un bandeau, sans identification de l&apos;immeuble.
           </li>
           <li>
             <strong>Professionnel / Artisan</strong> : entreprise du bâtiment

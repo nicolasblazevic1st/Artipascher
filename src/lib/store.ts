@@ -1373,7 +1373,8 @@ export type ProUnlockedContact = {
   phone: string;
   address: string;
   companyName?: string;
-  clientKind?: "individual" | "company";
+  clientKind?: "individual" | "company" | "copropriete";
+  workScope?: "privatif" | "commun";
 };
 
 /** Coordonnées clients débloquées par l'artisan (carnet Contacts). */
@@ -1405,6 +1406,7 @@ export async function getUnlockedContactsForPro(
         address: formatWorkRequestAddress(request),
         companyName: request.companyName,
         clientKind: request.clientKind ?? "individual",
+        workScope: request.workScope,
       });
       continue;
     }
@@ -1427,6 +1429,7 @@ export async function getUnlockedContactsForPro(
       address: `${staticContact.address}, ${staticContact.postalCode}`,
       companyName: staticContact.companyName,
       clientKind: staticContact.clientKind,
+      workScope: staticContact.workScope,
     });
   }
 

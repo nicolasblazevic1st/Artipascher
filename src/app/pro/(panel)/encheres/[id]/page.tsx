@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactPanel from "@/components/ClientContactPanel";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
@@ -54,6 +55,12 @@ export default async function ProChantierDetailPage({ params }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-slate-900">{resolved.title}</h1>
             {resolved.isTest && showDemoBanner && <TestBanner />}
+            {(resolved.isCopropriete ||
+              workRequest?.clientKind === "copropriete") && (
+              <CoproprieteBanner
+                workScope={workRequest?.workScope ?? resolved.workScope}
+              />
+            )}
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {workRequest

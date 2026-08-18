@@ -3,6 +3,7 @@ import {
   unlockCreditsForTier,
   unlockPriceEurForTier,
 } from "./pricing-tiers";
+import type { ClientKind, WorkScope } from "./store-types";
 
 export interface ClientContact {
   auctionId: string;
@@ -16,7 +17,8 @@ export interface ClientContact {
   postalCode: string;
   companyName?: string;
   clientSiret?: string;
-  clientKind?: "individual" | "company";
+  clientKind?: ClientKind;
+  workScope?: WorkScope;
 }
 
 /** Données privées — jamais exposées sans paiement (solde) par un pro approuvé. */

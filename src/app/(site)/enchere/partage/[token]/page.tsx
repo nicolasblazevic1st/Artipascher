@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { resolveAuctionEndsAt } from "@/lib/auction-duration";
@@ -72,9 +73,14 @@ export default async function SharedChantierPage({ params }: Props) {
       <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
-              {request.category}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+                {request.category}
+              </span>
+              {request.clientKind === "copropriete" && (
+                <CoproprieteBanner workScope={request.workScope} />
+              )}
+            </div>
             <h1 className="mt-3 text-3xl font-bold text-slate-900">
               Demande de travaux · {request.city}
             </h1>

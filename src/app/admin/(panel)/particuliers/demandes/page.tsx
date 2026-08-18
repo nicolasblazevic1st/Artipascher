@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import NearbyBusinessesPanel from "@/components/admin/NearbyBusinessesPanel";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import TestBanner from "@/components/TestBanner";
 import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
@@ -95,6 +96,9 @@ export default function AdminDemandesPage() {
                       {STATUS_LABELS[r.status].text}
                     </span>
                     {r.isTest && <TestBanner />}
+                    {r.clientKind === "copropriete" && (
+                      <CoproprieteBanner workScope={r.workScope} />
+                    )}
                   </div>
                   <p className="mt-2 text-sm text-slate-600">{r.description}</p>
                   <p className="mt-1 text-xs text-slate-400">

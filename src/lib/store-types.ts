@@ -233,7 +233,10 @@ export interface PennylaneInvoiceRef {
   createdAt: string;
 }
 
-export type ClientKind = "individual" | "company";
+export type ClientKind = "individual" | "company" | "copropriete";
+
+/** Nature des travaux dans une copropriété (non identifiant). */
+export type WorkScope = "privatif" | "commun";
 
 export interface ClientAccount {
   id: string;
@@ -282,6 +285,11 @@ export interface WorkRequest {
   clientKind?: ClientKind;
   companyName?: string;
   clientSiret?: string;
+  /**
+   * Parties communes vs lot privatif — seulement si clientKind = copropriete.
+   * Affichable publiquement (n’identifie pas l’immeuble).
+   */
+  workScope?: WorkScope;
   /** Numéro et voie du chantier (ex. 12 rue de la Barre). */
   addressLine?: string;
   /** Complément d'adresse (appartement, bâtiment…). */

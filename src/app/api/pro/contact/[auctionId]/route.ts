@@ -28,6 +28,7 @@ async function resolveClientContact(auctionId: string): Promise<ClientContact | 
     companyName: request.companyName,
     clientSiret: request.clientSiret,
     clientKind: request.clientKind ?? "individual",
+    workScope: request.workScope,
   };
 }
 

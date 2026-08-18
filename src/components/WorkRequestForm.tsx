@@ -40,6 +40,8 @@ import {
   type RcsVerificationResult,
 } from "@/lib/rcs";
 import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/google-rating";
+import { WORK_SCOPE_LABELS } from "@/lib/copropriete";
+import type { ClientKind, WorkScope } from "@/lib/store-types";
 import BanAddressAutocomplete, {
   type SelectedBanAddress,
 } from "@/components/BanAddressAutocomplete";
@@ -111,7 +113,8 @@ export default function WorkRequestForm({
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpMessage, setOtpMessage] = useState<string | null>(null);
   const [otpCooldown, setOtpCooldown] = useState(0);
-  const [isCompany, setIsCompany] = useState(false);
+  const [clientKind, setClientKind] = useState<ClientKind>("individual");
+  const [workScope, setWorkScope] = useState<WorkScope | "">("");
   const [clientSiret, setClientSiret] = useState("");
   const [companyVerification, setCompanyVerification] =
     useState<RcsVerificationResult | null>(null);
@@ -347,12 +350,20 @@ export default function WorkRequestForm({
       return;
     }
 
-    if (isCompany) {
+    if (clientKind === "company") {
       if (!companyVerification?.valid) {
         setError("Vérifiez le SIRET de votre entreprise avant d'envoyer.");
         setStatus("error");
         return;
       }
+    }
+
+    if (clientKind === "copropriete" && !workScope) {
+      setError(
+        "Indiquez si les travaux concernent les parties communes ou un lot privatif."
+      );
+      setStatus("error");
+      return;
     }
 
     if (!acceptContactTerms) {
@@ -434,8 +445,8 @@ export default function WorkRequestForm({
     formData.delete("smsContactAlertsEnabled");
     formData.delete("startPriceMode");
     formData.delete("clientStartPrice");
-    formData.set("clientKind", isCompany ? "company" : "individual");
-    if (isCompany && companyVerification) {
+    formData.set("clientKind", clientKind);
+    if (clientKind === "company" && companyVerification) {
       formData.set("clientSiret", companyVerification.siret);
       formData.set("clientSiren", companyVerification.siren);
       formData.set("companyName", companyVerification.companyName ?? "");
@@ -443,6 +454,11 @@ export default function WorkRequestForm({
       formData.delete("clientSiret");
       formData.delete("clientSiren");
       formData.delete("companyName");
+    }
+    if (clientKind === "copropriete" && workScope) {
+      formData.set("workScope", workScope);
+    } else {
+      formData.delete("workScope");
     }
     formData.delete("photos");
     photoFiles.forEach((file) => formData.append("photos", file));
@@ -495,7 +511,8 @@ export default function WorkRequestForm({
     setProofPreview(null);
     setSelectedAddress(null);
     setRequestedWorkStartDate("");
-    setIsCompany(false);
+    setClientKind("individual");
+    setWorkScope("");
     setClientSiret("");
     setCompanyVerification(null);
     form.reset();
@@ -549,28 +566,57 @@ export default function WorkRequestForm({
         </ul>
       </div>
 
-      <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={isCompany}
-          onChange={(e) => {
-            setIsCompany(e.target.checked);
-            setCompanyVerification(null);
-            setClientSiret("");
-            setError(null);
-          }}
-          className="mt-0.5"
-        />
-        <span>
-          <span className="font-medium text-slate-900">Je suis une entreprise</span>
-          <span className="mt-0.5 block text-xs text-slate-500">
-            Cochez uniquement si vous postez au nom d&apos;une société existante (SIRET
-            obligatoire).
-          </span>
-        </span>
-      </label>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-slate-900">
+          Vous déposez cette demande en tant que
+        </legend>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {(
+            [
+              ["individual", "Particulier", "Travaux pour votre logement."],
+              [
+                "company",
+                "Entreprise",
+                "Au nom d’une société (SIRET obligatoire).",
+              ],
+              [
+                "copropriete",
+                "Copropriété",
+                "Syndic ou conseil — l’annonce restera anonyme.",
+              ],
+            ] as const
+          ).map(([value, label, hint]) => (
+            <label
+              key={value}
+              className={`flex cursor-pointer flex-col rounded-lg border px-3 py-3 text-sm ${
+                clientKind === value
+                  ? "border-brand-400 bg-brand-50"
+                  : "border-slate-200 bg-slate-50"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="clientKindChoice"
+                  checked={clientKind === value}
+                  onChange={() => {
+                    setClientKind(value);
+                    setCompanyVerification(null);
+                    setClientSiret("");
+                    setWorkScope("");
+                    setError(null);
+                  }}
+                  className="accent-brand-600"
+                />
+                <span className="font-medium text-slate-900">{label}</span>
+              </span>
+              <span className="mt-1 text-xs text-slate-500">{hint}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
-      {isCompany && (
+      {clientKind === "company" && (
         <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
           <div>
             <label htmlFor="clientSiret" className="mb-1 block text-sm font-medium text-slate-700">
@@ -613,11 +659,58 @@ export default function WorkRequestForm({
         </div>
       )}
 
+      {clientKind === "copropriete" && (
+        <div className="space-y-3 rounded-lg border border-slate-200 bg-sky-50/60 p-4">
+          <p className="text-sm text-slate-700">
+            L&apos;annonce affichera uniquement un bandeau{" "}
+            <strong>Copropriété</strong>. Le nom de l&apos;immeuble, le syndic et
+            vos coordonnées restent masqués jusqu&apos;au déblocage par un artisan.
+          </p>
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-slate-700">
+              Nature des travaux <span className="text-red-500">*</span>
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(["commun", "privatif"] as const).map((scope) => (
+                <label
+                  key={scope}
+                  className={`flex cursor-pointer items-start gap-2 rounded-lg border bg-white px-3 py-2.5 text-sm ${
+                    workScope === scope
+                      ? "border-sky-400"
+                      : "border-slate-200"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="workScopeChoice"
+                    checked={workScope === scope}
+                    onChange={() => setWorkScope(scope)}
+                    className="mt-0.5 accent-sky-700"
+                  />
+                  <span>
+                    <span className="font-medium text-slate-900">
+                      {WORK_SCOPE_LABELS[scope]}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      {scope === "commun"
+                        ? "Toiture, façade, parties communes…"
+                        : "Travaux dans un lot privatif."}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <input
           name="firstName"
           type="text"
-          placeholder={isCompany ? "Prénom du contact" : "Prénom"}
+          placeholder={
+            clientKind === "individual" ? "Prénom" : "Prénom du contact"
+          }
           className={inputClass}
           required
           defaultValue={defaults?.firstName ?? ""}
@@ -626,7 +719,9 @@ export default function WorkRequestForm({
         <input
           name="lastName"
           type="text"
-          placeholder={isCompany ? "Nom du contact" : "Nom"}
+          placeholder={
+            clientKind === "individual" ? "Nom" : "Nom du contact"
+          }
           className={inputClass}
           required
           defaultValue={defaults?.lastName ?? ""}

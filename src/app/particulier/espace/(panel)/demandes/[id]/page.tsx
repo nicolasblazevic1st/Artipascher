@@ -6,6 +6,7 @@ import ClientDemandePhotosPanel from "@/components/client/ClientDemandePhotosPan
 import ClientSubmitQuotePanel from "@/components/client/ClientSubmitQuotePanel";
 import SelectArtisanPanel from "@/components/client/SelectArtisanPanel";
 import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatPublicLocation, formatWorkRequestAddress } from "@/lib/client-address";
 import {
@@ -76,6 +77,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
                 ? ` · ${request.companyName}`
                 : ""}
             </p>
+            {request.clientKind === "copropriete" && (
+              <div className="mt-2">
+                <CoproprieteBanner workScope={request.workScope} />
+              </div>
+            )}
             {request.nafCodes && request.nafCodes.length > 0 && (
               <p className="mt-2 text-xs text-slate-600">
                 Spécialité NAF : {request.nafCodes.join(" · ")}

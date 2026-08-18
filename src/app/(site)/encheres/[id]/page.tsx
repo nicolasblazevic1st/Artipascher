@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
@@ -65,6 +66,12 @@ export default async function ChantierDetailPage({ params }: Props) {
                 {workCategory}
               </span>
               {isTest && showDemoBanner && <TestBanner />}
+              {(resolved.isCopropriete ||
+                workRequest?.clientKind === "copropriete") && (
+                <CoproprieteBanner
+                  workScope={workRequest?.workScope ?? resolved.workScope}
+                />
+              )}
             </div>
             <h1 className="mt-3 text-3xl font-bold text-slate-900">
               {resolved.title}

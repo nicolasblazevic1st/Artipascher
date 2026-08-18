@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import CoproprieteBanner from "@/components/CoproprieteBanner";
 import { getProSession } from "@/lib/pro-auth";
 import { getUnlockedContactsForPro } from "@/lib/store";
 
@@ -46,13 +47,21 @@ export default async function ProContactsPage() {
                   <h2 className="font-semibold text-slate-900">
                     {c.clientKind === "company" && c.companyName
                       ? c.companyName
-                      : `${c.firstName} ${c.lastName}`}
+                      : c.clientKind === "copropriete"
+                        ? "Copropriété"
+                        : `${c.firstName} ${c.lastName}`}
                   </h2>
                   <p className="mt-0.5 text-sm text-slate-600">
                     {c.category} · {c.city}
                     {c.department ? ` (${c.department})` : ""}
                   </p>
-                  {c.clientKind === "company" && (
+                  {c.clientKind === "copropriete" && (
+                    <div className="mt-1">
+                      <CoproprieteBanner workScope={c.workScope} />
+                    </div>
+                  )}
+                  {(c.clientKind === "company" ||
+                    c.clientKind === "copropriete") && (
                     <p className="mt-0.5 text-xs text-slate-500">
                       Contact : {c.firstName} {c.lastName}
                     </p>
