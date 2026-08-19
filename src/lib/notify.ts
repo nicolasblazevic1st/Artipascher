@@ -1,4 +1,6 @@
+import { isStagingSite } from "@/lib/beta";
 import { isSmsContactAlertsEnabled } from "@/lib/contact-slots";
+import { isTestAccountEmail } from "@/lib/demo-banners";
 import {
   createAppNotification,
   resolveClientUserIdForRequest,
@@ -7,6 +9,16 @@ import type { WorkRequest } from "@/lib/store-types";
 import { formatPrice } from "@/lib/data";
 import { absoluteUrl } from "@/lib/share";
 import { sendSms } from "@/lib/sms";
+
+/** Numéro perso admin — surchargeable via ADMIN_SMS_PHONE, vide = désactivé. */
+const DEFAULT_ADMIN_SMS_PHONE = "06 99 45 09 12";
+
+export function getAdminSmsPhone(): string | null {
+  const raw = process.env.ADMIN_SMS_PHONE;
+  if (raw !== undefined && raw.trim() === "") return null;
+  const phone = (raw ?? DEFAULT_ADMIN_SMS_PHONE).trim();
+  return phone || null;
+}
 
 export { isSmsContactAlertsEnabled };
 
@@ -138,6 +150,32 @@ export async function notifyProContactRecalled(params: {
     body: `Votre demande pour ${params.category} à ${params.city} est de nouveau en attente (48 h).`,
     href: `/pro/encheres/${params.auctionId}`,
   });
+}
+
+export async function notifyAdminNewWorkRequest(workRequest: WorkRequest) {
+  if (isStagingSite()) return;
+  if (workRequest.isTest || isTestAccountEmail(workRequest.email)) return;
+
+  const phone = getAdminSmsPhone();
+  if (!phone) return;
+
+  const who = `${workRequest.firstName} ${workRequest.lastName}`.trim();
+  const url = absoluteUrl("/admin/particuliers/demandes");
+  const message =
+    `Nord Artisan Pro : nouvelle demande a valider.\n` +
+    `${workRequest.category} a ${workRequest.city} (${who}).\n` +
+    url;
+
+  const result = await sendSms(phone, message, "transactional");
+  if (!result.ok) {
+    console.error(
+      "[notify] admin new request SMS failed",
+      workRequest.id,
+      result.error
+    );
+  } else if (result.demo) {
+    console.info("[notify] admin new request SMS demo", workRequest.id);
+  }
 }
 
 export async function notifyClientRequestReviewed(params: {

@@ -38,6 +38,7 @@ import {
 import type { ClientKind } from "@/lib/store-types";
 import { parseClientKind, parseWorkScope } from "@/lib/copropriete";
 import { savePreviousQuoteProof, saveRequestPhotos } from "@/lib/uploads";
+import { notifyAdminNewWorkRequest } from "@/lib/notify";
 
 export async function POST(request: NextRequest) {
   if (isBetaModeFromRequest(request)) return betaClosedJsonResponse();
@@ -388,6 +389,10 @@ export async function POST(request: NextRequest) {
         previousQuoteNote: previousQuoteNote || undefined,
       });
     }
+
+    void notifyAdminNewWorkRequest(entry).catch((err) =>
+      console.error("[notify] admin new request", err)
+    );
 
     return NextResponse.json(
       {
