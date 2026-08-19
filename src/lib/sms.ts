@@ -26,16 +26,19 @@ export interface SendSmsResult {
 
 export function isSmsConfigured(): boolean {
   return (
-    process.env.OVH_SMS_ENABLED === "true" &&
-    Boolean(process.env.OVH_APP_KEY) &&
-    Boolean(process.env.OVH_APP_SECRET) &&
-    Boolean(process.env.OVH_CONSUMER_KEY) &&
-    Boolean(process.env.OVH_SMS_SERVICE_NAME)
+    process.env.OVH_SMS_ENABLED?.trim() === "true" &&
+    Boolean(process.env.OVH_APP_KEY?.trim()) &&
+    Boolean(process.env.OVH_APP_SECRET?.trim()) &&
+    Boolean(process.env.OVH_CONSUMER_KEY?.trim()) &&
+    Boolean(process.env.OVH_SMS_SERVICE_NAME?.trim())
   );
 }
 
 export function isDemoSmsAllowed(): boolean {
-  return process.env.OVH_SMS_ENABLED !== "true" || process.env.NODE_ENV === "development";
+  return (
+    process.env.OVH_SMS_ENABLED?.trim() !== "true" ||
+    process.env.NODE_ENV === "development"
+  );
 }
 
 /**

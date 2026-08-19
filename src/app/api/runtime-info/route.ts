@@ -5,6 +5,7 @@ import {
   isStagingSite,
   normalizeHost,
 } from "@/lib/beta";
+import { isSmsConfigured, isDemoSmsAllowed } from "@/lib/sms";
 
 /**
  * Diagnostic déploiement (pas de secret).
@@ -22,6 +23,8 @@ export async function GET(request: NextRequest) {
     beta: isBetaModeFromRequest(request),
     isProductionHost: isProductionPublicHost(host),
     isStagingEnv: isStagingSite(),
+    smsConfigured: isSmsConfigured(),
+    smsDemoAllowed: isDemoSmsAllowed(),
     port: process.env.PORT ?? null,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? null,
     artipascherStaging: process.env.ARTIPASCHER_STAGING ?? null,
