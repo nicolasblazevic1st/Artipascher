@@ -26,10 +26,10 @@ export default async function ProPanelLayout({
       {session.impersonatedByAdmin && (
         <ProImpersonationBanner companyName={pro.companyName} status={pro.status} />
       )}
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <ProSidebar companyName={pro.companyName} creditBalance={creditBalance} />
-        <div className="flex-1 overflow-auto bg-slate-100">
-          <div className="mx-auto max-w-6xl p-6 sm:p-8">{children}</div>
+        <div className="min-w-0 flex-1 overflow-auto bg-slate-100">
+          <div className="mx-auto max-w-6xl p-4 sm:p-8">{children}</div>
         </div>
       </div>
     </div>
