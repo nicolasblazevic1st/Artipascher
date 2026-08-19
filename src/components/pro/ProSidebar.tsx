@@ -63,8 +63,10 @@ export default function ProSidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100 shadow-2xl transition-transform md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:shadow-none ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`w-72 max-w-[85vw] shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100 md:static md:flex md:w-56 md:max-w-none ${
+          mobileOpen
+            ? "fixed inset-y-0 left-0 z-50 flex shadow-2xl md:shadow-none"
+            : "hidden"
         }`}
       >
         <div className="border-b border-brand-900 px-5 py-5">

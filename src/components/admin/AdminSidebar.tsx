@@ -91,8 +91,10 @@ export default function AdminSidebar() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-slate-300 shadow-2xl transition-transform md:static md:z-auto md:w-60 md:max-w-none md:translate-x-0 md:shadow-none ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        className={`w-72 max-w-[85vw] shrink-0 flex-col border-r border-slate-800 bg-slate-900 text-slate-300 md:static md:flex md:w-56 md:max-w-none ${
+          mobileOpen
+            ? "fixed inset-y-0 left-0 z-50 flex shadow-2xl md:shadow-none"
+            : "hidden"
         }`}
       >
         <div className="border-b border-slate-800 px-5 py-5">
