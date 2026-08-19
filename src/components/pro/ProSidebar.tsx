@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import ProLogoutButton from "./ProLogoutButton";
@@ -17,57 +20,114 @@ export default function ProSidebar({
   companyName: string;
   creditBalance: number;
 }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const close = () => setMobileOpen(false);
   const low = creditBalance < 15;
 
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100">
-      <div className="border-b border-brand-900 px-5 py-5">
-        <Link href="/pro" className="block">
-          <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
-          <p className="text-xs text-brand-200">Espace professionnel</p>
+    <>
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-brand-900 bg-brand-800 px-4 py-3 text-white md:hidden">
+        <Link href="/pro" className="min-w-0">
+          <p className="truncate text-sm font-bold">Nord Artisan Pro</p>
+          <p className="truncate text-xs text-brand-200">{companyName}</p>
         </Link>
-        <p className="mt-3 truncate text-xs font-medium text-white">{companyName}</p>
-        <Link
-          href="/pro/compte#credits"
-          className={`mt-3 flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition ${
-            low
-              ? "bg-amber-500 text-amber-950 hover:bg-amber-400"
-              : "bg-brand-700 text-white hover:bg-brand-600"
-          }`}
-          title="Voir le solde résiduel"
-        >
-          <span className="text-xs font-medium opacity-90">Solde</span>
-          <span className="text-lg font-bold tabular-nums leading-none">
-            {formatUnlockPriceEur(creditBalance)}
-          </span>
-        </Link>
-      </div>
-      <nav className="flex-1 space-y-1 p-3">
-        <NotificationBell
-          audience="pro"
-          listHref="/pro/notifications"
-          accent="brand"
-        />
-        {NAV.map((item) => (
+        <div className="flex shrink-0 items-center gap-2">
           <Link
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-brand-700 hover:text-white"
+            href="/pro/compte#credits"
+            className={`rounded-lg px-2.5 py-1.5 text-xs font-bold tabular-nums ${
+              low ? "bg-amber-500 text-amber-950" : "bg-brand-700 text-white"
+            }`}
+            title="Voir le solde résiduel"
           >
-            <span>{item.icon}</span>
-            {item.label}
+            {formatUnlockPriceEur(creditBalance)}
           </Link>
-        ))}
-      </nav>
-      <div className="space-y-2 border-t border-brand-900 p-3">
-        <Link
-          href="/encheres"
-          className="block rounded-lg px-3 py-2 text-sm hover:bg-brand-700 hover:text-white"
-        >
-          Voir les chantiers publics
-        </Link>
-        <ProLogoutButton />
-      </div>
-    </aside>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="rounded-lg border border-white/20 px-3 py-2 text-sm font-medium"
+            aria-label="Ouvrir le menu"
+            aria-expanded={mobileOpen}
+          >
+            Menu
+          </button>
+        </div>
+      </header>
+
+      {mobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-slate-950/60 md:hidden"
+          onClick={close}
+          aria-label="Fermer le menu"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] shrink-0 flex-col border-r border-brand-900 bg-brand-800 text-brand-100 shadow-2xl transition-transform md:static md:z-auto md:w-56 md:max-w-none md:translate-x-0 md:shadow-none ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="border-b border-brand-900 px-5 py-5">
+          <div className="flex items-start justify-between gap-3">
+            <Link href="/pro" className="block min-w-0" onClick={close}>
+              <p className="text-lg font-bold text-white">Nord Artisan Pro</p>
+              <p className="text-xs text-brand-200">Espace professionnel</p>
+            </Link>
+            <button
+              type="button"
+              onClick={close}
+              className="rounded-lg px-2 py-1 text-xl text-white/80 hover:bg-brand-700 hover:text-white md:hidden"
+              aria-label="Fermer le menu"
+            >
+              ×
+            </button>
+          </div>
+          <p className="mt-3 truncate text-xs font-medium text-white">{companyName}</p>
+          <Link
+            href="/pro/compte#credits"
+            onClick={close}
+            className={`mt-3 flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 transition ${
+              low
+                ? "bg-amber-500 text-amber-950 hover:bg-amber-400"
+                : "bg-brand-700 text-white hover:bg-brand-600"
+            }`}
+            title="Voir le solde résiduel"
+          >
+            <span className="text-xs font-medium opacity-90">Solde</span>
+            <span className="text-lg font-bold tabular-nums leading-none">
+              {formatUnlockPriceEur(creditBalance)}
+            </span>
+          </Link>
+        </div>
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          <NotificationBell
+            audience="pro"
+            listHref="/pro/notifications"
+            accent="brand"
+          />
+          {NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={close}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-brand-700 hover:text-white"
+            >
+              <span>{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="space-y-2 border-t border-brand-900 p-3">
+          <Link
+            href="/encheres"
+            onClick={close}
+            className="block rounded-lg px-3 py-2 text-sm hover:bg-brand-700 hover:text-white"
+          >
+            Voir les chantiers publics
+          </Link>
+          <ProLogoutButton />
+        </div>
+      </aside>
+    </>
   );
 }

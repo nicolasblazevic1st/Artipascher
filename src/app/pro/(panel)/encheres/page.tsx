@@ -37,7 +37,7 @@ export default async function ProChantiersPage() {
         25&nbsp;€ selon le ticket
       </p>
 
-      <div className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
