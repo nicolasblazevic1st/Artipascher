@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import {
   verifyBanAddress,
@@ -390,8 +390,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    void notifyAdminNewWorkRequest(entry).catch((err) =>
-      console.error("[notify] admin new request", err)
+    after(() =>
+      notifyAdminNewWorkRequest(entry).catch((err) =>
+        console.error("[notify] admin new request", err)
+      )
     );
 
     return NextResponse.json(

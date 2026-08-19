@@ -153,11 +153,20 @@ export async function notifyProContactRecalled(params: {
 }
 
 export async function notifyAdminNewWorkRequest(workRequest: WorkRequest) {
-  if (isStagingSite()) return;
-  if (workRequest.isTest || isTestAccountEmail(workRequest.email)) return;
+  if (isStagingSite()) {
+    console.info("[notify] admin new request skipped: staging", workRequest.id);
+    return;
+  }
+  if (workRequest.isTest || isTestAccountEmail(workRequest.email)) {
+    console.info("[notify] admin new request skipped: test", workRequest.id);
+    return;
+  }
 
   const phone = getAdminSmsPhone();
-  if (!phone) return;
+  if (!phone) {
+    console.info("[notify] admin new request skipped: no admin phone", workRequest.id);
+    return;
+  }
 
   const who = `${workRequest.firstName} ${workRequest.lastName}`.trim();
   const url = absoluteUrl("/admin/particuliers/demandes");
