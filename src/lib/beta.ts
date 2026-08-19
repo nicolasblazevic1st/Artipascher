@@ -57,7 +57,8 @@ export function isDevStagingHost(host: string | null | undefined): boolean {
 export function isStagingSite(): boolean {
   if (envFlagTrue(process.env.ARTIPASCHER_STAGING)) return true;
   if (envFlagTrue(process.env.NEXT_PUBLIC_ARTIPASCHER_STAGING)) return true;
-  if (process.env.PORT === "3001") return true;
+  // Ne pas déduire le staging du PORT : en prod Nord Artisan Pro écoute 3001
+  // (3000 = autre site sur le VPS, 3002 = staging).
 
   const site = (process.env.NEXT_PUBLIC_SITE_URL ?? "").toLowerCase();
   if (site.includes("dev.nord-artisan-pro.com")) return true;
