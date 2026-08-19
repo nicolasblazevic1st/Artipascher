@@ -175,6 +175,8 @@ export async function notifyAdminNewWorkRequest(workRequest: WorkRequest) {
     );
   } else if (result.demo) {
     console.info("[notify] admin new request SMS demo", workRequest.id);
+  } else {
+    console.info("[notify] admin new request SMS sent", workRequest.id);
   }
 }
 
