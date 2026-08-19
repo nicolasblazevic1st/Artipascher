@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { BRAND } from "@/lib/brand";
+import { listPublicAuctions } from "@/lib/work-request-auctions";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ?? BRAND.siteUrl
   ).replace(/\/$/, "");
@@ -24,10 +25,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/cookies", changeFrequency: "yearly", priority: 0.3 },
   ];
 
-  return routes.map(({ path, changeFrequency, priority }) => ({
-    url: `${baseUrl}${path}`,
-    lastModified: new Date(),
-    changeFrequency,
-    priority,
-  }));
+  const staticUrls: MetadataRoute.Sitemap = routes.map(
+    ({ path, changeFrequency, priority }) => ({
+      url: `${baseUrl}${path}`,
+      changeFrequency,
+      priority,
+    })
+  );
+
+  let listingUrls: MetadataRoute.Sitemap = [];
+  try {
+    const auctions = await listPublicAuctions();
+    listingUrls = auctions
+      .filter((auction) => auction.isTest !== true)
+      .map((auction) => ({
+        url: `${baseUrl}/encheres/${auction.id}`,
+        changeFrequency: "daily" as const,
+        priority: 0.6,
+      }));
+  } catch (err) {
+    console.error("[sitemap] public listings omitted", err);
+  }
+
+  return [...staticUrls, ...listingUrls];
 }
