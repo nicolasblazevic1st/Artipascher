@@ -67,6 +67,8 @@ async function main() {
     client.firstName = client.firstName || "Camille";
     client.lastName = client.lastName || "Test";
     client.phone = client.phone || "0612345678";
+    client.phoneVerifiedE164 = "+33612345678";
+    client.phoneVerifiedAt = client.phoneVerifiedAt || now;
     client.kind = "individual";
     client.isTestAccount = true;
   } else {
@@ -77,6 +79,8 @@ async function main() {
       firstName: "Camille",
       lastName: "Test",
       phone: "0612345678",
+      phoneVerifiedE164: "+33612345678",
+      phoneVerifiedAt: now,
       kind: "individual",
       isTestAccount: true,
       emailVerified: true,
