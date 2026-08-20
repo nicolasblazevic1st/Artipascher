@@ -1,8 +1,8 @@
 # Mentions légales — Nord Artisan Pro
 
-Dernière mise à jour : 17 août 2026 · Version 1.4-brouillon
+Dernière mise à jour : 21 août 2026 · Version 1.8-brouillon
 
-> Brouillon à faire relire par un avocat. Adresse siège + médiateur encore à finaliser.
+> Brouillon à faire relire par un avocat. Médiateur de la consommation : inscription en cours.
 
 ## 1. Éditeur du site
 
