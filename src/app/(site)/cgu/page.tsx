@@ -451,8 +451,8 @@ export default function CguPage() {
         <p className="mt-3">
           Conformément aux articles L.611-1 et suivants du Code de la
           consommation, le Client consommateur peut recourir gratuitement à un
-          médiateur de la consommation. Coordonnées du médiateur :{" "}
-          <strong>{LEGAL_PUBLISHER.consumerMediator}</strong>.
+          médiateur de la consommation.{" "}
+          {LEGAL_PUBLISHER.consumerMediator}
         </p>
       </section>
 

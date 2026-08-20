@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation (CGU) — Nord Artisan Pro
 
-Dernière mise à jour : 18 août 2026 · Version 1.7-brouillon
+Dernière mise à jour : 21 août 2026 · Version 1.8-brouillon
 
 > Brouillon à faire relire par un avocat.
 
@@ -100,7 +100,7 @@ Version publiée sur le Site applicable.
 
 ## 16. Droit applicable
 
-Droit français. Médiateur consommation : Médiateur de la consommation FEVAD — BP 20015, 75362 Paris Cedex 8 — https://www.mediateurfevad.fr.
+Droit français. Médiateur consommation : l’inscription auprès d’un médiateur de la consommation agréé est en cours. Les coordonnées seront communiquées dès confirmation de l’adhésion.
 
 ## 17. Contact
 

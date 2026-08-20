@@ -27,14 +27,15 @@ export const LEGAL_PUBLISHER = {
   siteUrl: BRAND.siteUrl,
   /**
    * Médiateur de la consommation (CGU).
-   * Vérifier que l’adhésion FEVAD inclut bien le dispositif de médiation.
+   * Adhésion à un médiateur agréé en cours — ne pas citer un organisme
+   * tant que le contrat n’est pas signé.
    */
   consumerMediator:
-    "Médiateur de la consommation FEVAD — BP 20015, 75362 Paris Cedex 8 — https://www.mediateurfevad.fr",
+    "L’inscription auprès d’un médiateur de la consommation agréé est en cours. Les coordonnées du médiateur seront communiquées sur cette page dès confirmation de l’adhésion.",
   /** Date de dernière mise à jour des documents */
-  lastUpdated: "18 août 2026",
+  lastUpdated: "21 août 2026",
   /** Version des documents */
-  version: "1.7-brouillon",
+  version: "1.8-brouillon",
 } as const;
 
 /** Hébergeur (OVH) — données publiques usuelles */

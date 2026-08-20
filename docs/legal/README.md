@@ -1,7 +1,7 @@
 # Documents légaux Nord Artisan Pro — brouillon
 
-**Version :** 1.7-brouillon  
-**Date :** 18 août 2026  
+**Version :** 1.8-brouillon  
+**Date :** 21 août 2026  
 
 > Documents opérationnels à faire relire par un avocat.  
 > Source site : `src/lib/legal.ts`.
@@ -29,6 +29,6 @@
 - [x] SIRET / RNE
 - [x] Adresse du siège (26 rue de Santes, 59320 Haubourdin)
 - [x] Directeur de la publication
-- [x] Médiateur de la consommation (FEVAD — à confirmer que l’adhésion couvre bien la médiation)
+- [ ] Médiateur de la consommation (inscription auprès d’un médiateur agréé en cours)
 - [ ] Relire avec un avocat
 - [ ] Enlever le bandeau « brouillon » et passer `version` à `1.0`
