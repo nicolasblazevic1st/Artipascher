@@ -80,11 +80,6 @@ export default function ClientDemandePhotosPanel({
   }
 
   async function handleSave() {
-    if (photos.length + pendingFiles.length < 1) {
-      setError("Conservez au moins une photo.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setSuccess(null);

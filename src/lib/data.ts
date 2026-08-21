@@ -135,7 +135,7 @@ export const FAQ_ITEMS = [
   {
     question: "Comment demander des travaux ?",
     answer:
-      "Remplissez le formulaire de demande (description d’au moins 100 caractères, au minimum 1 photo, ville en 59/62) et vérifiez votre mobile par SMS. Aucun compte n’est obligatoire pour publier. Créer un compte ensuite vous permet de retrouver et suivre vos demandes. Après validation par notre équipe, l’annonce est publiée pour les artisans correspondants.",
+      "Remplissez le formulaire de demande (description d’au moins 100 caractères, ville en 59/62, photos optionnelles) et vérifiez votre mobile par SMS. Aucun compte n’est obligatoire pour publier. Créer un compte ensuite vous permet de retrouver et suivre vos demandes. Après validation par notre équipe, l’annonce est publiée pour les artisans correspondants.",
   },
   {
     question: "Comment s'inscrire comme artisan ?",

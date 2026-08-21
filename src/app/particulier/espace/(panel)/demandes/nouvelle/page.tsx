@@ -5,11 +5,16 @@ import { getIsBetaMode } from "@/lib/beta-server";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientById } from "@/lib/store";
 
-export default async function NouvelleDemandePage() {
+export default async function NouvelleDemandePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   const session = await getClientSession();
   if (!session) return null;
 
-  const [client, beta] = await Promise.all([
+  const [{ category: categoryParam }, client, beta] = await Promise.all([
+    searchParams,
     getClientById(session.clientId),
     getIsBetaMode(),
   ]);
@@ -34,6 +39,7 @@ export default async function NouvelleDemandePage() {
       ) : (
         <WorkRequestForm
           successHref="/particulier/espace/demandes"
+          initialCategory={categoryParam}
           defaults={{
             firstName: client?.firstName ?? session.firstName,
             lastName: client?.lastName ?? session.lastName,

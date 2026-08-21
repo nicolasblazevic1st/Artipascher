@@ -29,7 +29,8 @@ import {
   type PricingTierId,
   validatePricingSelection,
 } from "@/lib/pricing-tiers";
-import { WORK_CATEGORIES } from "@/lib/work-categories";
+import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
+import { isWorkCategory, WORK_CATEGORIES } from "@/lib/work-categories";
 import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
@@ -66,6 +67,8 @@ interface Props {
   defaults?: WorkRequestFormDefaults;
   /** Lien après succès (espace client). */
   successHref?: string;
+  /** Catégorie préremplie (ex. depuis l’accueil). */
+  initialCategory?: string;
   /**
    * Demande sans compte : champs contact éditables, OTP invité,
    * puis invitation à créer un espace pour suivre les demandes.
@@ -76,6 +79,7 @@ interface Props {
 export default function WorkRequestForm({
   defaults,
   successHref = "/particulier/espace/demandes",
+  initialCategory,
   guestMode = false,
 }: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -91,8 +95,14 @@ export default function WorkRequestForm({
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [category, setCategory] = useState("");
-  const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>([]);
+  const [category, setCategory] = useState(() =>
+    initialCategory && isWorkCategory(initialCategory) ? initialCategory : ""
+  );
+  const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>(() => {
+    if (!initialCategory || !isWorkCategory(initialCategory)) return [];
+    const options = getNafOptionsForCategory(initialCategory);
+    return options.length === 1 ? [options[0].code] : [];
+  });
   const [workOptionId, setWorkOptionId] = useState("");
   const [pricingTier, setPricingTier] = useState<PricingTierId | "">("");
   const [workOptionOtherDescription, setWorkOptionOtherDescription] =
@@ -128,7 +138,6 @@ export default function WorkRequestForm({
   const [verifyingCompany, setVerifyingCompany] = useState(false);
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
-  const photosOk = photoFiles.length >= 1;
   const minStartDate = minRequestedWorkStartDate(listingDurationHours);
   const maxStartDate = maxRequestedWorkStartDate();
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
@@ -569,13 +578,196 @@ export default function WorkRequestForm({
         <p className="font-medium">Pour une annonce de qualité :</p>
         <ul className="mt-1 list-inside list-disc text-brand-800">
           <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
-          <li>Au minimum 1 photo du chantier ou de la zone à travailler</li>
+          <li>Photos du chantier (recommandées, optionnelles)</li>
           <li>Mobile vérifié par SMS pour être joint par les artisans</li>
           <li>Adresse du chantier vérifiée via la Base Adresse Nationale (État)</li>
           <li>Date souhaitée de début des travaux</li>
           <li>Option : joindre un devis déjà reçu (montant + justificatif) pour contextualiser</li>
         </ul>
       </div>
+
+      <fieldset>
+        <legend className="text-sm font-semibold text-slate-900">
+          Type de travaux <span className="text-red-500">*</span>
+        </legend>
+        <p className="mt-1 text-xs text-slate-600">
+          Choisissez la catégorie qui correspond à votre chantier.
+        </p>
+        <input type="hidden" name="category" value={category} />
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {WORK_CATEGORIES.map((cat) => {
+            const selected = category === cat;
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => handleCategoryChange(cat)}
+                className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition ${
+                  selected
+                    ? "border-brand-500 bg-brand-50 text-slate-900"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-brand-300"
+                }`}
+              >
+                <span
+                  className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                    selected
+                      ? "bg-brand-100 text-brand-800"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  <WorkCategoryIcon category={cat} className="h-4 w-4" />
+                </span>
+                <span className="font-medium leading-snug">{cat}</span>
+              </button>
+            );
+          })}
+        </div>
+        {!category && (
+          <p className="mt-2 text-xs font-medium text-amber-700">
+            Sélectionnez un type de travaux pour continuer.
+          </p>
+        )}
+      </fieldset>
+
+      {requiresNafChoice && (
+        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-900">
+            Spécialité NAF <span className="text-red-500">*</span>
+          </legend>
+          <p className="mt-1 text-xs text-slate-600">
+            Ce type de travaux couvre plusieurs activités. Cochez celles qui
+            correspondent à votre chantier (au moins une).
+          </p>
+          <ul className="mt-3 space-y-2">
+            {nafOptions.map((opt) => {
+              const checked = selectedNafCodes.includes(opt.code);
+              return (
+                <li key={opt.code}>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                    <input
+                      type="checkbox"
+                      name="nafCodes"
+                      value={opt.code}
+                      checked={checked}
+                      onChange={() => toggleNafCode(opt.code)}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="font-medium text-slate-900">
+                        {opt.code}
+                      </span>
+                      <span className="mt-0.5 block text-slate-600">
+                        {opt.label}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          {selectedNafCodes.length === 0 && (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Sélection obligatoire pour continuer.
+            </p>
+          )}
+        </fieldset>
+      )}
+
+      {category && effectiveNafCodes.length > 0 && (
+        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-900">
+            Type de prestation <span className="text-red-500">*</span>
+          </legend>
+          <p className="mt-1 text-xs text-slate-600">
+            Indiquez la nature des travaux pour mieux matcher les artisans.
+          </p>
+
+          <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
+            {workOptions.map((opt) => {
+              const checked = workOptionId === opt.id;
+              return (
+                <li key={opt.id}>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                    <input
+                      type="radio"
+                      name="workOptionId"
+                      value={opt.id}
+                      checked={checked}
+                      onChange={() => selectWorkOption(opt.id)}
+                      className="mt-1"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium text-slate-900">
+                        {opt.name}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-slate-600">
+                        {opt.detail}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+            <li>
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
+                <input
+                  type="radio"
+                  name="workOptionId"
+                  value={OTHER_WORK_OPTION_ID}
+                  checked={workOptionId === OTHER_WORK_OPTION_ID}
+                  onChange={() => selectOtherWorkOption()}
+                  className="mt-1"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-slate-900">Autre</span>
+                  <span className="mt-0.5 block text-xs text-slate-600">
+                    Prestation non listée — décrivez-la brièvement
+                  </span>
+                </span>
+              </label>
+            </li>
+          </ul>
+
+          {workOptionId === OTHER_WORK_OPTION_ID && (
+            <div className="mt-3">
+              <label className="mb-1 block text-xs font-medium text-slate-700">
+                Courte description <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="workOptionOtherDescription"
+                value={workOptionOtherDescription}
+                onChange={(e) =>
+                  setWorkOptionOtherDescription(e.target.value.slice(0, OTHER_WORK_DESCRIPTION_MAX))
+                }
+                placeholder="Ex. débouchage WC + remplacement robinet cuisine"
+                className={inputClass}
+                required
+                minLength={OTHER_WORK_DESCRIPTION_MIN}
+                maxLength={OTHER_WORK_DESCRIPTION_MAX}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                {workOptionOtherDescription.trim().length} /{" "}
+                {OTHER_WORK_DESCRIPTION_MIN} car. min. (max.{" "}
+                {OTHER_WORK_DESCRIPTION_MAX})
+              </p>
+            </div>
+          )}
+
+          {workOptionId && workOptionId !== OTHER_WORK_OPTION_ID && (
+            <input type="hidden" name="pricingTier" value={pricingTier} />
+          )}
+          {workOptionId === OTHER_WORK_OPTION_ID && (
+            <input type="hidden" name="pricingTier" value="bas" />
+          )}
+
+          {!workOptionId && (
+            <p className="mt-2 text-xs font-medium text-amber-700">
+              Sélectionnez une prestation pour continuer.
+            </p>
+          )}
+        </fieldset>
+      )}
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-slate-900">
@@ -1083,163 +1275,6 @@ export default function WorkRequestForm({
         </div>
       </fieldset>
 
-      <select
-        name="category"
-        value={category}
-        onChange={(e) => handleCategoryChange(e.target.value)}
-        className={`${inputClass} text-slate-600`}
-        required
-      >
-        <option value="" disabled>
-          Type de travaux
-        </option>
-        {WORK_CATEGORIES.map((cat) => (
-          <option key={cat} value={cat}>
-            {cat}
-          </option>
-        ))}
-      </select>
-
-      {requiresNafChoice && (
-        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <legend className="px-1 text-sm font-semibold text-slate-900">
-            Spécialité NAF <span className="text-red-500">*</span>
-          </legend>
-          <p className="mt-1 text-xs text-slate-600">
-            Ce type de travaux couvre plusieurs activités. Cochez celles qui
-            correspondent à votre chantier (au moins une).
-          </p>
-          <ul className="mt-3 space-y-2">
-            {nafOptions.map((opt) => {
-              const checked = selectedNafCodes.includes(opt.code);
-              return (
-                <li key={opt.code}>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
-                    <input
-                      type="checkbox"
-                      name="nafCodes"
-                      value={opt.code}
-                      checked={checked}
-                      onChange={() => toggleNafCode(opt.code)}
-                      className="mt-0.5"
-                    />
-                    <span>
-                      <span className="font-medium text-slate-900">
-                        {opt.code}
-                      </span>
-                      <span className="mt-0.5 block text-slate-600">
-                        {opt.label}
-                      </span>
-                    </span>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-          {selectedNafCodes.length === 0 && (
-            <p className="mt-2 text-xs font-medium text-amber-700">
-              Sélection obligatoire pour continuer.
-            </p>
-          )}
-        </fieldset>
-      )}
-
-      {category && effectiveNafCodes.length > 0 && (
-        <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <legend className="px-1 text-sm font-semibold text-slate-900">
-            Type de prestation <span className="text-red-500">*</span>
-          </legend>
-          <p className="mt-1 text-xs text-slate-600">
-            Indiquez la nature des travaux pour mieux matcher les artisans.
-          </p>
-
-          <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
-            {workOptions.map((opt) => {
-              const checked = workOptionId === opt.id;
-              return (
-                <li key={opt.id}>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
-                    <input
-                      type="radio"
-                      name="workOptionId"
-                      value={opt.id}
-                      checked={checked}
-                      onChange={() => selectWorkOption(opt.id)}
-                      className="mt-1"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="font-medium text-slate-900">
-                        {opt.name}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-slate-600">
-                        {opt.detail}
-                      </span>
-                    </span>
-                  </label>
-                </li>
-              );
-            })}
-            <li>
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm hover:border-brand-300">
-                <input
-                  type="radio"
-                  name="workOptionId"
-                  value={OTHER_WORK_OPTION_ID}
-                  checked={workOptionId === OTHER_WORK_OPTION_ID}
-                  onChange={() => selectOtherWorkOption()}
-                  className="mt-1"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="font-medium text-slate-900">Autre</span>
-                  <span className="mt-0.5 block text-xs text-slate-600">
-                    Prestation non listée — décrivez-la brièvement
-                  </span>
-                </span>
-              </label>
-            </li>
-          </ul>
-
-          {workOptionId === OTHER_WORK_OPTION_ID && (
-            <div className="mt-3">
-              <label className="mb-1 block text-xs font-medium text-slate-700">
-                Courte description <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="workOptionOtherDescription"
-                value={workOptionOtherDescription}
-                onChange={(e) =>
-                  setWorkOptionOtherDescription(e.target.value.slice(0, OTHER_WORK_DESCRIPTION_MAX))
-                }
-                placeholder="Ex. débouchage WC + remplacement robinet cuisine"
-                className={inputClass}
-                required
-                minLength={OTHER_WORK_DESCRIPTION_MIN}
-                maxLength={OTHER_WORK_DESCRIPTION_MAX}
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                {workOptionOtherDescription.trim().length} /{" "}
-                {OTHER_WORK_DESCRIPTION_MIN} car. min. (max.{" "}
-                {OTHER_WORK_DESCRIPTION_MAX})
-              </p>
-            </div>
-          )}
-
-          {workOptionId && workOptionId !== OTHER_WORK_OPTION_ID && (
-            <input type="hidden" name="pricingTier" value={pricingTier} />
-          )}
-          {workOptionId === OTHER_WORK_OPTION_ID && (
-            <input type="hidden" name="pricingTier" value="bas" />
-          )}
-
-          {!workOptionId && (
-            <p className="mt-2 text-xs font-medium text-amber-700">
-              Sélectionnez une prestation pour continuer.
-            </p>
-          )}
-        </fieldset>
-      )}
-
       <ClientQualificationGuide selectedCategory={category} />
 
       <div>
@@ -1266,19 +1301,20 @@ export default function WorkRequestForm({
 
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-700">
-          Photos du projet <span className="text-red-500">*</span>
+          Photos du projet{" "}
+          <span className="font-normal text-slate-500">(optionnel)</span>
         </label>
         <input
           type="file"
           name="photos"
           accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           multiple
-          required
           onChange={handlePhotosChange}
           className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
         />
         <p className="mt-1 text-xs text-slate-500">
-          Minimum 1 photo · JPG, PNG ou WebP · max {MAX_PHOTOS} photos · 5 Mo chacune
+          Recommandé pour aider les artisans · JPG, PNG ou WebP · max {MAX_PHOTOS}{" "}
+          photos · 5 Mo chacune
         </p>
         {previews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -1291,9 +1327,6 @@ export default function WorkRequestForm({
               />
             ))}
           </div>
-        )}
-        {!photosOk && (
-          <p className="mt-1 text-xs text-amber-600">Ajoutez au moins une photo.</p>
         )}
       </div>
 
@@ -1493,7 +1526,6 @@ export default function WorkRequestForm({
           status === "submitting" ||
           status === "success" ||
           !descriptionOk ||
-          !photosOk ||
           !acceptContactTerms
         }
         className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-50"

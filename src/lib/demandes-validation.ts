@@ -29,9 +29,6 @@ export function validateDescription(description: unknown): string | null {
 }
 
 export function validatePhotoFiles(files: File[]): string | null {
-  if (files.length === 0) {
-    return "Ajoutez au moins une photo de votre projet.";
-  }
   if (files.length > MAX_PHOTOS) {
     return `Maximum ${MAX_PHOTOS} photos autorisées.`;
   }
