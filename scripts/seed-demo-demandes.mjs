@@ -1,5 +1,5 @@
 /**
- * Crée un lot de demandes de travaux + enchères de démo (bandeau TEST).
+ * Crée un lot de demandes de travaux + enchères de démo (bandeau Démo).
  * Réutilise le compte particulier@test.artipascher.fr s'il existe.
  *
  * Usage : node scripts/seed-demo-demandes.mjs
@@ -59,7 +59,7 @@ const DEMO_REQUESTS = [
     postalCode: "59000",
     addressLine: "12 rue de la Barre",
     description:
-      "[TEST] Peinture complète d'un appartement T3 : salons, chambres et couloir. Préparation des murs, deux couches acrylique mate blanc cassé. Accès parking sous-sol.",
+      "Peinture complète d'un appartement T3 : salons, chambres et couloir. Préparation des murs, deux couches acrylique mate blanc cassé. Accès parking sous-sol.",
     startPrice: 2800,
     auctionDurationDays: 14,
     endsInDays: 10,
@@ -77,7 +77,7 @@ const DEMO_REQUESTS = [
     postalCode: "59100",
     addressLine: "45 avenue Jean Lebas",
     description:
-      "[TEST] Remplacement chauffe-eau 200 L + reprise évacuation lavabo. Appartement RDC, accès aisé. Devis concurrent déjà obtenu.",
+      "Remplacement chauffe-eau 200 L + reprise évacuation lavabo. Appartement RDC, accès aisé. Devis concurrent déjà obtenu.",
     startPrice: 1450,
     auctionDurationDays: 7,
     endsInDays: 5,
@@ -94,7 +94,7 @@ const DEMO_REQUESTS = [
     postalCode: "62000",
     addressLine: "8 place des Héros",
     description:
-      "[TEST] Mise aux normes tableau électrique + ajout 6 prises USB dans cuisine et bureau. Maison année 70, compteur monophasé.",
+      "Mise aux normes tableau électrique + ajout 6 prises USB dans cuisine et bureau. Maison année 70, compteur monophasé.",
     startPrice: 2100,
     auctionDurationDays: 21,
     endsInDays: 18,
@@ -110,7 +110,7 @@ const DEMO_REQUESTS = [
     postalCode: "62300",
     addressLine: "22 rue Casimir Beugnet",
     description:
-      "[TEST] Remplacement 25 tuiles + traitement antimousse sur versant sud. Maison mitoyenne, échafaudage nécessaire côté rue.",
+      "Remplacement 25 tuiles + traitement antimousse sur versant sud. Maison mitoyenne, échafaudage nécessaire côté rue.",
     startPrice: 3900,
     auctionDurationDays: 14,
     endsInDays: 12,
@@ -127,7 +127,7 @@ const DEMO_REQUESTS = [
     postalCode: "59300",
     addressLine: "3 rue Ferrand",
     description:
-      "[TEST] Pose carrelage 60×60 salon + cuisine (45 m²) sur chape existante. Fourniture client déjà livrée.",
+      "Pose carrelage 60×60 salon + cuisine (45 m²) sur chape existante. Fourniture client déjà livrée.",
     startPrice: 4200,
     auctionDurationDays: 10,
     endsInDays: 8,
@@ -143,7 +143,7 @@ const DEMO_REQUESTS = [
     postalCode: "59140",
     addressLine: "17 boulevard Sainte-Barbe",
     description:
-      "[TEST] Remplacement de 4 fenêtres PVC double vitrage + porte d'entrée. Devis concurrent 6800 € fourni.",
+      "Remplacement de 4 fenêtres PVC double vitrage + porte d'entrée. Devis concurrent 6800 € fourni.",
     startPrice: 6200,
     auctionDurationDays: 14,
     previousQuoteAmount: 6800,
@@ -158,7 +158,7 @@ const DEMO_REQUESTS = [
     postalCode: "62100",
     addressLine: "9 rue Royale",
     description:
-      "[TEST] Création de 2 cloisons BA13 + isolation phonique pour aménager un bureau dans un loft. Surface ~18 m².",
+      "Création de 2 cloisons BA13 + isolation phonique pour aménager un bureau dans un loft. Surface ~18 m².",
     startPrice: 2400,
     auctionDurationDays: 10,
     photos: ["/demo/projets/demo-placo.jpg"],
@@ -172,7 +172,7 @@ const DEMO_REQUESTS = [
     postalCode: "62400",
     addressLine: "56 rue d'Arras",
     description:
-      "[TEST] Installation pompe à chaleur air/eau en remplacement chaudière fioul. Maison 120 m², radiateurs existants à conserver.",
+      "Installation pompe à chaleur air/eau en remplacement chaudière fioul. Maison 120 m², radiateurs existants à conserver.",
     startPrice: 12500,
     auctionDurationDays: 30,
     previousQuoteAmount: 13800,
@@ -326,7 +326,7 @@ async function main() {
           companyName: pro.companyName || "Artisan test",
           visitDate,
           amount: offerAmount,
-          description: `[TEST] Devis après visite — ${demo.category} à ${demo.city}. Montant = enchère déposée (${offerAmount} €).`,
+          description: `Devis après visite — ${demo.category} à ${demo.city}. Montant = enchère déposée (${offerAmount} €).`,
           status: "approved",
           createdAt: hoursAgo(12),
           reviewedAt: hoursAgo(11),

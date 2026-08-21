@@ -8,7 +8,6 @@ import OfferClientRequirements from "@/components/OfferClientRequirements";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import TestBanner from "@/components/TestBanner";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
-import { shouldShowDemoBanner } from "@/lib/demo-banners";
 import { formatPublicLocation } from "@/lib/client-address";
 import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
@@ -50,7 +49,6 @@ export default async function ChantierDetailPage({ params }: Props) {
   });
 
   const isTest = resolved.isTest === true || workRequest?.isTest === true;
-  const showDemoBanner = await shouldShowDemoBanner();
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
@@ -58,14 +56,15 @@ export default async function ChantierDetailPage({ params }: Props) {
         ← Retour aux chantiers
       </Link>
 
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        {isTest && <TestBanner variant="bar" />}
+        <div className="p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
                 {workCategory}
               </span>
-              {isTest && showDemoBanner && <TestBanner />}
               {(resolved.isCopropriete ||
                 workRequest?.clientKind === "copropriete") && (
                 <CoproprieteBanner
@@ -140,6 +139,7 @@ export default async function ChantierDetailPage({ params }: Props) {
           Jusqu’à 5 artisans correspondant aux attentes du client · Déblocage des
           coordonnées avec votre solde · Artisans RCS
         </p>
+      </div>
       </div>
     </div>
   );

@@ -6,8 +6,10 @@ import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import CoproprieteBanner from "@/components/CoproprieteBanner";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import TestBanner from "@/components/TestBanner";
 import { resolveAuctionEndsAt } from "@/lib/auction-duration";
 import { formatPublicLocation } from "@/lib/client-address";
+import { stripTestLabel } from "@/lib/demo-banners";
 import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import {
   buildShareText,
@@ -70,7 +72,9 @@ export default async function SharedChantierPage({ params }: Props) {
         ← Voir tous les chantiers
       </Link>
 
-      <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        {request.isTest && <TestBanner variant="bar" />}
+        <div className="p-6 sm:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -97,7 +101,9 @@ export default async function SharedChantierPage({ params }: Props) {
           </span>
         </div>
 
-        <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
+        <p className="mt-6 leading-relaxed text-slate-600">
+          {stripTestLabel(request.description)}
+        </p>
 
         <ProjectPhotos photos={request.photos ?? []} showPublicNote />
 
@@ -128,6 +134,7 @@ export default async function SharedChantierPage({ params }: Props) {
         <p className="mt-8 text-center text-xs text-slate-500">
           Nord Artisan Pro · Mise en relation artisans · Nord 59 / Pas-de-Calais 62
         </p>
+      </div>
       </div>
     </div>
   );
