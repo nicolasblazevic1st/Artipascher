@@ -771,7 +771,7 @@ export default function WorkRequestForm({
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-slate-900">
-          Vous déposez cette demande en tant que
+          Vous déposez cette demande en tant que — l&apos;annonce est anonyme
         </legend>
         <div className="grid gap-2 sm:grid-cols-3">
           {(
