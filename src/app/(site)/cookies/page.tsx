@@ -35,7 +35,8 @@ export default function CookiesPage() {
           </h2>
           <p className="mt-3">
             Les cookies décrits ci-dessous sont déposés par Nord Artisan Pro, ou par
-            Google pour la mesure d&apos;audience lorsque vous y avez consenti.
+            Google pour la mesure d&apos;audience et le suivi des conversions
+            publicitaires lorsque vous y avez consenti.
           </p>
         </section>
 
@@ -105,10 +106,11 @@ export default function CookiesPage() {
             Cookies de mesure d&apos;audience
           </h2>
           <p className="mt-3">
-            Avec votre accord uniquement, nous utilisons Google Analytics pour
-            comprendre comment le site est utilisé (pages vues, parcours). Ces
-            cookies ne sont pas déposés si vous refusez ou tant que vous
-            n&apos;avez pas choisi.
+            Avec votre accord uniquement, nous utilisons Google Analytics et la
+            balise Google Ads (AW-18373726951) pour comprendre comment le site
+            est utilisé et pour attribuer les demandes de travaux aux campagnes
+            (Recherche et Performance Max). Ces cookies ne sont pas déposés si
+            vous refusez ou tant que vous n&apos;avez pas choisi.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-full text-left text-sm">
@@ -126,6 +128,14 @@ export default function CookiesPage() {
                     Statistiques de visite via Google Analytics (IP anonymisée)
                   </td>
                   <td className="px-4 py-3">Jusqu&apos;à 2 ans</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-mono text-xs">_gcl_au</td>
+                  <td className="px-4 py-3">
+                    Attribution des conversions Google Ads (clics Search et
+                    Performance Max)
+                  </td>
+                  <td className="px-4 py-3">90 jours</td>
                 </tr>
               </tbody>
             </table>

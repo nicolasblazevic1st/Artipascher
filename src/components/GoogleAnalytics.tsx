@@ -11,6 +11,9 @@ import {
 
 const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-S1NP0RF6Y4";
+/** Balise Google Ads du compte 833-719-5837 — même destination pour PMax et Recherche. */
+const GOOGLE_ADS_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_ADS_ID ?? "AW-18373726951";
 
 declare global {
   interface Window {
@@ -23,6 +26,9 @@ function applyAnalyticsConsent(granted: boolean) {
   if (typeof window.gtag !== "function") return;
   window.gtag("consent", "update", {
     analytics_storage: granted ? "granted" : "denied",
+    ad_storage: granted ? "granted" : "denied",
+    ad_user_data: granted ? "granted" : "denied",
+    ad_personalization: granted ? "granted" : "denied",
   });
 }
 
@@ -97,14 +103,15 @@ export default function GoogleAnalytics() {
           gtag('js', new Date());
           gtag('consent', 'default', {
             analytics_storage: 'granted',
-            ad_storage: 'denied',
-            ad_user_data: 'denied',
-            ad_personalization: 'denied'
+            ad_storage: 'granted',
+            ad_user_data: 'granted',
+            ad_personalization: 'granted'
           });
           gtag('config', '${GA_MEASUREMENT_ID}', {
             anonymize_ip: true,
             send_page_view: false
           });
+          gtag('config', '${GOOGLE_ADS_ID}');
         `}
       </Script>
       <Suspense fallback={null}>

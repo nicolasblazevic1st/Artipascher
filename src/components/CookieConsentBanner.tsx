@@ -63,8 +63,9 @@ export default function CookieConsentBanner() {
         >
           Nous utilisons des cookies indispensables au fonctionnement du site
           (connexion à votre espace) et, uniquement avec votre accord, Google
-          Analytics pour mesurer l&apos;audience. Vous pouvez accepter ou
-          refuser les cookies non essentiels.{" "}
+          Analytics et Google Ads pour mesurer l&apos;audience et les
+          conversions (demandes de travaux). Vous pouvez accepter ou refuser
+          les cookies non essentiels.{" "}
           <Link
             href="/cookies"
             className="font-medium text-brand-200 underline underline-offset-2 hover:text-white"
@@ -103,10 +104,11 @@ export default function CookieConsentBanner() {
               />
               <span>
                 <span className="font-medium text-white">
-                  Mesure d&apos;audience (Google Analytics)
+                  Mesure d&apos;audience et conversions (Google)
                 </span>
                 <span className="mt-0.5 block text-brand-200">
-                  Statistiques de visite anonymisées. Désactivé par défaut.
+                  Analytics et suivi des demandes via Google Ads. Désactivé par
+                  défaut.
                 </span>
               </span>
             </label>
