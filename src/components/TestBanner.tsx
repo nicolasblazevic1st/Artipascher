@@ -1,11 +1,26 @@
 interface Props {
   className?: string;
-  /** Ignoré : le bandeau est toujours une pastille légère. */
+  /** `bar` = bandeau pleine largeur ; `pill` = pastille (listes / admin). */
+  variant?: "pill" | "bar";
   compact?: boolean;
 }
 
-/** Pastille légère « Démo » sur les enchères / demandes fictives. */
-export default function TestBanner({ className = "" }: Props) {
+/** Marquage « Démo » sur les enchères / demandes fictives. */
+export default function TestBanner({
+  className = "",
+  variant = "pill",
+}: Props) {
+  if (variant === "bar") {
+    return (
+      <div
+        role="status"
+        className={`w-full bg-amber-100 px-3 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-amber-900 ${className}`}
+      >
+        Annonce de démonstration
+      </div>
+    );
+  }
+
   return (
     <span
       title="Données fictives pour présentation"

@@ -15,7 +15,6 @@ import {
 
 export default function AuctionCard({
   auction,
-  showDemoBanner = true,
 }: {
   auction: Auction;
   showDemoBanner?: boolean;
@@ -27,6 +26,7 @@ export default function AuctionCard({
 
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-brand-200 hover:shadow-md">
+      {auction.isTest && <TestBanner variant="bar" />}
       {auction.coverPhotoUrl ? (
         <img
           src={auction.coverPhotoUrl}
@@ -49,7 +49,6 @@ export default function AuctionCard({
             <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
               {CATEGORY_LABELS[auction.category]}
             </span>
-            {auction.isTest && showDemoBanner && <TestBanner />}
             {auction.isCopropriete && (
               <CoproprieteBanner workScope={auction.workScope} />
             )}

@@ -10,6 +10,7 @@ import {
   type Auction,
   type TradeCategory,
 } from "./data";
+import { stripTestLabel } from "./demo-banners";
 import { isAuctionStillActive } from "./share";
 import {
   countContactUnlocksForAuction,
@@ -56,7 +57,7 @@ function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
   return {
     id: request.auctionId,
     title: `${request.category} · ${request.city}`,
-    description: request.description,
+    description: stripTestLabel(request.description),
     city: request.city,
     department: request.department,
     startPrice: request.startPrice,
@@ -121,7 +122,7 @@ export async function workRequestToAuctionCard(
   return {
     id: request.auctionId,
     title: `${request.category} · ${request.city}`,
-    description: request.description,
+    description: stripTestLabel(request.description),
     category: tradeCategoryForRequest(request),
     city: request.city,
     department: request.department,
@@ -225,7 +226,7 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
     views.push({
       id: request.auctionId,
       title: `${request.category} · ${request.city}`,
-      description: request.description,
+      description: stripTestLabel(request.description),
       categoryLabel: request.category,
       city: request.city,
       department: request.department,
