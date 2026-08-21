@@ -142,8 +142,25 @@ export async function workRequestToAuctionCard(
   };
 }
 
-/** Liste publique : demandes store actives avec photo (ou TEST). */
-export async function listPublicAuctions(): Promise<Auction[]> {
+function pickPublicDemoAuction(
+  demos: Auction[],
+  createdAtByAuctionId: Map<string, string>
+): Auction | null {
+  if (demos.length === 0) return null;
+  const ranked = [...demos].sort((a, b) => {
+    const photo = Number(Boolean(b.coverPhotoUrl)) - Number(Boolean(a.coverPhotoUrl));
+    if (photo !== 0) return photo;
+    return (createdAtByAuctionId.get(b.id) ?? "").localeCompare(
+      createdAtByAuctionId.get(a.id) ?? ""
+    );
+  });
+  return ranked[0] ?? null;
+}
+
+/** Liste publique : demandes réelles actives + une seule démo. */
+export async function listPublicAuctions(options?: {
+  includeTest?: boolean;
+}): Promise<Auction[]> {
   const store = await readStore();
   const fromStore = (
     await Promise.all(
@@ -153,10 +170,25 @@ export async function listPublicAuctions(): Promise<Auction[]> {
     )
   ).filter((a): a is Auction => a != null);
 
-  // Exclut les fausses enchères sans photo et hors TEST.
-  return fromStore.filter(
-    (auction) => auction.isTest === true || Boolean(auction.coverPhotoUrl)
+  const real = fromStore.filter((auction) => !auction.isTest);
+  const demos = fromStore.filter((auction) => auction.isTest === true);
+
+  if (options?.includeTest) {
+    return [...real, ...demos];
+  }
+
+  const createdAtByAuctionId = new Map(
+    store.workRequests
+      .filter((request) => request.auctionId)
+      .map((request) => [request.auctionId as string, request.createdAt ?? ""])
   );
+  const demo = pickPublicDemoAuction(demos, createdAtByAuctionId);
+  return demo ? [...real, demo] : real;
+}
+
+export async function isPubliclyListedDemo(auctionId: string): Promise<boolean> {
+  const listed = await listPublicAuctions();
+  return listed.some((auction) => auction.isTest === true && auction.id === auctionId);
 }
 
 /** Admin : toutes les enchères store (y compris terminées). */
@@ -323,20 +355,12 @@ export async function getWorkRequestByAuctionId(
   return store.workRequests.find((r) => r.auctionId === auctionId) ?? null;
 }
 
-/** Catégories de travaux avec au moins une enchère active (réelles ou démo). */
+/** Catégories de travaux avec au moins une enchère publique active. */
 export async function getActiveWorkCategories(): Promise<Set<string>> {
   const active = new Set<string>();
-  const store = await readStore();
-
-  for (const request of store.workRequests) {
-    if (
-      request.status === "approved" &&
-      request.auctionId &&
-      isAuctionStillActive(endsAtForRequest(request))
-    ) {
-      active.add(request.category);
-    }
+  for (const auction of await listPublicAuctions()) {
+    const label = TRADE_CATEGORY_TO_WORK[auction.category];
+    if (label) active.add(label);
   }
-
   return active;
 }

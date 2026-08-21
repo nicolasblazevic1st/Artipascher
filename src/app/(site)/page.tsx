@@ -6,15 +6,8 @@ import StepCard from "@/components/StepCard";
 import TrustPillars from "@/components/TrustPillars";
 import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
 import { FAQ_ITEMS } from "@/lib/data";
-import {
-  getActiveWorkCategories,
-  listPublicAuctions,
-} from "@/lib/work-request-auctions";
-import { shouldShowDemoBanner } from "@/lib/demo-banners";
-import {
-  WORK_CATEGORIES,
-  WORK_TO_TRADE_CATEGORY,
-} from "@/lib/work-categories";
+import { listPublicAuctions } from "@/lib/work-request-auctions";
+import { WORK_CATEGORIES } from "@/lib/work-categories";
 
 const STEPS = [
   {
@@ -35,11 +28,7 @@ const STEPS = [
 ];
 
 export default async function HomePage() {
-  const [activeCategories, auctions, showDemoBanner] = await Promise.all([
-    getActiveWorkCategories(),
-    listPublicAuctions(),
-    shouldShowDemoBanner(),
-  ]);
+  const auctions = await listPublicAuctions();
 
   return (
     <>
@@ -59,7 +48,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <BetaAwareLink
-              href="/particulier"
+              href="/particulier/espace/demandes/nouvelle"
               className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
             >
               Demander des travaux
@@ -70,6 +59,32 @@ export default async function HomePage() {
             >
               Je suis artisan
             </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <h2 className="text-center text-3xl font-bold text-slate-900">
+            Catégories de travaux
+          </h2>
+          <p className="mt-2 text-center text-slate-600">
+            Tous corps de métier du bâtiment, artisans du Nord-Pas-de-Calais
+          </p>
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {WORK_CATEGORIES.map((category) => (
+              <BetaAwareLink
+                key={category}
+                href={`/particulier/espace/demandes/nouvelle?category=${encodeURIComponent(category)}`}
+                className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:border-brand-300 hover:shadow-sm"
+              >
+                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                  <WorkCategoryIcon category={category} className="h-5 w-5" />
+                </span>
+                <p className="mt-3 font-medium text-slate-900">{category}</p>
+                <p className="mt-1 text-xs text-slate-500">Déposer une demande →</p>
+              </BetaAwareLink>
+            ))}
           </div>
         </div>
       </section>
@@ -122,48 +137,20 @@ export default async function HomePage() {
             </Link>
           </div>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {auctions.slice(0, 6).map((auction) => (
-              <AuctionCard
-                key={auction.id}
-                auction={auction}
-                showDemoBanner={showDemoBanner}
-              />
-            ))}
+            {auctions.length === 0 ? (
+              <p className="col-span-full rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
+                Aucune offre publiée pour le moment.
+              </p>
+            ) : (
+              auctions.slice(0, 6).map((auction) => (
+                <AuctionCard
+                  key={auction.id}
+                  auction={auction}
+                  showDemoBanner
+                />
+              ))
+            )}
           </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="text-center text-3xl font-bold text-slate-900">
-          Catégories de travaux
-        </h2>
-        <p className="mt-2 text-center text-slate-600">
-          Tous corps de métier du bâtiment, artisans du Nord-Pas-de-Calais
-        </p>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {WORK_CATEGORIES.map((category) => {
-            const trade = WORK_TO_TRADE_CATEGORY[category];
-            const href = trade
-              ? `/encheres?category=${encodeURIComponent(trade)}`
-              : "/encheres";
-            return (
-              <Link
-                key={category}
-                href={href}
-                className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:border-brand-300 hover:shadow-sm"
-              >
-                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
-                  <WorkCategoryIcon category={category} className="h-5 w-5" />
-                </span>
-                <p className="mt-3 font-medium text-slate-900">{category}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  {activeCategories.has(category)
-                    ? "Voir les offres →"
-                    : "Aucune offre"}
-                </p>
-              </Link>
-            );
-          })}
         </div>
       </section>
 
@@ -203,7 +190,7 @@ export default async function HomePage() {
             artisans vérifiés du Nord-Pas-de-Calais.
           </p>
           <BetaAwareLink
-            href="/particulier"
+            href="/particulier/espace/demandes/nouvelle"
             className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white transition hover:bg-accent-600"
           >
             Demander des travaux maintenant

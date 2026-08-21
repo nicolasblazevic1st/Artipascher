@@ -14,7 +14,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /**
  * Met à jour les photos d'une demande : conserve une liste d'URLs et/ou ajoute
- * de nouveaux fichiers. Au moins 1 photo, maximum MAX_PHOTOS.
+ * de nouveaux fichiers. Photos optionnelles, maximum MAX_PHOTOS.
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   const session = await getClientSession();
@@ -65,12 +65,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
   }
 
   const total = keepValid.length + newFiles.length;
-  if (total < 1) {
-    return NextResponse.json(
-      { error: "Conservez au moins une photo de votre projet." },
-      { status: 400 }
-    );
-  }
   if (total > MAX_PHOTOS) {
     return NextResponse.json(
       { error: `Maximum ${MAX_PHOTOS} photos autorisées.` },

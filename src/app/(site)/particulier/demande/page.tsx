@@ -12,10 +12,20 @@ export const metadata: Metadata = {
     "Publiez votre demande de travaux dans le Nord-Pas-de-Calais. Compte optionnel pour suivre vos demandes.",
 };
 
-export default async function PublicDemandePage() {
-  const session = await getClientSession();
+export default async function PublicDemandePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
+  const [{ category: categoryParam }, session] = await Promise.all([
+    searchParams,
+    getClientSession(),
+  ]);
   if (session) {
-    redirect("/particulier/espace/demandes/nouvelle");
+    const q = categoryParam
+      ? `?category=${encodeURIComponent(categoryParam)}`
+      : "";
+    redirect(`/particulier/espace/demandes/nouvelle${q}`);
   }
 
   const beta = await getIsBetaMode();
@@ -42,7 +52,11 @@ export default async function PublicDemandePage() {
           </div>
         ) : (
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <WorkRequestForm guestMode successHref="/particulier" />
+            <WorkRequestForm
+              guestMode
+              successHref="/particulier"
+              initialCategory={categoryParam}
+            />
           </div>
         )}
 
