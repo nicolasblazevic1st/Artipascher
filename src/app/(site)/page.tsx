@@ -48,7 +48,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <BetaAwareLink
-              href="/particulier/espace/demandes/nouvelle"
+              href="/particulier/demande"
               className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
             >
               Demander des travaux
@@ -75,7 +75,7 @@ export default async function HomePage() {
             {WORK_CATEGORIES.map((category) => (
               <BetaAwareLink
                 key={category}
-                href={`/particulier/espace/demandes/nouvelle?category=${encodeURIComponent(category)}`}
+                href={`/particulier/demande?category=${encodeURIComponent(category)}`}
                 className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:border-brand-300 hover:shadow-sm"
               >
                 <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
@@ -190,7 +190,7 @@ export default async function HomePage() {
             artisans vérifiés du Nord-Pas-de-Calais.
           </p>
           <BetaAwareLink
-            href="/particulier/espace/demandes/nouvelle"
+            href="/particulier/demande"
             className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white transition hover:bg-accent-600"
           >
             Demander des travaux maintenant
