@@ -6,12 +6,14 @@
 
 import { listArtisans } from "./artisans-db";
 import type { EnrichedArtisan } from "./artisans-types";
+import { artisanIsRge } from "./rge-verification";
 import {
   defaultNearbyRadiusKm,
   haversineKm,
   type LatLon,
 } from "./geo-distance";
 import { geocodeCity } from "./geo";
+import { parseMinGoogleRating } from "./google-rating";
 import { resolveWorkRequestNafCodes } from "./naf-codes";
 import {
   artisanMatchesNafCodes,
@@ -47,6 +49,7 @@ export interface ChantierArtisanRow {
   lat?: number;
   lon?: number;
   source: EnrichedArtisan["source"];
+  isRge: boolean;
 }
 
 export interface SearchArtisansForChantierResult {
@@ -87,14 +90,31 @@ async function resolveChantierOrigin(
   return { lat: geo.lat, lon: geo.lon };
 }
 
+/** Préférence d’ancienneté du particulier → filtre de recherche. */
+export function ageCohortFromClientPreference(
+  preferEstablishedCompany?: boolean
+): CompanyAgeCohort | "all" {
+  if (preferEstablishedCompany === true) return "established";
+  if (preferEstablishedCompany === false) return "young";
+  return "all";
+}
+
 export async function searchArtisansForChantier(
   request: WorkRequest,
   options?: {
     radiusKm?: number;
-    /** young | established — all = tous */
+    /** young | established — all = tous. Défaut : préférence client. */
     ageCohort?: CompanyAgeCohort | "all";
     hasPhone?: "all" | "yes" | "no";
+    requireRge?: boolean;
+    /** Si true, ne filtre pas encore la note Google (Places peut la remplir après). */
+    ignoreMinGoogleRating?: boolean;
     limit?: number;
+    /**
+     * request = département du chantier (liste admin).
+     * hdf = 59+62 dans le rayon (sélection SMS, chantiers limitrophes).
+     */
+    departmentScope?: "request" | "hdf";
   }
 ): Promise<SearchArtisansForChantierResult> {
   const nafCodes = resolveWorkRequestNafCodes(request).map(normalizeNafCode);
@@ -117,16 +137,27 @@ export async function searchArtisansForChantier(
 
   const radiusKm = options?.radiusKm ?? defaultNearbyRadiusKm();
   const origin = await resolveChantierOrigin(request);
-  const ageFilter = options?.ageCohort ?? "all";
+  const ageFilter =
+    options?.ageCohort ??
+    ageCohortFromClientPreference(request.preferEstablishedCompany);
   const phoneFilter = options?.hasPhone ?? "all";
+  const requireRge = options?.requireRge ?? request.requireRge === true;
+  const minRating = options?.ignoreMinGoogleRating
+    ? null
+    : parseMinGoogleRating(request.minGoogleRating);
   const limit = Math.min(500, Math.max(1, options?.limit ?? 100));
+  const departmentScope = options?.departmentScope ?? "request";
 
   const active = await listArtisans({ status: "active" });
   const matched: ChantierArtisanRow[] = [];
 
   for (const a of active) {
     if (a.optedOut) continue;
-    if (a.department !== request.department) continue;
+    if (departmentScope === "request") {
+      if (a.department !== request.department) continue;
+    } else if (a.department !== "59" && a.department !== "62") {
+      continue;
+    }
     if (!artisanMatchesNafCodes(a, nafCodes)) continue;
 
     const matchedNafCode =
@@ -139,6 +170,15 @@ export async function searchArtisansForChantier(
     const hasPhone = Boolean(a.phone?.trim());
     if (phoneFilter === "yes" && !hasPhone) continue;
     if (phoneFilter === "no" && hasPhone) continue;
+
+    const isRge = artisanIsRge(a);
+    if (requireRge && !isRge) continue;
+    if (
+      minRating != null &&
+      (typeof a.googleRating !== "number" || a.googleRating < minRating)
+    ) {
+      continue;
+    }
 
     let distanceKm: number | null = null;
     if (
@@ -174,6 +214,7 @@ export async function searchArtisansForChantier(
       lat: a.lat,
       lon: a.lon,
       source: a.source,
+      isRge,
     });
   }
 

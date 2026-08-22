@@ -117,6 +117,7 @@ export default function AdminListingEditor({ request, backHref }: Props) {
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">(
     request.minGoogleRating ?? ""
   );
+  const [requireRge, setRequireRge] = useState(request.requireRge === true);
   const [isTest, setIsTest] = useState(request.isTest === true);
   const [adminNote, setAdminNote] = useState(request.adminNote ?? "");
   const [keepPhotos, setKeepPhotos] = useState<string[]>(request.photos ?? []);
@@ -209,6 +210,7 @@ export default function AdminListingEditor({ request, backHref }: Props) {
       preferEstablishedCompany:
         preferEstablishedCompany === "any" ? null : preferEstablishedCompany === "true",
       minGoogleRating: minGoogleRating === "" ? null : minGoogleRating,
+      requireRge,
       isTest,
       adminNote,
       ...extra,
@@ -703,6 +705,14 @@ export default function AdminListingEditor({ request, backHref }: Props) {
             </select>
           </label>
         </div>
+        <label className="mt-4 flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={requireRge}
+            onChange={(e) => setRequireRge(e.target.checked)}
+          />
+          Uniquement artisans RGE (annuaire ADEME)
+        </label>
         <label className="mt-4 flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"

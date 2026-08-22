@@ -11,6 +11,7 @@ import {
 } from "./artisans-types";
 import { isMappedToPlatformCategory } from "./acquisition-naf";
 import { normalizeNafCode, getNafLabel } from "./naf-trade-groups";
+import { artisanIsRge } from "./rge-verification";
 
 const DB_PATH = path.join(process.cwd(), "data", "artisans-enrichment.json");
 
@@ -30,7 +31,13 @@ function isRetryableFsError(err: unknown): boolean {
     err && typeof err === "object" && "code" in err
       ? String((err as { code?: string }).code)
       : "";
-  return code === "EBUSY" || code === "EPERM" || code === "EACCES" || code === "EAGAIN";
+  return (
+    code === "EBUSY" ||
+    code === "EPERM" ||
+    code === "EACCES" ||
+    code === "EAGAIN" ||
+    code === "UNKNOWN"
+  );
 }
 
 async function sleep(ms: number) {
@@ -271,6 +278,154 @@ export async function applyArtisanCoordinates(
     }
     if (n > 0) await writeArtisansDb(db);
     return n;
+  });
+}
+
+/** Applique les snapshots RGE ADEME en lot. */
+export async function applyArtisanRgeSnapshots(
+  updates: Array<{
+    siret: string;
+    rge: NonNullable<EnrichedArtisan["rge"]> | {
+      isRge: boolean;
+      status: NonNullable<EnrichedArtisan["rge"]>["status"];
+      checkedAt: string;
+      domains?: string[];
+      validUntil?: string;
+    };
+  }>
+): Promise<{ updated: number; markedRge: number; markedNotRge: number }> {
+  if (updates.length === 0) {
+    return { updated: 0, markedRge: 0, markedNotRge: 0 };
+  }
+  return enqueueWrite(async () => {
+    const db = await readArtisansDb();
+    const now = new Date().toISOString();
+    const bySiret = new Map(db.artisans.map((a, i) => [a.siret, i]));
+    let updated = 0;
+    let markedRge = 0;
+    let markedNotRge = 0;
+    for (const u of updates) {
+      const index = bySiret.get(u.siret);
+      if (index == null) continue;
+      const rge: NonNullable<EnrichedArtisan["rge"]> = {
+        isRge: u.rge.isRge && u.rge.status === "verified",
+        status: u.rge.status,
+        checkedAt: u.rge.checkedAt,
+        domains: u.rge.domains,
+        validUntil: u.rge.validUntil,
+      };
+      db.artisans[index] = {
+        ...db.artisans[index],
+        rge,
+        updatedAt: now,
+      };
+      updated += 1;
+      if (rge.isRge) markedRge += 1;
+      else markedNotRge += 1;
+    }
+    if (updated > 0) await writeArtisansDb(db);
+    return { updated, markedRge, markedNotRge };
+  });
+}
+
+export interface RgeArtisanUpsertRow {
+  siret: string;
+  siren: string;
+  companyName: string;
+  addressLine: string;
+  postalCode: string;
+  city: string;
+  department: EnrichedArtisan["department"];
+  nafCodes: string[];
+  lat?: number;
+  lon?: number;
+  phone?: string;
+  website?: string;
+  rge: NonNullable<EnrichedArtisan["rge"]>;
+}
+
+/** Insère les RGE ADEME absents et complète les fiches existantes (sans écraser Places). */
+export async function upsertArtisansFromRgeProfiles(
+  rows: RgeArtisanUpsertRow[]
+): Promise<{ inserted: number; updated: number; markedRge: number }> {
+  if (rows.length === 0) {
+    return { inserted: 0, updated: 0, markedRge: 0 };
+  }
+  return enqueueWrite(async () => {
+    const db = await readArtisansDb();
+    const now = new Date().toISOString();
+    const bySiret = new Map(db.artisans.map((a, i) => [a.siret, i]));
+    let inserted = 0;
+    let updated = 0;
+    let markedRge = 0;
+
+    for (const row of rows) {
+      const nafCodes = row.nafCodes.map(normalizeNafCode).filter(Boolean);
+      const nafCode = nafCodes[0] ?? "";
+      const nafSecondaryCodes = nafCodes.slice(1);
+      const rge = row.rge;
+      if (rge.isRge) markedRge += 1;
+
+      const index = bySiret.get(row.siret);
+      if (index == null) {
+        if (!nafCode) continue;
+        const entry: EnrichedArtisan = {
+          siret: row.siret,
+          siren: row.siren,
+          companyName: row.companyName,
+          addressLine: row.addressLine,
+          postalCode: row.postalCode,
+          city: row.city,
+          department: row.department,
+          nafCode,
+          nafSecondaryCodes:
+            nafSecondaryCodes.length > 0 ? nafSecondaryCodes : undefined,
+          status: "active",
+          lat: row.lat,
+          lon: row.lon,
+          phone: row.phone,
+          website: row.website,
+          enrichmentStatus: "pending",
+          lastSeenAt: now,
+          source: "gouv",
+          rge,
+          createdAt: now,
+          updatedAt: now,
+        };
+        bySiret.set(row.siret, db.artisans.length);
+        db.artisans.push(entry);
+        inserted += 1;
+        continue;
+      }
+
+      const existing = db.artisans[index];
+      const mergedSecondary = [
+        ...new Set([
+          ...(existing.nafSecondaryCodes ?? []),
+          ...nafSecondaryCodes.filter((c) => c !== existing.nafCode),
+        ]),
+      ];
+      db.artisans[index] = {
+        ...existing,
+        rge,
+        companyName: existing.companyName || row.companyName,
+        addressLine: existing.addressLine || row.addressLine,
+        postalCode: existing.postalCode || row.postalCode,
+        city: existing.city || row.city,
+        phone: existing.phone || row.phone,
+        website: existing.website || row.website,
+        lat: existing.lat ?? row.lat,
+        lon: existing.lon ?? row.lon,
+        nafSecondaryCodes:
+          mergedSecondary.length > 0 ? mergedSecondary : existing.nafSecondaryCodes,
+        lastSeenAt: now,
+        updatedAt: now,
+      };
+      updated += 1;
+    }
+
+    if (inserted + updated > 0) await writeArtisansDb(db);
+    return { inserted, updated, markedRge };
   });
 }
 
@@ -525,6 +680,10 @@ export async function getArtisansStats() {
   const invalid = active.filter((a) => a.enrichmentStatus === "invalid_phone");
   const used = quota.requestsProduction + quota.requestsEnrichment;
 
+  const rge = active.filter((a) => artisanIsRge(a));
+  const rgeWithoutRating = rge.filter(
+    (a) => typeof a.googleRating !== "number" || !Number.isFinite(a.googleRating)
+  );
   const unmapped = active.filter((a) => !isMappedToPlatformCategory(a.nafCode));
   const byDepartment: Record<string, number> = { "59": 0, "62": 0 };
   const nafCounts = new Map<string, number>();
@@ -558,6 +717,8 @@ export async function getArtisansStats() {
     pendingEnrichment: pending.length,
     invalidPhone: invalid.length,
     unmappedCategory: unmapped.length,
+    rge: rge.length,
+    rgeWithoutRating: rgeWithoutRating.length,
     byDepartment,
     topNaf,
     nafOptions,

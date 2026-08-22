@@ -91,6 +91,33 @@ export function getLevel1Checks(pro: ProRegistration): Level1CheckItem[] {
     automatic: true,
   });
 
+  const rge = pro.level1Audit?.rge;
+  const rgeDomains =
+    rge?.domains && rge.domains.length > 0
+      ? rge.domains.slice(0, 3).join(" · ")
+      : "";
+  checks.push({
+    id: "rge",
+    label: "Label RGE (annuaire ADEME)",
+    status: !rge
+      ? "pending"
+      : rge.status === "verified"
+        ? "ok"
+        : "pending",
+    detail: !rge
+      ? "Pas encore contrôlé"
+      : rge.status === "verified"
+        ? `RGE actif${rgeDomains ? ` · ${rgeDomains}` : ""}${
+            rge.validUntil ? ` · jusqu’au ${rge.validUntil}` : ""
+          }`
+        : rge.status === "expired"
+          ? "Qualifications RGE expirées"
+          : rge.status === "unavailable"
+            ? rge.error ?? "API ADEME indisponible"
+            : "Pas de mention RGE en cours",
+    automatic: true,
+  });
+
   const rcDoc = pro.documents?.find(isRcDocument);
   const rcStatus = documentStatus(rcDoc);
   checks.push({

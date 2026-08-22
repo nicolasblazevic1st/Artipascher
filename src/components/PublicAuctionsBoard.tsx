@@ -40,7 +40,7 @@ function parseCategoryParam(raw: string | null): CategoryFilter {
 
 export default function PublicAuctionsBoard({
   auctions,
-  showDemoBanner = true,
+  showDemoBanner = false,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();

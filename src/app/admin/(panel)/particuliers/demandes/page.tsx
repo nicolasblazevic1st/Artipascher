@@ -184,6 +184,9 @@ export default function AdminDemandesPage() {
                         : "peu importe"}
                     </div>
                     <div>
+                      RGE : {r.requireRge ? "obligatoire (ADEME)" : "non exigé"}
+                    </div>
+                    <div>
                       Obligatoire : statut normal · décennale &amp; RC pro
                     </div>
                     <div>

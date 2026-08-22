@@ -10,9 +10,14 @@ export interface EnrichedAuction extends Auction {
   isWinning: boolean;
 }
 
-export async function getEnrichedAuctions(proId?: string): Promise<EnrichedAuction[]> {
+export async function getEnrichedAuctions(
+  proId?: string,
+  options?: { includeTest?: boolean }
+): Promise<EnrichedAuction[]> {
   const myBids = proId ? await getBidsForPro(proId) : [];
-  const auctions = await listPublicAuctions();
+  const auctions = await listPublicAuctions({
+    includeTest: options?.includeTest,
+  });
 
   return Promise.all(
     auctions.map(async (auction) => {

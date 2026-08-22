@@ -17,6 +17,8 @@ interface AcquisitionRow extends SmsAcquisitionCampaign {
   auctionId?: string;
   acceptedCount: number;
   maxAccepted: number;
+  smsQuota?: number;
+  remainingSms?: number;
   sentToday: number;
 }
 
@@ -32,6 +34,8 @@ interface WorkRequestOption {
   clientKind?: string;
   auctionId?: string;
   createdAt: string;
+  maxContactArtisans?: number;
+  smsQuota?: number;
 }
 
 interface Candidate {
@@ -56,7 +60,10 @@ interface Preview {
   auctionUrl: string;
   defaultMessage: string;
   campaignSize: number;
+  artisansWanted?: number;
+  smsPerArtisan?: number;
   preferEstablishedCompany?: boolean;
+  requireRge?: boolean;
   geoFound: boolean;
   totalNearby: number;
   gouvCount: number;
@@ -206,7 +213,7 @@ export default function AdminSmsCampaignsPage() {
       setAcquisitions(data.acquisitions ?? []);
       setRequests(data.requests ?? []);
       setSettings(data.settings ?? null);
-      setCampaignSize(data.settings?.smsPerDay ?? data.settings?.defaultCampaignSize ?? 5);
+      setCampaignSize(5);
       setSmsConfigured(data.smsConfigured === true);
       setDemoAllowed(data.demoAllowed === true);
     } catch {
@@ -595,10 +602,19 @@ export default function AdminSmsCampaignsPage() {
     ];
   }, [preview]);
 
+  const selectedRequest = requests.find((r) => r.id === selectedId);
   const acceptedForSelected =
     acquisitions.find((a) => a.workRequestId === selectedId)?.acceptedCount ?? 0;
   const maxForSelected =
-    acquisitions.find((a) => a.workRequestId === selectedId)?.maxAccepted ?? 5;
+    selectedRequest?.maxContactArtisans ??
+    acquisitions.find((a) => a.workRequestId === selectedId)?.maxAccepted ??
+    5;
+
+  useEffect(() => {
+    if (!selectedRequest) return;
+    const quota = selectedRequest.smsQuota ?? (selectedRequest.maxContactArtisans ?? 5) * 5;
+    setCampaignSize(quota);
+  }, [selectedRequest]);
   const reviewBeforeSend = settings?.requireReviewBeforeSend !== false;
   const excludedCount =
     (preview?.platformCount ?? 0) + (preview?.alreadyMarketedCount ?? 0);
@@ -884,31 +900,16 @@ export default function AdminSmsCampaignsPage() {
                   saveSettings({ autoSendOnApprove: e.target.checked })
                 }
               />
-              Démarrer auto une campagne à l&apos;approbation (prépare les lots
-              jusqu&apos;à 5/5)
+              Démarrer auto une campagne à l&apos;approbation (quota 5 SMS ×
+              artisans choisis)
             </label>
             <p className="mt-2 text-xs text-slate-500">
-              Validation activée : préparation la veille pour le lendemain (sans
-              OVH). Le matin, re-check 5/5 puis tu valides l&apos;envoi OVH.
+              Volume = 5 SMS × le nombre d&apos;artisans demandé par le
+              particulier. Stop quand le quota est envoyé ou les places de
+              contact sont pleines. Validation : préparation puis envoi OVH
+              après re-check.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2">
-                SMS / jour (défaut)
-                <input
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={settings.smsPerDay}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      smsPerDay: Number(e.target.value) || 5,
-                    })
-                  }
-                  onBlur={() => saveSettings({ smsPerDay: settings.smsPerDay })}
-                  className="w-20 rounded border border-slate-300 px-2 py-1"
-                />
-              </label>
               <label className="flex items-center gap-2">
                 Throttle (ms)
                 <input
@@ -937,9 +938,9 @@ export default function AdminSmsCampaignsPage() {
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold">Lancer une campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Prévisualisez le lot du jour, cochez les destinataires, puis préparez
-          ou simulez. La campagne continue chaque jour jusqu&apos;à 5/5 contacts.
-          STOP + lun–sam 8h–20h Paris.
+          Prévisualisez les numéros (5 SMS × artisans choisis), cochez, puis
+          préparez ou simulez. Stop au quota envoyé ou places de contact
+          pleines. STOP + lun–sam 8h–20h Paris.
         </p>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -980,8 +981,15 @@ export default function AdminSmsCampaignsPage() {
             )}
 
             <label className="mt-3 mb-1 block text-sm font-medium text-slate-700">
-              SMS / jour (budget du lot)
+              Volume du lot
             </label>
+            <p className="mb-1 text-xs text-slate-500">
+              Règle : 5 SMS × artisans choisis par le particulier
+              {selectedRequest
+                ? ` → 5 × ${maxForSelected} = ${selectedRequest.smsQuota ?? maxForSelected * 5} numéros`
+                : ""}
+              .
+            </p>
             <input
               type="number"
               min={1}
@@ -999,7 +1007,7 @@ export default function AdminSmsCampaignsPage() {
             >
               {previewLoading
                 ? "Recherche + Places…"
-                : "Prévisualiser le lot du jour"}
+                : "Prévisualiser les numéros"}
             </button>
           </div>
 
@@ -1030,7 +1038,17 @@ export default function AdminSmsCampaignsPage() {
                     {excludedCount} exclus
                   </li>
                   <li>
-                    Objectif contacts :{" "}
+                    Artisans demandés par le client :{" "}
+                    <strong>
+                      {preview.artisansWanted ?? maxForSelected}
+                    </strong>
+                    {" · "}
+                    lot = {(preview.smsPerArtisan ?? 5)} ×{" "}
+                    {preview.artisansWanted ?? maxForSelected} ={" "}
+                    <strong>{preview.campaignSize}</strong> SMS
+                  </li>
+                  <li>
+                    Contacts déjà débloqués :{" "}
                     <strong>
                       {acceptedForSelected}/{maxForSelected}
                     </strong>
@@ -1044,6 +1062,14 @@ export default function AdminSmsCampaignsPage() {
                     </strong>
                   </li>
                 </ul>
+                {selectedCount > 0 && (
+                  <p className="mt-3 break-all font-mono text-xs text-slate-800">
+                    {preview.candidates
+                      .filter((c) => selectedSirets.has(c.siret))
+                      .map((c) => c.phone)
+                      .join(", ")}
+                  </p>
+                )}
                 <p className="mt-2 text-xs text-slate-500">
                   Cible âge : {preview.suggestedCounts.new_young} × 0–5 ans /{" "}
                   {preview.suggestedCounts.new_established} × 5+
@@ -1052,6 +1078,7 @@ export default function AdminSmsCampaignsPage() {
                     : preview.preferEstablishedCompany === false
                       ? " (client : uniquement 0–5 ans)"
                       : " (pas de filtre âge)"}
+                  {preview.requireRge ? " · client : uniquement RGE" : ""}
                   {" · "}sélection actuelle : {selectedByCohort.new_young} /{" "}
                   {selectedByCohort.new_established}
                   {!preview.geoFound ? " · géo approximative" : ""}
@@ -1271,8 +1298,8 @@ export default function AdminSmsCampaignsPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Les cases cochées sont bien celles du lot (max ~{campaignSize}).
-                La campagne continue ensuite chaque jour jusqu&apos;à 5/5.
+                Les cases cochées sont le lot (max {campaignSize} = 5 × artisans
+                demandés). Stop au quota envoyé ou places pleines.
               </p>
             </div>
           </>
@@ -1319,8 +1346,8 @@ export default function AdminSmsCampaignsPage() {
         </p>
         {pendingReview.length === 0 ? (
           <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-            Aucun lot en attente. Le cron du soir prépare le lendemain ; tu
-            valides le matin après le re-check 5/5.
+            Aucun lot en attente. Le cron peut préparer un lot ; tu valides
+            l&apos;envoi après re-check (places + quota).
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
@@ -1404,9 +1431,12 @@ export default function AdminSmsCampaignsPage() {
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                       {ACQ_STATUS_LABELS[a.status]} · contacts{" "}
-                      {a.acceptedCount}/{a.maxAccepted} · SMS aujourd&apos;hui{" "}
-                      {a.sentToday}/{a.smsPerDay} · total {a.totalSent} ·{" "}
-                      {a.trigger}
+                      {a.acceptedCount}/{a.maxAccepted} · SMS{" "}
+                      {a.totalSent}/{a.smsQuota ?? a.smsPerDay}
+                      {(a.remainingSms ?? 0) > 0
+                        ? ` · reste ${a.remainingSms}`
+                        : ""}{" "}
+                      · {a.trigger}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">

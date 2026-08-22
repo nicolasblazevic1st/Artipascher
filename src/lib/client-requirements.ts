@@ -13,6 +13,7 @@ export type ClientRequirementSource = Pick<
   | "minGoogleRating"
   | "requireActiveCompany"
   | "requireValidInsurances"
+  | "requireRge"
 >;
 
 /** Liste courte des exigences visibles pour les artisans. */
@@ -47,6 +48,10 @@ export function listVisibleClientRequirements(
 
   if (request.requireValidInsurances !== false) {
     items.push("RC professionnelle et décennale validées");
+  }
+
+  if (request.requireRge === true) {
+    items.push("Artisan RGE (annuaire ADEME)");
   }
 
   if (request.preferEstablishedCompany === true) {

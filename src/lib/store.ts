@@ -547,6 +547,7 @@ const WORK_REQUEST_PATCH_KEYS = [
   "maxContactArtisans",
   "preferEstablishedCompany",
   "minGoogleRating",
+  "requireRge",
   "isTest",
   "unpublishedAt",
   "adminNote",
@@ -565,6 +566,7 @@ const WORK_REQUEST_CLEARABLE_KEYS = new Set<
   "workOptionOtherDescription",
   "preferEstablishedCompany",
   "minGoogleRating",
+  "requireRge",
   "unpublishedAt",
   "adminNote",
 ]);
@@ -1335,6 +1337,11 @@ export async function getProRegistrationById(
 ): Promise<ProRegistration | null> {
   const store = await readStore();
   return store.proRegistrations.find((p) => p.id === proId) ?? null;
+}
+
+export async function listProRegistrations(): Promise<ProRegistration[]> {
+  const store = await readStore();
+  return store.proRegistrations;
 }
 
 export async function getApprovedProById(proId: string): Promise<ProRegistration | null> {

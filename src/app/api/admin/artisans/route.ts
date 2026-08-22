@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
   ) as EnrichmentStatus | null;
   const hasPhone = searchParams.get("hasPhone");
   const unmappedOnly = searchParams.get("unmappedOnly") === "1";
+  const rgeOnly = searchParams.get("rge") === "1";
+  const rgeWithoutRating = searchParams.get("rgeWithoutRating") === "1";
   const nafRaw = searchParams.get("naf") ?? "";
   const nafFilter = [
     ...new Set(
@@ -69,6 +71,18 @@ export async function GET(request: NextRequest) {
 
   if (unmappedOnly) {
     groups = groups.filter((g) => g.hasUnmappedPrimary);
+  }
+
+  if (rgeOnly) {
+    groups = groups.filter((g) => g.isRge);
+  }
+
+  if (rgeWithoutRating) {
+    groups = groups.filter(
+      (g) =>
+        g.isRge &&
+        (typeof g.googleRating !== "number" || !Number.isFinite(g.googleRating))
+    );
   }
 
   if (nafFilter.length > 0) {

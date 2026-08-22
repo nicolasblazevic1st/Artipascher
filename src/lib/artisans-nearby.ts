@@ -6,6 +6,7 @@ import {
   type LatLon,
 } from "./geo-distance";
 import { geocodeCity } from "./geo";
+import { parseMinGoogleRating } from "./google-rating";
 import { enrichNearbyForProduction } from "./places-quota";
 import type { WorkRequest } from "./store-types";
 
@@ -61,6 +62,7 @@ export async function getArtisansNearWorkRequest(
   if (options?.enrichProduction !== false) {
     enrichment = await enrichNearbyForProduction(nearby, {
       maxArtisans: options?.maxEnrich ?? 30,
+      includeMissingRatings: parseMinGoogleRating(request.minGoogleRating) != null,
     });
     // Re-read phones after enrichment
     const refreshed = await listArtisans({ status: "active" });

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getProSession } from "@/lib/pro-auth";
 import { getEnrichedAuctions } from "@/lib/pro-dashboard";
+import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { CATEGORY_LABELS, formatLocation } from "@/lib/data";
 import { getProDashboardStats, getProForSession, hasContactUnlock } from "@/lib/store";
 import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
@@ -19,7 +20,9 @@ export default async function ProDashboardPage() {
   const [pro, stats, auctions] = await Promise.all([
     getProForSession(session),
     getProDashboardStats(session.proId),
-    getEnrichedAuctions(session.proId),
+    getEnrichedAuctions(session.proId, {
+      includeTest: shouldShowDemoBannerForProSession(session),
+    }),
   ]);
 
   const unlockFlags = await Promise.all(

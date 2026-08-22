@@ -12,6 +12,7 @@ import {
 } from "@/lib/store";
 import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import { maskSiret } from "@/lib/professionals";
+import { isRgeCurrentlyValid } from "@/lib/rge-verification";
 
 export const metadata: Metadata = {
   title: "Mon compte",
@@ -68,6 +69,16 @@ export default async function ProComptePage() {
             />
             <Row label="Email" value={pro.email} />
             <Row label="Téléphone" value={pro.phone} />
+            <Row
+              label="Label RGE"
+              value={
+                isRgeCurrentlyValid(pro.level1Audit?.rge)
+                  ? `Oui — ${(pro.level1Audit?.rge?.domains ?? []).join(" · ") || "annuaire ADEME"}`
+                  : pro.level1Audit?.rge?.status === "expired"
+                    ? "Qualifications expirées (ADEME)"
+                    : "Non détecté sur l’annuaire ADEME"
+              }
+            />
           </dl>
           <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
             ✓ Compte{" "}

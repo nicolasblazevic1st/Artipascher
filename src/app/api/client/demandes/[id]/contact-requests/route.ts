@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getClientSession } from "@/lib/client-auth";
 import { resolveMaxContactArtisans } from "@/lib/contact-slots";
 import { formatProTradeSelections } from "@/lib/pro-trades";
+import { isRgeCurrentlyValid } from "@/lib/rge-verification";
 import {
   countAcceptedArtisansForAuction,
   getApprovedProById,
@@ -40,6 +41,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       siret: pro?.siret ?? "",
       city: pro?.city ?? "",
       trades: pro ? formatProTradeSelections(pro) : "",
+      isRge: isRgeCurrentlyValid(pro?.level1Audit?.rge),
+      rgeDomains: pro?.level1Audit?.rge?.domains ?? [],
     });
   }
 

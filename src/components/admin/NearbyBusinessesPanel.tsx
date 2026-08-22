@@ -29,6 +29,25 @@ interface Stats {
   returned: number;
 }
 
+interface ContactTarget {
+  siret: string;
+  companyName: string;
+  city: string;
+  phone: string;
+  phoneE164: string;
+  distanceKm: number | null;
+  isRge: boolean;
+}
+
+interface ContactTargets {
+  quotaLabel: string;
+  quota: number;
+  selectedCount: number;
+  shortfall: number;
+  phones: string[];
+  artisans: ContactTarget[];
+}
+
 const AGE_LABELS: Record<CompanyAgeCohort, string> = {
   young: "0–5 ans",
   established: "5+",
@@ -51,6 +70,9 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
   const [radiusKm, setRadiusKm] = useState(20);
   const [ageCohort, setAgeCohort] = useState<"all" | CompanyAgeCohort>("all");
   const [hasPhone, setHasPhone] = useState<"all" | "yes" | "no">("all");
+  const [targetsLoading, setTargetsLoading] = useState(false);
+  const [targets, setTargets] = useState<ContactTargets | null>(null);
+  const [targetsError, setTargetsError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -78,6 +100,26 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
       setLoading(false);
     }
   }, [requestId, radiusKm, ageCohort, hasPhone]);
+
+  const loadContactTargets = useCallback(async () => {
+    setTargetsLoading(true);
+    setTargetsError(null);
+    try {
+      const params = new URLSearchParams({ radiusKm: String(radiusKm) });
+      const res = await fetch(
+        `/api/admin/demandes/${requestId}/contact-targets?${params}`
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Impossible de sélectionner les numéros.");
+      }
+      setTargets(data);
+    } catch (e) {
+      setTargetsError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setTargetsLoading(false);
+    }
+  }, [requestId, radiusKm]);
 
   return (
     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -137,6 +179,14 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
         >
           {loading ? "Recherche…" : "Lister les artisans"}
         </button>
+        <button
+          type="button"
+          onClick={() => void loadContactTargets()}
+          disabled={targetsLoading}
+          className="rounded-lg border border-brand-300 bg-white px-3 py-1.5 text-xs font-medium text-brand-800 hover:bg-brand-50 disabled:opacity-50"
+        >
+          {targetsLoading ? "Sélection…" : "Numéros à contacter"}
+        </button>
         {open && (
           <a
             href={`/admin/campagnes-sms?request=${requestId}`}
@@ -154,6 +204,50 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
       </p>
 
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {targetsError && (
+        <p className="mt-2 text-xs text-red-600">{targetsError}</p>
+      )}
+
+      {targets && (
+        <div className="mt-3 rounded-lg border border-brand-200 bg-white p-3">
+          <p className="text-xs font-medium text-slate-900">
+            {targets.quotaLabel}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            {targets.selectedCount}/{targets.quota} mobiles sélectionnés
+            {targets.shortfall > 0
+              ? ` · ${targets.shortfall} manquant${targets.shortfall > 1 ? "s" : ""} dans le rayon`
+              : ""}
+            . Du plus proche au plus loin, critères du particulier.
+          </p>
+          {targets.phones.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">
+              Aucun mobile joignable pour ces critères.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 break-all font-mono text-xs text-slate-800">
+                {targets.phones.join(", ")}
+              </p>
+              <ul className="mt-2 max-h-48 space-y-1 overflow-auto text-xs text-slate-700">
+                {targets.artisans.map((a) => (
+                  <li key={a.siret}>
+                    <span className="font-medium">{a.companyName}</span>
+                    {" · "}
+                    {a.city}
+                    {a.distanceKm != null
+                      ? ` · ${a.distanceKm.toFixed(1)} km`
+                      : ""}
+                    {" · "}
+                    {a.phoneE164}
+                    {a.isRge ? " · RGE" : ""}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
 
       {open && stats && (
         <div className="mt-3 space-y-3">

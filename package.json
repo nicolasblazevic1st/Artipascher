@@ -14,7 +14,9 @@
     "scan:bodacc": "npx tsx scripts/scan-bodacc-procedures.mts",
     "scan:bodacc:retry": "npx tsx scripts/scan-bodacc-procedures.mts --retry-unavailable --delay-ms=800 --concurrency=1",
     "bodacc:list": "npx tsx scripts/list-bodacc-active.mts",
-    "bodacc:stats": "npx tsx scripts/list-bodacc-active.mts --stats"
+    "bodacc:stats": "npx tsx scripts/list-bodacc-active.mts --stats",
+    "fixtures:rge": "npx tsx scripts/verify-rge.mts",
+    "sync:rge": "npx tsx scripts/sync-rge.mts"
   },
   "dependencies": {
     "next": "^16.2.12",

@@ -2,6 +2,8 @@ import {
   checkBodaccCollectiveProcedures,
   type BodaccProcedureCheck,
 } from "./bodacc";
+import { checkRgeBySiret } from "./rge-verification";
+import { updateArtisanBySiret } from "./artisans-db";
 import {
   analyzeDocumentFile,
   checkDocumentConsistency,
@@ -16,6 +18,7 @@ import type {
   ProLevel1Audit,
   ProRegistration,
   ProTradeSelection,
+  RgeVerificationSnapshot,
 } from "./store-types";
 
 export async function enrichProDocumentsWithOcr(
@@ -106,7 +109,7 @@ function snapshotBodacc(check: BodaccProcedureCheck): BodaccVerificationSnapshot
 }
 
 /**
- * OCR + BODACC + suggestion auto.
+ * OCR + BODACC + RGE ADEME + suggestion auto.
  * Ne certifie plus automatiquement : les docs restent « en attente »
  * pour validation manuelle admin (sauf refus dur BODACC côté appelant).
  */
@@ -118,10 +121,11 @@ export async function processLevel1Documents(
   documents: ProDocument[],
   tradeSelections: ProTradeSelection[]
 ) {
-  const [documentsWithOcr, selectionsWithOcr, bodaccCheck] = await Promise.all([
+  const [documentsWithOcr, selectionsWithOcr, bodaccCheck, rge] = await Promise.all([
     enrichProDocumentsWithOcr(pro, documents),
     enrichTradeSelectionsWithOcr(pro, tradeSelections),
     checkBodaccCollectiveProcedures(pro.siren),
+    checkRgeBySiret(pro.siret),
   ]);
 
   const bodacc = snapshotBodacc(bodaccCheck);
@@ -153,6 +157,19 @@ export async function processLevel1Documents(
   if (bodacc.status === "unavailable") {
     console.warn("[level1] BODACC indisponible à l'inscription", bodacc.error);
   }
+  if (rge.status === "unavailable") {
+    console.warn("[level1] ADEME RGE indisponible à l'inscription", rge.error);
+  } else {
+    await updateArtisanBySiret(pro.siret, {
+      rge: {
+        isRge: rge.isRge && rge.status === "verified",
+        status: rge.status,
+        checkedAt: rge.checkedAt,
+        domains: rge.domains,
+        validUntil: rge.validUntil,
+      },
+    }).catch(() => undefined);
+  }
 
   const level1Audit = buildLevel1AuditFromEnrichment(
     {
@@ -175,7 +192,8 @@ export async function processLevel1Documents(
         ...(bodacc.status === "active_procedure" ? rejectionReasons : []),
       ],
       suggestedAt: new Date().toISOString(),
-    }
+    },
+    rge
   );
 
   return {
@@ -189,6 +207,7 @@ export async function processLevel1Documents(
     ocrSuggest: level1Audit.ocrSuggest,
     level1Audit,
     bodacc,
+    rge,
   };
 }
 
@@ -197,7 +216,8 @@ export function buildLevel1AuditFromEnrichment(
   documents: ProDocument[],
   tradeSelections: ProTradeSelection[],
   bodacc?: BodaccVerificationSnapshot,
-  ocrSuggest?: ProLevel1Audit["ocrSuggest"]
+  ocrSuggest?: ProLevel1Audit["ocrSuggest"],
+  rge?: RgeVerificationSnapshot
 ): ProLevel1Audit {
   const globalIssues = [
     ...(documents.flatMap((d) => d.consistencyIssues ?? [])),
@@ -223,5 +243,6 @@ export function buildLevel1AuditFromEnrichment(
     ocrSuggest,
     globalIssues,
     bodacc: bodacc ?? pro.level1Audit?.bodacc,
+    rge: rge ?? pro.level1Audit?.rge,
   };
 }

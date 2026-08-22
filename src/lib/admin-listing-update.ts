@@ -291,6 +291,12 @@ export async function applyAdminListingUpdate(
     }
   }
 
+  if (hasField("requireRge")) {
+    const raw = body.requireRge;
+    if (raw === true || raw === "true") patch.requireRge = true;
+    else patch.requireRge = null;
+  }
+
   if (hasField("isTest")) {
     patch.isTest = body.isTest === true || body.isTest === "true";
   }

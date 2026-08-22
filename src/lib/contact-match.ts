@@ -16,6 +16,12 @@ import {
 import { getArtisanProspects } from "./store";
 import type { ProRegistration, WorkRequest } from "./store-types";
 import { parseMinGoogleRating } from "./google-rating";
+import { isGooglePlacesEnabled } from "./google-places";
+import {
+  artisanNeedsGoogleRating,
+  enrichArtisanWithPlaces,
+} from "./places-quota";
+import { resolveProIsRge } from "./rge-resolve";
 import {
   TRADE_CATEGORY_TO_WORK,
   WORK_TO_TRADE_CATEGORY,
@@ -90,7 +96,7 @@ async function resolveProGoogleRating(
 
 /**
  * Critères client pour débloquer un contact (consultation libre tous départements) :
- * métier/NAF, entreprise active, RC + décennale, ancienneté, note Google.
+ * métier/NAF, entreprise active, RC + décennale, RGE, ancienneté, note Google.
  * Les annonces démo sans critères NAF restent ouvertes aux pros approuvés.
  */
 export async function evaluateProContactMatch(
@@ -158,9 +164,29 @@ export async function evaluateProContactMatch(
     }
   }
 
+  if (request.requireRge === true) {
+    const isRge = await resolveProIsRge(pro);
+    if (!isRge) {
+      return {
+        ok: false,
+        code: "criteria",
+        reason:
+          "Le client exige un artisan RGE (mention vérifiée sur l’annuaire ADEME).",
+        missingItems: ["Label RGE (ADEME)"],
+      };
+    }
+  }
+
   const minRating = parseMinGoogleRating(request.minGoogleRating);
   if (minRating != null) {
-    const rating = await resolveProGoogleRating(pro);
+    let rating = await resolveProGoogleRating(pro);
+    if (rating == null && isGooglePlacesEnabled()) {
+      const artisan = await getArtisanBySiret(pro.siret);
+      if (artisan && artisanNeedsGoogleRating(artisan)) {
+        await enrichArtisanWithPlaces(artisan, "production");
+        rating = await resolveProGoogleRating(pro);
+      }
+    }
     if (rating != null && rating < minRating) {
       return {
         ok: false,

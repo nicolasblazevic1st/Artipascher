@@ -11,6 +11,7 @@ import {
 import type { EnrichedArtisan } from "./artisans-types";
 import { STALE_ENRICHMENT_MS } from "./artisans-types";
 import { isGooglePlacesEnabled, lookupPlacePhone } from "./google-places";
+import { artisanIsRge } from "./rge-verification";
 
 export type PlacesSpendKind = "production" | "enrichment";
 
@@ -117,8 +118,15 @@ export async function boostDailyEnrichmentBudget(extra: number): Promise<{
 
 export { MAX_SINGLE_DAILY_BOOST };
 
+export function artisanNeedsGoogleRating(a: EnrichedArtisan): boolean {
+  if (a.status !== "active" || a.optedOut) return false;
+  if (a.enrichmentStatus === "no_match") return false;
+  return typeof a.googleRating !== "number" || !Number.isFinite(a.googleRating);
+}
+
 function priorityScore(a: EnrichedArtisan, now: number): number {
   if (a.enrichmentStatus === "invalid_phone" || a.lastSmsFailedAt) return 3000;
+  if (artisanIsRge(a) && artisanNeedsGoogleRating(a)) return 2800;
   if (a.enrichmentStatus === "pending" || !a.phone) return 2000;
   const verified = a.lastVerifiedAt ? new Date(a.lastVerifiedAt).getTime() : 0;
   if (!verified || now - verified > STALE_ENRICHMENT_MS) return 1000;
@@ -210,20 +218,31 @@ export function isPlacesPhoneTarget(a: EnrichedArtisan): boolean {
   return !a.phone?.trim() || a.enrichmentStatus === "invalid_phone";
 }
 
+/** Cible Places pour compléter une note Google (priorité RGE). */
+export function isPlacesRatingTarget(a: EnrichedArtisan): boolean {
+  return artisanNeedsGoogleRating(a);
+}
+
 /**
  * Enrichissement production : jamais bloqué par le plafond mensuel.
  * Enrichit les artisans du rayon sans téléphone (ou invalid_phone).
  */
 export async function enrichNearbyForProduction(
   artisans: EnrichedArtisan[],
-  options?: { maxArtisans?: number }
+  options?: { maxArtisans?: number; includeMissingRatings?: boolean }
 ): Promise<{
   enriched: number;
   requestsUsed: number;
   errors: string[];
 }> {
   const max = options?.maxArtisans ?? 30;
-  const targets = artisans.filter(isPlacesPhoneTarget).slice(0, max);
+  const phoneTargets = artisans.filter(isPlacesPhoneTarget);
+  const ratingTargets = options?.includeMissingRatings
+    ? artisans
+        .filter((a) => isPlacesRatingTarget(a) && !isPlacesPhoneTarget(a))
+        .sort((a, b) => Number(artisanIsRge(b)) - Number(artisanIsRge(a)))
+    : [];
+  const targets = [...phoneTargets, ...ratingTargets].slice(0, max);
 
   let requestsUsed = 0;
   let enriched = 0;
