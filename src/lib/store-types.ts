@@ -349,8 +349,8 @@ export interface WorkRequest {
   /**
    * Ancienneté d'entreprise exigée pour les contacts / SMS :
    * - true : uniquement 5+ (≥ 5 ans)
-   * - false : uniquement 0 à 5 ans (&lt; 5 ans)
-   * - undefined (historique) : pas de filtre d'âge
+   * - false : uniquement 0 à 5 ans (&lt; 5 ans) — anciennes demandes
+   * - undefined : indifférent (pas de filtre d'âge)
    */
   preferEstablishedCompany?: boolean;
   /**

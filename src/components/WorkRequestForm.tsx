@@ -149,7 +149,9 @@ export default function WorkRequestForm({
     useState("");
   const [descriptionTouched, setDescriptionTouched] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
-  const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
+  const [preferEstablishedCompany, setPreferEstablishedCompany] = useState<
+    boolean | undefined
+  >(undefined);
   const [maxContactArtisans, setMaxContactArtisans] = useState(5);
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
   const [acceptContactTerms, setAcceptContactTerms] = useState(false);
@@ -576,7 +578,7 @@ export default function WorkRequestForm({
     formData.delete("auctionDurationDays");
     formData.set(
       "preferEstablishedCompany",
-      preferEstablishedCompany ? "true" : "false"
+      preferEstablishedCompany === true ? "true" : "any"
     );
     formData.set("maxContactArtisans", String(maxContactArtisans));
     if (minGoogleRating !== "") {
@@ -653,6 +655,7 @@ export default function WorkRequestForm({
     setWorkScope("");
     setClientSiret("");
     setCompanyVerification(null);
+    setPreferEstablishedCompany(undefined);
     form.reset();
   }
 
@@ -1270,7 +1273,7 @@ export default function WorkRequestForm({
         <div className="grid gap-2 sm:grid-cols-2">
           <label
             className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-              !preferEstablishedCompany
+              preferEstablishedCompany !== true
                 ? "border-brand-500 bg-brand-50"
                 : "border-slate-200 bg-white"
             }`}
@@ -1278,17 +1281,18 @@ export default function WorkRequestForm({
             <input
               type="radio"
               name="preferEstablishedCompany"
-              value="false"
-              checked={!preferEstablishedCompany}
-              onChange={() => setPreferEstablishedCompany(false)}
+              value="any"
+              checked={preferEstablishedCompany !== true}
+              onChange={() => setPreferEstablishedCompany(undefined)}
               className="mt-1"
             />
             <span>
               <span className="font-semibold text-slate-900">
-                0 à 5 ans d&apos;existence
+                Indifférent
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Uniquement des entreprises créées il y a moins de 5 ans.
+                Pas de filtre d&apos;ancienneté : tous les artisans
+                correspondants.
               </span>
             </span>
           </label>
