@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import BetaClosedNotice from "@/components/BetaClosedNotice";
 import WorkRequestForm from "@/components/WorkRequestForm";
 import { getIsBetaMode } from "@/lib/beta-server";
 import { getClientSession } from "@/lib/client-auth";
+import { getClientById } from "@/lib/store";
 
 export const metadata: Metadata = {
   title: "Demande de travaux — Sans compte obligatoire",
@@ -21,12 +21,8 @@ export default async function PublicDemandePage({
     searchParams,
     getClientSession(),
   ]);
-  if (session) {
-    const q = categoryParam
-      ? `?category=${encodeURIComponent(categoryParam)}`
-      : "";
-    redirect(`/particulier/espace/demandes/nouvelle${q}`);
-  }
+  const client = session ? await getClientById(session.clientId) : null;
+  const loggedIn = Boolean(session && client);
 
   const beta = await getIsBetaMode();
 
@@ -53,22 +49,38 @@ export default async function PublicDemandePage({
         ) : (
           <div className="mt-8">
             <WorkRequestForm
-              guestMode
-              successHref="/particulier"
+              guestMode={!loggedIn}
+              successHref={
+                loggedIn ? "/particulier/espace/demandes" : "/particulier"
+              }
               initialCategory={categoryParam}
+              defaults={
+                loggedIn && client
+                  ? {
+                      firstName: client.firstName ?? session?.firstName ?? "",
+                      lastName: client.lastName ?? session?.lastName ?? "",
+                      email: client.email ?? session?.email ?? "",
+                      phone: client.phone,
+                      phoneVerifiedE164: client.phoneVerifiedE164,
+                      phoneVerifiedAt: client.phoneVerifiedAt,
+                    }
+                  : undefined
+              }
             />
           </div>
         )}
 
-        <p className="mt-6 text-center text-sm text-slate-600">
-          Déjà un compte ?{" "}
-          <Link
-            href="/particulier/espace/login?from=/particulier/espace/demandes/nouvelle"
-            className="font-medium text-brand-700 underline"
-          >
-            Se connecter
-          </Link>
-        </p>
+        {!loggedIn ? (
+          <p className="mt-6 text-center text-sm text-slate-600">
+            Déjà un compte ?{" "}
+            <Link
+              href="/particulier/espace/login?from=/particulier/espace/demandes/nouvelle"
+              className="font-medium text-brand-700 underline"
+            >
+              Se connecter
+            </Link>
+          </p>
+        ) : null}
       </div>
     </div>
   );
