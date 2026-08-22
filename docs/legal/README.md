@@ -1,7 +1,7 @@
 # Documents légaux Nord Artisan Pro — brouillon
 
 **Version :** 1.8-brouillon  
-**Date :** 21 août 2026  
+**Date :** 22 août 2026  
 
 > Documents opérationnels à faire relire par un avocat.  
 > Source site : `src/lib/legal.ts`.

@@ -11,20 +11,20 @@ export const metadata: Metadata = {
 
 export default function CguPage() {
   return (
-    <LegalDocument title="Conditions générales d'utilisation (CGU)">
+    <LegalDocument title="Conditions Générales d'Utilisation (CGU)">
       <section>
         <h2>1. Objet</h2>
         <p className="mt-3">
-          Les présentes Conditions générales d&apos;utilisation (ci-après « CGU »)
-          régissent l&apos;accès et l&apos;utilisation du site{" "}
+          Les présentes Conditions Générales d&apos;Utilisation (ci-après « CGU »)
+          régissent l&apos;accès et l&apos;utilisation du Site{" "}
           <strong>{LEGAL_PUBLISHER.siteUrl.replace("https://", "")}</strong>{" "}
           (ci-après « le Site » ou « la Plateforme ») édité par{" "}
-          {LEGAL_PUBLISHER.brand} / {LEGAL_PUBLISHER.legalName} (ci-après «
-          l&apos;Éditeur »).
+          {LEGAL_PUBLISHER.brand} / {LEGAL_PUBLISHER.legalName} (ci-après
+          « l&apos;Éditeur »).
         </p>
         <p className="mt-3">
           Toute utilisation du Site implique l&apos;acceptation sans réserve des
-          présentes CGU. En cas de désaccord, l&apos;utilisateur doit cesser
+          présentes CGU. En cas de désaccord, l&apos;Utilisateur doit cesser
           d&apos;utiliser le Site.
         </p>
       </section>
@@ -33,16 +33,29 @@ export default function CguPage() {
         <h2>2. Définitions</h2>
         <ul>
           <li>
+            <strong>CGU</strong> : les présentes Conditions Générales
+            d&apos;Utilisation.
+          </li>
+          <li>
+            <strong>Site</strong> / <strong>Plateforme</strong> : le site
+            internet {LEGAL_PUBLISHER.siteUrl.replace("https://", "")}, édité
+            par l&apos;Éditeur.
+          </li>
+          <li>
+            <strong>Éditeur</strong> : {LEGAL_PUBLISHER.brand} /{" "}
+            {LEGAL_PUBLISHER.legalName}.
+          </li>
+          <li>
             <strong>Client</strong> : particulier, société ou copropriété
             (syndicat / syndic) utilisant la Plateforme pour publier une demande
             de travaux. Les coordonnées du Client restent masquées jusqu&apos;au
-            déblocage par un Professionnel ; une demande de copropriété est
+            Déblocage par un Professionnel ; une demande de copropriété est
             signalée par un bandeau, sans identification de l&apos;immeuble.
           </li>
           <li>
             <strong>Professionnel / Artisan</strong> : entreprise du bâtiment
             inscrite au registre du commerce, vérifiée (SIRET, documents),
-            autorisée à consulter les annonces et à débloquer le contact des
+            autorisée à consulter les Annonces et à débloquer le contact des
             Clients.
           </li>
           <li>
@@ -50,22 +63,22 @@ export default function CguPage() {
             (visiteur, Client ou Professionnel).
           </li>
           <li>
-            <strong>Annonce / offre</strong> : publication d&apos;une demande de
+            <strong>Annonce / Offre</strong> : publication d&apos;une demande de
             travaux validée, consultable par les Professionnels (tous
             départements du périmètre) pendant la durée choisie par le Client ;
-            le déblocage des coordonnées reste soumis aux critères définis par
+            le Déblocage des coordonnées reste soumis aux critères définis par
             le Client.
           </li>
           <li>
-            <strong>Mise en contact / Déblocage</strong> : accès payant
+            <strong>Mise en Contact / Déblocage</strong> : accès payant
             (paiement unitaire au ticket du chantier — voir{" "}
             <Link href="/cgv">CGV</Link>) aux coordonnées d&apos;un Client après
             autorisation de contact.
           </li>
           <li>
-            <strong>Solde résiduel</strong> : éventuel crédit restant sur le
-            compte Professionnel (remboursement, ancien crédit),
-            utilisable pour un déblocage s&apos;il est suffisant.
+            <strong>Solde Résiduel</strong> : éventuel crédit restant sur le
+            compte Professionnel (remboursement, ancien crédit), utilisable
+            pour un Déblocage s&apos;il est suffisant.
           </li>
         </ul>
       </section>
@@ -83,7 +96,7 @@ export default function CguPage() {
             pour le contacter et établir un devis hors Plateforme ;
           </li>
           <li>
-            au Client d&apos;être contacté par le genre d&apos;artisan qu&apos;il
+            au Client d&apos;être contacté par le genre d&apos;Artisan qu&apos;il
             a choisi, selon les critères définis dans sa demande (métier,
             ancienneté, etc.).
           </li>
@@ -149,7 +162,7 @@ export default function CguPage() {
         <p className="mt-3">
           L&apos;Éditeur applique ces exigences{" "}
           <strong>par corps de métier</strong> à l&apos;inscription et peut
-          refuser un dossier non conforme. Cette classification plateforme est{" "}
+          refuser un dossier non conforme. Cette classification Plateforme est{" "}
           <strong>indicative</strong> et ne se substitue pas aux obligations
           légales de l&apos;Artisan envers ses clients. L&apos;entreprise ne
           doit pas faire l&apos;objet d&apos;une procédure collective active
@@ -183,9 +196,9 @@ export default function CguPage() {
             d&apos;une demande.
           </li>
           <li>
-            Le Client peut indiquer une préférence d&apos;
-            <strong>ancienneté d&apos;entreprise</strong> (0&nbsp;à&nbsp;5&nbsp;ans
-            ou 5&nbsp;ans et plus) : ce critère filtre les Artisans qui peuvent
+            Le Client peut indiquer une préférence d&apos;<strong>ancienneté
+            d&apos;entreprise</strong> (0&nbsp;à&nbsp;5&nbsp;ans ou
+            5&nbsp;ans et plus) : ce critère filtre les Artisans qui peuvent
             le contacter / être prospectés.
           </li>
           <li>
@@ -193,14 +206,14 @@ export default function CguPage() {
             <strong>alerte SMS</strong> lorsqu&apos;un Artisan souhaite le
             contacter. Si cette option est activée, la demande de contact est{" "}
             <strong>acceptée automatiquement</strong>, dans la limite de{" "}
-            <strong>5 Artisans</strong> par annonce ; le Client est informé
+            <strong>5 Artisans</strong> par Annonce ; le Client est informé
             (SMS, email et/ou notification). Si l&apos;option est désactivée, le
             Client accepte ou refuse manuellement sous 48&nbsp;h.
           </li>
           <li>
             Les coordonnées du Client ne sont communiquées à un Professionnel
             qu&apos;après autorisation de contact et{" "}
-            <strong>déblocage</strong> (paiement unitaire — voir{" "}
+            <strong>Déblocage</strong> (paiement unitaire — voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
         </ul>
@@ -211,27 +224,27 @@ export default function CguPage() {
         <ul>
           <li>
             Une demande de travaux peut être validée par l&apos;équipe
-            Nord Artisan Pro avant publication de l&apos;annonce.
+            Nord Artisan Pro avant publication de l&apos;Annonce.
           </li>
           <li>
             Les devis sont établis{" "}
             <strong>directement entre le Client et l&apos;Artisan</strong>{" "}
-            (visite, échange hors Plateforme). Nord Artisan Pro ne centralise pas de
-            devis concurrentiels.
+            (visite, échange hors Plateforme). Nord Artisan Pro ne
+            centralise pas de devis concurrentiels.
           </li>
           <li>
             Après contact, le Client reste libre de poursuivre ou non avec
             l&apos;Artisan ; aucune attribution automatique n&apos;est imposée.
           </li>
           <li>
-            Le déblocage des coordonnées est soumis à la correspondance du
+            Le Déblocage des coordonnées est soumis à la correspondance du
             profil Professionnel avec les critères choisis par le Client
             (métier, entreprise active, assurances, ancienneté, note Google le
-            cas échéant) et au paiement de la mise en contact (voir{" "}
+            cas échéant) et au paiement de la Mise en Contact (voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
           <li>
-            Le déblocage donne accès aux{" "}
+            Le Déblocage donne accès aux{" "}
             <strong>coordonnées</strong> (identité, téléphone, email, adresse) :
             il <strong>ne garantit pas</strong> une réponse du Client ni la
             conclusion d&apos;un chantier.
@@ -257,9 +270,9 @@ export default function CguPage() {
             Ces envois peuvent être déclenchés{" "}
             <strong>manuellement</strong> ou{" "}
             <strong>automatiquement</strong> lorsqu&apos;une demande Client est
-            validée et publiée comme offre (enchère) destinée aux Professionnels,
+            validée et publiée comme Offre (enchère) destinée aux Professionnels,
             dans la limite des places de contact prévues (notamment 5 Artisans
-            maximum par offre) ;
+            maximum par Offre) ;
           </li>
           <li>
             les SMS marketing sont transmis via le prestataire technique{" "}
@@ -386,7 +399,7 @@ export default function CguPage() {
         <p className="mt-3">
           L&apos;Éditeur ne garantit pas la conclusion d&apos;un contrat de
           travaux, ni la qualité, le délai ou le prix final des prestations
-          réalisées par les Artisans, ni le volume d&apos;offres disponibles
+          réalisées par les Artisans, ni le volume d&apos;Offres disponibles
           près d&apos;un Professionnel. Toute réclamation relative aux travaux
           doit être adressée à l&apos;Artisan concerné.
         </p>
