@@ -38,6 +38,7 @@ export interface ResolvedAuction {
   startPrice?: number;
   status: "active" | "ended";
   endsAt?: string;
+  publishedAt?: string;
   shareToken?: string;
   source: "sample" | "workRequest";
   isTest?: boolean;
@@ -71,6 +72,7 @@ function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
     startPrice: request.startPrice,
     status: active ? "active" : "ended",
     endsAt,
+    publishedAt: request.reviewedAt ?? request.createdAt,
     shareToken: request.shareToken,
     source: "workRequest",
     isTest: request.isTest === true,
@@ -89,6 +91,7 @@ function fromSample(auction: Auction): ResolvedAuction {
     startPrice: auction.startPrice,
     status: auction.status,
     endsAt: auction.endsAt,
+    publishedAt: auction.publishedAt,
     source: "sample",
     isTest: auction.isTest === true,
     isCopropriete: auction.isCopropriete === true,
@@ -141,6 +144,7 @@ export async function workRequestToAuctionCard(
     maxAcceptedArtisans: resolveMaxContactArtisans(request),
     status: active ? "active" : "ended",
     endsAt: endsAt ?? new Date().toISOString(),
+    publishedAt: request.reviewedAt ?? request.createdAt,
     isTest: request.isTest === true,
     isCopropriete: request.clientKind === "copropriete",
     workScope: request.workScope,

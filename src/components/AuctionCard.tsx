@@ -1,7 +1,7 @@
 import Link from "next/link";
-import AuctionCountdown from "@/components/AuctionCountdown";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import CoproprieteBanner from "@/components/CoproprieteBanner";
+import PublishedDate from "@/components/PublishedDate";
 import TestBanner from "@/components/TestBanner";
 import {
   Auction,
@@ -12,6 +12,7 @@ import {
   isContactSlotsBannerEnabled,
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 } from "@/lib/contact-slots";
+import { publicOfferPath } from "@/lib/public-offers";
 
 export default function AuctionCard({
   auction,
@@ -66,7 +67,7 @@ export default function AuctionCard({
           {auction.description}
         </p>
 
-        <AuctionCountdown endsAt={auction.endsAt} className="mt-3" />
+        <PublishedDate publishedAt={auction.publishedAt} className="mt-3" />
 
         <dl className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-center">
           <div>
@@ -82,7 +83,7 @@ export default function AuctionCard({
         </dl>
 
         <Link
-          href={`/encheres/${auction.id}`}
+          href={publicOfferPath(auction.id)}
           className="mt-4 rounded-lg bg-brand-600 py-2.5 text-center text-sm font-medium text-white transition hover:bg-brand-700"
         >
           Voir l&apos;offre

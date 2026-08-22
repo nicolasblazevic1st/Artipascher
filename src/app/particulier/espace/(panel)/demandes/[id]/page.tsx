@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import AuctionCountdown from "@/components/AuctionCountdown";
 import ClientContactRequestsPanel from "@/components/client/ClientContactRequestsPanel";
 import ClientDemandePhotosPanel from "@/components/client/ClientDemandePhotosPanel";
 import ClientSubmitQuotePanel from "@/components/client/ClientSubmitQuotePanel";
@@ -9,11 +8,8 @@ import ShareAuctionPanel from "@/components/client/ShareAuctionPanel";
 import CoproprieteBanner from "@/components/CoproprieteBanner";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
 import { formatPublicLocation, formatWorkRequestAddress } from "@/lib/client-address";
-import {
-  formatWorkRequestAuctionDuration,
-  resolveAuctionEndsAt,
-} from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
+import { formatPublishedDate, publishedAtForRequest } from "@/lib/public-offers";
 import { getClientSession } from "@/lib/client-auth";
 import { formatWorkPrestationLabel } from "@/lib/pricing-tiers";
 import {
@@ -156,9 +152,11 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Durée de l&apos;annonce</dt>
+            <dt className="text-xs text-slate-500">Date de publication</dt>
             <dd className="mt-1 text-sm font-semibold">
-              {formatWorkRequestAuctionDuration(request)}
+              {request.status === "approved"
+                ? formatPublishedDate(publishedAtForRequest(request)) ?? "—"
+                : "Pas encore publiée"}
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
@@ -201,25 +199,17 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           </div>
         </dl>
 
-        {request.status === "approved" && (
-          <div className="mt-4 space-y-2">
-            <AuctionCountdown
-              endsAt={resolveAuctionEndsAt({
-                auctionEndsAt: request.auctionEndsAt,
-                auctionDurationHours: request.auctionDurationHours,
-                auctionDurationDays: request.auctionDurationDays,
-                from: request.reviewedAt ?? request.createdAt,
+        {request.status === "approved" && request.auctionEndsAt && (
+          <p className="mt-4 text-sm text-slate-600">
+            Visible jusqu&apos;au{" "}
+            <strong>
+              {new Date(request.auctionEndsAt).toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
               })}
-            />
-            {request.auctionEndsAt && (
-              <p className="text-sm text-slate-600">
-                Fin de l&apos;annonce :{" "}
-                <strong>
-                  {new Date(request.auctionEndsAt).toLocaleString("fr-FR")}
-                </strong>
-              </p>
-            )}
-          </div>
+            </strong>
+          </p>
         )}
 
         <section className="mt-10">

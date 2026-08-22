@@ -130,8 +130,8 @@ function isYoungCompany(createdAt?: string): boolean {
 
 export function buildDefaultCampaignMessage(request: WorkRequest): string {
   const auctionPath = request.auctionId
-    ? `/encheres/${request.auctionId}`
-    : "/encheres";
+    ? `/offres/${request.auctionId}`
+    : "/offres";
   const url = absoluteUrl(auctionPath);
   const prestation = formatWorkPrestationLabel(request);
   return (
@@ -573,7 +573,7 @@ export async function previewSmsCampaignDetailed(
     city: request.city,
     department: request.department,
     auctionUrl: absoluteUrl(
-      request.auctionId ? `/encheres/${request.auctionId}` : "/encheres"
+      request.auctionId ? `/offres/${request.auctionId}` : "/offres"
     ),
     defaultMessage: buildDefaultCampaignMessage(request),
     campaignSize,

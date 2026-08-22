@@ -218,7 +218,7 @@ export default async function AdminOffreDetailPage({ params }: Props) {
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
             {auction.status !== "unpublished" && (
             <Link
-              href={`/encheres/${auction.id}`}
+              href={`/offres/${auction.id}`}
               target="_blank"
               className="text-brand-700 hover:underline"
             >

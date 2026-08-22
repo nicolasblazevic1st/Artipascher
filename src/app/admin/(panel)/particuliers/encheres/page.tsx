@@ -123,7 +123,7 @@ export default async function AdminOffresPage() {
                 )}
                 {auction.status !== "unpublished" && (
                   <Link
-                    href={`/encheres/${auction.id}`}
+                    href={`/offres/${auction.id}`}
                     className="text-slate-600 hover:underline"
                     target="_blank"
                   >

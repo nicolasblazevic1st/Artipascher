@@ -6,11 +6,13 @@ import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import CoproprieteBanner from "@/components/CoproprieteBanner";
 import ProjectPhotos from "@/components/ProjectPhotos";
 import PreviousQuotePanel from "@/components/PreviousQuotePanel";
+import PublishedDate from "@/components/PublishedDate";
 import TestBanner from "@/components/TestBanner";
 import { resolveAuctionEndsAt } from "@/lib/auction-duration";
 import { formatPublicLocation } from "@/lib/client-address";
 import { stripTestLabel } from "@/lib/demo-banners";
 import { resolveMaxContactArtisans } from "@/lib/contact-slots";
+import { publishedAtForRequest } from "@/lib/public-offers";
 import {
   buildShareText,
   absoluteUrl,
@@ -68,8 +70,8 @@ export default async function SharedChantierPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-      <Link href="/encheres" className="text-sm font-medium text-brand-700">
-        ← Voir tous les chantiers
+      <Link href="/offres" className="text-sm font-medium text-brand-700">
+        ← Voir toutes les offres
       </Link>
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -91,6 +93,10 @@ export default async function SharedChantierPage({ params }: Props) {
             <p className="mt-1 text-slate-500">
               {formatPublicLocation(request)}
             </p>
+            <PublishedDate
+              publishedAt={publishedAtForRequest(request)}
+              className="mt-2"
+            />
           </div>
           <span
             className={`rounded-full px-4 py-1.5 text-sm font-medium ${

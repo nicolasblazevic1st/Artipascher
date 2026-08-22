@@ -95,7 +95,7 @@ export default async function ProfessionnelPage() {
               Se connecter
             </Link>
             <Link
-              href="/encheres"
+              href="/offres"
               className="rounded-xl border border-slate-600 px-8 py-3 font-semibold hover:bg-slate-800"
             >
               Voir les chantiers

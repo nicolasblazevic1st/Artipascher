@@ -130,7 +130,7 @@ export default async function HomePage() {
               </p>
             </div>
             <Link
-              href="/encheres"
+              href="/offres"
               className="text-sm font-semibold text-brand-700 hover:text-brand-800"
             >
               Voir toutes les offres →

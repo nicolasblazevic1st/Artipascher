@@ -28,6 +28,8 @@ export interface Auction {
   maxAcceptedArtisans: number;
   status: AuctionStatus;
   endsAt: string;
+  /** Date de publication (validation admin, sinon création). */
+  publishedAt?: string;
   /** Annonce de démonstration (bande de démonstration). */
   isTest?: boolean;
   /** Première photo projet (visible sans crédit). */
@@ -150,7 +152,7 @@ export const FAQ_ITEMS = [
   {
     question: "Combien de temps reste visible une annonce ?",
     answer:
-      "Vous choisissez la durée lors de votre demande : de 6 heures à 3 mois maximum. Un compteur indique le temps restant sur chaque fiche une fois l’annonce publiée.",
+      "Après validation, l’annonce est publiée avec sa date de publication. Elle reste visible jusqu’à clôture (30 jours par défaut).",
   },
   {
     question: "Combien coûte le déblocage pour le professionnel ?",
