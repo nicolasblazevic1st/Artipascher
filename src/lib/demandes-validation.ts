@@ -112,12 +112,6 @@ function startOfLocalDay(date: Date): Date {
   return d;
 }
 
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
 function toIsoDateLocal(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -126,18 +120,11 @@ function toIsoDateLocal(date: Date): string {
 }
 
 /**
- * Date minimale de début de travaux : aujourd'hui, ou fin d'annonce
- * (aujourd'hui + ceil(heures/24) jours calendaires) si une durée en heures est fournie.
+ * Date minimale de début de travaux : aujourd'hui (démarrage rapide possible).
+ * L'argument durée d'annonce est ignoré (conservé pour compatibilité des appels).
  */
-export function minRequestedWorkStartDate(auctionDurationHours?: number): string {
-  const today = startOfLocalDay(new Date());
-  const calendarDays =
-    typeof auctionDurationHours === "number" &&
-    Number.isFinite(auctionDurationHours) &&
-    auctionDurationHours > 0
-      ? durationHoursToCalendarDays(auctionDurationHours)
-      : 0;
-  return toIsoDateLocal(addDays(today, calendarDays));
+export function minRequestedWorkStartDate(_auctionDurationHours?: number): string {
+  return toIsoDateLocal(startOfLocalDay(new Date()));
 }
 
 /** @deprecated Prefer durationHoursToCalendarDays from auction-duration. */
@@ -155,7 +142,7 @@ export function maxRequestedWorkStartDate(): string {
 
 export function validateRequestedWorkStartDate(
   value: unknown,
-  auctionDurationHours?: number
+  _auctionDurationHours?: number
 ): string | null {
   if (typeof value !== "string" || !value.trim()) {
     return "Indiquez la date de début de travaux souhaitée.";
@@ -175,21 +162,6 @@ export function validateRequestedWorkStartDate(
 
   if (startDay < today) {
     return "La date de début de travaux doit être aujourd'hui ou ultérieure.";
-  }
-
-  const hours =
-    typeof auctionDurationHours === "number" &&
-    Number.isFinite(auctionDurationHours) &&
-    auctionDurationHours > 0
-      ? auctionDurationHours
-      : null;
-
-  if (hours != null) {
-    const calendarDays = durationHoursToCalendarDays(hours);
-    const minAfterAuction = addDays(today, calendarDays);
-    if (startDay < minAfterAuction) {
-      return `La date de début doit être au plus tôt à la fin de l'annonce (${calendarDays} jour${calendarDays > 1 ? "s" : ""}), soit le ${minAfterAuction.toLocaleDateString("fr-FR")}.`;
-    }
   }
 
   const maxDate = new Date(today);

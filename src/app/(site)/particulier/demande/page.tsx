@@ -9,7 +9,7 @@ import { getClientSession } from "@/lib/client-auth";
 export const metadata: Metadata = {
   title: "Demande de travaux — Sans compte obligatoire",
   description:
-    "Publiez votre demande de travaux dans le Nord-Pas-de-Calais. Compte optionnel pour suivre vos demandes.",
+    "Décrivez votre chantier en 2 minutes. Des artisans du Nord et du Pas-de-Calais vous recontactent. Gratuit, sans compte.",
 };
 
 export default async function PublicDemandePage({
@@ -39,11 +39,11 @@ export default async function PublicDemandePage({
           </Link>
         </p>
         <h1 className="mt-4 text-3xl font-bold text-slate-900">
-          Demande de travaux
+          Décrivez votre projet
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Aucun compte requis pour publier. Créez-en un ensuite si vous souhaitez
-          suivre vos demandes dans votre espace.
+          Gratuit, sans compte. Des artisans du Nord et du Pas-de-Calais vous
+          recontactent — en général sous 24&nbsp;h.
         </p>
 
         {beta ? (
@@ -51,7 +51,7 @@ export default async function PublicDemandePage({
             <BetaClosedNotice title="Création de demandes fermée" />
           </div>
         ) : (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mt-8">
             <WorkRequestForm
               guestMode
               successHref="/particulier"

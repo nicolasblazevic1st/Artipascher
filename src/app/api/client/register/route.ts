@@ -99,7 +99,11 @@ export async function POST(request: NextRequest) {
 
   await markClientPhoneVerified(result.client.id, phoneE164);
   await consumeGuestPhoneVerification(phoneE164);
-  await linkOrphanWorkRequests(result.client.id, result.client.email);
+  await linkOrphanWorkRequests(
+    result.client.id,
+    result.client.email,
+    phoneE164
+  );
   await requestEmailVerification(result.client.email, "client");
 
   return NextResponse.json(
