@@ -588,11 +588,11 @@ export async function updateWorkRequest(
     if (!Object.prototype.hasOwnProperty.call(patch, key)) continue;
     const value = patch[key];
     if (value === null && WORK_REQUEST_CLEARABLE_KEYS.has(key)) {
-      delete (next as Record<string, unknown>)[key];
+      delete (next as unknown as Record<string, unknown>)[key];
       continue;
     }
     if (value !== undefined && value !== null) {
-      (next as Record<string, unknown>)[key] = value;
+      (next as unknown as Record<string, unknown>)[key] = value;
     }
   }
 
