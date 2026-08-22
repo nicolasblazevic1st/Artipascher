@@ -33,6 +33,7 @@ import {
   normalizeSiret,
   type RcsVerificationResult,
 } from "@/lib/rcs";
+import { maxContactArtisansForTier } from "@/lib/contact-slots";
 import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/google-rating";
 import { WORK_SCOPE_LABELS } from "@/lib/copropriete";
 import type { ClientKind, WorkScope } from "@/lib/store-types";
@@ -183,6 +184,7 @@ export default function WorkRequestForm({
         ? [nafOptions[0].code]
         : [];
   const workOptions = getWorkOptionsForNafCodes(effectiveNafCodes);
+  const maxContactCap = maxContactArtisansForTier(pricingTier || undefined);
   const phoneE164 = normalizeFrenchMobile(phone);
   const phoneVerified =
     Boolean(phoneE164) &&
@@ -226,6 +228,12 @@ export default function WorkRequestForm({
     workOptions,
     descriptionTouched,
   ]);
+
+  useEffect(() => {
+    setMaxContactArtisans((current) =>
+      current > maxContactCap ? maxContactCap : current
+    );
+  }, [maxContactCap]);
 
   function handleCategoryChange(next: string) {
     setCategory(next);
@@ -656,6 +664,7 @@ export default function WorkRequestForm({
     setClientSiret("");
     setCompanyVerification(null);
     setPreferEstablishedCompany(undefined);
+    setMaxContactArtisans(5);
     form.reset();
   }
 
@@ -1231,40 +1240,46 @@ export default function WorkRequestForm({
         <p className="text-sm font-medium text-slate-900">
           Qui peut me contacter
         </p>
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-700">
-          Nombre d&apos;artisans
-        </legend>
-        <p className="mb-2 text-xs text-slate-500">
-          Combien d&apos;artisans maximum pourront débloquer vos coordonnées
-          et vous contacter (1 à 5).
+        <p className="text-xs text-slate-500">
+          Choisissez combien d&apos;artisans pourront débloquer vos
+          coordonnées (1 à {maxContactCap}
+          {pricingTier === "bas" ? " pour cette petite intervention" : ""}
+          ).
         </p>
-        <div className="grid grid-cols-5 gap-2">
-          {([1, 2, 3, 4, 5] as const).map((n) => (
-            <label
-              key={n}
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border px-2 py-3 text-sm ${
-                maxContactArtisans === n
-                  ? "border-brand-500 bg-brand-50"
-                  : "border-slate-200 bg-white"
-              }`}
-            >
-              <input
-                type="radio"
-                name="maxContactArtisans"
-                value={n}
-                checked={maxContactArtisans === n}
-                onChange={() => setMaxContactArtisans(n)}
-                className="sr-only"
-              />
-              <span className="text-lg font-semibold text-slate-900">{n}</span>
-              <span className="text-[10px] text-slate-500">
-                {n === 1 ? "artisan" : "artisans"}
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+        <fieldset>
+          <legend className="mb-2 text-sm font-medium text-slate-700">
+            Nombre d&apos;artisans
+          </legend>
+          <div
+            className={`grid gap-2 ${
+              maxContactCap === 3 ? "grid-cols-3" : "grid-cols-5"
+            }`}
+          >
+            {Array.from({ length: maxContactCap }, (_, i) => i + 1).map((n) => (
+              <label
+                key={n}
+                className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border px-2 py-3 text-sm ${
+                  maxContactArtisans === n
+                    ? "border-brand-500 bg-brand-50"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="maxContactArtisans"
+                  value={n}
+                  checked={maxContactArtisans === n}
+                  onChange={() => setMaxContactArtisans(n)}
+                  className="sr-only"
+                />
+                <span className="text-lg font-semibold text-slate-900">{n}</span>
+                <span className="text-[10px] text-slate-500">
+                  {n === 1 ? "artisan" : "artisans"}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-slate-700">

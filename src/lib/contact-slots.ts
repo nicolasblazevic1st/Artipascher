@@ -1,9 +1,21 @@
+import type { PricingTierId } from "@/lib/pricing-tiers";
 import type { WorkRequest } from "@/lib/store-types";
 
-/** Plancher / plafond absolus du choix client. */
+/** Plancher / plafond absolus. */
 export const MIN_CONTACT_ARTISANS = 1;
 /** Max d’artisans pouvant débloquer les coordonnées pour une même demande. */
 export const MAX_CONTACT_UNLOCKS_PER_REQUEST = 5;
+/** Petites interventions (ticket bas) : 3 artisans max, le client peut en choisir moins. */
+export const MAX_CONTACT_UNLOCKS_SMALL_JOB = 3;
+
+/** Plafond selon le ticket : le particulier choisit de 1 jusqu’à ce max. */
+export function maxContactArtisansForTier(
+  tier?: PricingTierId | string | null
+): number {
+  return tier === "bas"
+    ? MAX_CONTACT_UNLOCKS_SMALL_JOB
+    : MAX_CONTACT_UNLOCKS_PER_REQUEST;
+}
 
 /**
  * @deprecated Alias historique — préférer MAX_CONTACT_UNLOCKS_PER_REQUEST.
