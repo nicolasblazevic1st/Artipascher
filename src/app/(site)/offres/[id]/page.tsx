@@ -164,7 +164,6 @@ export default async function OffreDetailPage({ params }: Props) {
         </p>
         </div>
       </div>
-      </div>
     </div>
   );
 }
