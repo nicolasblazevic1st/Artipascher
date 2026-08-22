@@ -83,12 +83,16 @@ export async function POST(request: NextRequest) {
         DEFAULT_AUCTION_DURATION_HOURS
     );
     const preferEstablishedRaw = String(
-      formData.get("preferEstablishedCompany") ?? "false"
+      formData.get("preferEstablishedCompany") ?? ""
     ).toLowerCase();
     const preferEstablishedCompany =
       preferEstablishedRaw === "true" ||
       preferEstablishedRaw === "1" ||
-      preferEstablishedRaw === "on";
+      preferEstablishedRaw === "on"
+        ? true
+        : preferEstablishedRaw === "false"
+          ? false
+          : undefined;
     const maxContactArtisans = parseMaxContactArtisans(
       formData.get("maxContactArtisans")
     );

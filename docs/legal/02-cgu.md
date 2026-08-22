@@ -40,7 +40,7 @@ Informations exactes et à jour. Professionnels : SIRET vérifié, périmètre 5
 
 - Description, photos, adresse chantier et **mobile français** requis.
 - Le mobile doit être **vérifié par code SMS** avant publication d'une demande.
-- Le Client peut indiquer une préférence d'**ancienneté d'entreprise** (0 à 5 ans ou 5 ans et plus) : critère de ciblage / prospection, **sans garantie** sur le profil final des Artisans.
+- Le Client peut indiquer une préférence d'**ancienneté d'entreprise** (indifférent ou 5 ans et plus) : critère de ciblage / prospection, **sans garantie** sur le profil final des Artisans.
 - Option (activée par défaut) : **alerte SMS** lorsqu'un Artisan souhaite le contacter. Si activée, la demande de contact est **acceptée automatiquement**, dans la limite de **5 Artisans** par Annonce ; le Client est informé (SMS, email, notification). Si désactivée, le Client accepte ou refuse manuellement sous 48 h.
 - Les coordonnées du Client ne sont communiquées à un Professionnel qu'après autorisation de contact et **Déblocage** (paiement — voir CGV).
 

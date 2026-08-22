@@ -197,9 +197,10 @@ export default function CguPage() {
           </li>
           <li>
             Le Client peut indiquer une préférence d&apos;<strong>ancienneté
-            d&apos;entreprise</strong>{" "} (0&nbsp;à&nbsp;5&nbsp;ans ou
-            5&nbsp;ans et plus) : ce critère filtre les Artisans qui peuvent
-            le contacter / être prospectés.
+            d&apos;entreprise</strong>
+            {" "}
+            (indifférent ou 5&nbsp;ans et plus) : ce critère filtre les
+            Artisans qui peuvent le contacter / être prospectés.
           </li>
           <li>
             Option (activée par défaut) :{" "}
