@@ -39,12 +39,20 @@ export function validatePhotoFiles(files: File[]): string | null {
   return null;
 }
 
+function hasAllowedPhotoExtension(fileName: string): boolean {
+  return /\.(jpe?g|png|webp|heic|heif)$/i.test(fileName);
+}
+
 /** Valide un fichier photo individuel (sans exiger un nombre minimum). */
 export function validatePhotoFile(file: File): string | null {
   if (!file || file.size === 0) {
     return "Fichier photo manquant.";
   }
-  if (!ALLOWED_PHOTO_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_TYPES)[number])) {
+  const typeOk = ALLOWED_PHOTO_TYPES.includes(
+    file.type as (typeof ALLOWED_PHOTO_TYPES)[number]
+  );
+  const cameraFallback = !file.type && hasAllowedPhotoExtension(file.name);
+  if (!typeOk && !cameraFallback) {
     return "Format non accepté. Utilisez JPG, PNG ou WebP.";
   }
   if (file.size > MAX_PHOTO_SIZE_BYTES) {

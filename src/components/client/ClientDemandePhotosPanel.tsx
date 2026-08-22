@@ -175,17 +175,44 @@ export default function ClientDemandePhotosPanel({
         ))}
 
         {editable && slotsLeft > 0 && (
-          <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-500 hover:border-client-400 hover:bg-client-50">
-            <span className="text-lg font-semibold text-client-600">+</span>
-            Ajouter
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp"
-              multiple
-              className="hidden"
-              onChange={handleAddFiles}
-            />
-          </label>
+          <>
+            <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-client-300 bg-client-50 text-center text-xs text-client-800 hover:border-client-500 hover:bg-client-100">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l.8-1.4A1.5 1.5 0 0 1 9.8 4h4.4a1.5 1.5 0 0 1 1.3.6L16.3 6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
+                />
+                <circle cx="12" cy="12.5" r="3.2" />
+              </svg>
+              Photo
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleAddFiles}
+              />
+            </label>
+            <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-500 hover:border-client-400 hover:bg-client-50">
+              <span className="text-lg font-semibold text-client-600">+</span>
+              Galerie
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp"
+                multiple
+                className="hidden"
+                onChange={handleAddFiles}
+              />
+            </label>
+          </>
         )}
       </div>
 
