@@ -5,6 +5,7 @@ import Link from "next/link";
 import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
   validateDescription,
+  validatePhotoFile,
   validatePhotoFiles,
   MIN_DESCRIPTION_LENGTH,
   MAX_PHOTOS,
@@ -120,6 +121,8 @@ export default function WorkRequestForm({
   guestMode = false,
 }: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
   const [submittedContact, setSubmittedContact] = useState<{
@@ -337,15 +340,41 @@ export default function WorkRequestForm({
     return descriptionRef.current?.value ?? "";
   }
 
-  function handlePhotosChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const list = e.target.files;
+  function addPhotoFiles(list: FileList | null) {
     if (!list) return;
 
-    previews.forEach((url) => URL.revokeObjectURL(url));
+    const nextFiles = [...photoFiles];
+    const nextPreviews = [...previews];
+    let err: string | null = null;
 
-    const files = Array.from(list);
-    setPhotoFiles(files);
-    setPreviews(files.map((f) => URL.createObjectURL(f)));
+    for (const file of Array.from(list)) {
+      if (nextFiles.length >= MAX_PHOTOS) {
+        err = `Maximum ${MAX_PHOTOS} photos autorisées.`;
+        break;
+      }
+      const fileError = validatePhotoFile(file);
+      if (fileError) {
+        err = fileError;
+        break;
+      }
+      nextFiles.push(file);
+      nextPreviews.push(URL.createObjectURL(file));
+    }
+
+    setPhotoFiles(nextFiles);
+    setPreviews(nextPreviews);
+    setError(err);
+  }
+
+  function handlePhotosChange(e: React.ChangeEvent<HTMLInputElement>) {
+    addPhotoFiles(e.target.files);
+    e.target.value = "";
+  }
+
+  function removePhoto(index: number) {
+    URL.revokeObjectURL(previews[index]!);
+    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviews((prev) => prev.filter((_, i) => i !== index));
     setError(null);
   }
 
@@ -1114,27 +1143,82 @@ export default function WorkRequestForm({
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700">
+        <p className="mb-2 text-sm font-medium text-slate-700">
           Photos{" "}
-          <span className="font-normal text-slate-500">(si vous en avez)</span>
-        </label>
+          <span className="font-normal text-slate-500">
+            ({photoFiles.length}/{MAX_PHOTOS}, si vous en avez)
+          </span>
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={photoFiles.length >= MAX_PHOTOS}
+            className="flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3 py-3 text-sm font-semibold text-brand-800 hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l.8-1.4A1.5 1.5 0 0 1 9.8 4h4.4a1.5 1.5 0 0 1 1.3.6L16.3 6h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
+              />
+              <circle cx="12" cy="12.5" r="3.2" />
+            </svg>
+            Prendre une photo
+          </button>
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={photoFiles.length >= MAX_PHOTOS}
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-700 hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Choisir dans la galerie
+          </button>
+        </div>
         <input
+          ref={cameraInputRef}
           type="file"
-          name="photos"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-          multiple
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
           onChange={handlePhotosChange}
-          className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
         />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp"
+          multiple
+          className="sr-only"
+          onChange={handlePhotosChange}
+        />
+        <p className="mt-2 text-xs text-slate-500">
+          Sur téléphone, « Prendre une photo » ouvre l&apos;appareil photo.
+        </p>
         {previews.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {previews.map((src, i) => (
-              <img
-                key={src}
-                src={src}
-                alt={`Aperçu ${i + 1}`}
-                className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
-              />
+              <div key={src} className="relative">
+                <img
+                  src={src}
+                  alt={`Aperçu ${i + 1}`}
+                  className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  className="absolute -right-2 -top-2 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white shadow hover:bg-red-700"
+                  aria-label="Retirer la photo"
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}
