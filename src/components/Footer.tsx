@@ -29,7 +29,7 @@ export default async function Footer() {
               </Link>
             </li>
             <li>
-              <Link href="/encheres" className="hover:text-white">
+              <Link href="/offres" className="hover:text-white">
                 Offres
               </Link>
             </li>

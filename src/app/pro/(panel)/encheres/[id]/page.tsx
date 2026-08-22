@@ -101,7 +101,7 @@ export default async function ProChantierDetailPage({ params }: Props) {
       />
 
       <p className="mt-4 text-center text-xs text-slate-500">
-        <Link href={`/encheres/${id}`} className="text-brand-700 underline">
+        <Link href={`/offres/${id}`} className="text-brand-700 underline">
           Voir la page publique
         </Link>
       </p>

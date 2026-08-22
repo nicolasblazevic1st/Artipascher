@@ -15,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "", changeFrequency: "daily", priority: 1 },
     { path: "/particulier", changeFrequency: "weekly", priority: 0.9 },
     { path: "/professionnel", changeFrequency: "weekly", priority: 0.9 },
-    { path: "/encheres", changeFrequency: "daily", priority: 0.85 },
+    { path: "/offres", changeFrequency: "daily", priority: 0.85 },
     { path: "/comment-ca-marche", changeFrequency: "monthly", priority: 0.7 },
     { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
     { path: "/mentions-legales", changeFrequency: "yearly", priority: 0.3 },
@@ -39,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listingUrls = auctions
       .filter((auction) => auction.isTest !== true)
       .map((auction) => ({
-        url: `${baseUrl}/encheres/${auction.id}`,
+        url: `${baseUrl}/offres/${auction.id}`,
         changeFrequency: "daily" as const,
         priority: 0.6,
       }));

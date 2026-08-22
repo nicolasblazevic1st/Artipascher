@@ -295,7 +295,7 @@ export async function sendContactRecallEmailToPro(params: {
   city: string;
   auctionId: string;
 }): Promise<void> {
-  const auctionUrl = absoluteUrl(`/encheres/${params.auctionId}`);
+  const auctionUrl = absoluteUrl(`/offres/${params.auctionId}`);
   const subject = "Le client vous a rappelé — Nord Artisan Pro";
   const text = [
     `Bonjour ${params.proCompanyName},`,
@@ -323,7 +323,7 @@ export async function sendContactDecisionEmailToPro(params: {
   city: string;
   auctionId: string;
 }): Promise<void> {
-  const auctionUrl = absoluteUrl(`/encheres/${params.auctionId}`);
+  const auctionUrl = absoluteUrl(`/offres/${params.auctionId}`);
   const labels = {
     accepted: "a accepté votre demande de contact",
     refused: "a décliné votre demande de contact",

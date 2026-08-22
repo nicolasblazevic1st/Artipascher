@@ -121,7 +121,7 @@ export default function ProSidebar({
         </nav>
         <div className="space-y-2 border-t border-brand-900 p-3">
           <Link
-            href="/encheres"
+            href="/offres"
             onClick={close}
             className="block rounded-lg px-3 py-2 text-sm hover:bg-brand-700 hover:text-white"
           >
