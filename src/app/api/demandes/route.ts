@@ -23,7 +23,10 @@ import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
 } from "@/lib/phone-format";
-import { parseMaxContactArtisans } from "@/lib/contact-slots";
+import {
+  maxContactArtisansForTier,
+  parseMaxContactArtisans,
+} from "@/lib/contact-slots";
 import { parseMinGoogleRating } from "@/lib/google-rating";
 import { clientPhoneIsVerified } from "@/lib/phone-verification";
 import {
@@ -93,18 +96,6 @@ export async function POST(request: NextRequest) {
         : preferEstablishedRaw === "false"
           ? false
           : undefined;
-    const maxContactArtisans = parseMaxContactArtisans(
-      formData.get("maxContactArtisans")
-    );
-    if (maxContactArtisans == null) {
-      return NextResponse.json(
-        {
-          error:
-            "Indiquez combien d’artisans peuvent vous contacter (de 1 à 5).",
-        },
-        { status: 400 }
-      );
-    }
     const minGoogleRating = parseMinGoogleRating(
       formData.get("minGoogleRating")
     );
@@ -273,6 +264,22 @@ export async function POST(request: NextRequest) {
     if (!pricingCheck.ok) {
       return NextResponse.json({ error: pricingCheck.error }, { status: 400 });
     }
+    const contactCap = maxContactArtisansForTier(pricingCheck.pricingTier);
+    const requestedContacts = parseMaxContactArtisans(
+      formData.get("maxContactArtisans")
+    );
+    if (
+      requestedContacts == null ||
+      requestedContacts > contactCap
+    ) {
+      return NextResponse.json(
+        {
+          error: `Indiquez combien d’artisans peuvent vous contacter (de 1 à ${contactCap}).`,
+        },
+        { status: 400 }
+      );
+    }
+    const maxContactArtisans = requestedContacts;
 
     const photosError = validatePhotoFiles(photos);
     if (photosError) {
