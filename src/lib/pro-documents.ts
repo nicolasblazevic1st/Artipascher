@@ -30,7 +30,7 @@ export const PRO_REGISTRATION_DOCUMENTS: ProRegistrationDocumentType[] = [
   {
     id: "rge",
     label: "Label RGE",
-    help: "Pour la rénovation énergétique (isolation, chauffage, fenêtres…).",
+    help: "Pour la rénovation énergétique (isolation, chauffage, fenêtres…). La mention est aussi contrôlée automatiquement sur l’annuaire ADEME (SIRET).",
     required: false,
     qualificationLevel: 2,
   },

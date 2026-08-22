@@ -48,6 +48,14 @@ export interface EnrichedArtisan {
   lastSmsFailedAt?: string;
   source: ArtisanSource;
   optedOut?: boolean;
+  /** Mention RGE (annuaire ADEME), si synchronisée. */
+  rge?: {
+    isRge: boolean;
+    status: "verified" | "not_rge" | "expired" | "unavailable";
+    checkedAt: string;
+    domains?: string[];
+    validUntil?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -75,7 +83,8 @@ export type EnrichmentJobKind =
   | "places_daily"
   | "places_production"
   | "geocode_backfill"
-  | "purge_unmapped_naf";
+  | "purge_unmapped_naf"
+  | "rge_sync";
 
 export interface EnrichmentJob {
   id: string;

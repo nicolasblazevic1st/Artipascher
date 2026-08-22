@@ -28,6 +28,8 @@ interface ArtisanCompanyRow {
   enrichmentStatus: string;
   optedOut?: boolean;
   source: string;
+  isRge?: boolean;
+  googleRating?: number;
 }
 
 interface Stats {
@@ -43,6 +45,8 @@ interface Stats {
   topNaf: Array<{ naf: string; count: number; mapped: boolean; label?: string }>;
   nafOptions?: NafFilterOption[];
   remaining: number;
+  rge?: number;
+  rgeWithoutRating?: number;
   placesEnabled: boolean;
   quota: {
     monthlyLimit: number;
@@ -80,6 +84,8 @@ export default function AdminBaseArtisansPage() {
   const [enrichmentStatus, setEnrichmentStatus] = useState("");
   const [selectedNaf, setSelectedNaf] = useState<string[]>([]);
   const [unmappedOnly, setUnmappedOnly] = useState(false);
+  const [rgeOnly, setRgeOnly] = useState(false);
+  const [rgeWithoutRating, setRgeWithoutRating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -116,6 +122,8 @@ export default function AdminBaseArtisansPage() {
       if (enrichmentStatus) params.set("enrichmentStatus", enrichmentStatus);
       if (selectedNaf.length > 0) params.set("naf", selectedNaf.join(","));
       if (unmappedOnly) params.set("unmappedOnly", "1");
+      if (rgeOnly) params.set("rge", "1");
+      if (rgeWithoutRating) params.set("rgeWithoutRating", "1");
       const res = await fetch(`/api/admin/artisans?${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur chargement");
@@ -133,7 +141,7 @@ export default function AdminBaseArtisansPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, q, department, hasPhone, enrichmentStatus, selectedNaf, unmappedOnly]);
+  }, [page, q, department, hasPhone, enrichmentStatus, selectedNaf, unmappedOnly, rgeOnly, rgeWithoutRating]);
 
   useEffect(() => {
     void loadStats();
@@ -231,13 +239,27 @@ export default function AdminBaseArtisansPage() {
   }
 
   async function runAction(
-    kind: "sirene" | "sirene-full" | "places" | "geocode"
+    kind: "sirene" | "sirene-full" | "places" | "geocode" | "rge"
   ) {
     setBusy(kind);
     setError(null);
     setSuccess(null);
     try {
-      if (kind === "places") {
+      if (kind === "rge") {
+        const res = await fetch("/api/admin/artisans/sync-rge", {
+          method: "POST",
+        });
+        const data = await readAdminJson<{
+          error?: string;
+          started?: boolean;
+          message?: string;
+        }>(res);
+        if (!res.ok) throw new Error(data.error ?? "Échec sync RGE");
+        setSuccess(
+          data.message ??
+            "Sync RGE ADEME lancée. Rechargez la liste dans quelques minutes."
+        );
+      } else if (kind === "places") {
         const res = await fetch("/api/admin/artisans/enrich-places", {
           method: "POST",
         });
@@ -377,7 +399,7 @@ export default function AdminBaseArtisansPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Base artisans NPC</h1>
           <p className="mt-1 text-sm text-slate-600">
-            Acquisition Nord / Pas-de-Calais — SIRENE + téléphones à compléter
+            Acquisition Nord / Pas-de-Calais — SIRENE, RGE ADEME, notes Google
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -398,6 +420,15 @@ export default function AdminBaseArtisansPage() {
             title="Parcourt tout SIRENE pour les métiers NPC (plusieurs minutes). À lancer rarement, ex. première charge ou rattrapage."
           >
             Sync SIRENE complète
+          </button>
+          <button
+            type="button"
+            disabled={Boolean(busy)}
+            onClick={() => void runAction("rge")}
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-950 hover:bg-emerald-100 disabled:opacity-50"
+            title="Annuaire ADEME : marque les RGE, importe les manquants (59 / 62), téléphone ADEME si présent. Les notes Google viennent ensuite de Places."
+          >
+            Sync RGE ADEME
           </button>
           <button
             type="button"
@@ -442,7 +473,10 @@ export default function AdminBaseArtisansPage() {
       <p className="text-xs text-slate-500">
         <strong>Sync rapide</strong> : mise à jour courte (quelques pages / métier).{" "}
         <strong>Sync SIRENE complète</strong> : toute la base NPC, plusieurs
-        minutes — à lancer rarement.
+        minutes — à lancer rarement.{" "}
+        <strong>Sync RGE ADEME</strong> : importe les entreprises RGE 59 / 62
+        absentes. Si un particulier exige une note Google, Places complète ces
+        fiches RGE en priorité.
       </p>
 
       {error && (
@@ -462,7 +496,7 @@ export default function AdminBaseArtisansPage() {
       )}
 
       {stats && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <StatCard label="Actifs" value={stats.active} hint={`Total fiches ${stats.total}`} />
           <StatCard
             label="Avec GPS"
@@ -482,6 +516,11 @@ export default function AdminBaseArtisansPage() {
             label="Hors catégories"
             value={stats.unmappedCategory}
             hint={`59: ${stats.byDepartment?.["59"] ?? 0} · 62: ${stats.byDepartment?.["62"] ?? 0}`}
+          />
+          <StatCard
+            label="RGE ADEME"
+            value={stats.rge ?? 0}
+            hint={`${stats.rgeWithoutRating ?? 0} sans note Google`}
           />
           <StatCard
             label="Quota Places"
@@ -639,6 +678,29 @@ export default function AdminBaseArtisansPage() {
           />
           Hors catégories
         </label>
+        <label className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={rgeOnly}
+            onChange={(e) => {
+              setPage(1);
+              setRgeOnly(e.target.checked);
+            }}
+          />
+          RGE
+        </label>
+        <label className="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={rgeWithoutRating}
+            onChange={(e) => {
+              setPage(1);
+              setRgeWithoutRating(e.target.checked);
+              if (e.target.checked) setRgeOnly(true);
+            }}
+          />
+          RGE sans note
+        </label>
       </div>
 
       {selectedNaf.length > 0 && (
@@ -698,7 +760,21 @@ export default function AdminBaseArtisansPage() {
             {items.map((row) => (
               <tr key={row.siren} className="border-b border-slate-100 align-top">
                 <td className="px-3 py-2">
-                  <div className="font-medium text-slate-900">{row.companyName}</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium text-slate-900">
+                      {row.companyName}
+                    </span>
+                    {row.isRge ? (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                        RGE
+                      </span>
+                    ) : null}
+                    {typeof row.googleRating === "number" ? (
+                      <span className="text-[10px] text-slate-500">
+                        {String(row.googleRating).replace(".", ",")}/5
+                      </span>
+                    ) : null}
+                  </div>
                   <div className="text-xs text-slate-500">
                     {row.cities.join(", ")} ({row.department})
                     {row.establishments.length > 1 && (

@@ -3,6 +3,7 @@ import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import { SAMPLE_AUCTIONS } from "@/lib/data";
 import { getClientContact } from "@/lib/client-contacts";
 import { evaluateProContactMatch } from "@/lib/contact-match";
+import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import {
   isAcceptSlotsFull,
   resolveMaxContactArtisans,
@@ -58,6 +59,10 @@ export async function POST(request: NextRequest) {
   const workRequest = await getWorkRequestByAuctionId(auctionId);
 
   if ((!sampleAuction || !sampleContact) && !workRequest) {
+    return NextResponse.json({ error: "Chantier introuvable." }, { status: 404 });
+  }
+
+  if (workRequest?.isTest && !shouldShowDemoBannerForProSession(session)) {
     return NextResponse.json({ error: "Chantier introuvable." }, { status: 404 });
   }
 

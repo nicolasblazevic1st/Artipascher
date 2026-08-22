@@ -39,6 +39,33 @@ export function resolveMaxContactArtisans(
   return MAX_CONTACT_UNLOCKS_PER_REQUEST;
 }
 
+/** SMS marketing à envoyer pour chaque artisan demandé par le particulier. */
+export const SMS_PER_SELECTED_ARTISAN = 5;
+
+/** Volume de numéros à contacter = 5 SMS × artisans choisis (1–5). */
+export function smsQuotaForRequest(
+  request?: Pick<WorkRequest, "maxContactArtisans"> | null
+): number {
+  return SMS_PER_SELECTED_ARTISAN * resolveMaxContactArtisans(request);
+}
+
+/** SMS encore à envoyer pour cette demande (quota total − déjà envoyés). */
+export function remainingSmsQuota(
+  request?: Pick<WorkRequest, "maxContactArtisans"> | null,
+  totalSent = 0
+): number {
+  return Math.max(0, smsQuotaForRequest(request) - Math.max(0, totalSent));
+}
+
+export function formatSmsQuotaLabel(
+  request?: Pick<WorkRequest, "maxContactArtisans"> | null
+): string {
+  const wanted = resolveMaxContactArtisans(request);
+  const quota = smsQuotaForRequest(request);
+  const artisanLabel = wanted === 1 ? "artisan" : "artisans";
+  return `${SMS_PER_SELECTED_ARTISAN} SMS × ${wanted} ${artisanLabel} = ${quota} numéros`;
+}
+
 /** Parse formulaire / API → 1..5 ou null si invalide. */
 export function parseMaxContactArtisans(raw: unknown): number | null {
   const n =

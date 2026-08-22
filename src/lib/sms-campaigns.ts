@@ -1,26 +1,23 @@
 import { companyAgeCohort } from "./artisans-for-chantier";
-import { getArtisansNearWorkRequest } from "./artisans-nearby";
-import { addEnrichmentJob, listArtisans, upsertArtisan } from "./artisans-db";
-import {
-  findNearbyBusinesses,
-  type NearbyBusiness,
-} from "./nearby-businesses";
-import { isGooglePlacesEnabled } from "./google-places";
-import {
-  enrichArtisanWithPlaces,
-  isPlacesPhoneTarget,
-  markArtisanPhoneInvalid,
-} from "./places-quota";
+import { markArtisanPhoneInvalid } from "./places-quota";
 import { absoluteUrl } from "./share";
 import { formatWorkPrestationLabel } from "./pricing-tiers";
-import { resolveMaxContactArtisans } from "@/lib/contact-slots";
-import { isMarketingSmsWindowOpen, normalizeFrenchMobile, sendSms } from "./sms";
+import {
+  SMS_PER_SELECTED_ARTISAN,
+  remainingSmsQuota,
+  resolveMaxContactArtisans,
+  smsQuotaForRequest,
+} from "@/lib/contact-slots";
+import {
+  selectArtisansToContact,
+  type ContactTargetArtisan,
+} from "@/lib/select-artisans-to-contact";
+import { isMarketingSmsWindowOpen, sendSms } from "./sms";
 import {
   addSmsCampaign,
   countContactUnlocksForAuction,
   createSmsAcquisitionCampaign,
   getActiveSmsAcquisitionCampaign,
-  getArtisanProspects,
   getMarketingSmsContactedSirets,
   getPendingReviewForAcquisition,
   getPendingReviewSmsCampaigns,
@@ -35,10 +32,8 @@ import {
   setSmsAcquisitionStatus,
   updateSmsAcquisitionCampaign,
   updateSmsCampaign,
-  upsertArtisanProspect,
 } from "./store";
 import type {
-  ArtisanProspect,
   SmsAcquisitionCampaign,
   SmsCampaign,
   SmsCampaignRecipient,
@@ -65,20 +60,6 @@ export interface SmsCandidate {
   distanceKm?: number;
 }
 
-type ProspectPoolRow = {
-  siret: string;
-  siren: string;
-  companyName: string;
-  city: string;
-  department: "59" | "62";
-  nafCode?: string;
-  source: "gouv" | "platform" | "import";
-  companyCreatedAt?: string;
-  phone?: string;
-  distanceKm?: number;
-  proId?: string;
-};
-
 export interface SmsCampaignPreviewDetailed {
   workRequestId: string;
   category: string;
@@ -87,8 +68,12 @@ export interface SmsCampaignPreviewDetailed {
   auctionUrl: string;
   defaultMessage: string;
   campaignSize: number;
+  artisansWanted: number;
+  smsPerArtisan: number;
   /** Pref. client : true = 5+, false = 0 à 5 ans, undefined = pas de filtre âge. */
   preferEstablishedCompany?: boolean;
+  /** Pref. client : uniquement artisans RGE ADEME. */
+  requireRge?: boolean;
   geoFound: boolean;
   totalNearby: number;
   gouvCount: number;
@@ -124,10 +109,6 @@ export type PreviewSmsCampaignOptions = {
   fillPhonesViaPlaces?: boolean;
 };
 
-function isYoungCompany(createdAt?: string): boolean {
-  return companyAgeCohort(createdAt) === "young";
-}
-
 export function buildDefaultCampaignMessage(request: WorkRequest): string {
   const auctionPath = request.auctionId
     ? `/offres/${request.auctionId}`
@@ -140,33 +121,14 @@ export function buildDefaultCampaignMessage(request: WorkRequest): string {
   );
 }
 
-function classifyCohort(
-  lastContactedAt: string | undefined,
-  companyCreatedAt: string | undefined
-): SmsCohort {
-  if (lastContactedAt) return "returning";
-  if (isYoungCompany(companyCreatedAt)) return "new_young";
-  return "new_established";
+function classifyCohort(companyCreatedAt?: string): SmsCohort {
+  return companyAgeCohort(companyCreatedAt) === "young"
+    ? "new_young"
+    : "new_established";
 }
 
-function cohortTargets(
-  campaignSize: number,
-  preferEstablishedCompany?: boolean
-): { young: number; established: number } {
-  // Filtres exclusifs selon le choix client — jamais de mix 0–5 / 5+.
-  if (preferEstablishedCompany === true) {
-    return { young: 0, established: campaignSize };
-  }
-  if (preferEstablishedCompany === false) {
-    return { young: campaignSize, established: 0 };
-  }
-  // Historique sans préférence : pas de quota d'âge.
-  return { young: campaignSize, established: campaignSize };
-}
-
-function toCandidate(
-  row: ProspectPoolRow,
-  phone: string,
+function toSmsCandidate(
+  row: ContactTargetArtisan,
   selectedByDefault: boolean
 ): SmsCandidate {
   return {
@@ -176,339 +138,12 @@ function toCandidate(
     city: row.city,
     department: row.department,
     nafCode: row.nafCode,
-    phone,
-    cohort: classifyCohort(undefined, row.companyCreatedAt),
+    phone: row.phoneE164,
+    cohort: classifyCohort(row.companyCreatedAt),
     companyCreatedAt: row.companyCreatedAt,
-    source: row.source,
-    proId: row.proId,
+    source: row.source === "import" ? "import" : "gouv",
     selectedByDefault,
-    distanceKm: row.distanceKm,
-  };
-}
-
-async function mergeProspectPool(
-  request: WorkRequest,
-  options?: {
-    targetPhones?: number;
-    fillPhonesViaPlaces?: boolean;
-    preferEstablishedCompany?: boolean;
-  }
-): Promise<{
-  withPhone: SmsCandidate[];
-  withoutPhone: SmsCampaignPreviewDetailed["withoutPhone"];
-  geoFound: boolean;
-  totalNearby: number;
-  gouvCount: number;
-  platformCount: number;
-  alreadyMarketedCount: number;
-  placesFill: NonNullable<SmsCampaignPreviewDetailed["placesFill"]>;
-}> {
-  const targetPhones = Math.max(1, Math.floor(options?.targetPhones ?? 10));
-  const fillPhonesViaPlaces = options?.fillPhonesViaPlaces !== false;
-  const targets = cohortTargets(
-    targetPhones,
-    options?.preferEstablishedCompany
-  );
-
-  // Pas d’enrichissement aveugle : Places uniquement en marchant du plus proche au plus loin.
-  const nearbyDb = await getArtisansNearWorkRequest(request, {
-    enrichProduction: false,
-  });
-  const distanceBySiret = new Map(
-    nearbyDb.artisans.map((a) => [a.siret, a.distanceKm])
-  );
-
-  const { businesses, geoFound } = await findNearbyBusinesses({
-    city: request.city,
-    department: request.department,
-    category: request.category,
-  });
-
-  const gouvCount =
-    businesses.filter((b) => b.source === "gouv").length +
-    nearbyDb.artisans.filter((a) => a.source === "gouv").length;
-  const platformCount = businesses.filter((b) => b.source === "platform").length;
-
-  const prospects = await getArtisanProspects();
-  const prospectBySiret = new Map(prospects.map((p) => [p.siret, p]));
-  const alreadyMarketed = await getMarketingSmsContactedSirets();
-  let alreadyMarketedCount = 0;
-
-  // Sync SIRENE discoveries into prospect carnet + base enrichissement Places.
-  for (const b of businesses) {
-    if (b.source !== "gouv") continue;
-    const existing = prospectBySiret.get(b.siret);
-    if (!existing) {
-      const created = await upsertArtisanProspect({
-        siret: b.siret,
-        siren: b.siren,
-        companyName: b.name,
-        city: b.city,
-        department: b.department,
-        nafCode: b.nafCode,
-        companyCreatedAt: b.companyCreatedAt,
-        source: "gouv",
-      });
-      prospectBySiret.set(b.siret, created);
-    } else if (!existing.companyCreatedAt && b.companyCreatedAt) {
-      const updated = await upsertArtisanProspect({
-        ...existing,
-        companyCreatedAt: b.companyCreatedAt,
-        nafCode: existing.nafCode ?? b.nafCode,
-      });
-      prospectBySiret.set(b.siret, updated);
-    }
-
-    await upsertArtisan(
-      {
-        siret: b.siret,
-        siren: b.siren,
-        companyName: b.name,
-        addressLine: b.city,
-        postalCode: "",
-        city: b.city,
-        department: b.department,
-        nafCode: b.nafCode,
-        companyCreatedAt: b.companyCreatedAt,
-        status: "active",
-        enrichmentStatus: "pending",
-        lastSeenAt: new Date().toISOString(),
-        source: "gouv",
-      },
-      { preserveContact: true }
-    );
-  }
-
-  const pool: ProspectPoolRow[] = [];
-  const seen = new Set<string>();
-
-  function pushBusiness(
-    b: NearbyBusiness | ArtisanProspect,
-    distanceKm?: number
-  ) {
-    const siret = "siret" in b ? b.siret : "";
-    if (!siret || seen.has(siret)) return;
-    seen.add(siret);
-
-    const prospect = prospectBySiret.get(siret);
-    if (prospect?.optedOut) return;
-
-    const source =
-      ("source" in b ? b.source : undefined) ?? prospect?.source ?? "gouv";
-    const proId = "proId" in b ? b.proId : undefined;
-    if (source === "platform" || proId) return;
-
-    const lastContactedAt = prospect?.lastContactedAt;
-    if (lastContactedAt || alreadyMarketed.has(siret)) {
-      alreadyMarketedCount += 1;
-      return;
-    }
-
-    const phoneRaw =
-      ("phone" in b ? b.phone : undefined) ?? prospect?.phone ?? undefined;
-    const phone = phoneRaw && normalizeFrenchMobile(phoneRaw) ? phoneRaw : undefined;
-    const companyCreatedAt =
-      ("companyCreatedAt" in b ? b.companyCreatedAt : undefined) ??
-      prospect?.companyCreatedAt;
-    const companyName =
-      ("name" in b ? b.name : undefined) ??
-      ("companyName" in b ? b.companyName : undefined) ??
-      "Entreprise";
-    const city = b.city;
-    const department = b.department;
-    const nafCode =
-      ("nafCode" in b ? b.nafCode : undefined) ?? prospect?.nafCode;
-    const siren =
-      ("siren" in b ? b.siren : undefined) ?? prospect?.siren ?? siret.slice(0, 9);
-    const dist = distanceKm ?? distanceBySiret.get(siret);
-
-    pool.push({
-      siret,
-      siren,
-      companyName,
-      city,
-      department,
-      nafCode,
-      source: source === "import" ? "import" : "gouv",
-      companyCreatedAt,
-      phone,
-      distanceKm: dist,
-      proId,
-    });
-  }
-
-  // Géolocalisés d’abord (distance connue), puis le reste SIRENE / prospects.
-  for (const a of nearbyDb.artisans) {
-    pushBusiness(
-      {
-        siret: a.siret,
-        siren: a.siren,
-        name: a.companyName,
-        city: a.city,
-        department: a.department,
-        nafCode: a.nafCode,
-        source: a.source === "platform" ? "platform" : "gouv",
-        companyCreatedAt: a.companyCreatedAt,
-        phone: a.phone,
-      },
-      a.distanceKm
-    );
-  }
-
-  for (const b of businesses) pushBusiness(b);
-
-  // Prospects 59+62 (pas de filtre = dept du chantier).
-  for (const p of prospects) {
-    if (p.department !== "59" && p.department !== "62") continue;
-    pushBusiness(p);
-  }
-
-  pool.sort((a, b) => {
-    const da = a.distanceKm ?? Number.POSITIVE_INFINITY;
-    const db = b.distanceKm ?? Number.POSITIVE_INFINITY;
-    if (da !== db) return da - db;
-    return a.companyName.localeCompare(b.companyName, "fr");
-  });
-
-  const preferAge = options?.preferEstablishedCompany;
-  const ageFilteredPool =
-    preferAge === undefined
-      ? pool
-      : pool.filter((row) => {
-          const young = isYoungCompany(row.companyCreatedAt);
-          return preferAge === false ? young : !young;
-        });
-
-  const artisanBySiret = new Map(
-    (await listArtisans({ status: "active" })).map((a) => [a.siret, a])
-  );
-  const placesEnabled = isGooglePlacesEnabled();
-  const maxAttempts = Math.min(80, Math.max(24, targetPhones * 6));
-  const phonesBefore = ageFilteredPool.filter((r) => Boolean(r.phone)).length;
-
-  let attempts = 0;
-  let phonesFound = 0;
-  let requestsUsed = 0;
-  const placesErrors: string[] = [];
-
-  const selectedSirets = new Set<string>();
-  let nYoung = 0;
-  let nEstablished = 0;
-  const withPhone: SmsCandidate[] = [];
-  const withoutPhone: SmsCampaignPreviewDetailed["withoutPhone"] = [];
-
-  async function tryPlacesPhone(row: ProspectPoolRow): Promise<string | undefined> {
-    if (!fillPhonesViaPlaces || !placesEnabled) return undefined;
-    if (attempts >= maxAttempts) return undefined;
-    const artisan = artisanBySiret.get(row.siret);
-    if (!artisan || !isPlacesPhoneTarget(artisan)) return undefined;
-
-    attempts += 1;
-    const res = await enrichArtisanWithPlaces(artisan, "production");
-    requestsUsed += res.requestsUsed;
-    if (res.error) placesErrors.push(`${row.siret}: ${res.error}`);
-    const phone = res.artisan?.phone?.trim();
-    if (!phone || !normalizeFrenchMobile(phone)) return undefined;
-
-    phonesFound += 1;
-    row.phone = phone;
-    artisanBySiret.set(row.siret, { ...artisan, ...res.artisan!, phone });
-    const prospect = prospectBySiret.get(row.siret);
-    if (prospect) {
-      await upsertArtisanProspect({ ...prospect, phone });
-      prospectBySiret.set(row.siret, { ...prospect, phone });
-    }
-    return phone;
-  }
-
-  function trySelect(row: ProspectPoolRow, phone: string): boolean {
-    if (selectedSirets.has(row.siret)) return false;
-    if (selectedSirets.size >= targetPhones) return false;
-
-    const cohort = classifyCohort(undefined, row.companyCreatedAt);
-    if (cohort === "new_young" && nYoung >= targets.young) return false;
-    if (cohort === "new_established" && nEstablished >= targets.established) {
-      return false;
-    }
-
-    selectedSirets.add(row.siret);
-    if (cohort === "new_young") nYoung += 1;
-    else nEstablished += 1;
-    withPhone.push(toCandidate(row, phone, true));
-    return true;
-  }
-
-  // Du plus proche au plus loin : obtenir un tél (Places si besoin) et remplir N.
-  // Pas de mix : la préférence client filtre déjà le pool / les quotas.
-  for (const row of ageFilteredPool) {
-    if (selectedSirets.size >= targetPhones) break;
-
-    let phone = row.phone;
-    if (!phone) {
-      phone = await tryPlacesPhone(row);
-    }
-    if (!phone) continue;
-    trySelect(row, phone);
-  }
-
-  // Catalogue UI : autres joignables connus (plus loin) + sans tél restants.
-  for (const row of ageFilteredPool) {
-    if (selectedSirets.has(row.siret)) continue;
-    if (row.phone) {
-      withPhone.push(toCandidate(row, row.phone, false));
-    } else {
-      withoutPhone.push({
-        siret: row.siret,
-        companyName: row.companyName,
-        city: row.city,
-        companyCreatedAt: row.companyCreatedAt,
-        source: row.source,
-        distanceKm: row.distanceKm,
-      });
-    }
-  }
-
-  withPhone.sort((a, b) => {
-    const da = a.distanceKm ?? Number.POSITIVE_INFINITY;
-    const db = b.distanceKm ?? Number.POSITIVE_INFINITY;
-    if (da !== db) return da - db;
-    if (a.selectedByDefault !== b.selectedByDefault) {
-      return a.selectedByDefault ? -1 : 1;
-    }
-    return a.companyName.localeCompare(b.companyName, "fr");
-  });
-
-  if (attempts > 0) {
-    await addEnrichmentJob({
-      kind: "places_production",
-      ranAt: new Date().toISOString(),
-      requestsSpent: requestsUsed,
-      processed: attempts,
-      skipped: 0,
-      errors: placesErrors,
-      note: `Campagne proche→loin: ${phonesFound} tél. / cible ${targetPhones} (${attempts} tentatives)`,
-    });
-  }
-
-  const placesFill: NonNullable<SmsCampaignPreviewDetailed["placesFill"]> = {
-    enabled: placesEnabled && fillPhonesViaPlaces,
-    targetPhones,
-    phonesBefore,
-    phonesAfter: withPhone.filter((c) => c.selectedByDefault).length,
-    attempts,
-    phonesFound,
-    requestsUsed,
-  };
-
-  return {
-    withPhone,
-    withoutPhone,
-    geoFound: geoFound || nearbyDb.origin != null,
-    totalNearby: Math.max(businesses.length, nearbyDb.artisans.length),
-    gouvCount,
-    platformCount,
-    alreadyMarketedCount,
-    placesFill,
+    distanceKm: row.distanceKm ?? undefined,
   };
 }
 
@@ -531,24 +166,25 @@ export async function previewSmsCampaignDetailed(
   request: WorkRequest,
   campaignSizeOrOptions?: number | PreviewSmsCampaignOptions
 ): Promise<SmsCampaignPreviewDetailed> {
-  const settings = await getSmsSettings();
   const opts = resolvePreviewOptions(campaignSizeOrOptions);
-  const campaignSize = opts.campaignSize ?? settings.smsPerDay;
+  const campaignSize = opts.campaignSize ?? smsQuotaForRequest(request);
   const preferEstablishedCompany = request.preferEstablishedCompany;
-  const {
-    withPhone: candidates,
-    withoutPhone,
-    geoFound,
-    totalNearby,
-    gouvCount,
-    platformCount,
-    alreadyMarketedCount,
-    placesFill,
-  } = await mergeProspectPool(request, {
-    targetPhones: campaignSize,
-    fillPhonesViaPlaces: opts.fillPhonesViaPlaces,
-    preferEstablishedCompany,
+  const requireRge = request.requireRge === true;
+  const selected = await selectArtisansToContact(request, {
+    targetCount: campaignSize,
+    fillPhonesViaPlaces: opts.fillPhonesViaPlaces !== false,
   });
+  const candidates: SmsCandidate[] = [
+    ...selected.artisans.map((row) => toSmsCandidate(row, true)),
+    ...selected.extras.withPhone.map((row) => toSmsCandidate(row, false)),
+  ];
+  const withoutPhone = selected.extras.withoutPhone;
+  const geoFound = selected.criteria.geoFound;
+  const totalNearby = selected.pool.matchingNearby;
+  const gouvCount = selected.pool.matchingNearby;
+  const platformCount = selected.pool.platformExcluded;
+  const alreadyMarketedCount = selected.pool.alreadyMarketed;
+  const placesFill = selected.placesFill;
 
   const cohortCounts: Record<SmsCohort, number> = {
     returning: 0,
@@ -577,7 +213,10 @@ export async function previewSmsCampaignDetailed(
     ),
     defaultMessage: buildDefaultCampaignMessage(request),
     campaignSize,
+    artisansWanted: resolveMaxContactArtisans(request),
+    smsPerArtisan: SMS_PER_SELECTED_ARTISAN,
     preferEstablishedCompany,
+    requireRge,
     geoFound,
     totalNearby,
     gouvCount,
@@ -631,9 +270,8 @@ export async function preparePendingReviewBatch(
     scheduledForDate?: string;
   }
 ): Promise<SmsCampaign> {
-  const settings = await getSmsSettings();
   const preview = await previewSmsCampaignDetailed(request, {
-    campaignSize: recipientSirets.length || settings.smsPerDay,
+    campaignSize: recipientSirets.length || smsQuotaForRequest(request),
     fillPhonesViaPlaces: false,
   });
   const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
@@ -823,7 +461,11 @@ export async function approvePendingReviewBatch(
         sentOnLastDate: sentToday + sentCount,
       });
       const acceptedAfter = await acceptedCountForRequest(request);
-      if (acceptedAfter >= resolveMaxContactArtisans(request)) {
+      const sentTotal = acq.totalSent + sentCount;
+      if (
+        acceptedAfter >= resolveMaxContactArtisans(request) ||
+        sentTotal >= smsQuotaForRequest(request)
+      ) {
         acquisition =
           (await setSmsAcquisitionStatus(acq.id, "completed")) ?? acquisition;
       }
@@ -837,7 +479,7 @@ export async function approvePendingReviewBatch(
   };
 }
 
-/** Annule les lots prévus pour aujourd’hui si 5/5 déjà atteint (cron matin). */
+/** Annule les lots prévus pour aujourd’hui si places pleines ou quota SMS atteint. */
 export async function cancelPendingBatchesIfObjectivesMet(): Promise<{
   cancelled: number;
 }> {
@@ -853,7 +495,12 @@ export async function cancelPendingBatchesIfObjectivesMet(): Promise<{
     const request = await getWorkRequestById(batch.workRequestId);
     if (!request?.auctionId) continue;
     const accepted = await countContactUnlocksForAuction(request.auctionId);
-    if (accepted < resolveMaxContactArtisans(request)) continue;
+    const acq = batch.acquisitionCampaignId
+      ? await getSmsAcquisitionCampaignById(batch.acquisitionCampaignId)
+      : null;
+    const slotsFull = accepted >= resolveMaxContactArtisans(request);
+    const quotaDone = remainingSmsQuota(request, acq?.totalSent ?? 0) <= 0;
+    if (!slotsFull && !quotaDone) continue;
 
     await updateSmsCampaign(batch.id, {
       status: "cancelled",
@@ -895,7 +542,7 @@ export async function executeSmsCampaignToRecipients(
 
   // Pas de re-enrichissement Places à l’envoi : déjà fait en preview / tick.
   const preview = await previewSmsCampaignDetailed(request, {
-    campaignSize: recipientSirets.length || settings.smsPerDay,
+    campaignSize: recipientSirets.length || smsQuotaForRequest(request),
     fillPhonesViaPlaces: false,
   });
   const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
@@ -1002,8 +649,8 @@ async function acceptedCountForRequest(request: WorkRequest): Promise<number> {
 }
 
 /**
- * Envoie le lot du jour (jusqu’à smsPerDay) pour une campagne active.
- * Stop si 5/5 contacts acceptés, budget jour déjà consommé, ou pool vide.
+ * Envoie (ou prépare) le lot : jusqu’à 5 SMS × artisans demandés, moins déjà envoyés.
+ * Stop si places contact pleines, quota SMS atteint, ou pool vide.
  */
 export async function runAcquisitionCampaignTick(
   acquisitionId: string,
@@ -1090,14 +737,15 @@ export async function runAcquisitionCampaignTick(
     };
   }
 
-  const sentOnTargetDay =
-    acquisition.lastSendDate === targetDay ? acquisition.sentOnLastDate : 0;
-  const remaining = acquisition.smsPerDay - sentOnTargetDay;
+  const remaining = remainingSmsQuota(request, acquisition.totalSent);
   if (remaining <= 0) {
+    const updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "completed")) ??
+      acquisition;
     return {
-      acquisition,
+      acquisition: updated,
       acceptedCount,
-      skippedReason: "daily_budget_reached",
+      skippedReason: "quota_reached",
     };
   }
 
@@ -1155,15 +803,20 @@ export async function runAcquisitionCampaignTick(
     };
   }
 
-  const nextSentToday = sentOnTargetDay + batch.sentCount;
+  const sentOnTargetDay =
+    acquisition.lastSendDate === today ? acquisition.sentOnLastDate : 0;
   let updated = await updateSmsAcquisitionCampaign(acquisition.id, {
     totalSent: acquisition.totalSent + batch.sentCount,
     lastSendDate: today,
-    sentOnLastDate: nextSentToday,
+    sentOnLastDate: sentOnTargetDay + batch.sentCount,
   });
 
   const acceptedAfter = await acceptedCountForRequest(request);
-  if (acceptedAfter >= resolveMaxContactArtisans(request)) {
+  const sentTotal = (updated?.totalSent ?? acquisition.totalSent);
+  if (
+    acceptedAfter >= resolveMaxContactArtisans(request) ||
+    sentTotal >= smsQuotaForRequest(request)
+  ) {
     updated =
       (await setSmsAcquisitionStatus(acquisition.id, "completed")) ?? updated;
   } else if (batch.sentCount === 0) {
@@ -1208,8 +861,7 @@ export async function startAcquisitionCampaign(
     );
   }
 
-  const settings = await getSmsSettings();
-  const smsPerDay = options?.smsPerDay ?? settings.smsPerDay;
+  const smsPerDay = smsQuotaForRequest(request);
   const acquisition = await createSmsAcquisitionCampaign({
     workRequestId: request.id,
     smsPerDay,

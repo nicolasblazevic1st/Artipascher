@@ -42,6 +42,34 @@ export interface BodaccVerificationSnapshot {
   error?: string;
 }
 
+export type RgeCheckStatus = "verified" | "not_rge" | "expired" | "unavailable";
+
+/** Qualification RGE active (ou récemment expirée) renvoyée par l’ADEME. */
+export interface RgeQualification {
+  domain: string;
+  metaDomain?: string;
+  qualificationName?: string;
+  certificateName?: string;
+  organism?: string;
+  validFrom?: string;
+  validUntil?: string;
+  qualificationUrl?: string;
+}
+
+/** Snapshot RGE (annuaire ADEME, Licence Ouverte). */
+export interface RgeVerificationSnapshot {
+  status: RgeCheckStatus;
+  checkedAt: string;
+  siret: string;
+  isRge: boolean;
+  companyName?: string;
+  domains?: string[];
+  qualifications?: RgeQualification[];
+  /** Plus proche date de fin parmi les qualifications encore valides. */
+  validUntil?: string;
+  error?: string;
+}
+
 export interface ProLevel1Audit {
   rcsVerifiedAt?: string;
   geoVerified: boolean;
@@ -60,6 +88,8 @@ export interface ProLevel1Audit {
   globalIssues?: Level1ConsistencyIssue[];
   /** Contrôle BODACC (procédures collectives) à l'inscription / revalidation docs. */
   bodacc?: BodaccVerificationSnapshot;
+  /** Contrôle RGE (annuaire ADEME open data) à l'inscription / synchro. */
+  rge?: RgeVerificationSnapshot;
 }
 
 export type Level1CheckStatus =
@@ -368,6 +398,11 @@ export interface WorkRequest {
    */
   requireValidInsurances?: boolean;
   /**
+   * true = uniquement des artisans RGE (annuaire ADEME).
+   * undefined / false = pas de filtre RGE.
+   */
+  requireRge?: boolean;
+  /**
    * Autorisation de mise en contact (acceptation CG à la création).
    * Contact-only : toujours true pour les nouvelles demandes.
    * undefined = true (historique).
@@ -568,13 +603,13 @@ export type SmsAcquisitionStatus =
   | "exhausted";
 
 /**
- * Campagne d’acquisition multi-jours : budget SMS/jour jusqu’à 5/5 contacts acceptés.
+ * Campagne d’acquisition : quota 5 SMS × artisans demandés, jusqu’aux places remplies.
  */
 export interface SmsAcquisitionCampaign {
   id: string;
   workRequestId: string;
   status: SmsAcquisitionStatus;
-  /** Snapshot du budget journalier au démarrage. */
+  /** Snapshot du quota total (5 × artisans) au démarrage. Ancien nom conservé. */
   smsPerDay: number;
   totalSent: number;
   /** Jour Europe/Paris YYYY-MM-DD du dernier lot. */
@@ -629,7 +664,10 @@ export interface ArtisanProspect {
 
 export interface SmsCampaignSettings {
   autoSendOnApprove: boolean;
-  /** SMS marketing max par jour et par campagne d’acquisition. */
+  /**
+   * Ancien budget SMS/jour. Le volume réel est 5 × artisans choisis.
+   * Conservé pour compat lecture des anciens stores.
+   */
   smsPerDay: number;
   /**
    * Si true (défaut) : préparation la veille en `pending_review` (sans OVH).

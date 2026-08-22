@@ -174,7 +174,12 @@ export async function confirmClientPhoneVerification(params: {
 
   const updated = await markClientPhoneVerified(params.clientId, phoneE164);
   if (!updated?.phoneVerifiedAt) {
-    return { ok: false, error: "Impossible d'enregistrer la vérification.", status: 500 };
+    return {
+      ok: false,
+      error:
+        "Ce numéro de mobile est déjà associé à un autre compte. Un mobile ne peut pas être lié à plusieurs emails.",
+      status: 409,
+    };
   }
 
   return {

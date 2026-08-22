@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { resolveMaxContactArtisans } from "@/lib/contact-slots";
+import {
+  remainingSmsQuota,
+  resolveMaxContactArtisans,
+  smsQuotaForRequest,
+} from "@/lib/contact-slots";
 import {
   approvePendingReviewBatch,
   pauseAcquisitionCampaign,
@@ -48,6 +52,8 @@ export async function GET() {
         auctionId: wr?.auctionId,
         acceptedCount,
         maxAccepted: resolveMaxContactArtisans(wr),
+        smsQuota: smsQuotaForRequest(wr),
+        remainingSms: remainingSmsQuota(wr, a.totalSent),
         sentToday,
       };
     })
@@ -67,6 +73,8 @@ export async function GET() {
       clientKind: r.clientKind,
       auctionId: r.auctionId,
       createdAt: r.createdAt,
+      maxContactArtisans: resolveMaxContactArtisans(r),
+      smsQuota: smsQuotaForRequest(r),
     }));
 
   return NextResponse.json({

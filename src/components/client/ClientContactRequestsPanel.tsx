@@ -6,6 +6,7 @@ import {
   isAcceptSlotsFull,
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 } from "@/lib/contact-slots";
+import RgeBadge from "@/components/RgeBadge";
 
 interface InterestItem {
   id: string;
@@ -17,6 +18,8 @@ interface InterestItem {
   siret: string;
   city: string;
   trades: string;
+  isRge?: boolean;
+  rgeDomains?: string[];
 }
 
 const STATUS_LABELS: Record<InterestItem["status"], string> = {
@@ -200,6 +203,11 @@ export default function ClientContactRequestsPanel({ workRequestId }: Props) {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <p className="font-semibold text-slate-900">{item.companyName}</p>
+                {item.isRge ? (
+                  <div className="mt-1">
+                    <RgeBadge compact domains={item.rgeDomains} />
+                  </div>
+                ) : null}
                 <p className="mt-0.5 text-xs text-slate-500">
                   SIRET {item.siret}
                   {item.city ? ` · ${item.city}` : ""}

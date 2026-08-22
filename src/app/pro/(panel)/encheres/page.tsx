@@ -21,8 +21,10 @@ export default async function ProChantiersPage() {
   const session = await getProSession();
   if (!session) return null;
 
-  const auctions = await getEnrichedAuctions(session.proId);
   const showDemoBanner = shouldShowDemoBannerForProSession(session);
+  const auctions = await getEnrichedAuctions(session.proId, {
+    includeTest: showDemoBanner,
+  });
   const showContactSlots = isContactSlotsBannerEnabled();
   const unlockFlags = await Promise.all(
     auctions.map((a) => hasContactUnlock(session.proId, a.id))
@@ -66,7 +68,7 @@ export default async function ProChantiersPage() {
                   <td className="px-4 py-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-medium text-slate-900">{auction.title}</p>
-                      {auction.isTest && showDemoBanner && <TestBanner />}
+                      {auction.isTest && <TestBanner />}
                       {auction.isCopropriete && (
                         <CoproprieteBanner workScope={auction.workScope} />
                       )}

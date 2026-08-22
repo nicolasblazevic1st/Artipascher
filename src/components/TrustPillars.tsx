@@ -27,13 +27,19 @@ export const TRUST_PILLARS = [
     detail:
       "Entreprise saine — Vérifiée financièrement, sans risque d'abandon de chantier.",
   },
+  {
+    id: "rge",
+    label: "Label RGE",
+    detail:
+      "Mention ADEME — Filtrez les artisans RGE pour les aides MaPrimeRénov’ et CEE.",
+  },
 ] as const;
 
 interface Props {
   className?: string;
 }
 
-/** Bande « Ce qu'on vérifie » — 5 contrôles, sans cartes lourdes. */
+/** Bande « Ce qu'on vérifie » — contrôles plateforme, sans cartes lourdes. */
 export default function TrustPillars({ className = "" }: Props) {
   return (
     <section

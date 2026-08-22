@@ -54,6 +54,17 @@ export default function ClientQualificationGuide(_props: Props) {
           ))}
         </ul>
       </div>
+
+      <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+        <p className="text-sm font-medium text-emerald-950">
+          Label RGE (optionnel)
+        </p>
+        <p className="mt-1 text-xs text-emerald-900/80">
+          Si vous cochez « Uniquement un artisan RGE », seuls les établissements
+          présents sur l’annuaire officiel ADEME pourront vous contacter — utile
+          pour MaPrimeRénov’, les CEE et l’éco-PTZ.
+        </p>
+      </div>
     </div>
   );
 }

@@ -99,6 +99,11 @@ export async function POST(request: NextRequest) {
     const minGoogleRating = parseMinGoogleRating(
       formData.get("minGoogleRating")
     );
+    const requireRgeRaw = String(formData.get("requireRge") ?? "").toLowerCase();
+    const requireRge =
+      requireRgeRaw === "true" ||
+      requireRgeRaw === "1" ||
+      requireRgeRaw === "on";
     // Mise en contact autorisée via acceptation CG (plus d’opt-in SMS séparé).
     const acceptContactTermsRaw = String(
       formData.get("acceptContactTerms") ?? ""
@@ -366,6 +371,7 @@ export async function POST(request: NextRequest) {
       maxContactArtisans,
       preferEstablishedCompany,
       minGoogleRating,
+      requireRge: requireRge || undefined,
       requireActiveCompany: true,
       requireValidInsurances: true,
       smsContactAlertsEnabled: true,

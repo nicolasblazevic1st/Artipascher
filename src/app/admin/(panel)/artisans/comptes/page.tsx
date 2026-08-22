@@ -7,7 +7,10 @@ import {
   bodaccAnnouncementUrl,
   bodaccCollectiveSearchUrl,
 } from "@/lib/bodacc";
-import type { BodaccVerificationSnapshot } from "@/lib/store-types";
+import type {
+  BodaccVerificationSnapshot,
+  RgeVerificationSnapshot,
+} from "@/lib/store-types";
 
 type StatusFilter = "all" | "approved" | "pending" | "rejected" | "email_unverified";
 
@@ -43,6 +46,7 @@ interface ArtisanAccount {
   };
   level1Audit?: {
     bodacc?: BodaccVerificationSnapshot;
+    rge?: RgeVerificationSnapshot;
   };
 }
 
@@ -220,6 +224,11 @@ export default function AdminComptesArtisansPage() {
                     {a.level1Audit?.bodacc?.status === "active_procedure" && (
                       <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800">
                         BODACC procédure
+                      </span>
+                    )}
+                    {a.level1Audit?.rge?.status === "verified" && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                        RGE ADEME
                       </span>
                     )}
                   </div>

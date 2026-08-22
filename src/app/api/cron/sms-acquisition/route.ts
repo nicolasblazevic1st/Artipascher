@@ -8,7 +8,7 @@ import {
 
 /**
  * mode=prepare (défaut) : prépare les lots pour le lendemain (sans OVH si revue).
- * mode=presend : annule les lots du jour si 5/5 déjà atteint.
+ * mode=presend : annule les lots du jour si places pleines ou quota SMS atteint.
  */
 export async function POST(request: NextRequest) {
   const admin = await isAdminAuthenticated();

@@ -3,6 +3,7 @@ import { isMappedToPlatformCategory } from "./acquisition-naf";
 import {
   normalizeNafCode,
 } from "./naf-trade-groups";
+import { artisanIsRge } from "./rge-verification";
 
 export interface ArtisanEstablishmentSummary {
   siret: string;
@@ -28,6 +29,8 @@ export interface ArtisanCompanyRow {
   enrichmentStatus: EnrichedArtisan["enrichmentStatus"];
   optedOut?: boolean;
   source: EnrichedArtisan["source"];
+  isRge: boolean;
+  googleRating?: number;
 }
 
 const ENRICHMENT_RANK: Record<EnrichedArtisan["enrichmentStatus"], number> = {
@@ -102,6 +105,11 @@ export function groupArtisansBySiren(
       ),
       optedOut: list.some((a) => a.optedOut),
       source: primary.source,
+      isRge: list.some((a) => artisanIsRge(a)),
+      googleRating: list
+        .map((a) => a.googleRating)
+        .filter((n): n is number => typeof n === "number" && Number.isFinite(n))
+        .sort((a, b) => b - a)[0],
     });
   }
 

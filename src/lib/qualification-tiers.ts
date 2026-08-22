@@ -51,6 +51,11 @@ export const QUALIFICATION_TIERS: QualificationTier[] = [
         label: "Établissement actif dans le Nord (59) ou le Pas-de-Calais (62)",
         help: "Nord Artisan Pro ne met en relation qu'avec des entreprises locales. Réactivité, connaissance du terrain et SAV plus simple.",
       },
+      {
+        id: "rge",
+        label: "Label RGE (si demandé)",
+        help: "Contrôle automatique sur l’annuaire ADEME. Exigé seulement si le particulier demande un artisan RGE (aides à la rénovation énergétique).",
+      },
     ],
   },
 ];

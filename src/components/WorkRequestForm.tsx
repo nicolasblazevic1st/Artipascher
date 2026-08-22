@@ -35,6 +35,7 @@ import {
 } from "@/lib/rcs";
 import { maxContactArtisansForTier } from "@/lib/contact-slots";
 import { MIN_GOOGLE_RATING_OPTIONS } from "@/lib/google-rating";
+import { workMayBenefitFromRge } from "@/lib/rge-verification";
 import { WORK_SCOPE_LABELS } from "@/lib/copropriete";
 import type { ClientKind, WorkScope } from "@/lib/store-types";
 import BanAddressAutocomplete, {
@@ -155,6 +156,7 @@ export default function WorkRequestForm({
   >(undefined);
   const [maxContactArtisans, setMaxContactArtisans] = useState(5);
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
+  const [requireRge, setRequireRge] = useState(false);
   const [acceptContactTerms, setAcceptContactTerms] = useState(false);
   const [phone, setPhone] = useState(defaults?.phone ?? "");
   const [phoneVerifiedE164, setPhoneVerifiedE164] = useState(
@@ -594,6 +596,7 @@ export default function WorkRequestForm({
     } else {
       formData.delete("minGoogleRating");
     }
+    formData.set("requireRge", requireRge ? "true" : "false");
     formData.set("acceptContactTerms", acceptContactTerms ? "true" : "false");
     formData.delete("smsContactAlertsEnabled");
     formData.delete("startPriceMode");
@@ -1399,12 +1402,48 @@ export default function WorkRequestForm({
         </div>
       </fieldset>
 
+      <fieldset>
+        <legend className="mb-2 text-sm font-medium text-slate-700">
+          Label RGE
+        </legend>
+        <p className="mb-2 text-xs text-slate-500">
+          {workMayBenefitFromRge(category)
+            ? "Recommandé pour ce type de travaux : le label RGE est souvent exigé pour MaPrimeRénov’, les CEE et l’éco-PTZ."
+            : "Optionnel. Cochez si vous voulez uniquement des artisans RGE (aides à la rénovation énergétique)."}
+        </p>
+        <label
+          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+            requireRge
+              ? "border-emerald-500 bg-emerald-50"
+              : "border-slate-200 bg-white"
+          }`}
+        >
+          <input
+            type="checkbox"
+            name="requireRge"
+            checked={requireRge}
+            onChange={(e) => setRequireRge(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            <span className="font-semibold text-slate-900">
+              Uniquement un artisan RGE
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-500">
+              Mention vérifiée sur l’annuaire officiel ADEME. Seuls ces artisans
+              pourront débloquer vos coordonnées.
+            </span>
+          </span>
+        </label>
+      </fieldset>
+
       <ClientQualificationGuide selectedCategory={category} />
       </div>
 
       <p className="text-xs text-slate-500">
         Seuls des artisans en activité, avec décennale et RC pro à jour, pourront
-        vous joindre.
+        vous joindre. Si vous exigez le label RGE, la mention est vérifiée sur
+        l&apos;annuaire ADEME.
       </p>
       <input type="hidden" name="requireActiveCompany" value="true" />
       <input type="hidden" name="requireValidInsurances" value="true" />

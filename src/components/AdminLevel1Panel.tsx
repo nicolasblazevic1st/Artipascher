@@ -4,6 +4,7 @@ import {
   bodaccAnnouncementUrl,
   bodaccCollectiveSearchUrl,
 } from "@/lib/bodacc";
+import { rgePublicSearchUrl } from "@/lib/rge-verification";
 import {
   DOCUMENT_STATUS_LABELS,
   getLevel1Checks,
@@ -29,6 +30,8 @@ export default function AdminLevel1Panel({ registration }: Props) {
   const rcDoc = registration.documents?.find((d) => d.id === "rc");
   const certified = isLevel1Certified(registration);
   const bodacc = registration.level1Audit?.bodacc;
+  const rge = registration.level1Audit?.rge;
+  const rgeSearchUrl = rgePublicSearchUrl(registration.siret);
   const bodaccSearchUrl = bodaccCollectiveSearchUrl(registration.siren);
   const bodaccDetailUrl = bodacc
     ? bodaccAnnouncementUrl({
@@ -45,7 +48,7 @@ export default function AdminLevel1Panel({ registration }: Props) {
             Certification niveau 1 — automatique
           </p>
           <p className="mt-1 text-xs text-slate-600">
-            RCS, BODACC, PDF RC/décennale · sans Kbis · auto
+            RCS, BODACC, RGE ADEME, PDF RC/décennale · sans Kbis · auto
           </p>
         </div>
         {certified && registration.level1CertifiedAt && (
@@ -189,6 +192,52 @@ export default function AdminLevel1Panel({ registration }: Props) {
         {bodacc && (
           <p className="mt-2 opacity-70">
             Contrôle du {new Date(bodacc.checkedAt).toLocaleString("fr-FR")}
+          </p>
+        )}
+      </div>
+
+      <div
+        className={`mt-3 rounded-lg border px-3 py-3 text-xs ${
+          !rge
+            ? "border-slate-200 bg-white text-slate-700"
+            : rge.status === "verified"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+              : rge.status === "unavailable"
+                ? "border-amber-200 bg-amber-50 text-amber-950"
+                : "border-slate-200 bg-slate-50 text-slate-700"
+        }`}
+      >
+        <p className="font-semibold">
+          {!rge
+            ? "RGE : pas encore contrôlé (annuaire ADEME)"
+            : rge.status === "verified"
+              ? "RGE : mention active (ADEME)"
+              : rge.status === "expired"
+                ? "RGE : qualifications expirées"
+                : rge.status === "unavailable"
+                  ? "RGE : contrôle ADEME indisponible"
+                  : "RGE : aucune mention en cours"}
+        </p>
+        {rge?.domains && rge.domains.length > 0 && (
+          <p className="mt-0.5 opacity-90">{rge.domains.join(" · ")}</p>
+        )}
+        {rge?.validUntil && rge.status === "verified" && (
+          <p className="mt-0.5 opacity-80">Valide jusqu’au {rge.validUntil}</p>
+        )}
+        {rge?.error && <p className="mt-0.5 opacity-80">{rge.error}</p>}
+        <div className="mt-2">
+          <a
+            href={rgeSearchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Consulter l&apos;annuaire ADEME (SIRET {registration.siret})
+          </a>
+        </div>
+        {rge && (
+          <p className="mt-2 opacity-70">
+            Contrôle du {new Date(rge.checkedAt).toLocaleString("fr-FR")}
           </p>
         )}
       </div>
