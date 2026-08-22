@@ -393,6 +393,10 @@ export interface WorkRequest {
   previousQuoteNote?: string;
   /** Demande / enchère de démonstration (bande de démonstration). */
   isTest?: boolean;
+  /** Retrait volontaire de l’annonce (masquée du site public, toujours consultable en admin). */
+  unpublishedAt?: string;
+  /** Note interne admin (non visible client / artisans). */
+  adminNote?: string;
 }
 
 export type ProQuoteStatus = "pending_moderation" | "approved" | "rejected";

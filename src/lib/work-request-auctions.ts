@@ -49,8 +49,16 @@ export function getWorkRequestStartPrice(request: WorkRequest): number | undefin
   return request.startPrice;
 }
 
+export function isWorkRequestPubliclyListed(request: WorkRequest): boolean {
+  return (
+    request.status === "approved" &&
+    Boolean(request.auctionId) &&
+    !request.unpublishedAt
+  );
+}
+
 function fromWorkRequest(request: WorkRequest): ResolvedAuction | null {
-  if (request.status !== "approved" || !request.auctionId) return null;
+  if (!isWorkRequestPubliclyListed(request) || !request.auctionId) return null;
 
   const endsAt = endsAtForRequest(request);
   const active = isAuctionStillActive(endsAt);
@@ -99,7 +107,7 @@ export async function workRequestToAuctionCard(
   request: WorkRequest,
   options?: { activeOnly?: boolean }
 ): Promise<Auction | null> {
-  if (request.status !== "approved" || !request.auctionId) return null;
+  if (!isWorkRequestPubliclyListed(request) || !request.auctionId) return null;
   const endsAt = endsAtForRequest(request);
   const active = isAuctionStillActive(endsAt);
   if (options?.activeOnly !== false && !active) return null;
@@ -214,7 +222,7 @@ export interface AdminAuctionView {
   department: "59" | "62";
   startPrice?: number;
   currentPrice?: number;
-  status: "active" | "ended";
+  status: "active" | "ended" | "unpublished";
   endsAt?: string;
   createdAt?: string;
   bidCount: number;
@@ -241,7 +249,8 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
     if (request.status !== "approved" || !request.auctionId) continue;
 
     const endsAt = endsAtForRequest(request);
-    const active = isAuctionStillActive(endsAt);
+    const unpublished = Boolean(request.unpublishedAt);
+    const active = !unpublished && isAuctionStillActive(endsAt);
     const bids = await getBidsForAuction(request.auctionId);
     const acceptedArtisansCount = await countContactUnlocksForAuction(
       request.auctionId
@@ -264,7 +273,7 @@ export async function listAdminAuctionViews(): Promise<AdminAuctionView[]> {
       department: request.department,
       startPrice,
       currentPrice,
-      status: active ? "active" : "ended",
+      status: unpublished ? "unpublished" : active ? "active" : "ended",
       endsAt,
       createdAt: request.createdAt,
       bidCount: bids.length,
@@ -343,7 +352,8 @@ export async function getWorkRequestByShareToken(
 ): Promise<WorkRequest | null> {
   const store = await readStore();
   const request = store.workRequests.find(
-    (r) => r.shareToken === shareToken && r.status === "approved"
+    (r) =>
+      r.shareToken === shareToken && isWorkRequestPubliclyListed(r)
   );
   return request ?? null;
 }

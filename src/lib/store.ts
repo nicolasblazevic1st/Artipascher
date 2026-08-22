@@ -508,32 +508,101 @@ export async function demoteProToLevelZero(
   return pro;
 }
 
+const WORK_REQUEST_PATCH_KEYS = [
+  "status",
+  "reviewedAt",
+  "auctionId",
+  "auctionEndsAt",
+  "selectedBidId",
+  "selectedQuoteId",
+  "clientId",
+  "shareToken",
+  "startPrice",
+  "startPriceQuoteId",
+  "nafCodes",
+  "firstName",
+  "lastName",
+  "email",
+  "phone",
+  "clientKind",
+  "companyName",
+  "clientSiret",
+  "workScope",
+  "addressLine",
+  "addressLine2",
+  "postalCode",
+  "city",
+  "department",
+  "banAddressId",
+  "latitude",
+  "longitude",
+  "addressVerifiedAt",
+  "requestedWorkStartDate",
+  "category",
+  "pricingTier",
+  "workOptionId",
+  "workOptionOtherDescription",
+  "description",
+  "auctionDurationHours",
+  "maxContactArtisans",
+  "preferEstablishedCompany",
+  "minGoogleRating",
+  "isTest",
+  "unpublishedAt",
+  "adminNote",
+] as const;
+
+const WORK_REQUEST_CLEARABLE_KEYS = new Set<
+  (typeof WORK_REQUEST_PATCH_KEYS)[number]
+>([
+  "auctionEndsAt",
+  "companyName",
+  "clientSiret",
+  "workScope",
+  "addressLine2",
+  "requestedWorkStartDate",
+  "workOptionId",
+  "workOptionOtherDescription",
+  "preferEstablishedCompany",
+  "minGoogleRating",
+  "unpublishedAt",
+  "adminNote",
+]);
+
+export type WorkRequestPatch = {
+  [K in (typeof WORK_REQUEST_PATCH_KEYS)[number]]?: WorkRequest[K] | null;
+};
+
 export async function updateWorkRequest(
   id: string,
-  patch: Partial<
-    Pick<
-      WorkRequest,
-      | "status"
-      | "reviewedAt"
-      | "auctionId"
-      | "auctionEndsAt"
-      | "selectedBidId"
-      | "clientId"
-      | "shareToken"
-      | "startPrice"
-      | "startPriceQuoteId"
-      | "nafCodes"
-    >
-  >
+  patch: WorkRequestPatch
 ): Promise<WorkRequest | null> {
   const store = await readStore();
   const index = store.workRequests.findIndex((r) => r.id === id);
   if (index === -1) return null;
-  store.workRequests[index] = {
-    ...store.workRequests[index],
-    ...patch,
-    reviewedAt: patch.reviewedAt ?? new Date().toISOString(),
-  };
+
+  const current = store.workRequests[index];
+  const next: WorkRequest = { ...current };
+
+  for (const key of WORK_REQUEST_PATCH_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(patch, key)) continue;
+    const value = patch[key];
+    if (value === null && WORK_REQUEST_CLEARABLE_KEYS.has(key)) {
+      delete (next as Record<string, unknown>)[key];
+      continue;
+    }
+    if (value !== undefined && value !== null) {
+      (next as Record<string, unknown>)[key] = value;
+    }
+  }
+
+  if (patch.reviewedAt != null) {
+    next.reviewedAt = patch.reviewedAt;
+  } else if (patch.status != null && patch.status !== current.status) {
+    next.reviewedAt = new Date().toISOString();
+  }
+
+  store.workRequests[index] = next;
   await writeStore(store);
   return store.workRequests[index];
 }
@@ -1470,6 +1539,26 @@ export async function getClientByEmail(email: string): Promise<ClientAccount | n
   );
 }
 
+function clientHasPhone(client: ClientAccount, phoneE164: string): boolean {
+  const fromPhone = client.phone ? normalizeFrenchMobile(client.phone) : null;
+  const fromVerified = client.phoneVerifiedE164
+    ? normalizeFrenchMobile(client.phoneVerifiedE164)
+    : null;
+  return fromPhone === phoneE164 || fromVerified === phoneE164;
+}
+
+export const CLIENT_PHONE_ALREADY_USED_ERROR =
+  "Ce numéro de mobile est déjà associé à un autre compte. Un mobile ne peut pas être lié à plusieurs emails.";
+
+export async function getClientByPhone(
+  phoneRaw: string
+): Promise<ClientAccount | null> {
+  const phoneE164 = normalizeFrenchMobile(phoneRaw);
+  if (!phoneE164) return null;
+  const store = await readStore();
+  return store.clientAccounts.find((c) => clientHasPhone(c, phoneE164)) ?? null;
+}
+
 export async function authenticateClient(
   email: string,
   password: string
@@ -1524,6 +1613,10 @@ export async function ensureClientAccount(data: {
   const store = await readStore();
   const emailLower = data.email.toLowerCase();
   const existing = store.clientAccounts.find((c) => c.email.toLowerCase() === emailLower);
+  const phoneE164 = data.phone ? normalizeFrenchMobile(data.phone) : null;
+  const phoneOwner = phoneE164
+    ? store.clientAccounts.find((c) => clientHasPhone(c, phoneE164))
+    : null;
 
   if (existing) {
     if (!verifyPassword(data.password, existing.passwordHash)) {
@@ -1532,11 +1625,18 @@ export async function ensureClientAccount(data: {
           "Un compte existe déjà avec cet email. Connectez-vous à votre espace ou utilisez le bon mot de passe.",
       };
     }
+    if (phoneOwner && phoneOwner.id !== existing.id) {
+      return { error: CLIENT_PHONE_ALREADY_USED_ERROR };
+    }
     if (data.phone && !existing.phone) {
       existing.phone = data.phone;
       await writeStore(store);
     }
     return { client: existing, created: false };
+  }
+
+  if (phoneOwner) {
+    return { error: CLIENT_PHONE_ALREADY_USED_ERROR };
   }
 
   const passwordError = validatePassword(data.password);
@@ -2349,6 +2449,11 @@ export async function markClientPhoneVerified(
   const store = await readStore();
   const index = store.clientAccounts.findIndex((c) => c.id === clientId);
   if (index === -1) return null;
+
+  const takenByOther = store.clientAccounts.find(
+    (c) => c.id !== clientId && clientHasPhone(c, phoneE164)
+  );
+  if (takenByOther) return null;
 
   const verifiedAt = new Date().toISOString();
 

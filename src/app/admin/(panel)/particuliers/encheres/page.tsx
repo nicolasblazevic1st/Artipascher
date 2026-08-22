@@ -14,9 +14,10 @@ export default async function AdminOffresPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Offres publiées</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Annonces publiées après validation admin — mise en contact jusqu&apos;à 5
-        artisans · {activeCount} active{activeCount > 1 ? "s" : ""} ·{" "}
-        {fromSite.length} au total
+        Contrôle total des annonces : modifier le contenu, la durée, les
+        photos, ou dépublier. Mise en contact jusqu&apos;à 5 artisans ·{" "}
+        {activeCount} active{activeCount > 1 ? "s" : ""} · {fromSite.length} au
+        total
       </p>
 
       {fromSite.length === 0 ? (
@@ -48,13 +49,21 @@ export default async function AdminOffresPage() {
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         auction.status === "active"
                           ? "bg-emerald-100 text-emerald-800"
-                          : "bg-slate-100 text-slate-600"
+                          : auction.status === "unpublished"
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-slate-100 text-slate-600"
                       }`}
                     >
-                      {auction.status === "active" ? "Active" : "Terminée"}
+                      {auction.status === "active"
+                        ? "Active"
+                        : auction.status === "unpublished"
+                          ? "Dépubliée"
+                          : "Terminée"}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                      Site public
+                      {auction.status === "unpublished"
+                        ? "Hors ligne"
+                        : "Site public"}
                     </span>
                   </div>
                   <h3 className="mt-1 font-semibold text-slate-900">{auction.title}</h3>
@@ -93,10 +102,16 @@ export default async function AdminOffresPage() {
               </div>
               <div className="mt-3 flex flex-wrap gap-3 text-sm">
                 <Link
-                  href={`/admin/particuliers/encheres/${auction.id}`}
+                  href={`/admin/particuliers/encheres/${auction.id}/editer`}
                   className="font-medium text-brand-700 hover:underline"
                 >
-                  Consulter →
+                  Modifier l’annonce
+                </Link>
+                <Link
+                  href={`/admin/particuliers/encheres/${auction.id}`}
+                  className="text-slate-600 hover:underline"
+                >
+                  Consulter
                 </Link>
                 {auction.workRequestId && (
                   <Link
@@ -106,13 +121,15 @@ export default async function AdminOffresPage() {
                     Demande associée
                   </Link>
                 )}
-                <Link
-                  href={`/encheres/${auction.id}`}
-                  className="text-slate-600 hover:underline"
-                  target="_blank"
-                >
-                  Voir sur le site public
-                </Link>
+                {auction.status !== "unpublished" && (
+                  <Link
+                    href={`/encheres/${auction.id}`}
+                    className="text-slate-600 hover:underline"
+                    target="_blank"
+                  >
+                    Voir sur le site public
+                  </Link>
+                )}
               </div>
             </li>
           ))}

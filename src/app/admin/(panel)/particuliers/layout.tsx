@@ -13,7 +13,7 @@ export default function AdminParticuliersLayout({
     <div>
       <AdminSectionNav
         title="Particuliers & chantiers"
-        description="Comptes clients, demandes de travaux et offres publiées (mise en contact)."
+        description="Comptes clients, demandes de travaux et offres publiées — édition, durée et dépublication."
         tabs={TABS}
       />
       {children}
