@@ -20,13 +20,13 @@ export default function CgvPage() {
           Les présentes Conditions générales de vente (ci-après « CGV »)
           s&apos;appliquent à la vente, par {LEGAL_PUBLISHER.brand} /{" "}
           {LEGAL_PUBLISHER.legalName} (ci-après « le Vendeur »), de{" "}
-          <strong>mises en contact</strong> (déblocage des coordonnées Client)
+          <strong>mises en contact</strong>{" "} (déblocage des coordonnées Client)
           permettant aux Professionnels d&apos;utiliser le service payant de la
           plateforme Nord Artisan Pro (ci-après « la Plateforme »).
         </p>
         <p className="mt-3">
           Les CGV s&apos;adressent exclusivement aux{" "}
-          <strong>professionnels</strong> (B2B) agissant dans le cadre de leur
+          <strong>professionnels</strong>{" "} (B2B) agissant dans le cadre de leur
           activité. Elles ne régissent pas le contrat de travaux entre Client et
           Artisan, lequel est hors Plateforme.
         </p>
@@ -46,17 +46,17 @@ export default function CgvPage() {
         <ul>
           <li>
             le tarif unitaire de référence pour une mise en contact typique est
-            de <strong>{CONTACT_UNLOCK_REF_EUR}&nbsp;€</strong> (TTC ou HT selon
+            de <strong>{CONTACT_UNLOCK_REF_EUR}&nbsp;€</strong>{" "} (TTC ou HT selon
             le régime fiscal affiché lors du paiement) ;
           </li>
           <li>
             le prix exact débité correspond au{" "}
-            <strong>ticket du chantier</strong> affiché avant paiement :{" "}
+            <strong>ticket du chantier</strong>{" "} affiché avant paiement :{" "}
             {PRICING_TIERS.map((t) => `${t.unlockPriceEur}\u00a0€`).join(" / ")}{" "}
             ;
           </li>
           <li>
-            <strong>aucun pack</strong> ni forfait de solde prépayé n&apos;est
+            <strong>aucun pack</strong>{" "} ni forfait de solde prépayé n&apos;est
             proposé à l&apos;achat. Un solde résiduel éventuellement présent sur
             le compte (remboursement, ancien crédit) peut être
             utilisé en priorité pour un déblocage si son montant est suffisant.
@@ -72,13 +72,13 @@ export default function CgvPage() {
       <section>
         <h2>2 bis. Nature du service payant</h2>
         <p className="mt-3">
-          Le montant payé pour un <strong>déblocage</strong> donne accès aux{" "}
-          <strong>coordonnées</strong> d&apos;un Client ayant autorisé le
+          Le montant payé pour un <strong>déblocage</strong>{" "} donne accès aux{" "}
+          <strong>coordonnées</strong>{" "} d&apos;un Client ayant autorisé le
           contact (acceptation manuelle ou option d&apos;alerte SMS avec
           acceptation automatique, dans la limite prévue aux CGU).
         </p>
         <p className="mt-3">
-          <strong>Ne sont pas garantis</strong> : une réponse du Client, un
+          <strong>Ne sont pas garantis</strong>{" "} : une réponse du Client, un
           devis signé, un chantier, ni un volume minimal d&apos;offres à
           proximité du Professionnel. Le paiement donne accès à une
           fonctionnalité de la Plateforme, non la vente d&apos;un résultat
@@ -99,7 +99,7 @@ export default function CgvPage() {
           disposition des coordonnées. Une confirmation peut être adressée par
           email et/ou affichée dans l&apos;espace compte. L&apos;accès au
           service suppose un compte Professionnel{" "}
-          <strong>préalablement vérifié</strong> à l&apos;inscription (registre,
+          <strong>préalablement vérifié</strong>{" "} à l&apos;inscription (registre,
           BODACC, attestations RC pro et garantie adaptée aux activités —
           voir CGU).
         </p>
@@ -152,7 +152,7 @@ export default function CgvPage() {
         <p className="mt-3">
           Le paiement d&apos;une mise en contact ne donne lieu à aucun
           remboursement, sauf{" "}
-          <strong>dysfonctionnement imputable au Vendeur</strong> (par exemple
+          <strong>dysfonctionnement imputable au Vendeur</strong>{" "} (par exemple
           impossibilité technique d&apos;accéder aux coordonnées après
           déblocage, ou coordonnées manifestement invalides du fait de la
           Plateforme).
@@ -160,7 +160,7 @@ export default function CgvPage() {
         <p className="mt-3">
           L&apos;absence de réponse du Client, l&apos;absence d&apos;offres dans
           une zone géographique, ou le refus ultérieur de travaux{" "}
-          <strong>ne constituent pas</strong> un motif de remboursement.
+          <strong>ne constituent pas</strong>{" "} un motif de remboursement.
         </p>
         <p className="mt-3">
           Le déblocage des coordonnées constitue le service livré : l&apos;absence

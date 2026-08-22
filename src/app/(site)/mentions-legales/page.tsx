@@ -20,25 +20,25 @@ export default function MentionsLegalesPage() {
         </p>
         <ul>
           <li>
-            <strong>Nom commercial :</strong> {LEGAL_PUBLISHER.brand}
+            <strong>Nom commercial :</strong>{" "}{LEGAL_PUBLISHER.brand}
           </li>
           <li>
-            <strong>Dénomination sociale :</strong> {LEGAL_PUBLISHER.legalName}
+            <strong>Dénomination sociale :</strong>{" "}{LEGAL_PUBLISHER.legalName}
           </li>
           <li>
-            <strong>Forme juridique :</strong> {LEGAL_PUBLISHER.legalForm}
+            <strong>Forme juridique :</strong>{" "}{LEGAL_PUBLISHER.legalForm}
           </li>
           <li>
-            <strong>Capital social :</strong> {LEGAL_PUBLISHER.shareCapital}
+            <strong>Capital social :</strong>{" "}{LEGAL_PUBLISHER.shareCapital}
           </li>
           <li>
-            <strong>SIRET :</strong> {LEGAL_PUBLISHER.siret}
+            <strong>SIRET :</strong>{" "}{LEGAL_PUBLISHER.siret}
           </li>
           <li>
-            <strong>Immatriculation :</strong> {LEGAL_PUBLISHER.rcs}
+            <strong>Immatriculation :</strong>{" "}{LEGAL_PUBLISHER.rcs}
           </li>
           <li>
-            <strong>Siège / adresse :</strong> {LEGAL_PUBLISHER.address}
+            <strong>Siège / adresse :</strong>{" "}{LEGAL_PUBLISHER.address}
           </li>
           <li>
             <strong>Email :</strong>{" "}
@@ -60,16 +60,16 @@ export default function MentionsLegalesPage() {
         <p className="mt-3">Le Site est hébergé par :</p>
         <ul>
           <li>
-            <strong>Hébergeur :</strong> {LEGAL_HOST.name}
+            <strong>Hébergeur :</strong>{" "}{LEGAL_HOST.name}
           </li>
           <li>
-            <strong>Adresse :</strong> {LEGAL_HOST.address}
+            <strong>Adresse :</strong>{" "}{LEGAL_HOST.address}
           </li>
           <li>
-            <strong>SIRET :</strong> {LEGAL_HOST.siret}
+            <strong>SIRET :</strong>{" "}{LEGAL_HOST.siret}
           </li>
           <li>
-            <strong>Téléphone :</strong> {LEGAL_HOST.phone}
+            <strong>Téléphone :</strong>{" "}{LEGAL_HOST.phone}
           </li>
           <li>
             <strong>Site :</strong>{" "}
