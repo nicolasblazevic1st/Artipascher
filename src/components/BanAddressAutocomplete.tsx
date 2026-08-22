@@ -22,12 +22,14 @@ interface Props {
   inputClass: string;
   onSelect: (address: SelectedBanAddress | null) => void;
   onManualChange?: () => void;
+  required?: boolean;
 }
 
 export default function BanAddressAutocomplete({
   inputClass,
   onSelect,
   onManualChange,
+  required = true,
 }: Props) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<BanSuggestion[]>([]);
@@ -115,7 +117,7 @@ export default function BanAddressAutocomplete({
         onFocus={() => suggestions.length > 0 && setOpen(true)}
         placeholder="Commencez à taper : 12 rue de la Barre, Lille…"
         className={inputClass}
-        required
+        required={required}
         autoComplete="off"
       />
       {loading && (

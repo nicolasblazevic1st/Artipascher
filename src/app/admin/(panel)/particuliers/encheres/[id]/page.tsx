@@ -59,16 +59,29 @@ export default async function AdminOffreDetailPage({ params }: Props) {
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                 auction.status === "active"
                   ? "bg-emerald-100 text-emerald-800"
-                  : "bg-slate-100 text-slate-600"
+                  : auction.status === "unpublished"
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-slate-100 text-slate-600"
               }`}
             >
-              {auction.status === "active" ? "Active" : "Terminée"}
+              {auction.status === "active"
+                ? "Active"
+                : auction.status === "unpublished"
+                  ? "Dépubliée"
+                  : "Terminée"}
             </span>
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
               {auction.source === "workRequest" ? "Site public" : "Catalogue démo"}
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-bold text-slate-900">{auction.title}</h1>
+          {workRequest?.unpublishedAt && (
+            <p className="mt-2 rounded-lg bg-orange-50 px-3 py-2 text-sm text-orange-800">
+              Annonce dépubliée le{" "}
+              {new Date(workRequest.unpublishedAt).toLocaleString("fr-FR")} —
+              invisible sur le site public.
+            </p>
+          )}
           <p className="mt-1 text-sm text-slate-500">
             Fin d&apos;annonce : {endsLabel}
             {workRequest && (
@@ -79,7 +92,16 @@ export default async function AdminOffreDetailPage({ params }: Props) {
             )}
           </p>
         </div>
-        <div className="text-right">
+        <div className="flex flex-col items-end gap-3">
+          {workRequest && (
+            <Link
+              href={`/admin/particuliers/encheres/${auction.id}/editer`}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Modifier l’annonce
+            </Link>
+          )}
+          <div className="text-right">
           <p className="text-sm text-slate-500">Contacts débloqués</p>
           <p className="text-2xl font-bold text-brand-700">
             {activeUnlocks.length}/{auction.maxAcceptedArtisans}
@@ -87,6 +109,7 @@ export default async function AdminOffreDetailPage({ params }: Props) {
           <p className="text-xs text-slate-400">
             {formatUnlockPriceEur(UNLOCK_PRICE_EUR)} typique / mise en contact
           </p>
+          </div>
         </div>
       </div>
 
@@ -125,6 +148,12 @@ export default async function AdminOffreDetailPage({ params }: Props) {
                   <dd className="text-slate-700">
                     {formatNafList(workRequest.nafCodes, ", ")}
                   </dd>
+                </div>
+              )}
+              {workRequest.adminNote && (
+                <div>
+                  <dt className="text-xs text-slate-400">Note admin</dt>
+                  <dd className="text-amber-900">{workRequest.adminNote}</dd>
                 </div>
               )}
             </dl>
@@ -187,6 +216,7 @@ export default async function AdminOffreDetailPage({ params }: Props) {
             </p>
           )}
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
+            {auction.status !== "unpublished" && (
             <Link
               href={`/encheres/${auction.id}`}
               target="_blank"
@@ -194,6 +224,7 @@ export default async function AdminOffreDetailPage({ params }: Props) {
             >
               Page publique →
             </Link>
+            )}
             {auction.shareToken && (
               <Link
                 href={`/enchere/partage/${auction.shareToken}`}

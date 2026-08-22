@@ -9,6 +9,7 @@ import { formatWorkRequestAddress } from "@/lib/client-address";
 import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatNafList } from "@/lib/naf-trade-groups";
+import { listingEditorHref } from "@/lib/admin-listing-paths";
 import type { WorkRequest } from "@/lib/store-types";
 
 const STATUS_LABELS = {
@@ -50,8 +51,8 @@ export default function AdminDemandesPage() {
     <div>
       <h2 className="text-lg font-semibold text-slate-900">Demandes de travaux</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Validez les demandes pour publier une annonce de mise en contact — puis
-        suivez-les dans l&apos;onglet Offres publiées.
+        Validez les demandes pour publier une annonce, ou cliquez sur Modifier
+        pour corriger le contenu avant / après publication.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -91,9 +92,15 @@ export default function AdminDemandesPage() {
                       {r.firstName} {r.lastName}
                     </h2>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_LABELS[r.status].className}`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        r.status === "approved" && r.unpublishedAt
+                          ? "bg-orange-100 text-orange-800"
+                          : STATUS_LABELS[r.status].className
+                      }`}
                     >
-                      {STATUS_LABELS[r.status].text}
+                      {r.status === "approved" && r.unpublishedAt
+                        ? "Dépubliée"
+                        : STATUS_LABELS[r.status].text}
                     </span>
                     {r.isTest && <TestBanner />}
                     {r.clientKind === "copropriete" && (
@@ -198,6 +205,11 @@ export default function AdminDemandesPage() {
                       {new Date(r.auctionEndsAt).toLocaleString("fr-FR")}
                     </p>
                   )}
+                  {r.adminNote && (
+                    <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                      Note admin : {r.adminNote}
+                    </p>
+                  )}
                   {r.auctionId && (
                     <p className="mt-2 text-xs text-emerald-600">
                       Annonce :{" "}
@@ -217,24 +229,32 @@ export default function AdminDemandesPage() {
                     category={r.category}
                   />
                 </div>
-                {r.status === "pending" && (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleReview(r.id, "approved")}
-                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-                    >
-                      Publier l&apos;annonce
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleReview(r.id, "rejected")}
-                      className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                    >
-                      Refuser
-                    </button>
-                  </div>
-                )}
+                <div className="flex flex-col gap-2">
+                  <a
+                    href={listingEditorHref(r)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Modifier
+                  </a>
+                  {r.status === "pending" && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleReview(r.id, "approved")}
+                        className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                      >
+                        Publier l&apos;annonce
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleReview(r.id, "rejected")}
+                        className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+                      >
+                        Refuser
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </li>
           ))}
