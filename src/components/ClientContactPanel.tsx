@@ -180,10 +180,12 @@ export default function ClientContactPanel({
               </span>
             </dd>
           </div>
+          {contact.email?.includes("@") ? (
           <div>
             <dt className="text-emerald-600">Email</dt>
             <dd className="font-medium text-emerald-900">{contact.email}</dd>
           </div>
+          ) : null}
           <div>
             <dt className="text-emerald-600">Adresse</dt>
             <dd className="font-medium text-emerald-900">

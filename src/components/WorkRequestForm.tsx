@@ -4,16 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ClientQualificationGuide from "@/components/ClientQualificationGuide";
 import {
-  LISTING_DURATION_OPTIONS,
-  DEFAULT_LISTING_DURATION_HOURS,
-} from "@/lib/auction-duration";
-import {
-  minRequestedWorkStartDate,
-  maxRequestedWorkStartDate,
   validateDescription,
   validatePhotoFiles,
-  validatePreviousQuotePair,
-  validateRequestedWorkStartDate,
   MIN_DESCRIPTION_LENGTH,
   MAX_PHOTOS,
 } from "@/lib/demandes-validation";
@@ -48,6 +40,51 @@ import BanAddressAutocomplete, {
 } from "@/components/BanAddressAutocomplete";
 
 const LEAD_FORM_CONVERSION_EVENT = "manual_event_SUBMIT_LEAD_FORM";
+
+function buildDescriptionPrefill(input: {
+  category: string;
+  workOptionName?: string;
+  workOptionDetail?: string;
+  otherDescription?: string;
+}): string {
+  const category = input.category.trim();
+  if (!category) return "";
+
+  const other = input.otherDescription?.trim();
+  const name = input.workOptionName?.trim();
+  const detail = input.workOptionDetail?.trim();
+
+  let besoin = "";
+  if (other) {
+    besoin = other;
+  } else if (name && detail) {
+    besoin = `${name} (${detail})`;
+  } else if (name) {
+    besoin = name;
+  }
+
+  const first = besoin
+    ? `Je souhaite des travaux de ${category.toLowerCase()} : ${besoin}.`
+    : `Je souhaite des travaux de ${category.toLowerCase()}.`;
+
+  return `${first}\n\nMerci de me recontacter pour un devis. Je préciserai les détails lors de l'échange.`;
+}
+
+const FORM_STEPS = [
+  { id: 1, label: "Travaux" },
+  { id: 2, label: "Bien" },
+  { id: 3, label: "Projet" },
+  { id: 4, label: "Contact" },
+] as const;
+type FormStep = (typeof FORM_STEPS)[number]["id"];
+
+const PROPERTY_TYPES = [
+  { id: "maison", label: "Maison" },
+  { id: "appartement", label: "Appartement" },
+  { id: "local", label: "Local professionnel" },
+  { id: "autre", label: "Autre" },
+] as const;
+type PropertyTypeId = (typeof PROPERTY_TYPES)[number]["id"];
 
 function trackLeadFormConversion() {
   if (typeof window.gtag !== "function") return;
@@ -107,16 +144,8 @@ export default function WorkRequestForm({
   const [pricingTier, setPricingTier] = useState<PricingTierId | "">("");
   const [workOptionOtherDescription, setWorkOptionOtherDescription] =
     useState("");
-  const [hasPreviousQuote, setHasPreviousQuote] = useState(false);
-  const [previousQuoteAmount, setPreviousQuoteAmount] = useState("");
-  const [previousQuoteProof, setPreviousQuoteProof] = useState<File | null>(null);
-  const [previousQuoteNote, setPreviousQuoteNote] = useState("");
-  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [descriptionTouched, setDescriptionTouched] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
-  const [requestedWorkStartDate, setRequestedWorkStartDate] = useState("");
-  const [listingDurationHours, setListingDurationHours] = useState(
-    DEFAULT_LISTING_DURATION_HOURS
-  );
   const [preferEstablishedCompany, setPreferEstablishedCompany] = useState(false);
   const [maxContactArtisans, setMaxContactArtisans] = useState(5);
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
@@ -136,10 +165,10 @@ export default function WorkRequestForm({
   const [companyVerification, setCompanyVerification] =
     useState<RcsVerificationResult | null>(null);
   const [verifyingCompany, setVerifyingCompany] = useState(false);
+  const [step, setStep] = useState<FormStep>(1);
+  const [propertyType, setPropertyType] = useState<PropertyTypeId | "">("");
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
-  const minStartDate = minRequestedWorkStartDate(listingDurationHours);
-  const maxStartDate = maxRequestedWorkStartDate();
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
   const requiresNafChoice = nafOptions.length > 1;
   const effectiveNafCodes =
@@ -162,6 +191,36 @@ export default function WorkRequestForm({
     }, 1000);
     return () => window.clearInterval(id);
   }, [otpCooldown]);
+
+  useEffect(() => {
+    if (descriptionTouched) return;
+    const selectedOption = workOptions.find((opt) => opt.id === workOptionId);
+    const draft = buildDescriptionPrefill({
+      category,
+      workOptionName:
+        workOptionId && workOptionId !== OTHER_WORK_OPTION_ID
+          ? selectedOption?.name
+          : undefined,
+      workOptionDetail:
+        workOptionId && workOptionId !== OTHER_WORK_OPTION_ID
+          ? selectedOption?.detail
+          : undefined,
+      otherDescription:
+        workOptionId === OTHER_WORK_OPTION_ID
+          ? workOptionOtherDescription
+          : undefined,
+    });
+    if (descriptionRef.current) {
+      descriptionRef.current.value = draft;
+    }
+    syncDescriptionLength(draft);
+  }, [
+    category,
+    workOptionId,
+    workOptionOtherDescription,
+    workOptions,
+    descriptionTouched,
+  ]);
 
   function handleCategoryChange(next: string) {
     setCategory(next);
@@ -290,21 +349,73 @@ export default function WorkRequestForm({
     setError(null);
   }
 
-  function handleProofChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    if (proofPreview) URL.revokeObjectURL(proofPreview);
-    setPreviousQuoteProof(file);
-    if (file && file.type.startsWith("image/")) {
-      setProofPreview(URL.createObjectURL(file));
-    } else {
-      setProofPreview(null);
+  function validateCurrentStep(current: FormStep): string | null {
+    if (current === 1) {
+      if (!category) return "Choisissez le type de travaux.";
+      const nafCheck = validateWorkRequestNafSelection(category, selectedNafCodes);
+      if (!nafCheck.ok) return nafCheck.error;
+      const pricingCheck = validatePricingSelection({
+        pricingTier,
+        workOptionId: workOptionId || undefined,
+        workOptionOtherDescription:
+          workOptionId === OTHER_WORK_OPTION_ID
+            ? workOptionOtherDescription
+            : undefined,
+        nafCodes: nafCheck.nafCodes,
+      });
+      if (!pricingCheck.ok) return pricingCheck.error;
+      return null;
     }
+
+    if (current === 2) {
+      if (!propertyType) return "Indiquez le type de bien.";
+      if (clientKind === "company" && !companyVerification?.valid) {
+        return "Vérifiez le SIRET de l'entreprise pour continuer.";
+      }
+      if (clientKind === "copropriete" && !workScope) {
+        return "Précisez si ce sont les parties communes ou un lot privatif.";
+      }
+      if (!selectedAddress?.banAddressId) {
+        return "Indiquez l'adresse du chantier et choisissez une suggestion.";
+      }
+      return null;
+    }
+
+    if (current === 3) {
+      const descError = validateDescription(getDescriptionValue());
+      if (descError) return descError;
+      return null;
+    }
+
+    return null;
+  }
+
+  function goToStep(next: FormStep) {
     setError(null);
+    setStep(next);
+  }
+
+  function goNext() {
+    const message = validateCurrentStep(step);
+    if (message) {
+      setError(message);
+      return;
+    }
+    if (step < 4) goToStep((step + 1) as FormStep);
+  }
+
+  function goBack() {
+    if (step > 1) goToStep((step - 1) as FormStep);
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    if (step < 4) {
+      goNext();
+      return;
+    }
 
     const descError = validateDescription(getDescriptionValue());
     if (descError) {
@@ -320,31 +431,12 @@ export default function WorkRequestForm({
       return;
     }
 
-    if (hasPreviousQuote) {
-      const quoteError = validatePreviousQuotePair(previousQuoteAmount, previousQuoteProof);
-      if (quoteError) {
-        setError(quoteError);
-        setStatus("error");
-        return;
-      }
-    }
-
     const form = e.currentTarget;
 
     if (!selectedAddress?.banAddressId) {
       setError(
         "Sélectionnez votre adresse dans la liste officielle (Base Adresse Nationale)."
       );
-      setStatus("error");
-      return;
-    }
-
-    const startDateError = validateRequestedWorkStartDate(
-      requestedWorkStartDate,
-      listingDurationHours
-    );
-    if (startDateError) {
-      setError(startDateError);
       setStatus("error");
       return;
     }
@@ -439,14 +531,20 @@ export default function WorkRequestForm({
     } else {
       formData.delete("workOptionOtherDescription");
     }
-    formData.set("description", getDescriptionValue().trim());
+    const propertyLabel = PROPERTY_TYPES.find((p) => p.id === propertyType)?.label;
+    const description = getDescriptionValue().trim();
+    formData.set(
+      "description",
+      propertyLabel ? `${propertyLabel}. ${description}` : description
+    );
     formData.set("addressLine", selectedAddress.addressLine);
     formData.set("postalCode", selectedAddress.postalCode);
     formData.set("city", selectedAddress.city);
     formData.set("banAddressId", selectedAddress.banAddressId);
-    formData.set("requestedWorkStartDate", requestedWorkStartDate);
+    formData.delete("requestedWorkStartDate");
     formData.set("phone", phoneValue);
-    formData.set("auctionDurationHours", String(listingDurationHours));
+    formData.delete("auctionDurationHours");
+    formData.delete("auctionDurationDays");
     formData.set(
       "preferEstablishedCompany",
       preferEstablishedCompany ? "true" : "false"
@@ -478,15 +576,13 @@ export default function WorkRequestForm({
     }
     formData.delete("photos");
     photoFiles.forEach((file) => formData.append("photos", file));
-    if (hasPreviousQuote) {
-      formData.set("previousQuoteAmount", previousQuoteAmount);
-      formData.set("previousQuoteNote", previousQuoteNote);
-      formData.delete("previousQuoteProof");
-      if (previousQuoteProof) formData.append("previousQuoteProof", previousQuoteProof);
-    } else {
-      formData.delete("previousQuoteAmount");
-      formData.delete("previousQuoteNote");
-      formData.delete("previousQuoteProof");
+    formData.delete("previousQuoteAmount");
+    formData.delete("previousQuoteNote");
+    formData.delete("previousQuoteProof");
+    if (guestMode) {
+      formData.delete("email");
+    } else if (defaults?.email) {
+      formData.set("email", defaults.email);
     }
 
     const res = await fetch("/api/demandes", {
@@ -515,20 +611,16 @@ export default function WorkRequestForm({
       descriptionRef.current.value = "";
     }
     setDescriptionLength(0);
+    setDescriptionTouched(false);
     setPhotoFiles([]);
     previews.forEach((url) => URL.revokeObjectURL(url));
     setPreviews([]);
     setCategory("");
-    setHasPreviousQuote(false);
-    setPreviousQuoteAmount("");
-    setPreviousQuoteProof(null);
-    setPreviousQuoteNote("");
     setAcceptContactTerms(false);
-    if (proofPreview) URL.revokeObjectURL(proofPreview);
-    setProofPreview(null);
     setSelectedAddress(null);
-    setRequestedWorkStartDate("");
     setClientKind("individual");
+    setPropertyType("");
+    setStep(1);
     setWorkScope("");
     setClientSiret("");
     setCompanyVerification(null);
@@ -569,30 +661,58 @@ export default function WorkRequestForm({
     "w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm";
 
   return (
-    <div className="mt-8 space-y-6">
+    <div className="space-y-6">
       <form
         onSubmit={handleSubmit}
-        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
+        noValidate
+        className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
       >
-      <div className="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3 text-sm text-brand-900">
-        <p className="font-medium">Pour une annonce de qualité :</p>
-        <ul className="mt-1 list-inside list-disc text-brand-800">
-          <li>Description d&apos;au moins {MIN_DESCRIPTION_LENGTH} caractères</li>
-          <li>Photos du chantier (recommandées, optionnelles)</li>
-          <li>Mobile vérifié par SMS pour être joint par les artisans</li>
-          <li>Adresse du chantier vérifiée via la Base Adresse Nationale (État)</li>
-          <li>Date souhaitée de début des travaux</li>
-          <li>Option : joindre un devis déjà reçu (montant + justificatif) pour contextualiser</li>
-        </ul>
+      <div>
+        <p className="text-sm font-medium text-slate-900">
+          {step === 1 && "Quels travaux souhaitez-vous réaliser ?"}
+          {step === 2 && "Où se situe le chantier ?"}
+          {step === 3 && "Dites-nous en plus sur le projet…"}
+          {step === 4 && "Dernière étape, vos coordonnées"}
+        </p>
+        <p className="mt-1 text-sm text-slate-600">
+          {step === 1 && "Une catégorie suffit pour commencer."}
+          {step === 2 && "Type de bien et adresse : on trouve les artisans autour de vous."}
+          {step === 3 && "Quelques mots sur ce que vous voulez, et des photos si vous en avez."}
+          {step === 4 && "On vous rappelle. Gratuit, sans engagement."}
+        </p>
+        <ol className="mt-4 grid grid-cols-4 gap-2">
+          {FORM_STEPS.map((item) => {
+            const done = step > item.id;
+            const current = step === item.id;
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (item.id < step) goToStep(item.id);
+                  }}
+                  disabled={item.id > step}
+                  className={`w-full rounded-lg px-2 py-2 text-center text-xs font-medium ${
+                    current
+                      ? "bg-brand-600 text-white"
+                      : done
+                        ? "bg-brand-50 text-brand-800"
+                        : "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {item.id}. {item.label}
+                </button>
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
+      <div className={step === 1 ? "space-y-4" : "hidden"}>
       <fieldset>
         <legend className="text-sm font-semibold text-slate-900">
-          Type de travaux <span className="text-red-500">*</span>
+          Type de travaux
         </legend>
-        <p className="mt-1 text-xs text-slate-600">
-          Choisissez la catégorie qui correspond à votre chantier.
-        </p>
         <input type="hidden" name="category" value={category} />
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {WORK_CATEGORIES.map((cat) => {
@@ -632,11 +752,10 @@ export default function WorkRequestForm({
       {requiresNafChoice && (
         <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <legend className="px-1 text-sm font-semibold text-slate-900">
-            Spécialité NAF <span className="text-red-500">*</span>
+            Précisez un peu
           </legend>
           <p className="mt-1 text-xs text-slate-600">
-            Ce type de travaux couvre plusieurs activités. Cochez celles qui
-            correspondent à votre chantier (au moins une).
+            Ce métier couvre plusieurs activités. Cochez ce qui correspond.
           </p>
           <ul className="mt-3 space-y-2">
             {nafOptions.map((opt) => {
@@ -652,14 +771,7 @@ export default function WorkRequestForm({
                       onChange={() => toggleNafCode(opt.code)}
                       className="mt-0.5"
                     />
-                    <span>
-                      <span className="font-medium text-slate-900">
-                        {opt.code}
-                      </span>
-                      <span className="mt-0.5 block text-slate-600">
-                        {opt.label}
-                      </span>
-                    </span>
+                    <span className="font-medium text-slate-900">{opt.label}</span>
                   </label>
                 </li>
               );
@@ -676,11 +788,8 @@ export default function WorkRequestForm({
       {category && effectiveNafCodes.length > 0 && (
         <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <legend className="px-1 text-sm font-semibold text-slate-900">
-            Type de prestation <span className="text-red-500">*</span>
+            Qu&apos;est-ce qu&apos;il faut faire ?
           </legend>
-          <p className="mt-1 text-xs text-slate-600">
-            Indiquez la nature des travaux pour mieux matcher les artisans.
-          </p>
 
           <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
             {workOptions.map((opt) => {
@@ -768,10 +877,37 @@ export default function WorkRequestForm({
           )}
         </fieldset>
       )}
+      </div>
 
+      <div className={step === 2 ? "space-y-4" : "hidden"}>
+      <fieldset>
+        <legend className="sr-only">Type de bien</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {PROPERTY_TYPES.map((opt) => {
+            const selected = propertyType === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  setPropertyType(opt.id);
+                  setError(null);
+                }}
+                className={`rounded-xl border px-4 py-4 text-left text-sm font-medium transition ${
+                  selected
+                    ? "border-brand-500 bg-brand-50 text-slate-900"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-brand-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium text-slate-900">
-          Vous déposez cette demande en tant que — l&apos;annonce est anonyme
+          Vous êtes
         </legend>
         <div className="grid gap-2 sm:grid-cols-3">
           {(
@@ -907,115 +1043,6 @@ export default function WorkRequestForm({
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <input
-          name="firstName"
-          type="text"
-          placeholder={
-            clientKind === "individual" ? "Prénom" : "Prénom du contact"
-          }
-          className={inputClass}
-          required
-          defaultValue={defaults?.firstName ?? ""}
-          readOnly={!guestMode}
-        />
-        <input
-          name="lastName"
-          type="text"
-          placeholder={
-            clientKind === "individual" ? "Nom" : "Nom du contact"
-          }
-          className={inputClass}
-          required
-          defaultValue={defaults?.lastName ?? ""}
-          readOnly={!guestMode}
-        />
-      </div>
-      <input
-        name="email"
-        type="email"
-        placeholder="Email"
-        className={inputClass}
-        required
-        defaultValue={defaults?.email ?? ""}
-        readOnly={!guestMode}
-      />
-      <div>
-        <input
-          name="phone"
-          type="tel"
-          inputMode="tel"
-          placeholder="Mobile (ex. 06 12 34 56 78)"
-          className={inputClass}
-          required
-          autoComplete="tel"
-          value={phone}
-          onChange={(e) => handlePhoneChange(e.target.value)}
-        />
-        <p className="mt-1 text-xs text-slate-500">
-          Mobile français obligatoire, vérifié par SMS — communiqué aux artisans
-          uniquement après mise en contact.
-        </p>
-        {phoneVerified ? (
-          <p className="mt-2 text-sm font-medium text-emerald-700">
-            ✓ Mobile vérifié
-            {phoneE164
-              ? ` — ${formatFrenchPhoneDisplay(phoneE164)}`
-              : ""}
-          </p>
-        ) : (
-          <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void sendPhoneOtp()}
-                disabled={otpSending || otpCooldown > 0 || !phoneE164}
-                className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-              >
-                {otpSending
-                  ? "Envoi…"
-                  : otpCooldown > 0
-                    ? `Renvoyer (${otpCooldown}s)`
-                    : "Recevoir un code"}
-              </button>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="Code à 6 chiffres"
-                value={otpCode}
-                onChange={(e) =>
-                  setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-                className="min-w-[9rem] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => void verifyPhoneOtp()}
-                disabled={otpVerifying || otpCode.length !== 6}
-                className="rounded-lg border border-brand-600 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
-              >
-                {otpVerifying ? "Vérif…" : "Vérifier"}
-              </button>
-            </div>
-            {otpMessage && (
-              <p
-                className={`text-xs ${
-                  otpMessage.includes("vérifié") ||
-                  otpMessage.includes("envoyé") ||
-                  otpMessage.includes("démo")
-                    ? "text-emerald-700"
-                    : "text-amber-800"
-                }`}
-              >
-                {otpMessage}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
       <BanAddressAutocomplete
         inputClass={inputClass}
         onSelect={setSelectedAddress}
@@ -1041,91 +1068,85 @@ export default function WorkRequestForm({
       </div>
 
       <p className="-mt-2 text-xs text-slate-500">
-        Nord (59) et Pas-de-Calais (62) uniquement. L&apos;adresse exacte n&apos;est
-        communiquée aux artisans qu&apos;après déblocage des coordonnées. Vérification
-        automatique via data.gouv.fr à l&apos;envoi.
+        Nord et Pas-de-Calais uniquement. L&apos;adresse exacte reste masquée
+        jusqu&apos;à ce qu&apos;un artisan prenne contact.
       </p>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label
-            htmlFor="listingDurationHours"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Durée de l&apos;annonce <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="listingDurationHours"
-            name="auctionDurationHours"
-            className={`${inputClass} text-slate-700`}
-            value={listingDurationHours}
-            onChange={(e) => {
-              const next = Number(e.target.value);
-              setListingDurationHours(next);
-              const minDate = minRequestedWorkStartDate(next);
-              if (requestedWorkStartDate && requestedWorkStartDate < minDate) {
-                setRequestedWorkStartDate("");
-              }
-            }}
-            required
-          >
-            {LISTING_DURATION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-slate-500">
-            Période pendant laquelle les artisans peuvent débloquer votre contact
-            (de 6&nbsp;h à 3 mois, max. 5 artisans).
-          </p>
-        </div>
-        <div>
-          <label
-            htmlFor="requestedWorkStartDate"
-            className="mb-1 block text-sm font-medium text-slate-700"
-          >
-            Date de début de travaux souhaitée <span className="text-red-500">*</span>
-          </label>
-          <input
-            key={`start-date-${minStartDate}`}
-            id="requestedWorkStartDate"
-            name="requestedWorkStartDate"
-            type="date"
-            value={requestedWorkStartDate}
-            onChange={(e) => {
-              const next = e.target.value;
-              if (!next) {
-                setRequestedWorkStartDate("");
-                return;
-              }
-              if (next < minStartDate || next > maxStartDate) {
-                setRequestedWorkStartDate("");
-                setError(
-                  `Choisissez une date à partir du ${new Date(
-                    `${minStartDate}T12:00:00`
-                  ).toLocaleDateString("fr-FR")} (fin d'annonce).`
-                );
-                return;
-              }
-              setError(null);
-              setRequestedWorkStartDate(next);
-            }}
-            min={minStartDate}
-            max={maxStartDate}
-            className={inputClass}
-            required
-          />
-          <p className="mt-1 text-xs text-slate-500">
-            Le calendrier bloque les dates avant la fin de l&apos;annonce (
-            {new Date(`${minStartDate}T12:00:00`).toLocaleDateString("fr-FR")}).
-          </p>
-        </div>
       </div>
 
+      <div className={step === 3 ? "space-y-4" : "hidden"}>
+      <div>
+        <label
+          htmlFor="description"
+          className="mb-1 block text-sm font-medium text-slate-700"
+        >
+          Description du projet
+        </label>
+        <p className="mb-2 text-xs text-slate-500">
+          Préremplie avec vos choix de l&apos;étape 1 — complétez ou corrigez
+          si besoin.
+        </p>
+        <textarea
+          id="description"
+          ref={descriptionRef}
+          name="description"
+          placeholder="Ex. Remplacer la baignoire par une douche, carrelage à refaire, environ 6 m²…"
+          rows={5}
+          lang="fr"
+          spellCheck
+          className={`${inputClass} ${!descriptionOk && descriptionLength > 0 ? "border-amber-400" : ""}`}
+          required
+          minLength={MIN_DESCRIPTION_LENGTH}
+          onInput={(e) => {
+            setDescriptionTouched(true);
+            syncDescriptionLength(e.currentTarget.value);
+          }}
+          onChange={(e) => {
+            setDescriptionTouched(true);
+            syncDescriptionLength(e.currentTarget.value);
+          }}
+        />
+        <p
+          className={`mt-1 text-xs ${descriptionOk ? "text-brand-600" : "text-slate-500"}`}
+        >
+          {descriptionLength} / {MIN_DESCRIPTION_LENGTH} caractères
+          {descriptionOk ? " ✓" : " — un peu de détail aide à avoir un devis juste"}
+        </p>
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium text-slate-700">
+          Photos{" "}
+          <span className="font-normal text-slate-500">(si vous en avez)</span>
+        </label>
+        <input
+          type="file"
+          name="photos"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+          multiple
+          onChange={handlePhotosChange}
+          className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+        />
+        {previews.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {previews.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt={`Aperçu ${i + 1}`}
+                className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+        <p className="text-sm font-medium text-slate-900">
+          Qui peut me contacter
+        </p>
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-slate-700">
-          Nombre d&apos;artisans <span className="text-red-500">*</span>
+          Nombre d&apos;artisans
         </legend>
         <p className="mb-2 text-xs text-slate-500">
           Combien d&apos;artisans maximum pourront débloquer vos coordonnées
@@ -1276,206 +1297,119 @@ export default function WorkRequestForm({
       </fieldset>
 
       <ClientQualificationGuide selectedCategory={category} />
-
-      <div>
-        <textarea
-          ref={descriptionRef}
-          name="description"
-          placeholder="Décrivez précisément votre projet : surface, matériaux, contraintes, accès…"
-          rows={5}
-          lang="fr"
-          spellCheck
-          className={`${inputClass} ${!descriptionOk && descriptionLength > 0 ? "border-amber-400" : ""}`}
-          required
-          minLength={MIN_DESCRIPTION_LENGTH}
-          onInput={(e) => syncDescriptionLength(e.currentTarget.value)}
-          onChange={(e) => syncDescriptionLength(e.currentTarget.value)}
-        />
-        <p
-          className={`mt-1 text-xs ${descriptionOk ? "text-brand-600" : "text-slate-500"}`}
-        >
-          {descriptionLength} / {MIN_DESCRIPTION_LENGTH} caractères minimum
-          {descriptionOk ? " ✓" : ""}
-        </p>
       </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700">
-          Photos du projet{" "}
-          <span className="font-normal text-slate-500">(optionnel)</span>
-        </label>
+      <p className="text-xs text-slate-500">
+        Seuls des artisans en activité, avec décennale et RC pro à jour, pourront
+        vous joindre.
+      </p>
+      <input type="hidden" name="requireActiveCompany" value="true" />
+      <input type="hidden" name="requireValidInsurances" value="true" />
+      </div>
+
+      <div className={step === 4 ? "space-y-4" : "hidden"}>
+      <div className="grid gap-4 sm:grid-cols-2">
         <input
-          type="file"
-          name="photos"
-          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-          multiple
-          onChange={handlePhotosChange}
-          className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
+          name="firstName"
+          type="text"
+          placeholder={
+            clientKind === "individual" ? "Prénom" : "Prénom du contact"
+          }
+          className={inputClass}
+          required
+          defaultValue={defaults?.firstName ?? ""}
+          readOnly={!guestMode}
+        />
+        <input
+          name="lastName"
+          type="text"
+          placeholder={
+            clientKind === "individual" ? "Nom" : "Nom du contact"
+          }
+          className={inputClass}
+          required
+          defaultValue={defaults?.lastName ?? ""}
+          readOnly={!guestMode}
+        />
+      </div>
+      {!guestMode && defaults?.email ? (
+        <input type="hidden" name="email" value={defaults.email} />
+      ) : null}
+      <div>
+        <input
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          placeholder="Mobile (06 ou 07)"
+          className={inputClass}
+          required
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => handlePhoneChange(e.target.value)}
         />
         <p className="mt-1 text-xs text-slate-500">
-          Recommandé pour aider les artisans · JPG, PNG ou WebP · max {MAX_PHOTOS}{" "}
-          photos · 5 Mo chacune
+          Un code SMS pour confirmer que c&apos;est bien vous. Les artisans ne
+          voient le numéro qu&apos;après avoir pris le contact.
         </p>
-        {previews.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {previews.map((src, i) => (
-              <img
-                key={src}
-                src={src}
-                alt={`Aperçu ${i + 1}`}
-                className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={hasPreviousQuote}
-            onChange={(e) => {
-              setHasPreviousQuote(e.target.checked);
-              if (!e.target.checked) {
-                setPreviousQuoteAmount("");
-                setPreviousQuoteProof(null);
-                setPreviousQuoteNote("");
-                if (proofPreview) URL.revokeObjectURL(proofPreview);
-                setProofPreview(null);
-              }
-              setError(null);
-            }}
-            className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600"
-          />
-          <span>
-            <span className="block text-sm font-medium text-slate-800">
-              J&apos;ai déjà reçu un devis d&apos;un autre artisan
-            </span>
-            <span className="mt-0.5 block text-xs text-slate-500">
-              Optionnel — justificatif visible par Nord Artisan Pro, utile pour
-              contextualiser votre projet.
-            </span>
-          </span>
-        </label>
-
-        {hasPreviousQuote && (
-          <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
-            <div>
-              <label htmlFor="previousQuoteAmount" className="mb-1 block text-sm font-medium text-slate-700">
-                Montant du devis (€) <span className="text-red-500">*</span>
-              </label>
+        {phoneVerified ? (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            ✓ Mobile vérifié
+            {phoneE164
+              ? ` — ${formatFrenchPhoneDisplay(phoneE164)}`
+              : ""}
+          </p>
+        ) : (
+          <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void sendPhoneOtp()}
+                disabled={otpSending || otpCooldown > 0 || !phoneE164}
+                className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {otpSending
+                  ? "Envoi…"
+                  : otpCooldown > 0
+                    ? `Renvoyer (${otpCooldown}s)`
+                    : "Recevoir un code"}
+              </button>
               <input
-                id="previousQuoteAmount"
-                name="previousQuoteAmount"
-                type="number"
-                min={1}
-                step={1}
-                value={previousQuoteAmount}
-                onChange={(e) => setPreviousQuoteAmount(e.target.value)}
-                placeholder="Ex. 4500"
-                className={inputClass}
-                required={hasPreviousQuote}
-              />
-            </div>
-            <div>
-              <label htmlFor="previousQuoteProof" className="mb-1 block text-sm font-medium text-slate-700">
-                Justificatif (photo ou PDF) <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="previousQuoteProof"
-                name="previousQuoteProof"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                onChange={handleProofChange}
-                className="w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700"
-                required={hasPreviousQuote}
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                Photo du devis papier, capture d&apos;écran ou PDF · max 10 Mo
-              </p>
-              {proofPreview && (
-                <img
-                  src={proofPreview}
-                  alt="Aperçu du justificatif"
-                  className="mt-2 max-h-32 rounded-lg border border-slate-200 object-contain"
-                />
-              )}
-              {previousQuoteProof?.type === "application/pdf" && (
-                <p className="mt-2 text-xs text-brand-700">
-                  PDF sélectionné : {previousQuoteProof.name}
-                </p>
-              )}
-            </div>
-            <div>
-              <label htmlFor="previousQuoteNote" className="mb-1 block text-sm font-medium text-slate-700">
-                Précisions (optionnel)
-              </label>
-              <input
-                id="previousQuoteNote"
-                name="previousQuoteNote"
                 type="text"
-                value={previousQuoteNote}
-                onChange={(e) => setPreviousQuoteNote(e.target.value)}
-                placeholder="Ex. Devis SARL Dupont, reçu en mars 2026"
-                className={inputClass}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="Code à 6 chiffres"
+                value={otpCode}
+                onChange={(e) =>
+                  setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                className="min-w-[9rem] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
               />
+              <button
+                type="button"
+                onClick={() => void verifyPhoneOtp()}
+                disabled={otpVerifying || otpCode.length !== 6}
+                className="rounded-lg border border-brand-600 px-3 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-50 disabled:opacity-50"
+              >
+                {otpVerifying ? "Vérif…" : "Vérifier"}
+              </button>
             </div>
+            {otpMessage && (
+              <p
+                className={`text-xs ${
+                  otpMessage.includes("vérifié") ||
+                  otpMessage.includes("envoyé") ||
+                  otpMessage.includes("démo")
+                    ? "text-emerald-700"
+                    : "text-amber-800"
+                }`}
+              >
+                {otpMessage}
+              </p>
+            )}
           </div>
         )}
       </div>
-
-      <fieldset className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-        <legend className="px-1 text-sm font-medium text-slate-700">
-          Conditions obligatoires{" "}
-          <span className="font-normal text-slate-500">(non modifiables)</span>
-        </legend>
-        <p className="mb-3 text-xs text-slate-500">
-          Seuls les artisans respectant ces critères pourront débloquer vos
-          coordonnées.
-        </p>
-        <ul className="space-y-2">
-          <li className="flex items-start gap-3 text-sm text-slate-800">
-            <input
-              type="checkbox"
-              checked
-              disabled
-              readOnly
-              className="mt-1"
-              aria-label="Entreprise au statut normal obligatoire"
-            />
-            <span>
-              <span className="font-semibold">
-                Entreprise au statut normal
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Active au registre — hors liquidation, dissolution ou cessation
-                d&apos;activité.
-              </span>
-            </span>
-          </li>
-          <li className="flex items-start gap-3 text-sm text-slate-800">
-            <input
-              type="checkbox"
-              checked
-              disabled
-              readOnly
-              className="mt-1"
-              aria-label="Décennale et assurance RC pro à jour obligatoires"
-            />
-            <span>
-              <span className="font-semibold">
-                Décennale et assurance RC pro à jour
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Attestations validées par Nord Artisan Pro pour le métier concerné.
-              </span>
-            </span>
-          </li>
-        </ul>
-        <input type="hidden" name="requireActiveCompany" value="true" />
-        <input type="hidden" name="requireValidInsurances" value="true" />
-      </fieldset>
 
       <label
         className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
@@ -1497,11 +1431,11 @@ export default function WorkRequestForm({
         />
         <span>
           <span className="font-semibold text-slate-900">
-            J&apos;accepte les CGU / CGV et j&apos;autorise la mise en contact{" "}
-            <span className="text-red-500">*</span>
+            J&apos;accepte d&apos;être rappelé par des artisans de ma zone
           </span>
           <span className="mt-0.5 block text-xs text-slate-500">
-            En cochant cette case, vous acceptez les{" "}
+            Jusqu&apos;à {maxContactArtisans} professionnels peuvent débloquer
+            vos coordonnées.{" "}
             <Link href="/cgu" className="underline" target="_blank">
               CGU
             </Link>{" "}
@@ -1509,33 +1443,54 @@ export default function WorkRequestForm({
             <Link href="/cgv" className="underline" target="_blank">
               CGV
             </Link>
-            , et vous autorisez jusqu&apos;à 5 artisans correspondant à votre
-            demande à débloquer vos coordonnées pour vous contacter (SMS, email
-            ou téléphone).
+            .
           </span>
         </span>
       </label>
+
+      </div>
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      <button
-        type="submit"
-        disabled={
-          status === "submitting" ||
-          status === "success" ||
-          !descriptionOk ||
-          !acceptContactTerms
-        }
-        className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {status === "submitting"
-          ? "Envoi…"
-          : status === "success"
-            ? "Demande envoyée ✓"
-            : "Envoyer ma demande"}
-      </button>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+        {step > 1 && status !== "success" && (
+          <button
+            type="button"
+            onClick={goBack}
+            className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Retour
+          </button>
+        )}
+        {step < 4 ? (
+          <button
+            type="button"
+            onClick={goNext}
+            className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600"
+          >
+            Continuer
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={
+              status === "submitting" ||
+              status === "success" ||
+              !descriptionOk ||
+              !acceptContactTerms
+            }
+            className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {status === "submitting"
+              ? "Envoi…"
+              : status === "success"
+                ? "Demande envoyée ✓"
+                : "Recevoir des propositions"}
+          </button>
+        )}
+      </div>
 
       {status === "success" && (
         <div className="space-y-3 text-center text-sm text-brand-700">
@@ -1553,9 +1508,6 @@ export default function WorkRequestForm({
                     const params = new URLSearchParams({
                       from: "/particulier/espace/demandes",
                     });
-                    if (submittedContact?.email) {
-                      params.set("email", submittedContact.email);
-                    }
                     if (submittedContact?.firstName) {
                       params.set("firstName", submittedContact.firstName);
                     }

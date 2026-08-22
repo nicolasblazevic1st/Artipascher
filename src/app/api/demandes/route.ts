@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const firstName = String(formData.get("firstName") ?? "").trim();
     const lastName = String(formData.get("lastName") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim();
+    const emailFromForm = String(formData.get("email") ?? "").trim();
     const phoneRaw = String(formData.get("phone") ?? "").trim();
     const clientKind: ClientKind = parseClientKind(formData.get("clientKind"));
     const workScope =
@@ -126,13 +126,11 @@ export async function POST(request: NextRequest) {
     if (
       !firstName ||
       !lastName ||
-      !email ||
       !phoneRaw ||
       !addressLine ||
       !postalCode ||
       !city ||
-      !banAddressId ||
-      !requestedWorkStartDate
+      !banAddressId
     ) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis." },
@@ -229,10 +227,9 @@ export async function POST(request: NextRequest) {
     }
     const auctionDurationHours = durationHours;
 
-    const startDateError = validateRequestedWorkStartDate(
-      requestedWorkStartDate,
-      auctionDurationHours
-    );
+    const startDateError = requestedWorkStartDate
+      ? validateRequestedWorkStartDate(requestedWorkStartDate)
+      : null;
     if (startDateError) {
       return NextResponse.json({ error: startDateError }, { status: 400 });
     }
@@ -289,6 +286,7 @@ export async function POST(request: NextRequest) {
     let clientId: string | undefined;
     let phoneVerifiedAt: string | undefined;
     let guest = false;
+    let email = emailFromForm;
 
     if (session) {
       const existing = await getClientById(session.clientId);
@@ -298,15 +296,7 @@ export async function POST(request: NextRequest) {
           { status: 401 }
         );
       }
-      if (existing.email.toLowerCase() !== email.toLowerCase()) {
-        return NextResponse.json(
-          {
-            error:
-              "Utilisez l'email de votre compte connecté pour créer une demande.",
-          },
-          { status: 400 }
-        );
-      }
+      email = existing.email;
       if (!clientPhoneIsVerified(existing, phoneNormalized)) {
         return NextResponse.json(
           {
@@ -353,7 +343,7 @@ export async function POST(request: NextRequest) {
       latitude: verifiedAddress.latitude,
       longitude: verifiedAddress.longitude,
       addressVerifiedAt: new Date().toISOString(),
-      requestedWorkStartDate,
+      requestedWorkStartDate: requestedWorkStartDate || undefined,
       category,
       nafCodes: nafCheck.nafCodes,
       pricingTier: pricingCheck.pricingTier,
@@ -373,7 +363,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (clientId) {
-      await linkOrphanWorkRequests(clientId, email);
+      await linkOrphanWorkRequests(clientId, email, phoneNormalized);
     } else {
       await consumeGuestPhoneVerification(phoneNormalized);
     }

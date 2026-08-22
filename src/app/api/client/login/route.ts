@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  await linkOrphanWorkRequests(client.id, client.email);
+  await linkOrphanWorkRequests(client.id, client.email, client.phone);
 
   const session = encodeClientSession({
     clientId: client.id,

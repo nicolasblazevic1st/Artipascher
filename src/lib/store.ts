@@ -17,7 +17,10 @@ import {
 import { createShareToken } from "./share";
 import { formatWorkRequestAddress } from "./client-address";
 import { getClientContact } from "./client-contacts";
-import { formatFrenchPhoneDisplay } from "./phone-format";
+import {
+  formatFrenchPhoneDisplay,
+  normalizeFrenchMobile,
+} from "./phone-format";
 import { getSampleQuotesForAuction } from "./sample-quotes";
 import { getValidatedDecennaleLabelsForWorkCategory } from "./decennale-verification";
 import { getNafCodesForCategory } from "./naf-codes";
@@ -711,6 +714,7 @@ function findClientForWorkRequestInStore(
   if (workRequest.clientId) {
     return store.clientAccounts.find((c) => c.id === workRequest.clientId) ?? null;
   }
+  if (!workRequest.email.trim()) return null;
   const email = workRequest.email.toLowerCase();
   return (
     store.clientAccounts.find((c) => c.email.toLowerCase() === email) ?? null
@@ -1476,14 +1480,31 @@ export async function authenticateClient(
   return client;
 }
 
-export async function linkOrphanWorkRequests(clientId: string, email: string): Promise<void> {
+export async function linkOrphanWorkRequests(
+  clientId: string,
+  email: string,
+  phone?: string
+): Promise<void> {
   const store = await readStore();
   let changed = false;
+  const emailLower = email.trim().toLowerCase();
+  const phoneNorm = phone ? normalizeFrenchMobile(phone) : null;
   for (const request of store.workRequests) {
-    if (!request.clientId && request.email.toLowerCase() === email.toLowerCase()) {
-      request.clientId = clientId;
-      changed = true;
+    if (request.clientId) continue;
+    const emailMatch =
+      Boolean(emailLower) && request.email.toLowerCase() === emailLower;
+    const requestPhone = request.phone
+      ? normalizeFrenchMobile(request.phone)
+      : null;
+    const phoneMatch = Boolean(
+      phoneNorm && requestPhone && phoneNorm === requestPhone
+    );
+    if (!emailMatch && !phoneMatch) continue;
+    request.clientId = clientId;
+    if (emailLower && !request.email.trim()) {
+      request.email = email.trim();
     }
+    changed = true;
   }
   if (changed) await writeStore(store);
 }
@@ -3306,6 +3327,7 @@ export async function resolveClientUserIdForRequest(
   workRequest: WorkRequest
 ): Promise<string | null> {
   if (workRequest.clientId) return workRequest.clientId;
+  if (!workRequest.email.trim()) return null;
   const client = await getClientByEmail(workRequest.email);
   return client?.id ?? null;
 }
