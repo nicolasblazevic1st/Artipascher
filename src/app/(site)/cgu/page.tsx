@@ -33,50 +33,50 @@ export default function CguPage() {
         <h2>2. Définitions</h2>
         <ul>
           <li>
-            <strong>CGU</strong> : les présentes Conditions Générales
+            <strong>CGU</strong>{" "} : les présentes Conditions Générales
             d&apos;Utilisation.
           </li>
           <li>
-            <strong>Site</strong> / <strong>Plateforme</strong> : le site
+            <strong>Site</strong>{" "} / <strong>Plateforme</strong>{" "} : le site
             internet {LEGAL_PUBLISHER.siteUrl.replace("https://", "")}, édité
             par l&apos;Éditeur.
           </li>
           <li>
-            <strong>Éditeur</strong> : {LEGAL_PUBLISHER.brand} /{" "}
+            <strong>Éditeur</strong>{" "} : {LEGAL_PUBLISHER.brand} /{" "}
             {LEGAL_PUBLISHER.legalName}.
           </li>
           <li>
-            <strong>Client</strong> : particulier, société ou copropriété
+            <strong>Client</strong>{" "} : particulier, société ou copropriété
             (syndicat / syndic) utilisant la Plateforme pour publier une demande
             de travaux. Les coordonnées du Client restent masquées jusqu&apos;au
             Déblocage par un Professionnel ; une demande de copropriété est
             signalée par un bandeau, sans identification de l&apos;immeuble.
           </li>
           <li>
-            <strong>Professionnel / Artisan</strong> : entreprise du bâtiment
+            <strong>Professionnel / Artisan</strong>{" "} : entreprise du bâtiment
             inscrite au registre du commerce, vérifiée (SIRET, documents),
             autorisée à consulter les Annonces et à débloquer le contact des
             Clients.
           </li>
           <li>
-            <strong>Utilisateur</strong> : toute personne accédant au Site
+            <strong>Utilisateur</strong>{" "} : toute personne accédant au Site
             (visiteur, Client ou Professionnel).
           </li>
           <li>
-            <strong>Annonce / Offre</strong> : publication d&apos;une demande de
+            <strong>Annonce / Offre</strong>{" "} : publication d&apos;une demande de
             travaux validée, consultable par les Professionnels (tous
             départements du périmètre) pendant la durée choisie par le Client ;
             le Déblocage des coordonnées reste soumis aux critères définis par
             le Client.
           </li>
           <li>
-            <strong>Mise en Contact / Déblocage</strong> : accès payant
+            <strong>Mise en Contact / Déblocage</strong>{" "} : accès payant
             (paiement unitaire au ticket du chantier — voir{" "}
             <Link href="/cgv">CGV</Link>) aux coordonnées d&apos;un Client après
             autorisation de contact.
           </li>
           <li>
-            <strong>Solde Résiduel</strong> : éventuel crédit restant sur le
+            <strong>Solde Résiduel</strong>{" "} : éventuel crédit restant sur le
             compte Professionnel (remboursement, ancien crédit), utilisable
             pour un Déblocage s&apos;il est suffisant.
           </li>
@@ -102,13 +102,13 @@ export default function CguPage() {
           </li>
         </ul>
         <p className="mt-3">
-          <strong>Nord Artisan Pro n&apos;est pas</strong> entreprise de travaux,
+          <strong>Nord Artisan Pro n&apos;est pas</strong>{" "} entreprise de travaux,
           maître d&apos;œuvre, assureur, ni partie au contrat de chantier. Le
           prix des travaux, le devis formalisé, le planning, la facturation et
           le paiement du chantier sont conclus{" "}
           <strong>directement entre le Client et l&apos;Artisan</strong>, hors
           Plateforme. Nord Artisan Pro ne perçoit{" "}
-          <strong>aucune commission</strong> sur le montant des travaux.
+          <strong>aucune commission</strong>{" "} sur le montant des travaux.
         </p>
       </section>
 
@@ -137,7 +137,7 @@ export default function CguPage() {
           entreprises actives dont le SIRET est vérifié, avec siège ou
           établissement dans le périmètre géographique indiqué sur le Site
           (notamment départements 59 et 62), justifiant des{" "}
-          <strong>attestations d&apos;assurance en PDF original</strong> :
+          <strong>attestations d&apos;assurance en PDF original</strong>{" "} :
           responsabilité civile professionnelle (RC pro){" "}
           <strong>obligatoire</strong>, et le cas échéant une{" "}
           <strong>garantie adaptée aux activités déclarées</strong>. Selon le
@@ -145,7 +145,7 @@ export default function CguPage() {
         </p>
         <ul className="mt-3 list-disc space-y-1 pl-5">
           <li>
-            une attestation <strong>décennale</strong> lorsque l&apos;activité
+            une attestation <strong>décennale</strong>{" "} lorsque l&apos;activité
             relève, selon la politique de la Plateforme, du régime de
             responsabilité décennale ;
           </li>
@@ -161,9 +161,9 @@ export default function CguPage() {
         </ul>
         <p className="mt-3">
           L&apos;Éditeur applique ces exigences{" "}
-          <strong>par corps de métier</strong> à l&apos;inscription et peut
+          <strong>par corps de métier</strong>{" "} à l&apos;inscription et peut
           refuser un dossier non conforme. Cette classification Plateforme est{" "}
-          <strong>indicative</strong> et ne se substitue pas aux obligations
+          <strong>indicative</strong>{" "} et ne se substitue pas aux obligations
           légales de l&apos;Artisan envers ses clients. L&apos;entreprise ne
           doit pas faire l&apos;objet d&apos;une procédure collective active
           publiée au BODACC (données ouvertes DILA, licence ouverte 2.0). Ces
@@ -192,28 +192,28 @@ export default function CguPage() {
           </li>
           <li>
             Le mobile doit être{" "}
-            <strong>vérifié par code SMS</strong> avant la publication
+            <strong>vérifié par code SMS</strong>{" "} avant la publication
             d&apos;une demande.
           </li>
           <li>
             Le Client peut indiquer une préférence d&apos;<strong>ancienneté
-            d&apos;entreprise</strong> (0&nbsp;à&nbsp;5&nbsp;ans ou
+            d&apos;entreprise</strong>{" "} (0&nbsp;à&nbsp;5&nbsp;ans ou
             5&nbsp;ans et plus) : ce critère filtre les Artisans qui peuvent
             le contacter / être prospectés.
           </li>
           <li>
             Option (activée par défaut) :{" "}
-            <strong>alerte SMS</strong> lorsqu&apos;un Artisan souhaite le
+            <strong>alerte SMS</strong>{" "} lorsqu&apos;un Artisan souhaite le
             contacter. Si cette option est activée, la demande de contact est{" "}
             <strong>acceptée automatiquement</strong>, dans la limite de{" "}
-            <strong>5 Artisans</strong> par Annonce ; le Client est informé
+            <strong>5 Artisans</strong>{" "} par Annonce ; le Client est informé
             (SMS, email et/ou notification). Si l&apos;option est désactivée, le
             Client accepte ou refuse manuellement sous 48&nbsp;h.
           </li>
           <li>
             Les coordonnées du Client ne sont communiquées à un Professionnel
             qu&apos;après autorisation de contact et{" "}
-            <strong>Déblocage</strong> (paiement unitaire — voir{" "}
+            <strong>Déblocage</strong>{" "} (paiement unitaire — voir{" "}
             <Link href="/cgv">CGV</Link>).
           </li>
         </ul>
@@ -245,8 +245,8 @@ export default function CguPage() {
           </li>
           <li>
             Le Déblocage donne accès aux{" "}
-            <strong>coordonnées</strong> (identité, téléphone, email, adresse) :
-            il <strong>ne garantit pas</strong> une réponse du Client ni la
+            <strong>coordonnées</strong>{" "} (identité, téléphone, email, adresse) :
+            il <strong>ne garantit pas</strong>{" "} une réponse du Client ni la
             conclusion d&apos;un chantier.
           </li>
         </ul>
@@ -256,8 +256,8 @@ export default function CguPage() {
         <h2>8. Prospection commerciale (Professionnels non inscrits)</h2>
         <p className="mt-3">
           L&apos;Éditeur peut contacter des{" "}
-          <strong>entreprises du bâtiment</strong> (Professionnels non inscrits
-          / prospects), à partir de <strong>sources publiques</strong> et/ou
+          <strong>entreprises du bâtiment</strong>{" "} (Professionnels non inscrits
+          / prospects), à partir de <strong>sources publiques</strong>{" "} et/ou
           d&apos;un enrichissement (SIRET, NAF, ville, téléphone), pour
           signaler des chantiers ou inviter à s&apos;inscrire sur la Plateforme.
           Cette prospection B2B peut prendre la forme de <strong>SMS</strong>{" "}
@@ -268,28 +268,28 @@ export default function CguPage() {
         <ul>
           <li>
             Ces envois peuvent être déclenchés{" "}
-            <strong>manuellement</strong> ou{" "}
-            <strong>automatiquement</strong> lorsqu&apos;une demande Client est
+            <strong>manuellement</strong>{" "} ou{" "}
+            <strong>automatiquement</strong>{" "} lorsqu&apos;une demande Client est
             validée et publiée comme Offre (enchère) destinée aux Professionnels,
             dans la limite des places de contact prévues (notamment 5 Artisans
             maximum par Offre) ;
           </li>
           <li>
             les SMS marketing sont transmis via le prestataire technique{" "}
-            <strong>OVH SMS</strong> ; dès qu&apos;un envoi est effectivement
+            <strong>OVH SMS</strong>{" "} ; dès qu&apos;un envoi est effectivement
             soumis à ce prestataire, le message est pris en charge pour
             livraison (sous réserve des règles du réseau) ;
           </li>
           <li>
             les messages marketing comportent une mention{" "}
-            <strong>STOP</strong> permettant de s&apos;opposer aux prochains
+            <strong>STOP</strong>{" "} permettant de s&apos;opposer aux prochains
             envois marketing ; ils sont en principe adressés uniquement dans la
             fenêtre indicative des SMS commerciaux en France (lundi–samedi,
             8h–20h, heure de Paris) ;
           </li>
           <li>
             un numéro / SIRET déjà contacté par SMS marketing n&apos;est en
-            principe <strong>pas relancé</strong> par ce canal.
+            principe <strong>pas relancé</strong>{" "} par ce canal.
           </li>
         </ul>
         <p className="mt-3">
@@ -302,7 +302,7 @@ export default function CguPage() {
         <h3 className="mt-4">8.2 Prospection téléphonique</h3>
         <p className="mt-3">
           L&apos;Éditeur peut également procéder à une{" "}
-          <strong>prospection téléphonique</strong> auprès d&apos;entreprises du
+          <strong>prospection téléphonique</strong>{" "} auprès d&apos;entreprises du
           bâtiment (numéros professionnels issus de sources publiques et/ou
           d&apos;enrichissement), pour présenter la Plateforme, signaler des
           chantiers disponibles ou inviter à l&apos;inscription.
@@ -315,11 +315,11 @@ export default function CguPage() {
           </li>
           <li>
             l&apos;appelant s&apos;identifie comme relevant de{" "}
-            <strong>Nord Artisan Pro</strong> et indique l&apos;objet du
+            <strong>Nord Artisan Pro</strong>{" "} et indique l&apos;objet du
             contact ;
           </li>
           <li>
-            le destinataire peut <strong>s&apos;opposer</strong> à tout moment
+            le destinataire peut <strong>s&apos;opposer</strong>{" "} à tout moment
             aux prochains appels de prospection (lors de l&apos;appel, ou par
             écrit à{" "}
             <a href={`mailto:${LEGAL_PUBLISHER.email}`}>
@@ -329,7 +329,7 @@ export default function CguPage() {
           </li>
           <li>
             un numéro / SIRET ayant fait l&apos;objet d&apos;une opposition
-            n&apos;est en principe <strong>plus relancé</strong> par téléphone
+            n&apos;est en principe <strong>plus relancé</strong>{" "} par téléphone
             à des fins de prospection.
           </li>
         </ul>

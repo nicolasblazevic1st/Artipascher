@@ -20,7 +20,7 @@ export default function ConfidentialitePage() {
         </p>
         <ul>
           <li>
-            <strong>{LEGAL_PUBLISHER.brand}</strong> / {LEGAL_PUBLISHER.legalName}
+            <strong>{LEGAL_PUBLISHER.brand}</strong>{" "} / {LEGAL_PUBLISHER.legalName}
           </li>
           <li>{LEGAL_PUBLISHER.address}</li>
           <li>SIRET : {LEGAL_PUBLISHER.siret}</li>
@@ -36,47 +36,47 @@ export default function ConfidentialitePage() {
         <p className="mt-3">Selon votre usage du Site, nous pouvons traiter :</p>
         <ul>
           <li>
-            <strong>Compte Client</strong> : identité, email, téléphone
+            <strong>Compte Client</strong>{" "} : identité, email, téléphone
             (mobile), statut de vérification SMS, mot de passe (hashé), adresse
             de chantier, description et photos du projet, préférences (ex.
             ancienneté d&apos;entreprise souhaitée, alerte SMS contact),
             éventuel SIRET (société) ;
           </li>
           <li>
-            <strong>Compte Professionnel</strong> : raison sociale, SIRET/SIREN,
+            <strong>Compte Professionnel</strong>{" "} : raison sociale, SIRET/SIREN,
             email, téléphone, documents (décennale, RC pro…), métiers,
             historique de déblocages et éventuel solde résiduel ;
           </li>
           <li>
-            <strong>Prospects acquisition</strong> : données d&apos;entreprises
+            <strong>Prospects acquisition</strong>{" "} : données d&apos;entreprises
             (SIRET, code NAF, ville, téléphone enrichi le cas échéant, sources
             publiques type annuaire / enrichissement) utilisées pour la
             prospection SMS et/ou téléphonique et le suivi d&apos;opposition
             (STOP SMS / opposition téléphone / déjà contacté) ;
           </li>
           <li>
-            <strong>Campagnes SMS</strong> : historique des lots / envois
+            <strong>Campagnes SMS</strong>{" "} : historique des lots / envois
             (destinataires, statut, date), lien éventuel avec une offre
             publiée, et indicateurs d&apos;attribution (ex. inscription après
             SMS) ;
           </li>
           <li>
-            <strong>Prospection téléphonique</strong> : traces de contact /
+            <strong>Prospection téléphonique</strong>{" "} : traces de contact /
             opposition (numéro, SIRET, date, résultat indicatif) pour éviter
             les relances non souhaitées ;
           </li>
           <li>
-            <strong>Paiements</strong> : données de transaction via le
+            <strong>Paiements</strong>{" "} : données de transaction via le
             prestataire de paiement (Stripe) — le Vendeur ne stocke pas le
             numéro complet de carte ;
           </li>
           <li>
-            <strong>Technique</strong> : logs de connexion, cookies nécessaires,
+            <strong>Technique</strong>{" "} : logs de connexion, cookies nécessaires,
             mesure d&apos;audience si consentement (voir{" "}
             <Link href="/cookies">politique de cookies</Link>) ;
           </li>
           <li>
-            <strong>Communications</strong> : emails et SMS transactionnels
+            <strong>Communications</strong>{" "} : emails et SMS transactionnels
             (code de vérification, alertes de contact), SMS marketing et appels
             de prospection B2B (invitation Professionnels / prospects).
           </li>
@@ -124,37 +124,37 @@ export default function ConfidentialitePage() {
         <h3 className="mt-4">4.2 Marketing SMS (prospection B2B)</h3>
         <p className="mt-2">
           L&apos;Éditeur peut envoyer des SMS d&apos;information / invitation à
-          des <strong>entreprises du bâtiment</strong> (Professionnels non
+          des <strong>entreprises du bâtiment</strong>{" "} (Professionnels non
           encore inscrits ou prospects), à partir de{" "}
-          <strong>sources publiques</strong> et/ou d&apos;un enrichissement
+          <strong>sources publiques</strong>{" "} et/ou d&apos;un enrichissement
           (SIRET, NAF, ville, téléphone), pour signaler des chantiers ou
           inviter à s&apos;inscrire sur la Plateforme. Cette prospection relève
           de l&apos;
-          <strong>intérêt légitime</strong> du responsable du traitement
+          <strong>intérêt légitime</strong>{" "} du responsable du traitement
           (développement B2B), sous réserve du droit d&apos;opposition.
         </p>
         <ul>
           <li>
-            déclenchement <strong>manuel</strong> ou{" "}
-            <strong>automatique</strong> lorsqu&apos;une demande Client est
+            déclenchement <strong>manuel</strong>{" "} ou{" "}
+            <strong>automatique</strong>{" "} lorsqu&apos;une demande Client est
             validée et publiée comme offre destinée aux Professionnels, dans la
             limite des places de contact (notamment 5 Artisans maximum par
             offre) ;
           </li>
           <li>
             campagnes éventuellement découpées en{" "}
-            <strong>lots quotidiens</strong> jusqu&apos;à atteinte de
+            <strong>lots quotidiens</strong>{" "} jusqu&apos;à atteinte de
             l&apos;objectif de mise en relation ;
           </li>
           <li>
-            transmission via <strong>OVH SMS</strong> ; dès qu&apos;un envoi
+            transmission via <strong>OVH SMS</strong>{" "} ; dès qu&apos;un envoi
             est effectivement soumis au prestataire, le message est pris en
             charge pour livraison (sous réserve des règles du réseau). Une phase
             de préparation / validation interne peut précéder cet envoi réel ;
           </li>
           <li>
             chaque message marketing comporte une mention{" "}
-            <strong>STOP</strong> permettant de s&apos;opposer aux prochains
+            <strong>STOP</strong>{" "} permettant de s&apos;opposer aux prochains
             envois marketing ; l&apos;opposition est enregistrée et respectée ;
           </li>
           <li>
@@ -163,7 +163,7 @@ export default function ConfidentialitePage() {
           </li>
           <li>
             un numéro / SIRET déjà contacté par SMS marketing n&apos;est en
-            principe <strong>pas relancé</strong> par ce canal ;
+            principe <strong>pas relancé</strong>{" "} par ce canal ;
           </li>
           <li>
             conservation de l&apos;historique des campagnes et du statut « déjà
@@ -181,13 +181,13 @@ export default function ConfidentialitePage() {
       <section>
         <h2>4 bis. Prospection téléphonique (B2B)</h2>
         <p className="mt-3">
-          L&apos;Éditeur peut contacter par <strong>téléphone</strong> des
+          L&apos;Éditeur peut contacter par <strong>téléphone</strong>{" "} des
           entreprises du bâtiment (Professionnels non inscrits / prospects), à
           partir des mêmes catégories de données (SIRET, NAF, ville, numéro
           professionnel public ou enrichi), pour présenter la Plateforme,
           signaler des chantiers ou inviter à l&apos;inscription. Cette
           prospection relève de l&apos;
-          <strong>intérêt légitime</strong> du responsable du traitement
+          <strong>intérêt légitime</strong>{" "} du responsable du traitement
           (développement B2B), sous réserve du droit d&apos;opposition.
         </p>
         <ul>
@@ -298,7 +298,7 @@ export default function ConfidentialitePage() {
         </p>
         <p className="mt-3">
           Concernant la <strong>prospection SMS marketing</strong>, vous pouvez
-          vous opposer à tout moment en répondant <strong>STOP</strong> au
+          vous opposer à tout moment en répondant <strong>STOP</strong>{" "} au
           message reçu, ou en écrivant à{" "}
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
           .
