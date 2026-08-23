@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     const preview = await previewSmsCampaignDetailed(workRequest, {
       campaignSize: Number.isFinite(campaignSize) ? campaignSize : undefined,
       // Aperçu : assez pour voir des numéros, trop peu pour un timeout Nginx.
-      maxPlacesAttempts: 12,
-      maxRatingAttempts: 8,
+      maxPlacesAttempts: 40,
+      maxRatingAttempts: 40,
     });
     return NextResponse.json({ preview });
   } catch (e) {

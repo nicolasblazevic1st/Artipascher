@@ -14,6 +14,9 @@ function pickContactFields(row) {
   return {
     phone: row.phone?.trim() || undefined,
     website: row.website?.trim() || undefined,
+    googleRating: row.googleRating,
+    googleUserRatingCount: row.googleUserRatingCount,
+    googlePlaceId: row.googlePlaceId,
     enrichmentStatus: row.enrichmentStatus,
     enrichedAt: row.enrichedAt,
     lastVerifiedAt: row.lastVerifiedAt,
@@ -28,6 +31,8 @@ function hasContactValue(fields) {
   return Boolean(
     fields.phone ||
       fields.website ||
+      typeof fields.googleRating === "number" ||
+      fields.googlePlaceId ||
       fields.enrichmentStatus === "enriched" ||
       fields.enrichmentStatus === "invalid_phone" ||
       fields.optedOut ||
@@ -56,6 +61,13 @@ async function main() {
 
     if (contact.phone) artisan.phone = contact.phone;
     if (contact.website) artisan.website = contact.website;
+    if (typeof contact.googleRating === "number") {
+      artisan.googleRating = contact.googleRating;
+    }
+    if (typeof contact.googleUserRatingCount === "number") {
+      artisan.googleUserRatingCount = contact.googleUserRatingCount;
+    }
+    if (contact.googlePlaceId) artisan.googlePlaceId = contact.googlePlaceId;
     if (contact.enrichmentStatus && contact.enrichmentStatus !== "pending") {
       artisan.enrichmentStatus = contact.enrichmentStatus;
     }
