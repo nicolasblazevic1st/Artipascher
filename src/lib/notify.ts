@@ -152,41 +152,61 @@ export async function notifyProContactRecalled(params: {
   });
 }
 
-export async function notifyAdminNewWorkRequest(workRequest: WorkRequest) {
+async function sendAdminTransactionalSms(
+  workRequest: WorkRequest,
+  message: string,
+  logLabel: string
+): Promise<void> {
   if (isStagingSite()) {
-    console.info("[notify] admin new request skipped: staging", workRequest.id);
+    console.info(`[notify] ${logLabel} skipped: staging`, workRequest.id);
     return;
   }
   if (workRequest.isTest || isTestAccountEmail(workRequest.email)) {
-    console.info("[notify] admin new request skipped: test", workRequest.id);
+    console.info(`[notify] ${logLabel} skipped: test`, workRequest.id);
     return;
   }
 
   const phone = getAdminSmsPhone();
   if (!phone) {
-    console.info("[notify] admin new request skipped: no admin phone", workRequest.id);
+    console.info(`[notify] ${logLabel} skipped: no admin phone`, workRequest.id);
     return;
   }
 
-  const who = `${workRequest.firstName} ${workRequest.lastName}`.trim();
+  const result = await sendSms(phone, message, "transactional");
+  if (!result.ok) {
+    console.error(`[notify] ${logLabel} SMS failed`, workRequest.id, result.error);
+  } else if (result.demo) {
+    console.info(`[notify] ${logLabel} SMS demo`, workRequest.id);
+  } else {
+    console.info(`[notify] ${logLabel} SMS sent`, workRequest.id);
+  }
+}
+
+function adminRequestWho(workRequest: WorkRequest): string {
+  return `${workRequest.firstName} ${workRequest.lastName}`.trim();
+}
+
+export async function notifyAdminNewWorkRequest(workRequest: WorkRequest) {
+  const who = adminRequestWho(workRequest);
   const url = absoluteUrl("/admin/particuliers/demandes");
   const message =
     `Nord Artisan Pro : nouvelle demande a valider.\n` +
     `${workRequest.category} a ${workRequest.city} (${who}).\n` +
     url;
+  await sendAdminTransactionalSms(workRequest, message, "admin new request");
+}
 
-  const result = await sendSms(phone, message, "transactional");
-  if (!result.ok) {
-    console.error(
-      "[notify] admin new request SMS failed",
-      workRequest.id,
-      result.error
-    );
-  } else if (result.demo) {
-    console.info("[notify] admin new request SMS demo", workRequest.id);
-  } else {
-    console.info("[notify] admin new request SMS sent", workRequest.id);
-  }
+/** SMS admin à chaque publication, même sans artisan joignable. */
+export async function notifyAdminListingPublished(workRequest: WorkRequest) {
+  const who = adminRequestWho(workRequest);
+  const path = workRequest.auctionId
+    ? `/admin/particuliers/encheres/${workRequest.auctionId}`
+    : "/admin/particuliers/encheres";
+  const message =
+    `Nord Artisan Pro : annonce publiee.\n` +
+    `${workRequest.category} a ${workRequest.city} (${who}).\n` +
+    absoluteUrl(path);
+  await sendAdminTransactionalSms(workRequest, message, "admin listing published");
 }
 
 export async function notifyClientRequestReviewed(params: {

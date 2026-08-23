@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeAuctionEndsAt, resolveAuctionDurationHours } from "@/lib/auction-duration";
 import { createShareToken } from "@/lib/share";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { notifyClientRequestReviewed } from "@/lib/notify";
+import {
+  notifyAdminListingPublished,
+  notifyClientRequestReviewed,
+} from "@/lib/notify";
 import { maybeAutoNotifyOnApprove } from "@/lib/sms-campaigns";
 import {
   backfillWorkRequestNafCodes,
@@ -74,6 +77,9 @@ export async function PATCH(request: NextRequest) {
   }
 
   if (status === "approved") {
+    void notifyAdminListingPublished(updated).catch((err) =>
+      console.error("[notify] listing published", err)
+    );
     void maybeAutoNotifyOnApprove(updated).catch((err) =>
       console.error("[sms] auto notify", err)
     );
