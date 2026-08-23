@@ -177,12 +177,10 @@ export async function searchArtisansForChantier(
 
     const isRge = artisanIsRge(a);
     if (requireRge && !isRge) continue;
-    if (
-      minRating != null &&
-      typeof a.googleRating === "number" &&
-      a.googleRating < minRating
-    ) {
-      continue;
+    if (minRating != null) {
+      if (typeof a.googleRating !== "number" || a.googleRating < minRating) {
+        continue;
+      }
     }
 
     let distanceKm: number | null = null;

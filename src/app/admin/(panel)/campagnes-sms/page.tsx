@@ -152,6 +152,15 @@ function formatGoogleRating(
   return { text, className: "font-medium text-emerald-800" };
 }
 
+function hasDisplayedGoogleRating(
+  rating: number | undefined,
+  minRating?: number
+): boolean {
+  if (typeof rating !== "number") return false;
+  if (minRating == null) return true;
+  return rating >= minRating;
+}
+
 function formatBodaccStatus(
   status?: "clear" | "active_procedure" | "unavailable" | "unchecked",
   nature?: string
@@ -411,7 +420,16 @@ export default function AdminSmsCampaignsPage() {
       setPreview(p);
       setMessage(p.defaultMessage);
       setSelectedSirets(
-        new Set(p.candidates.filter((c) => c.selectedByDefault).map((c) => c.siret))
+        new Set(
+          p.candidates
+            .filter((c) => c.selectedByDefault)
+            .filter((c) =>
+              p.minGoogleRating == null
+                ? true
+                : hasDisplayedGoogleRating(c.googleRating, p.minGoogleRating)
+            )
+            .map((c) => c.siret)
+        )
       );
     } catch {
       setError(
@@ -431,15 +449,27 @@ export default function AdminSmsCampaignsPage() {
     });
   }
 
+  function ratedCandidates() {
+    if (!preview) return [];
+    if (preview.minGoogleRating == null) return preview.candidates;
+    return preview.candidates.filter((c) =>
+      hasDisplayedGoogleRating(c.googleRating, preview.minGoogleRating)
+    );
+  }
+
   function selectAll() {
     if (!preview) return;
-    setSelectedSirets(new Set(preview.candidates.map((c) => c.siret)));
+    setSelectedSirets(new Set(ratedCandidates().map((c) => c.siret)));
   }
 
   function selectSuggested() {
     if (!preview) return;
     setSelectedSirets(
-      new Set(preview.candidates.filter((c) => c.selectedByDefault).map((c) => c.siret))
+      new Set(
+        ratedCandidates()
+          .filter((c) => c.selectedByDefault)
+          .map((c) => c.siret)
+      )
     );
   }
 
@@ -671,9 +701,22 @@ export default function AdminSmsCampaignsPage() {
 
   const allRows: ListRow[] = useMemo(() => {
     if (!preview) return [];
+    const min = preview.minGoogleRating;
+    const candidates =
+      min == null
+        ? preview.candidates
+        : preview.candidates.filter((c) =>
+            hasDisplayedGoogleRating(c.googleRating, min)
+          );
+    const withoutPhone =
+      min == null
+        ? preview.withoutPhone
+        : preview.withoutPhone.filter((row) =>
+            hasDisplayedGoogleRating(row.googleRating, min)
+          );
     return [
-      ...preview.candidates.map((candidate) => ({ kind: "ready" as const, candidate })),
-      ...preview.withoutPhone.map((row) => ({ kind: "no_phone" as const, row })),
+      ...candidates.map((candidate) => ({ kind: "ready" as const, candidate })),
+      ...withoutPhone.map((row) => ({ kind: "no_phone" as const, row })),
     ];
   }, [preview]);
 
@@ -1324,11 +1367,10 @@ export default function AdminSmsCampaignsPage() {
                 </table>
               )}
               <p className="mt-2 text-[11px] text-slate-500">
-                Note Google : issue de Places (— = pas encore de fiche ou pas
-                d’avis). BODACC : scan local + contrôle API des joignables pas
-                encore scannés. OK = pas de procédure collective active.
+                Note Google : issue de Places. BODACC : scan local + contrôle
+                API des joignables. OK = pas de procédure collective active.
                 {preview.minGoogleRating != null
-                  ? ` Seuil client : ≥ ${String(preview.minGoogleRating).replace(".", ",")}/5.`
+                  ? ` Seuil client : uniquement les fiches avec une note affichée ≥ ${String(preview.minGoogleRating).replace(".", ",")}/5.`
                   : ""}
               </p>
             </div>
