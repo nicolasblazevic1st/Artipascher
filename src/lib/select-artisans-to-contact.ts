@@ -47,6 +47,8 @@ export interface ContactTargetArtisan {
   phoneE164: string;
   isRge: boolean;
   source: ChantierArtisanRow["source"];
+  googleRating?: number;
+  googleUserRatingCount?: number;
 }
 
 export interface ContactTargetExtra {
@@ -56,6 +58,11 @@ export interface ContactTargetExtra {
   companyCreatedAt?: string;
   source: string;
   distanceKm?: number;
+  siren?: string;
+  googleRating?: number;
+  googleUserRatingCount?: number;
+  bodaccStatus?: "clear" | "active_procedure" | "unavailable" | "unchecked";
+  bodaccNature?: string;
 }
 
 export interface SelectArtisansToContactResult {
@@ -121,6 +128,8 @@ function toTarget(
     phoneE164,
     isRge: row.isRge,
     source: row.source,
+    googleRating: row.googleRating,
+    googleUserRatingCount: row.googleUserRatingCount,
   };
 }
 
@@ -138,6 +147,10 @@ export async function selectArtisansToContact(
     excludeAlreadyMarketed?: boolean;
     /** Si true, Places pour noter / trouver un mobile jusqu’au quota. */
     fillPhonesViaPlaces?: boolean;
+    /** Plafond d’appels Places (search+details comptent 1 tentative). */
+    maxPlacesAttempts?: number;
+    /** Plafond de fiches à noter avant le remplissage tél. */
+    maxRatingAttempts?: number;
   }
 ): Promise<SelectArtisansToContactResult> {
   const artisansWanted = resolveMaxContactArtisans(request);
@@ -179,7 +192,14 @@ export async function selectArtisansToContact(
   let attempts = 0;
   let phonesFound = 0;
   const placesErrors: string[] = [];
-  const maxAttempts = Math.min(80, Math.max(24, quota * 6));
+  const defaultMaxAttempts = Math.min(80, Math.max(24, quota * 6));
+  const maxAttempts = Math.min(
+    80,
+    Math.max(
+      0,
+      Math.floor(options?.maxPlacesAttempts ?? defaultMaxAttempts)
+    )
+  );
 
   async function tryPlaces(
     row: ChantierArtisanRow,
@@ -193,6 +213,10 @@ export async function selectArtisansToContact(
     if (res.error) placesErrors.push(`${row.siret}: ${res.error}`);
     if (!res.artisan) return undefined;
     artisanBySiret.set(row.siret, res.artisan);
+    if (typeof res.artisan.googleRating === "number") {
+      row.googleRating = res.artisan.googleRating;
+      row.googleUserRatingCount = res.artisan.googleUserRatingCount;
+    }
     if (res.artisan.phone) {
       row.phone = res.artisan.phone;
       const phone = normalizeFrenchMobile(res.artisan.phone);
@@ -208,7 +232,14 @@ export async function selectArtisansToContact(
   }
 
   if (minGoogleRating != null && fillPhonesViaPlaces && placesEnabled) {
-    const ratingBudget = Math.min(40, Math.max(quota * 3, 12));
+    const defaultRatingBudget = Math.min(40, Math.max(quota * 3, 12));
+    const ratingBudget = Math.min(
+      maxAttempts,
+      Math.max(
+        0,
+        Math.floor(options?.maxRatingAttempts ?? defaultRatingBudget)
+      )
+    );
     let ratingAttempts = 0;
     for (const row of search.artisans) {
       if (ratingAttempts >= ratingBudget) break;
@@ -264,11 +295,14 @@ export async function selectArtisansToContact(
       if (row.phone?.trim()) invalidOrLandline += 1;
       withoutPhone.push({
         siret: row.siret,
+        siren: row.siren,
         companyName: row.companyName,
         city: row.city,
         companyCreatedAt: row.companyCreatedAt,
         source: row.source,
         distanceKm: row.distanceKm ?? undefined,
+        googleRating: row.googleRating,
+        googleUserRatingCount: row.googleUserRatingCount,
       });
       continue;
     }

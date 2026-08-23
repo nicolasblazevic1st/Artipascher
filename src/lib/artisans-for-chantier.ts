@@ -46,6 +46,8 @@ export interface ChantierArtisanRow {
   phone?: string;
   website?: string;
   hasPhone: boolean;
+  googleRating?: number;
+  googleUserRatingCount?: number;
   lat?: number;
   lon?: number;
   source: EnrichedArtisan["source"];
@@ -63,6 +65,7 @@ export interface SearchArtisansForChantierResult {
   young: number;
   established: number;
   withPhone: number;
+  withRating: number;
   artisans: ChantierArtisanRow[];
 }
 
@@ -131,6 +134,7 @@ export async function searchArtisansForChantier(
       young: 0,
       established: 0,
       withPhone: 0,
+      withRating: 0,
       artisans: [],
     };
   }
@@ -212,6 +216,8 @@ export async function searchArtisansForChantier(
       phone: a.phone,
       website: a.website,
       hasPhone,
+      googleRating: a.googleRating,
+      googleUserRatingCount: a.googleUserRatingCount,
       lat: a.lat,
       lon: a.lon,
       source: a.source,
@@ -240,6 +246,7 @@ export async function searchArtisansForChantier(
     young,
     established,
     withPhone: matched.filter((m) => m.hasPhone).length,
+    withRating: matched.filter((m) => typeof m.googleRating === "number").length,
     artisans: matched.slice(0, limit),
   };
 }

@@ -7,6 +7,7 @@ import {
 } from "@/lib/contact-slots";
 import {
   approvePendingReviewBatch,
+  discardPendingReviewBatch,
   pauseAcquisitionCampaign,
   resumeAcquisitionCampaign,
   runAcquisitionCampaignTick,
@@ -60,8 +61,12 @@ export async function GET() {
   );
 
   const eligibleRequests = store.workRequests
-    .filter((r) => r.status === "approved" || r.status === "pending")
-    .map((r) => ({
+    .filter(
+      (r) =>
+        (r.status === "approved" || r.status === "pending") &&
+        r.isTest !== true
+    )
+    .map((r) => ({)
       id: r.id,
       category: r.category,
       city: r.city,
@@ -138,7 +143,8 @@ export async function POST(request: NextRequest) {
   let acquisitionId = "";
   let message = "";
   let demo = false;
-  let action: "start" | "tick" | "pause" | "resume" | "approve" = "start";
+  let action: "start" | "tick" | "pause" | "resume" | "approve" | "discard" =
+    "start";
   let smsPerDay: number | undefined;
   let batchId = "";
   let recipientSirets: string[] | undefined;
@@ -149,7 +155,8 @@ export async function POST(request: NextRequest) {
       body.action === "tick" ||
       body.action === "pause" ||
       body.action === "resume" ||
-      body.action === "approve"
+      body.action === "approve" ||
+      body.action === "discard"
         ? body.action
         : "start";
     workRequestId = String(body.workRequestId ?? "").trim();
@@ -167,6 +174,21 @@ export async function POST(request: NextRequest) {
     }
   } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+  }
+
+  if (action === "discard") {
+    if (!batchId) {
+      return NextResponse.json({ error: "batchId requis." }, { status: 400 });
+    }
+    try {
+      const batch = await discardPendingReviewBatch(batchId);
+      return NextResponse.json({ batch });
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Suppression impossible." },
+        { status: 400 }
+      );
+    }
   }
 
   if (action === "approve") {
