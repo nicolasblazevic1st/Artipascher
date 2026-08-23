@@ -24,11 +24,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const size = Number.isFinite(campaignSize) ? campaignSize : undefined;
+    const placesBudget = Math.min(100, Math.max(48, (size ?? 15) * 4));
     const preview = await previewSmsCampaignDetailed(workRequest, {
-      campaignSize: Number.isFinite(campaignSize) ? campaignSize : undefined,
-      // Aperçu : assez pour voir des numéros, trop peu pour un timeout Nginx.
-      maxPlacesAttempts: 40,
-      maxRatingAttempts: 40,
+      campaignSize: size,
+      maxPlacesAttempts: placesBudget,
+      maxRatingAttempts: placesBudget,
     });
     return NextResponse.json({ preview });
   } catch (e) {
