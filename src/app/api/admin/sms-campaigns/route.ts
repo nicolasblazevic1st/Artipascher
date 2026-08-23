@@ -61,26 +61,27 @@ export async function GET() {
   );
 
   const eligibleRequests = store.workRequests
-    .filter(
-      (r) =>
-        (r.status === "approved" || r.status === "pending") &&
-        r.isTest !== true
-    )
-    .map((r) => ({)
-      id: r.id,
-      category: r.category,
-      city: r.city,
-      department: r.department,
-      status: r.status,
-      firstName: r.firstName,
-      lastName: r.lastName,
-      companyName: r.companyName,
-      clientKind: r.clientKind,
-      auctionId: r.auctionId,
-      createdAt: r.createdAt,
-      maxContactArtisans: resolveMaxContactArtisans(r),
-      smsQuota: smsQuotaForRequest(r),
-    }));
+    .filter((r) => {
+      const listed = r.status === "approved" || r.status === "pending";
+      return listed && r.isTest !== true;
+    })
+    .map((r) => {
+      return {
+        id: r.id,
+        category: r.category,
+        city: r.city,
+        department: r.department,
+        status: r.status,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        companyName: r.companyName,
+        clientKind: r.clientKind,
+        auctionId: r.auctionId,
+        createdAt: r.createdAt,
+        maxContactArtisans: resolveMaxContactArtisans(r),
+        smsQuota: smsQuotaForRequest(r),
+      };
+    });
 
   return NextResponse.json({
     campaigns,
