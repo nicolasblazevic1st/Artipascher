@@ -3,6 +3,7 @@ import {
   ADMIN_SESSION_COOKIE,
   isValidSessionToken,
 } from "@/lib/admin-auth";
+import { BRAND } from "@/lib/brand";
 import {
   PRO_SESSION_COOKIE,
   isValidProSessionToken,
@@ -12,7 +13,15 @@ import {
   isValidClientSessionToken,
 } from "@/lib/client-auth";
 
+const CANONICAL_HOST = BRAND.domain;
+
 export function proxy(request: NextRequest) {
+  const host = (request.headers.get("host") ?? "").split(":")[0]?.toLowerCase();
+  if (host === `www.${CANONICAL_HOST}`) {
+    const dest = `https://${CANONICAL_HOST}${request.nextUrl.pathname}${request.nextUrl.search}`;
+    return NextResponse.redirect(dest, 301);
+  }
+
   const { pathname } = request.nextUrl;
 
   const publicClientPaths = [
@@ -72,5 +81,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/pro/:path*", "/particulier/espace/:path*"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };
