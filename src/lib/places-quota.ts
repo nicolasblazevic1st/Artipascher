@@ -197,14 +197,17 @@ export async function enrichArtisanWithPlaces(
   const updated = await updateArtisanBySiret(artisan.siret, {
     phone: result.phone ?? artisan.phone,
     website: result.website ?? artisan.website,
-    googleRating: result.rating ?? artisan.googleRating,
-    googleUserRatingCount:
-      result.userRatingCount ?? artisan.googleUserRatingCount,
-    googlePlaceId: result.placeId ?? artisan.googlePlaceId,
+    googleRating: result.matched ? result.rating : undefined,
+    googleUserRatingCount: result.matched
+      ? result.userRatingCount
+      : undefined,
+    googlePlaceId: result.matched ? result.placeId : undefined,
     enrichmentStatus: result.phone
       ? "enriched"
       : result.matched
-        ? "no_match"
+        ? result.rating != null
+          ? "enriched"
+          : "no_match"
         : "no_match",
     enrichedAt: now,
     lastVerifiedAt: now,

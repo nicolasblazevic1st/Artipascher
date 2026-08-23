@@ -2,6 +2,7 @@
  * Remplit les notes Google manquantes (Places) autour d’un point.
  * Usage:
  *   node scripts/fill-missing-google-ratings.mjs
+ *   PLACES_REVERIFY=1 node scripts/fill-missing-google-ratings.mjs
  * Env: GOOGLE_PLACES_ENABLED=true + GOOGLE_PLACES_API_KEY
  */
 import { readFileSync, writeFileSync, renameSync, unlinkSync } from "fs";
@@ -16,6 +17,44 @@ const ORIGIN = { lat: 51.013, lon: 2.303 }; // Grande-Synthe
 const RADIUS_KM = 40;
 const NAF = new Set(["43.32A", "43.32B"]);
 const LIMIT = Number(process.env.PLACES_FILL_LIMIT ?? 80);
+const REVERIFY = process.env.PLACES_REVERIFY === "1";
+
+function foldName(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(sarl|sas|sasu|eurl|ei|eirl|sa|sci|snc|ste|societe)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function placesNameMatchesCompany(companyName, googleName) {
+  if (!googleName?.trim()) return false;
+  const company = foldName(companyName);
+  const google = foldName(googleName);
+  if (!company || !google) return false;
+  if (company === google) return true;
+  if (company.length >= 4 && google.includes(company)) return true;
+  const companyTokens = new Set(company.split(" ").filter(Boolean));
+  const googleTokens = new Set(google.split(" ").filter(Boolean));
+  const overlap = [...companyTokens].filter((token) => googleTokens.has(token));
+  if (overlap.length === 0) return false;
+  if (companyTokens.size <= 2) return overlap.length === companyTokens.size;
+  return overlap.length / companyTokens.size >= 0.6;
+}
+
+function addressContainsLocality(formattedAddress, postalCode, city) {
+  if (!formattedAddress?.trim()) return !city && !postalCode;
+  const hay = foldName(formattedAddress);
+  const zip = String(postalCode ?? "").replace(/\D/g, "");
+  if (zip && String(formattedAddress).replace(/\D/g, "").includes(zip)) {
+    return true;
+  }
+  const cityFold = city ? foldName(city) : "";
+  return Boolean(cityFold && hay.includes(cityFold));
+}
 
 function loadEnv() {
   try {
@@ -65,13 +104,13 @@ async function lookupPlace(key, artisan) {
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": key,
-      "X-Goog-FieldMask": "places.id,places.displayName",
+      "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress",
     },
     body: JSON.stringify({
       textQuery,
       languageCode: "fr",
       regionCode: "FR",
-      maxResultCount: 1,
+      maxResultCount: 5,
     }),
   });
   requestsUsed += 1;
@@ -85,7 +124,16 @@ async function lookupPlace(key, artisan) {
   } catch {
     return { ok: false, requestsUsed, error: "search json" };
   }
-  const placeId = searchData.places?.[0]?.id;
+  const chosen = (searchData.places ?? []).find((place) => {
+    const googleName = place.displayName?.text;
+    if (!placesNameMatchesCompany(artisan.companyName, googleName)) return false;
+    return addressContainsLocality(
+      place.formattedAddress,
+      artisan.postalCode,
+      artisan.city
+    );
+  });
+  const placeId = chosen?.id;
   if (!placeId) return { ok: true, matched: false, requestsUsed };
 
   const detailsRes = await fetch(
@@ -141,7 +189,8 @@ async function main() {
       if (a.department !== "59" && a.department !== "62") return false;
       if (!collectNaf(a).some((c) => NAF.has(c))) return false;
       if (!a.phone?.trim()) return false;
-      if (typeof a.googleRating === "number") return false;
+      const hasRating = typeof a.googleRating === "number";
+      if (REVERIFY ? !hasRating : hasRating) return false;
       if (typeof a.lat !== "number" || typeof a.lon !== "number") return false;
       return haversineKm(ORIGIN, { lat: a.lat, lon: a.lon }) <= RADIUS_KM;
     })
@@ -168,16 +217,27 @@ async function main() {
     if (res.matched) matched += 1;
     if (res.phone) artisan.phone = artisan.phone || res.phone;
     if (res.website) artisan.website = artisan.website || res.website;
-    if (res.placeId) artisan.googlePlaceId = res.placeId;
-    if (typeof res.rating === "number") {
-      artisan.googleRating = res.rating;
-      artisan.googleUserRatingCount = res.userRatingCount;
-      withRating += 1;
+    if (res.matched) {
+      if (res.placeId) artisan.googlePlaceId = res.placeId;
+      if (typeof res.rating === "number") {
+        artisan.googleRating = res.rating;
+        artisan.googleUserRatingCount = res.userRatingCount;
+        withRating += 1;
+      } else {
+        delete artisan.googleRating;
+        delete artisan.googleUserRatingCount;
+      }
+    } else {
+      delete artisan.googleRating;
+      delete artisan.googleUserRatingCount;
+      delete artisan.googlePlaceId;
     }
     artisan.enrichmentStatus = res.phone
       ? "enriched"
       : res.matched
-        ? artisan.enrichmentStatus
+        ? typeof res.rating === "number"
+          ? "enriched"
+          : "no_match"
         : "no_match";
     artisan.enrichedAt = now;
     artisan.lastVerifiedAt = now;
