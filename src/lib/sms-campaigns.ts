@@ -1,6 +1,7 @@
 import { companyAgeCohort } from "./artisans-for-chantier";
 import { markArtisanPhoneInvalid } from "./places-quota";
 import { absoluteUrl } from "./share";
+import { parseMinGoogleRating } from "./google-rating";
 import { formatWorkPrestationLabel } from "./pricing-tiers";
 import {
   SMS_PER_SELECTED_ARTISAN,
@@ -118,14 +119,35 @@ export type PreviewSmsCampaignOptions = {
   maxRatingAttempts?: number;
 };
 
+function formatSmsMatchReasons(request: WorkRequest): string {
+  const parts = ["métier", "secteur", "sans procédure judiciaire"];
+  const minRating = parseMinGoogleRating(request.minGoogleRating);
+  if (minRating != null) {
+    parts.push(
+      `note Google >= ${minRating.toFixed(1).replace(".", ",")}/5`
+    );
+  }
+  if (request.requireRge === true) parts.push("RGE");
+  if (request.preferEstablishedCompany === true) {
+    parts.push("entreprise 5 ans+");
+  } else if (request.preferEstablishedCompany === false) {
+    parts.push("entreprise récente");
+  }
+  if (parts.length === 2) return `${parts[0]} et ${parts[1]}`;
+  const last = parts.pop()!;
+  return `${parts.join(", ")} et ${last}`;
+}
+
 export function buildDefaultCampaignMessage(request: WorkRequest): string {
   const auctionPath = request.auctionId
     ? `/offres/${request.auctionId}`
     : "/offres";
   const url = absoluteUrl(auctionPath);
   const prestation = formatWorkPrestationLabel(request);
+  const reasons = formatSmsMatchReasons(request);
   return (
     `Nord Artisan Pro : ${prestation} a ${request.city} (${request.department}). ` +
+    `Vous êtes contacté car vous correspondez aux critères du particulier (${reasons}). ` +
     `Details : ${url}`
   );
 }
