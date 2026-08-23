@@ -196,18 +196,6 @@ export async function notifyAdminNewWorkRequest(workRequest: WorkRequest) {
   await sendAdminTransactionalSms(workRequest, message, "admin new request");
 }
 
-/** SMS admin à chaque publication, même sans artisan joignable. */
-export async function notifyAdminListingPublished(workRequest: WorkRequest) {
-  const who = adminRequestWho(workRequest);
-  const path = workRequest.auctionId
-    ? `/admin/particuliers/encheres/${workRequest.auctionId}`
-    : "/admin/particuliers/encheres";
-  const message =
-    `Nord Artisan Pro : annonce publiee.\n` +
-    `${workRequest.category} a ${workRequest.city} (${who}).\n` +
-    absoluteUrl(path);
-  await sendAdminTransactionalSms(workRequest, message, "admin listing published");
-}
 
 export async function notifyClientRequestReviewed(params: {
   workRequest: WorkRequest;
