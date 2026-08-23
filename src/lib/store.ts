@@ -2488,6 +2488,13 @@ export async function getSmsCampaignsForWorkRequest(
   return campaigns.filter((c) => c.workRequestId === workRequestId);
 }
 
+export async function getSmsCampaignsForAcquisition(
+  acquisitionId: string
+): Promise<SmsCampaign[]> {
+  const campaigns = await getSmsCampaigns();
+  return campaigns.filter((c) => c.acquisitionCampaignId === acquisitionId);
+}
+
 export async function addSmsCampaign(
   data: Omit<SmsCampaign, "id" | "createdAt">
 ): Promise<SmsCampaign> {
@@ -2522,6 +2529,7 @@ export async function updateSmsCampaign(
       | "sentAt"
       | "message"
       | "scheduledForDate"
+      | "autoSend"
     >
   >
 ): Promise<SmsCampaign | null> {

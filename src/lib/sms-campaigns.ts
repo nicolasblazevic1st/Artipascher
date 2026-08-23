@@ -20,10 +20,9 @@ import {
   createSmsAcquisitionCampaign,
   getActiveSmsAcquisitionCampaign,
   getMarketingSmsContactedSirets,
-  getPendingReviewForAcquisition,
   getPendingReviewSmsCampaigns,
+  getSmsCampaignsForAcquisition,
   getSmsAcquisitionCampaignById,
-  getSmsAcquisitionCampaigns,
   getSmsCampaignById,
   getSmsSettings,
   getWorkRequestById,
@@ -501,15 +500,8 @@ export async function approvePendingReviewBatch(
         lastSendDate: day,
         sentOnLastDate: sentToday + sentCount,
       });
-      const acceptedAfter = await acceptedCountForRequest(request);
-      const sentTotal = acq.totalSent + sentCount;
-      if (
-        acceptedAfter >= resolveMaxContactArtisans(request) ||
-        sentTotal >= smsQuotaForRequest(request)
-      ) {
-        acquisition =
-          (await setSmsAcquisitionStatus(acq.id, "completed")) ?? acquisition;
-      }
+      acquisition =
+        (await setSmsAcquisitionStatus(acq.id, "completed")) ?? acquisition;
     }
   }
 
@@ -517,6 +509,98 @@ export async function approvePendingReviewBatch(
     batch: updatedBatch ?? batch,
     acquisition,
     acceptedCount,
+  };
+}
+
+/** Coche / décoche « prêt à partir » (envoi cron 8h). */
+export async function setPendingBatchAutoSend(
+  batchId: string,
+  autoSend: boolean
+): Promise<SmsCampaign> {
+  const batch = await getSmsCampaignById(batchId);
+  if (!batch) throw new Error("Lot introuvable.");
+  if (batch.status !== "pending_review") {
+    throw new Error("Ce lot n’est plus en attente.");
+  }
+  const updated = await updateSmsCampaign(batchId, { autoSend });
+  if (!updated) throw new Error("Lot introuvable.");
+  return updated;
+}
+
+/**
+ * Seule tâche cron SMS : envoyer les lots cochés « prêt à partir ».
+ * À lancer lun–sam vers 8h (heure de Paris). Hors fenêtre : aucun envoi.
+ */
+export async function sendReadyPendingBatches(): Promise<{
+  windowOpen: boolean;
+  readyCount: number;
+  sent: number;
+  cancelled: number;
+  failed: number;
+  results: Array<{
+    batchId: string;
+    status: SmsCampaign["status"];
+    sentCount: number;
+    skippedReason?: string;
+    error?: string;
+  }>;
+}> {
+  if (!isMarketingSmsWindowOpen()) {
+    return {
+      windowOpen: false,
+      readyCount: 0,
+      sent: 0,
+      cancelled: 0,
+      failed: 0,
+      results: [],
+    };
+  }
+
+  const ready = (await getPendingReviewSmsCampaigns()).filter(
+    (batch) => batch.autoSend === true
+  );
+  const results: Array<{
+    batchId: string;
+    status: SmsCampaign["status"];
+    sentCount: number;
+    skippedReason?: string;
+    error?: string;
+  }> = [];
+  let sent = 0;
+  let cancelled = 0;
+  let failed = 0;
+
+  for (const batch of ready) {
+    try {
+      const result = await approvePendingReviewBatch(batch.id);
+      const status = result.batch.status;
+      if (status === "cancelled") cancelled += 1;
+      else if (status === "failed") failed += 1;
+      else sent += 1;
+      results.push({
+        batchId: batch.id,
+        status,
+        sentCount: result.batch.sentCount,
+        skippedReason: result.skippedReason,
+      });
+    } catch (err) {
+      failed += 1;
+      results.push({
+        batchId: batch.id,
+        status: "pending_review",
+        sentCount: 0,
+        error: err instanceof Error ? err.message : "Envoi impossible.",
+      });
+    }
+  }
+
+  return {
+    windowOpen: true,
+    readyCount: ready.length,
+    sent,
+    cancelled,
+    failed,
+    results,
   };
 }
 
@@ -713,8 +797,7 @@ async function acceptedCountForRequest(request: WorkRequest): Promise<number> {
 }
 
 /**
- * Envoie (ou prépare) le lot : jusqu’à 5 SMS × artisans demandés, moins déjà envoyés.
- * Stop si places contact pleines, quota SMS atteint, ou pool vide.
+ * Prépare ou envoie un seul lot. Pas de vagues suivantes jusqu’à 5/5.
  */
 export async function runAcquisitionCampaignTick(
   acquisitionId: string,
@@ -785,12 +868,9 @@ export async function runAcquisitionCampaignTick(
   }
 
   const today = parisDayKey();
-  // Mode revue : on prépare le lot pour le *prochain* jour marketing (la veille).
-  const targetDay = reviewMode ? parisNextMarketingDayKey() : today;
-
-  const existingPending = await getPendingReviewForAcquisition(
-    acquisition.id,
-    targetDay
+  const existingBatches = await getSmsCampaignsForAcquisition(acquisition.id);
+  const existingPending = existingBatches.find(
+    (c) => c.status === "pending_review"
   );
   if (existingPending) {
     return {
@@ -798,6 +878,20 @@ export async function runAcquisitionCampaignTick(
       acceptedCount,
       batch: existingPending,
       skippedReason: "pending_review_exists",
+    };
+  }
+  const alreadySent = existingBatches.some(
+    (c) =>
+      c.status === "sent" || c.status === "demo" || c.status === "failed"
+  );
+  if (alreadySent) {
+    const updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "completed")) ??
+      acquisition;
+    return {
+      acquisition: updated,
+      acceptedCount,
+      skippedReason: "already_sent_once",
     };
   }
 
@@ -876,16 +970,12 @@ export async function runAcquisitionCampaignTick(
   });
 
   const acceptedAfter = await acceptedCountForRequest(request);
-  const sentTotal = (updated?.totalSent ?? acquisition.totalSent);
-  if (
-    acceptedAfter >= resolveMaxContactArtisans(request) ||
-    sentTotal >= smsQuotaForRequest(request)
-  ) {
-    updated =
-      (await setSmsAcquisitionStatus(acquisition.id, "completed")) ?? updated;
-  } else if (batch.sentCount === 0) {
+  if (batch.sentCount === 0) {
     updated =
       (await setSmsAcquisitionStatus(acquisition.id, "exhausted")) ?? updated;
+  } else {
+    updated =
+      (await setSmsAcquisitionStatus(acquisition.id, "completed")) ?? updated;
   }
 
   return {
@@ -895,7 +985,7 @@ export async function runAcquisitionCampaignTick(
   };
 }
 
-/** Démarre une campagne multi-jours et envoie immédiatement le premier lot. */
+/** Démarre un lot unique (plus de relances jusqu’à 5/5). */
 export async function startAcquisitionCampaign(
   request: WorkRequest,
   options?: {
@@ -955,41 +1045,17 @@ export async function resumeAcquisitionCampaign(
   return setSmsAcquisitionStatus(acquisitionId, "active");
 }
 
-/** Tick toutes les campagnes actives (cron quotidien). */
+/** Ancien cron multi-jours : ne prépare plus de lots. */
 export async function runAllActiveAcquisitionTicks(): Promise<{
   processed: number;
   results: AcquisitionTickResult[];
 }> {
-  const all = await getSmsAcquisitionCampaigns();
-  const active = all.filter((c) => c.status === "active");
-  const results: AcquisitionTickResult[] = [];
-  for (const campaign of active) {
-    try {
-      results.push(await runAcquisitionCampaignTick(campaign.id));
-    } catch (err) {
-      console.error("[sms-acquisition] tick", campaign.id, err);
-    }
-  }
-  return { processed: results.length, results };
+  return { processed: 0, results: [] };
 }
 
+/** Plus de campagne auto à l’approbation (pas de spam jusqu’à 5/5). */
 export async function maybeAutoNotifyOnApprove(
-  request: WorkRequest
+  _request: WorkRequest
 ): Promise<void> {
-  if (request.isTest === true) return;
-
-  const settings = await getSmsSettings();
-  if (!settings.autoSendOnApprove) return;
-
-  const existing = await getActiveSmsAcquisitionCampaign(request.id);
-  if (existing) return;
-
-  const alreadyFinished = (await getSmsAcquisitionCampaigns()).some(
-    (c) =>
-      c.workRequestId === request.id &&
-      (c.status === "completed" || c.status === "exhausted")
-  );
-  if (alreadyFinished) return;
-
-  await startAcquisitionCampaign(request, { trigger: "auto" });
+  return;
 }

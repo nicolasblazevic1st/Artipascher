@@ -648,6 +648,43 @@ export default function AdminSmsCampaignsPage() {
     }
   }
 
+  async function handleToggleAutoSend(batchId: string, autoSend: boolean) {
+    setError(null);
+    setSuccess(null);
+    setPendingReview((rows) =>
+      rows.map((row) => (row.id === batchId ? { ...row, autoSend } : row))
+    );
+    try {
+      const res = await fetch("/api/admin/sms-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "auto-send", batchId, autoSend }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPendingReview((rows) =>
+          rows.map((row) =>
+            row.id === batchId ? { ...row, autoSend: !autoSend } : row
+          )
+        );
+        setError(data.error ?? "Impossible de cocher l’envoi auto.");
+        return;
+      }
+      setSuccess(
+        autoSend
+          ? "Lot prêt à partir : le cron l’enverra à 8h (lun–sam)."
+          : "Envoi auto désactivé. Ce lot ne partira plus tout seul."
+      );
+    } catch {
+      setPendingReview((rows) =>
+        rows.map((row) =>
+          row.id === batchId ? { ...row, autoSend: !autoSend } : row
+        )
+      );
+      setError("Erreur réseau pendant la mise à jour.");
+    }
+  }
+
   async function handleDiscardBatch(batchId: string) {
     if (
       !window.confirm(
@@ -1133,22 +1170,10 @@ export default function AdminSmsCampaignsPage() {
               />
               Exiger validation admin avant tout envoi OVH (recommandé)
             </label>
-            <label className="mt-2 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={settings.autoSendOnApprove}
-                onChange={(e) =>
-                  saveSettings({ autoSendOnApprove: e.target.checked })
-                }
-              />
-              Démarrer auto une campagne à l&apos;approbation (quota 5 SMS ×
-              artisans choisis)
-            </label>
             <p className="mt-2 text-xs text-slate-500">
-              Volume = 5 SMS × le nombre d&apos;artisans demandé par le
-              particulier. Stop quand le quota est envoyé ou les places de
-              contact sont pleines. Validation : préparation puis envoi OVH
-              après re-check.
+              Un seul lot par demande : pas de relances SMS tant que les
+              places de contact ne sont pas pleines. Cochez « Prêt à partir »
+              pour l’envoi à 8h, ou envoyez à la main.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2">
@@ -1180,9 +1205,9 @@ export default function AdminSmsCampaignsPage() {
         <PlacesFreeQuotaCard stats={artisanStats} />
         <h2 className="mt-5 text-lg font-semibold">Lancer une campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Prévisualisez les numéros (5 SMS × artisans choisis), cochez, puis
-          préparez ou simulez. Stop au quota envoyé ou places de contact
-          pleines. STOP + lun–sam 8h–20h Paris.
+          Un lot unique : prévisualisez, cochez, préparez. Pas de vagues
+          suivantes jusqu’à 5/5. Envoi à 8h si « Prêt à partir », ou tout de
+          suite. STOP + lun–sam 8h–20h Paris.
         </p>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -1568,8 +1593,8 @@ export default function AdminSmsCampaignsPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Les cases cochées sont le lot (max {campaignSize} = 5 × artisans
-                demandés). Stop au quota envoyé ou places pleines.
+                Les cases cochées sont le lot. Un seul envoi, pas de relance
+                jusqu’à 5/5.
               </p>
             </div>
           </>
@@ -1612,12 +1637,13 @@ export default function AdminSmsCampaignsPage() {
           Lots à valider
         </h2>
         <p className="mt-1 text-xs text-slate-500">
-          Préparés sans OVH. Validez pour envoyer, simulez, ou supprimez.
+          Préparés sans OVH. Cochez « Prêt à partir » pour l’envoi auto à 8h
+          (lun–sam), ou envoyez tout de suite.
         </p>
         {pendingReview.length === 0 ? (
           <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-            Aucun lot en attente. Le cron peut préparer un lot ; tu valides
-            l&apos;envoi après re-check (places + quota).
+            Aucun lot en attente. Préparez un lot depuis Lancer, puis cochez
+            Prêt à partir si vous voulez l’envoi à 8h.
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
@@ -1632,12 +1658,24 @@ export default function AdminSmsCampaignsPage() {
                       {batch.category} · {batch.city} ({batch.department})
                     </p>
                     <p className="mt-1 text-xs text-slate-600">
-                      Prévu pour le{" "}
-                      <strong>{batch.scheduledForDate ?? "—"}</strong> ·{" "}
                       {batch.recipientCount} destinataire
                       {batch.recipientCount > 1 ? "s" : ""} · préparé{" "}
                       {new Date(batch.createdAt).toLocaleString("fr-FR")}
+                      {batch.autoSend
+                        ? " · prêt à partir à 8h"
+                        : ""}
                     </p>
+                    <label className="mt-2 flex items-center gap-2 text-xs font-medium text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={batch.autoSend === true}
+                        disabled={disableWhen(sending)}
+                        onChange={(e) =>
+                          void handleToggleAutoSend(batch.id, e.target.checked)
+                        }
+                      />
+                      Prêt à partir — envoi auto à 8h (lun–sam)
+                    </label>
                     <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-slate-700">
                       {batch.recipients.map((r, i) => (
                         <li key={`${r.siret ?? r.phone}-${i}`}>
@@ -1692,7 +1730,7 @@ export default function AdminSmsCampaignsPage() {
           </div>
         ) : acquisitions.length === 0 ? (
           <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-            Aucune campagne d&apos;acquisition multi-jours pour l&apos;instant.
+            Aucune campagne pour l&apos;instant.
           </p>
         ) : (
           <ul className="mt-4 space-y-3">
@@ -1718,18 +1756,6 @@ export default function AdminSmsCampaignsPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {(a.status === "active" || a.status === "paused") && (
-                      <button
-                        type="button"
-                        disabled={disableWhen(sending)}
-                        onClick={() =>
-                          handleAcquisitionAction(a.id, "tick", !smsConfigured)
-                        }
-                        className="rounded border border-slate-300 px-2 py-1 text-xs"
-                      >
-                        Lot du jour{!smsConfigured ? " (démo)" : ""}
-                      </button>
-                    )}
                     {a.status === "active" && (
                       <button
                         type="button"

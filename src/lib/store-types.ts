@@ -592,6 +592,8 @@ export interface SmsCampaign {
    * En mode revue : préparé la veille pour cette date.
    */
   scheduledForDate?: string;
+  /** Coché admin : le cron de 8h (lun–sam) envoie ce lot. */
+  autoSend?: boolean;
   createdAt: string;
   sentAt?: string;
 }
