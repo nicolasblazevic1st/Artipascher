@@ -64,6 +64,9 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
   const [stats, setStats] = useState<Stats | null>(null);
   const [artisans, setArtisans] = useState<ArtisanRow[]>([]);
   const [nafCodes, setNafCodes] = useState<string[]>([]);
+  const [clientMinGoogleRating, setClientMinGoogleRating] = useState<
+    number | null
+  >(null);
   const [geoFound, setGeoFound] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,6 +95,11 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
       setStats(data.stats ?? null);
       setArtisans(data.artisans ?? []);
       setNafCodes(data.nafCodes ?? []);
+      setClientMinGoogleRating(
+        typeof data.clientMinGoogleRating === "number"
+          ? data.clientMinGoogleRating
+          : null
+      );
       setGeoFound(data.geoFound !== false);
       setOpen(true);
     } catch (e) {
@@ -273,6 +281,14 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
           {nafCodes.length > 0 && (
             <p className="text-[11px] text-slate-500">
               NAF ciblés : {formatNafList(nafCodes, ", ")}
+            </p>
+          )}
+          {clientMinGoogleRating != null && (
+            <p className="text-[11px] text-amber-800">
+              Le client a demandé une note Google ≥{" "}
+              {String(clientMinGoogleRating).replace(".", ",")}/5. Cette liste
+              montre tout le vivier NAF (beaucoup n’ont pas encore de note en
+              base).
             </p>
           )}
 
