@@ -11,6 +11,8 @@ export interface PlacesLookupResult {
   matched: boolean;
   /** Nombre d'appels HTTP Google facturés (Search + Details). */
   requestsUsed: number;
+  textSearchUsed?: number;
+  placeDetailsUsed?: number;
   error?: string;
   placeId?: string;
 }
@@ -163,6 +165,8 @@ export async function lookupPlacePhone(query: {
         ok: false,
         matched: false,
         requestsUsed,
+        textSearchUsed: 1,
+        placeDetailsUsed: 0,
         error: `Places Text Search HTTP ${searchRes.status}: ${searchBody.raw.slice(0, 200)}`,
       };
     }
@@ -171,6 +175,8 @@ export async function lookupPlacePhone(query: {
         ok: false,
         matched: false,
         requestsUsed,
+        textSearchUsed: 1,
+        placeDetailsUsed: 0,
         error: `Places Text Search: ${searchBody.error}`,
       };
     }
@@ -189,7 +195,13 @@ export async function lookupPlacePhone(query: {
     });
     const placeId = chosen?.id;
     if (!placeId) {
-      return { ok: true, matched: false, requestsUsed };
+      return {
+        ok: true,
+        matched: false,
+        requestsUsed,
+        textSearchUsed: 1,
+        placeDetailsUsed: 0,
+      };
     }
 
     const detailsRes = await fetch(
@@ -218,6 +230,8 @@ export async function lookupPlacePhone(query: {
         matched: true,
         requestsUsed,
         placeId,
+        textSearchUsed: 1,
+        placeDetailsUsed: 1,
         error: `Places Details HTTP ${detailsRes.status}: ${detailsBody.raw.slice(0, 200)}`,
       };
     }
@@ -227,6 +241,8 @@ export async function lookupPlacePhone(query: {
         matched: true,
         requestsUsed,
         placeId,
+        textSearchUsed: 1,
+        placeDetailsUsed: 1,
         error: `Places Details: ${detailsBody.error ?? "réponse vide"}`,
       };
     }
@@ -243,6 +259,8 @@ export async function lookupPlacePhone(query: {
       ok: true,
       matched: true,
       requestsUsed,
+      textSearchUsed: 1,
+      placeDetailsUsed: 1,
       placeId,
       phone,
       website: details.websiteUri?.trim() || undefined,

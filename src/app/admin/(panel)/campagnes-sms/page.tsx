@@ -187,6 +187,109 @@ const ACQ_STATUS_LABELS: Record<SmsAcquisitionCampaign["status"], string> = {
   exhausted: "Épuisée (plus de destinataires)",
 };
 
+type PlacesFreeUsage = {
+  httpUsed: number;
+  httpLimit: number;
+  httpRemaining: number;
+  textSearchUsed: number;
+  textSearchLimit: number;
+  textSearchRemaining: number;
+  placeDetailsUsed: number;
+  placeDetailsLimit: number;
+  placeDetailsRemaining: number;
+  hasSkuSplit: boolean;
+};
+
+function quotaTone(remaining: number, limit: number): string {
+  if (limit <= 0) return "text-slate-700";
+  const ratio = remaining / limit;
+  if (ratio <= 0.15) return "text-red-800";
+  if (ratio <= 0.4) return "text-amber-800";
+  return "text-emerald-800";
+}
+
+function PlacesFreeQuotaCard({
+  stats,
+}: {
+  stats: {
+    remaining: number;
+    placesEnabled: boolean;
+    quota: {
+      requestsProduction: number;
+      requestsEnrichment: number;
+      monthlyLimit: number;
+    };
+    placesFree?: PlacesFreeUsage;
+  } | null;
+}) {
+  if (!stats) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        Quota Places Google : chargement…
+      </div>
+    );
+  }
+
+  const free = stats.placesFree;
+  const used = free?.httpUsed ??
+    stats.quota.requestsProduction + stats.quota.requestsEnrichment;
+  const limit = free?.httpLimit ?? stats.quota.monthlyLimit;
+  const remaining = free?.httpRemaining ?? stats.remaining;
+  const detailsTight =
+    free?.hasSkuSplit === true &&
+    free.placeDetailsRemaining <= Math.min(200, free.placeDetailsLimit * 0.2);
+
+  return (
+    <div
+      className={`rounded-lg border px-3 py-2.5 text-xs ${
+        detailsTight
+          ? "border-amber-300 bg-amber-50"
+          : "border-slate-200 bg-slate-50"
+      }`}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="font-semibold text-slate-900">
+          Places Google — offert ce mois
+        </p>
+        <p className={quotaTone(remaining, limit)}>
+          <strong>
+            {used} / {limit}
+          </strong>{" "}
+          appels · reste {remaining}
+        </p>
+      </div>
+      {free?.hasSkuSplit ? (
+        <div className="mt-1.5 grid gap-1 text-slate-600 sm:grid-cols-2">
+          <div className={quotaTone(free.textSearchRemaining, free.textSearchLimit)}>
+            Recherches : {free.textSearchUsed} / {free.textSearchLimit} · reste{" "}
+            {free.textSearchRemaining}
+          </div>
+          <div
+            className={quotaTone(
+              free.placeDetailsRemaining,
+              free.placeDetailsLimit
+            )}
+          >
+            Fiches note + tél. : {free.placeDetailsUsed} / {free.placeDetailsLimit}{" "}
+            · reste {free.placeDetailsRemaining}
+          </div>
+        </div>
+      ) : (
+        <p className="mt-1 text-slate-600">
+          Google offre 5 000 recherches et 1 000 fiches (note + tél.) par mois.
+          Au-delà, c’est payant. Le détail recherche / fiche se remplira au
+          prochain appel.
+        </p>
+      )}
+      <p className="mt-1 text-slate-500">
+        {stats.placesEnabled
+          ? "Une prévisualisation peut consommer des appels si des notes ou des tél. manquent."
+          : "Places n’est pas activé : aucun appel Google depuis cette page."}
+      </p>
+    </div>
+  );
+}
+
 export default function AdminSmsCampaignsPage() {
   const [campaigns, setCampaigns] = useState<SmsCampaign[]>([]);
   const [pendingReview, setPendingReview] = useState<SmsCampaign[]>([]);
@@ -229,6 +332,18 @@ export default function AdminSmsCampaignsPage() {
       paused: boolean;
       prodToday: number;
       bonusToday?: number;
+    };
+    placesFree?: {
+      httpUsed: number;
+      httpLimit: number;
+      httpRemaining: number;
+      textSearchUsed: number;
+      textSearchLimit: number;
+      textSearchRemaining: number;
+      placeDetailsUsed: number;
+      placeDetailsLimit: number;
+      placeDetailsRemaining: number;
+      hasSkuSplit: boolean;
     };
   } | null>(null);
   const [artisanBusy, setArtisanBusy] = useState<string | null>(null);
@@ -437,6 +552,7 @@ export default function AdminSmsCampaignsPage() {
       );
     } finally {
       setPreviewLoading(false);
+      void loadArtisanStats();
     }
   }
 
@@ -905,11 +1021,15 @@ export default function AdminSmsCampaignsPage() {
             <div>
               Quota :{" "}
               <strong>
-                {artisanStats.quota.requestsProduction +
-                  artisanStats.quota.requestsEnrichment}
-                /{artisanStats.quota.monthlyLimit}
+                {artisanStats.placesFree?.httpUsed ??
+                  artisanStats.quota.requestsProduction +
+                    artisanStats.quota.requestsEnrichment}
+                /
+                {artisanStats.placesFree?.httpLimit ??
+                  artisanStats.quota.monthlyLimit}
               </strong>{" "}
-              (reste {artisanStats.remaining})
+              (reste{" "}
+              {artisanStats.placesFree?.httpRemaining ?? artisanStats.remaining})
             </div>
             <div>
               Prod ce mois : {artisanStats.quota.requestsProduction} · Enrich :{" "}
@@ -1054,7 +1174,8 @@ export default function AdminSmsCampaignsPage() {
 
       {tab === "launch" && (
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="text-lg font-semibold">Lancer une campagne</h2>
+        <PlacesFreeQuotaCard stats={artisanStats} />
+        <h2 className="mt-5 text-lg font-semibold">Lancer une campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
           Prévisualisez les numéros (5 SMS × artisans choisis), cochez, puis
           préparez ou simulez. Stop au quota envoyé ou places de contact

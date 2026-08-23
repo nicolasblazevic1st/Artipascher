@@ -65,6 +65,10 @@ export interface QuotaTracking {
   monthlyLimit: number;
   requestsProduction: number;
   requestsEnrichment: number;
+  /** Appels Text Search (SKU Pro, 5 000 offerts / mois). */
+  requestsTextSearch?: number;
+  /** Appels Place Details avec note/tél. (SKU Enterprise, 1 000 offerts / mois). */
+  requestsPlaceDetails?: number;
   /** Consommation production par jour (YYYY-MM-DD). */
   dailyProductionLog: Record<string, number>;
   /**

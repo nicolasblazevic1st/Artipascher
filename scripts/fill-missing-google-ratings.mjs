@@ -116,7 +116,13 @@ async function lookupPlace(key, artisan) {
   requestsUsed += 1;
   const searchRaw = await searchRes.text();
   if (!searchRes.ok || !searchRaw.trim()) {
-    return { ok: false, requestsUsed, error: `search ${searchRes.status}` };
+    return {
+      ok: false,
+      requestsUsed,
+      textSearchUsed: 1,
+      placeDetailsUsed: 0,
+      error: `search ${searchRes.status}`,
+    };
   }
   let searchData;
   try {
@@ -134,7 +140,15 @@ async function lookupPlace(key, artisan) {
     );
   });
   const placeId = chosen?.id;
-  if (!placeId) return { ok: true, matched: false, requestsUsed };
+  if (!placeId) {
+    return {
+      ok: true,
+      matched: false,
+      requestsUsed,
+      textSearchUsed: 1,
+      placeDetailsUsed: 0,
+    };
+  }
 
   const detailsRes = await fetch(
     `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
@@ -161,6 +175,8 @@ async function lookupPlace(key, artisan) {
     ok: true,
     matched: true,
     requestsUsed,
+    textSearchUsed: 1,
+    placeDetailsUsed: 1,
     placeId,
     phone: details.nationalPhoneNumber || details.internationalPhoneNumber,
     website: details.websiteUri,
@@ -203,6 +219,8 @@ async function main() {
 
   console.log("targets", targets.length, "limit", LIMIT);
   let requests = 0;
+  let textSearchUsed = 0;
+  let placeDetailsUsed = 0;
   let withRating = 0;
   let matched = 0;
   let errors = 0;
@@ -210,6 +228,8 @@ async function main() {
   for (const artisan of targets) {
     const res = await lookupPlace(key, artisan);
     requests += res.requestsUsed ?? 0;
+    textSearchUsed += res.textSearchUsed ?? 0;
+    placeDetailsUsed += res.placeDetailsUsed ?? 0;
     if (res.error) {
       errors += 1;
       continue;
@@ -245,6 +265,30 @@ async function main() {
     await new Promise((r) => setTimeout(r, 80));
   }
 
+  if (requests > 0) {
+    if (!Array.isArray(db.quotaTracking)) db.quotaTracking = [];
+    const monthKey = now.slice(0, 7);
+    let quota = db.quotaTracking.find((row) => row.monthKey === monthKey);
+    if (!quota) {
+      quota = {
+        monthKey,
+        monthlyLimit: 5000,
+        requestsProduction: 0,
+        requestsEnrichment: 0,
+        dailyProductionLog: {},
+        enrichmentCarryover: 0,
+        enrichmentPaused: false,
+        paidOverageEnabled: false,
+      };
+      db.quotaTracking.push(quota);
+    }
+    quota.requestsEnrichment = (quota.requestsEnrichment ?? 0) + requests;
+    quota.requestsTextSearch = (quota.requestsTextSearch ?? 0) + textSearchUsed;
+    quota.requestsPlaceDetails =
+      (quota.requestsPlaceDetails ?? 0) + placeDetailsUsed;
+    quota.updatedAt = now;
+  }
+
   const tmp = `${DB_PATH}.${process.pid}.${randomBytes(2).toString("hex")}.tmp`;
   writeFileSync(tmp, JSON.stringify(db, null, 2));
   try {
@@ -254,7 +298,14 @@ async function main() {
     unlinkSync(tmp);
   }
 
-  console.log({ requests, matched, withRating, errors });
+  console.log({
+    requests,
+    textSearchUsed,
+    placeDetailsUsed,
+    matched,
+    withRating,
+    errors,
+  });
 }
 
 main().catch((err) => {
