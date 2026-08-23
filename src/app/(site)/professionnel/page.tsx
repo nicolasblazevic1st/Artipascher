@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
   description:
     "Rejoignez Nord Artisan Pro : mise en relation avec des clients qualifiés en 59/62. Débloquez les coordonnées au ticket du chantier.",
+  alternates: { canonical: "/professionnel" },
 };
 
 const FEATURES = [

@@ -38,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
   return {
     title: `${resolved.title} — ${resolved.city}`,
+    alternates: { canonical: `/offres/${id}` },
     ...(isDemo ? { robots: { index: false, follow: false } } : {}),
   };
 }

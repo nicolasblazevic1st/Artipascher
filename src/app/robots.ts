@@ -4,6 +4,7 @@ import { BRAND } from "@/lib/brand";
 /**
  * Zones privées / techniques : non indexables.
  * Préfixe sans slash final = bloque aussi /admin, /admin/foo, etc. (robots Google).
+ * `/pro` bloquerait aussi `/professionnel` (préfixe) : Allow plus long gagne.
  */
 const PRIVATE_PREFIXES = [
   "/admin",
@@ -21,7 +22,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/professionnel"],
         disallow: [...PRIVATE_PREFIXES],
       },
     ],

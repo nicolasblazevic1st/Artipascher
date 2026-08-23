@@ -12,10 +12,11 @@ import { resolveAuctionEndsAt } from "@/lib/auction-duration";
 import { formatPublicLocation } from "@/lib/client-address";
 import { stripTestLabel } from "@/lib/demo-banners";
 import { resolveMaxContactArtisans } from "@/lib/contact-slots";
-import { publishedAtForRequest } from "@/lib/public-offers";
+import { publishedAtForRequest, publicOfferPath } from "@/lib/public-offers";
 import {
   buildShareText,
   absoluteUrl,
+  getPublicSharePath,
   getPublicShareUrl,
   isAuctionStillActive,
 } from "@/lib/share";
@@ -37,6 +38,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    robots: { index: false, follow: true },
+    alternates: {
+      canonical: request.auctionId
+        ? publicOfferPath(request.auctionId)
+        : getPublicSharePath(token),
+    },
     openGraph: {
       title,
       description,
