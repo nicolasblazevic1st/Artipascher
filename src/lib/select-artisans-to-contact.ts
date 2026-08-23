@@ -4,6 +4,7 @@
  * Sortie : liste de mobiles à contacter (du plus proche au plus loin).
  */
 
+import { lookupBodaccForSirens } from "./bodacc-scan-db";
 import { addEnrichmentJob, listArtisans } from "./artisans-db";
 import {
   ageCohortFromClientPreference,
@@ -49,6 +50,8 @@ export interface ContactTargetArtisan {
   source: ChantierArtisanRow["source"];
   googleRating?: number;
   googleUserRatingCount?: number;
+  bodaccStatus?: "clear" | "active_procedure" | "unavailable" | "unchecked";
+  bodaccNature?: string;
 }
 
 export interface ContactTargetExtra {
@@ -96,6 +99,7 @@ export interface SelectArtisansToContactResult {
     alreadyMarketed: number;
     invalidOrLandline: number;
     platformExcluded: number;
+    bodaccExcluded: number;
   };
   placesFill: {
     enabled: boolean;
@@ -108,10 +112,15 @@ export interface SelectArtisansToContactResult {
   };
 }
 
+function sirenKey(row: { siren?: string; siret: string }): string {
+  return (row.siren || row.siret).replace(/\D/g, "").slice(0, 9);
+}
+
 function toTarget(
   row: ChantierArtisanRow,
   phoneE164: string,
-  fresh?: EnrichedArtisan
+  fresh?: EnrichedArtisan,
+  bodacc?: { status?: ContactTargetArtisan["bodaccStatus"]; nature?: string }
 ): ContactTargetArtisan {
   return {
     siret: row.siret,
@@ -132,6 +141,8 @@ function toTarget(
     googleRating: fresh?.googleRating ?? row.googleRating,
     googleUserRatingCount:
       fresh?.googleUserRatingCount ?? row.googleUserRatingCount,
+    bodaccStatus: bodacc?.status,
+    bodaccNature: bodacc?.nature,
   };
 }
 
@@ -187,6 +198,20 @@ export async function selectArtisansToContact(
   const artisanBySiret = new Map(
     (await listArtisans({ status: "active" })).map((a) => [a.siret, a])
   );
+
+  const bodaccMap = await lookupBodaccForSirens(
+    search.artisans.map((row) => row.siren || row.siret),
+    {
+      liveCheckUnchecked: true,
+      liveLimit: Math.min(80, search.artisans.length),
+    }
+  );
+  const afterFree = search.artisans.filter((row) => {
+    const bodacc = bodaccMap.get(sirenKey(row));
+    return bodacc?.status !== "active_procedure";
+  });
+  const bodaccExcluded = search.artisans.length - afterFree.length;
+
   const prospects = fillPhonesViaPlaces ? await getArtisanProspects() : [];
   const prospectBySiret = new Map(prospects.map((p) => [p.siret, p]));
 
@@ -233,6 +258,23 @@ export async function selectArtisansToContact(
     return res.artisan;
   }
 
+  function smsReadyCount(): number {
+    let n = 0;
+    for (const row of afterFree) {
+      const fresh = artisanBySiret.get(row.siret);
+      const rating = fresh?.googleRating ?? row.googleRating;
+      if (
+        minGoogleRating != null &&
+        (typeof rating !== "number" || rating < minGoogleRating)
+      ) {
+        continue;
+      }
+      const phone = fresh?.phone ?? row.phone;
+      if (phone && normalizeFrenchMobile(phone)) n += 1;
+    }
+    return n;
+  }
+
   if (minGoogleRating != null && fillPhonesViaPlaces && placesEnabled) {
     const defaultRatingBudget = Math.min(40, Math.max(quota * 3, 12));
     const ratingBudget = Math.min(
@@ -243,7 +285,8 @@ export async function selectArtisansToContact(
       )
     );
     let ratingAttempts = 0;
-    for (const row of search.artisans) {
+    for (const row of afterFree) {
+      if (smsReadyCount() >= quota) break;
       if (ratingAttempts >= ratingBudget) break;
       const artisan = artisanBySiret.get(row.siret);
       if (!artisan || !artisanNeedsGoogleRating(artisan)) continue;
@@ -252,7 +295,7 @@ export async function selectArtisansToContact(
     }
   }
 
-  const eligible = search.artisans.filter((row) => {
+  const eligible = afterFree.filter((row) => {
     if (minGoogleRating == null) return true;
     const rating =
       artisanBySiret.get(row.siret)?.googleRating ?? row.googleRating;
@@ -294,6 +337,7 @@ export async function selectArtisansToContact(
 
     if (!phoneE164) {
       if (row.phone?.trim()) invalidOrLandline += 1;
+      const bodacc = bodaccMap.get(sirenKey(row));
       withoutPhone.push({
         siret: row.siret,
         siren: row.siren,
@@ -304,13 +348,20 @@ export async function selectArtisansToContact(
         distanceKm: row.distanceKm ?? undefined,
         googleRating: row.googleRating,
         googleUserRatingCount: row.googleUserRatingCount,
+        bodaccStatus: bodacc?.status,
+        bodaccNature: bodacc?.nature,
       });
       continue;
     }
     if (seenPhones.has(phoneE164)) continue;
     seenPhones.add(phoneE164);
 
-    const target = toTarget(row, phoneE164, artisanBySiret.get(row.siret));
+    const target = toTarget(
+      row,
+      phoneE164,
+      artisanBySiret.get(row.siret),
+      bodaccMap.get(sirenKey(row))
+    );
     if (selected.length < quota) {
       selected.push(target);
     } else {
@@ -358,6 +409,7 @@ export async function selectArtisansToContact(
       alreadyMarketed: alreadyMarketedCount,
       invalidOrLandline,
       platformExcluded,
+      bodaccExcluded,
     },
     placesFill: {
       enabled: placesEnabled && fillPhonesViaPlaces,
