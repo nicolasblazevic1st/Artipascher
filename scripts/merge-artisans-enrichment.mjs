@@ -83,6 +83,31 @@ async function main() {
     merged += 1;
   }
 
+  if (Array.isArray(backup.quotaTracking) && backup.quotaTracking.length > 0) {
+    if (!Array.isArray(target.quotaTracking)) target.quotaTracking = [];
+    const byMonth = new Map(
+      target.quotaTracking.map((row) => [String(row.monthKey), row])
+    );
+    for (const prev of backup.quotaTracking) {
+      const key = String(prev.monthKey ?? "");
+      if (!key) continue;
+      const cur = byMonth.get(key);
+      const prevUsed =
+        (prev.requestsProduction ?? 0) + (prev.requestsEnrichment ?? 0);
+      const curUsed = cur
+        ? (cur.requestsProduction ?? 0) + (cur.requestsEnrichment ?? 0)
+        : 0;
+      if (!cur) {
+        target.quotaTracking.push(prev);
+        byMonth.set(key, prev);
+        continue;
+      }
+      if (prevUsed >= curUsed) {
+        Object.assign(cur, prev);
+      }
+    }
+  }
+
   await fs.writeFile(targetPath, JSON.stringify(target, null, 2), "utf-8");
   console.log(`Fusion terminée: ${merged.toLocaleString("fr-FR")} fiches avec données locales conservées.`);
 }

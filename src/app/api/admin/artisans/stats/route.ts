@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getArtisansStats } from "@/lib/artisans-db";
-import { computeDailyEnrichmentBudget } from "@/lib/places-quota";
+import {
+  computeDailyEnrichmentBudget,
+  summarizeGooglePlacesUsage,
+} from "@/lib/places-quota";
 import { isGooglePlacesEnabled } from "@/lib/google-places";
 
 export async function GET() {
@@ -16,5 +19,6 @@ export async function GET() {
     ...stats,
     placesEnabled: isGooglePlacesEnabled(),
     dailyBudget: daily,
+    placesFree: summarizeGooglePlacesUsage(stats.quota),
   });
 }

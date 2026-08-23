@@ -17,9 +17,46 @@ import type { WorkRequest } from "./store-types";
 
 export type PlacesSpendKind = "production" | "enrichment";
 
+/** Plafonds gratuits Google Places API (New), depuis mars 2025. */
+export const GOOGLE_PLACES_FREE = {
+  textSearchPro: 5000,
+  placeDetailsEnterprise: 1000,
+} as const;
+
+export function summarizeGooglePlacesUsage(quota: {
+  monthlyLimit: number;
+  requestsProduction: number;
+  requestsEnrichment: number;
+  requestsTextSearch?: number;
+  requestsPlaceDetails?: number;
+}) {
+  const httpUsed = quota.requestsProduction + quota.requestsEnrichment;
+  const textSearchUsed = quota.requestsTextSearch ?? 0;
+  const placeDetailsUsed = quota.requestsPlaceDetails ?? 0;
+  return {
+    httpUsed,
+    httpLimit: quota.monthlyLimit,
+    httpRemaining: Math.max(0, quota.monthlyLimit - httpUsed),
+    textSearchUsed,
+    textSearchLimit: GOOGLE_PLACES_FREE.textSearchPro,
+    textSearchRemaining: Math.max(
+      0,
+      GOOGLE_PLACES_FREE.textSearchPro - textSearchUsed
+    ),
+    placeDetailsUsed,
+    placeDetailsLimit: GOOGLE_PLACES_FREE.placeDetailsEnterprise,
+    placeDetailsRemaining: Math.max(
+      0,
+      GOOGLE_PLACES_FREE.placeDetailsEnterprise - placeDetailsUsed
+    ),
+    hasSkuSplit: textSearchUsed > 0 || placeDetailsUsed > 0,
+  };
+}
+
 export async function recordPlacesSpend(
   kind: PlacesSpendKind,
-  count: number
+  count: number,
+  split?: { textSearch?: number; placeDetails?: number }
 ): Promise<void> {
   if (count <= 0) return;
   const day = currentDayKey();
@@ -29,6 +66,13 @@ export async function recordPlacesSpend(
       q.dailyProductionLog[day] = (q.dailyProductionLog[day] ?? 0) + count;
     } else {
       q.requestsEnrichment += count;
+    }
+    if ((split?.textSearch ?? 0) > 0) {
+      q.requestsTextSearch = (q.requestsTextSearch ?? 0) + split.textSearch!;
+    }
+    if ((split?.placeDetails ?? 0) > 0) {
+      q.requestsPlaceDetails =
+        (q.requestsPlaceDetails ?? 0) + split.placeDetails!;
     }
     const used = q.requestsProduction + q.requestsEnrichment;
     if (used >= q.monthlyLimit && !q.paidOverageEnabled) {
@@ -182,7 +226,10 @@ export async function enrichArtisanWithPlaces(
   });
 
   if (result.requestsUsed > 0) {
-    await recordPlacesSpend(kind, result.requestsUsed);
+    await recordPlacesSpend(kind, result.requestsUsed, {
+      textSearch: result.textSearchUsed,
+      placeDetails: result.placeDetailsUsed,
+    });
   }
 
   if (!result.ok) {
