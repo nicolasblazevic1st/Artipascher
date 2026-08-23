@@ -110,7 +110,8 @@ export interface SelectArtisansToContactResult {
 
 function toTarget(
   row: ChantierArtisanRow,
-  phoneE164: string
+  phoneE164: string,
+  fresh?: EnrichedArtisan
 ): ContactTargetArtisan {
   return {
     siret: row.siret,
@@ -124,12 +125,13 @@ function toTarget(
     ageCohort: row.ageCohort,
     companyCreatedAt: row.companyCreatedAt,
     distanceKm: row.distanceKm,
-    phone: row.phone ?? phoneE164,
+    phone: fresh?.phone ?? row.phone ?? phoneE164,
     phoneE164,
     isRge: row.isRge,
     source: row.source,
-    googleRating: row.googleRating,
-    googleUserRatingCount: row.googleUserRatingCount,
+    googleRating: fresh?.googleRating ?? row.googleRating,
+    googleUserRatingCount:
+      fresh?.googleUserRatingCount ?? row.googleUserRatingCount,
   };
 }
 
@@ -309,7 +311,7 @@ export async function selectArtisansToContact(
     if (seenPhones.has(phoneE164)) continue;
     seenPhones.add(phoneE164);
 
-    const target = toTarget(row, phoneE164);
+    const target = toTarget(row, phoneE164, artisanBySiret.get(row.siret));
     if (selected.length < quota) {
       selected.push(target);
     } else {
