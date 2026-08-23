@@ -98,6 +98,8 @@ export interface SmsCampaignPreviewDetailed {
     source: string;
     distanceKm?: number;
   }>;
+  shortfall?: number;
+  radiusKm?: number;
   /** Remplissage Places pour atteindre N joignables. */
   placesFill?: {
     enabled: boolean;
@@ -266,6 +268,8 @@ export async function previewSmsCampaignDetailed(
     suggestedCounts,
     candidates,
     withoutPhone,
+    shortfall: selected.shortfall,
+    radiusKm: selected.criteria.radiusKm,
     placesFill,
   };
 }

@@ -75,6 +75,8 @@ interface Preview {
   platformCount: number;
   alreadyMarketedCount?: number;
   bodaccExcluded?: number;
+  shortfall?: number;
+  radiusKm?: number;
   cohortCounts: Record<SmsCohort, number>;
   suggestedCounts: Record<SmsCohort, number>;
   candidates: Candidate[];
@@ -1251,11 +1253,12 @@ export default function AdminSmsCampaignsPage() {
               Volume du lot
             </label>
             <p className="mb-1 text-xs text-slate-500">
-              Règle : 5 SMS × artisans choisis par le particulier
+              Nombre de mobiles 06/07 à trouver (du plus proche au plus loin,
+              59+62). Défaut : 5 × artisans du particulier
               {selectedRequest
-                ? ` → 5 × ${maxForSelected} = ${selectedRequest.smsQuota ?? maxForSelected * 5} numéros`
+                ? ` → 5 × ${maxForSelected} = ${selectedRequest.smsQuota ?? maxForSelected * 5}`
                 : ""}
-              .
+              . Mets 25 si tu en veux 25.
             </p>
             <input
               type="number"
@@ -1294,6 +1297,16 @@ export default function AdminSmsCampaignsPage() {
                   Résumé du lot
                 </p>
                 <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                  <li>
+                    <strong>{preview.candidates.filter((c) => c.selectedByDefault).length}</strong>
+                    /{preview.campaignSize} mobiles trouvés
+                    {(preview.shortfall ?? 0) > 0
+                      ? ` · manque ${preview.shortfall}`
+                      : ""}
+                    {preview.radiusKm
+                      ? ` · rayon ${preview.radiusKm} km`
+                      : ""}
+                  </li>
                   <li>
                     <strong>{selectedCount}</strong> destinataire
                     {selectedCount > 1 ? "s" : ""} sélectionné

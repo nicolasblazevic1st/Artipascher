@@ -19,7 +19,9 @@ import {
   resolveMaxContactArtisans,
   smsQuotaForRequest,
 } from "./contact-slots";
-import { defaultNearbyRadiusKm } from "./geo-distance";
+/** Assez large pour remplir 15–25+ SMS dans le 59/62, toujours trié par distance. */
+export const SMS_FILL_RADIUS_KM = 150;
+export const SMS_SEARCH_POOL_LIMIT = 500;
 import { isGooglePlacesEnabled } from "./google-places";
 import { parseMinGoogleRating } from "./google-rating";
 import { normalizeFrenchMobile } from "./phone-format";
@@ -171,7 +173,7 @@ export async function selectArtisansToContact(
     1,
     Math.floor(options?.targetCount ?? smsQuotaForRequest(request))
   );
-  const radiusKm = options?.radiusKm ?? defaultNearbyRadiusKm();
+  const radiusKm = options?.radiusKm ?? SMS_FILL_RADIUS_KM;
   const ageCohort = ageCohortFromClientPreference(
     request.preferEstablishedCompany
   );
@@ -192,7 +194,7 @@ export async function selectArtisansToContact(
     requireRge,
     departmentScope: "hdf",
     ignoreMinGoogleRating: fillPhonesViaPlaces && minGoogleRating != null,
-    limit: Math.min(500, Math.max(quota * 8, 80)),
+    limit: SMS_SEARCH_POOL_LIMIT,
   });
 
   const artisanBySiret = new Map(
@@ -209,7 +211,7 @@ export async function selectArtisansToContact(
     [...alreadyRated, ...notYetRated].map((row) => row.siren || row.siret),
     {
       liveCheckUnchecked: true,
-      liveLimit: Math.min(80, search.artisans.length),
+      liveLimit: Math.min(200, search.artisans.length),
     }
   );
   const afterFree = search.artisans.filter((row) => {
@@ -225,9 +227,9 @@ export async function selectArtisansToContact(
   let attempts = 0;
   let phonesFound = 0;
   const placesErrors: string[] = [];
-  const defaultMaxAttempts = Math.min(80, Math.max(24, quota * 6));
+  const defaultMaxAttempts = Math.min(120, Math.max(40, quota * 5));
   const maxAttempts = Math.min(
-    80,
+    120,
     Math.max(
       0,
       Math.floor(options?.maxPlacesAttempts ?? defaultMaxAttempts)
@@ -282,7 +284,7 @@ export async function selectArtisansToContact(
   }
 
   if (minGoogleRating != null && fillPhonesViaPlaces && placesEnabled) {
-    const defaultRatingBudget = Math.min(40, Math.max(quota * 3, 12));
+    const defaultRatingBudget = Math.min(80, Math.max(quota * 4, 16));
     const ratingBudget = Math.min(
       maxAttempts,
       Math.max(
@@ -415,6 +417,59 @@ export async function selectArtisansToContact(
     }
     selected.length = 0;
     selected.push(...stillOk);
+
+    const leftoverExtras: ContactTargetArtisan[] = [];
+    const selectedSirets = new Set(selected.map((row) => row.siret));
+    for (const extra of extrasWithPhone) {
+      if (
+        selected.length < quota &&
+        extra.bodaccStatus !== "active_procedure" &&
+        !selectedSirets.has(extra.siret)
+      ) {
+        selectedSirets.add(extra.siret);
+        selected.push(extra);
+      } else if (extra.bodaccStatus !== "active_procedure") {
+        leftoverExtras.push(extra);
+      } else {
+        bodaccExcluded += 1;
+      }
+    }
+    extrasWithPhone.length = 0;
+    extrasWithPhone.push(...leftoverExtras);
+
+    if (selected.length < quota && fillPhonesViaPlaces && placesEnabled) {
+      const rowBySiret = new Map(afterFree.map((row) => [row.siret, row]));
+      const leftoverWithout: ContactTargetExtra[] = [];
+      for (const extra of withoutPhone) {
+        if (selected.length >= quota || attempts >= maxAttempts) {
+          leftoverWithout.push(extra);
+          continue;
+        }
+        const row = rowBySiret.get(extra.siret);
+        const artisan = artisanBySiret.get(extra.siret);
+        if (!row || !artisan || !isPlacesPhoneTarget(artisan)) {
+          leftoverWithout.push(extra);
+          continue;
+        }
+        const updated = await tryPlaces(row, artisan);
+        const phoneE164 = normalizeFrenchMobile(
+          updated?.phone ?? row.phone ?? ""
+        );
+        const bodacc = bodaccMap.get(sirenKey(row));
+        if (bodacc?.status === "active_procedure") {
+          bodaccExcluded += 1;
+          continue;
+        }
+        if (phoneE164 && !seenPhones.has(phoneE164)) {
+          seenPhones.add(phoneE164);
+          selected.push(toTarget(row, phoneE164, artisanBySiret.get(row.siret), bodacc));
+          continue;
+        }
+        leftoverWithout.push(extra);
+      }
+      withoutPhone.length = 0;
+      withoutPhone.push(...leftoverWithout);
+    }
   }
 
   if (attempts > 0) {
@@ -425,7 +480,7 @@ export async function selectArtisansToContact(
       processed: attempts,
       skipped: 0,
       errors: placesErrors,
-      note: `Sélecteur 5×N: ${phonesFound} tél. / cible ${quota} (${attempts} tentatives)`,
+      note: `Sélecteur SMS: ${phonesFound} tél. / cible ${quota} (${attempts} tentatives)`,
     });
   }
 
