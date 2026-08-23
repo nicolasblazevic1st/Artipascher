@@ -8,6 +8,7 @@ import {
 import {
   approvePendingReviewBatch,
   discardPendingReviewBatch,
+  setPendingBatchAutoSend,
   pauseAcquisitionCampaign,
   resumeAcquisitionCampaign,
   runAcquisitionCampaignTick,
@@ -144,8 +145,15 @@ export async function POST(request: NextRequest) {
   let acquisitionId = "";
   let message = "";
   let demo = false;
-  let action: "start" | "tick" | "pause" | "resume" | "approve" | "discard" =
-    "start";
+  let autoSend: boolean | undefined;
+  let action:
+    | "start"
+    | "tick"
+    | "pause"
+    | "resume"
+    | "approve"
+    | "discard"
+    | "auto-send" = "start";
   let smsPerDay: number | undefined;
   let batchId = "";
   let recipientSirets: string[] | undefined;
@@ -157,7 +165,8 @@ export async function POST(request: NextRequest) {
       body.action === "pause" ||
       body.action === "resume" ||
       body.action === "approve" ||
-      body.action === "discard"
+      body.action === "discard" ||
+      body.action === "auto-send"
         ? body.action
         : "start";
     workRequestId = String(body.workRequestId ?? "").trim();
@@ -165,6 +174,7 @@ export async function POST(request: NextRequest) {
     batchId = String(body.batchId ?? "").trim();
     message = String(body.message ?? "").trim();
     demo = body.demo === true;
+    if (typeof body.autoSend === "boolean") autoSend = body.autoSend;
     if (typeof body.smsPerDay === "number") {
       smsPerDay = Math.max(1, Math.min(200, Math.floor(body.smsPerDay)));
     }
@@ -175,6 +185,24 @@ export async function POST(request: NextRequest) {
     }
   } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
+  }
+
+  if (action === "auto-send") {
+    if (!batchId) {
+      return NextResponse.json({ error: "batchId requis." }, { status: 400 });
+    }
+    if (typeof autoSend !== "boolean") {
+      return NextResponse.json({ error: "autoSend requis." }, { status: 400 });
+    }
+    try {
+      const batch = await setPendingBatchAutoSend(batchId, autoSend);
+      return NextResponse.json({ batch });
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Mise à jour impossible." },
+        { status: 400 }
+      );
+    }
   }
 
   if (action === "discard") {
