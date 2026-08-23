@@ -12,6 +12,7 @@ import {
   selectArtisansToContact,
   type ContactTargetArtisan,
 } from "@/lib/select-artisans-to-contact";
+import { lookupBodaccForSirens } from "./bodacc-scan-db";
 import { isMarketingSmsWindowOpen, sendSms } from "./sms";
 import {
   addSmsCampaign,
@@ -58,6 +59,10 @@ export interface SmsCandidate {
   selectedByDefault: boolean;
   /** Distance chantier → artisan (km), si géolocalisé. */
   distanceKm?: number;
+  googleRating?: number;
+  googleUserRatingCount?: number;
+  bodaccStatus?: "clear" | "active_procedure" | "unavailable" | "unchecked";
+  bodaccNature?: string;
 }
 
 export interface SmsCampaignPreviewDetailed {
@@ -74,6 +79,7 @@ export interface SmsCampaignPreviewDetailed {
   preferEstablishedCompany?: boolean;
   /** Pref. client : uniquement artisans RGE ADEME. */
   requireRge?: boolean;
+  minGoogleRating?: number;
   geoFound: boolean;
   totalNearby: number;
   gouvCount: number;
@@ -107,6 +113,8 @@ export type PreviewSmsCampaignOptions = {
   campaignSize?: number;
   /** Si true (défaut en preview), Places jusqu’à N joignables. */
   fillPhonesViaPlaces?: boolean;
+  maxPlacesAttempts?: number;
+  maxRatingAttempts?: number;
 };
 
 export function buildDefaultCampaignMessage(request: WorkRequest): string {
@@ -144,6 +152,8 @@ function toSmsCandidate(
     source: row.source === "import" ? "import" : "gouv",
     selectedByDefault,
     distanceKm: row.distanceKm ?? undefined,
+    googleRating: row.googleRating,
+    googleUserRatingCount: row.googleUserRatingCount,
   };
 }
 
@@ -159,6 +169,8 @@ function resolvePreviewOptions(
   return {
     campaignSize: campaignSizeOrOptions?.campaignSize,
     fillPhonesViaPlaces: campaignSizeOrOptions?.fillPhonesViaPlaces !== false,
+    maxPlacesAttempts: campaignSizeOrOptions?.maxPlacesAttempts,
+    maxRatingAttempts: campaignSizeOrOptions?.maxRatingAttempts,
   };
 }
 
@@ -173,12 +185,35 @@ export async function previewSmsCampaignDetailed(
   const selected = await selectArtisansToContact(request, {
     targetCount: campaignSize,
     fillPhonesViaPlaces: opts.fillPhonesViaPlaces !== false,
+    maxPlacesAttempts: opts.maxPlacesAttempts,
+    maxRatingAttempts: opts.maxRatingAttempts,
   });
   const candidates: SmsCandidate[] = [
     ...selected.artisans.map((row) => toSmsCandidate(row, true)),
     ...selected.extras.withPhone.map((row) => toSmsCandidate(row, false)),
   ];
   const withoutPhone = selected.extras.withoutPhone;
+  const bodaccMap = await lookupBodaccForSirens(
+    [
+      ...candidates.map((c) => c.siren || c.siret),
+      ...withoutPhone.map((row) => row.siren || row.siret),
+    ],
+    { liveCheckUnchecked: true, liveLimit: 40 }
+  );
+  for (const candidate of candidates) {
+    const key = (candidate.siren || candidate.siret).replace(/\D/g, "").slice(0, 9);
+    const bodacc = bodaccMap.get(key);
+    if (!bodacc) continue;
+    candidate.bodaccStatus = bodacc.status;
+    candidate.bodaccNature = bodacc.nature;
+  }
+  for (const row of withoutPhone) {
+    const key = (row.siren || row.siret).replace(/\D/g, "").slice(0, 9);
+    const bodacc = bodaccMap.get(key);
+    if (!bodacc) continue;
+    row.bodaccStatus = bodacc.status;
+    row.bodaccNature = bodacc.nature;
+  }
   const geoFound = selected.criteria.geoFound;
   const totalNearby = selected.pool.matchingNearby;
   const gouvCount = selected.pool.matchingNearby;
@@ -217,6 +252,7 @@ export async function previewSmsCampaignDetailed(
     smsPerArtisan: SMS_PER_SELECTED_ARTISAN,
     preferEstablishedCompany,
     requireRge,
+    minGoogleRating: request.minGoogleRating,
     geoFound,
     totalNearby,
     gouvCount,
@@ -513,6 +549,29 @@ export async function cancelPendingBatchesIfObjectivesMet(): Promise<{
   }
 
   return { cancelled };
+}
+
+/** Supprime un lot encore en revue : aucun OVH, destinataires non marqués contactés. */
+export async function discardPendingReviewBatch(
+  batchId: string
+): Promise<SmsCampaign> {
+  const batch = await getSmsCampaignById(batchId);
+  if (!batch) throw new Error("Lot introuvable.");
+  if (batch.status !== "pending_review") {
+    throw new Error("Ce lot n’est plus en attente de validation.");
+  }
+
+  const updated = await updateSmsCampaign(batchId, {
+    status: "cancelled",
+    sentAt: new Date().toISOString(),
+    recipients: batch.recipients.map((r) => ({
+      ...r,
+      status: "skipped" as const,
+      error: r.error ?? "Lot supprimé avant envoi",
+    })),
+  });
+  if (!updated) throw new Error("Lot introuvable.");
+  return updated;
 }
 
 export async function executeSmsCampaignToRecipients(
@@ -912,6 +971,8 @@ export async function runAllActiveAcquisitionTicks(): Promise<{
 export async function maybeAutoNotifyOnApprove(
   request: WorkRequest
 ): Promise<void> {
+  if (request.isTest === true) return;
+
   const settings = await getSmsSettings();
   if (!settings.autoSendOnApprove) return;
 

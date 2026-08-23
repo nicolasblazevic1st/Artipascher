@@ -93,7 +93,11 @@ async function writeArtisansDb(db: ArtisansEnrichmentDb): Promise<void> {
     const tmp = `${DB_PATH}.${process.pid}.${Date.now()}.${randomBytes(2).toString("hex")}.tmp`;
     try {
       await fs.writeFile(tmp, payload, "utf-8");
-      await fs.copyFile(tmp, DB_PATH);
+      if (process.platform === "win32") {
+        await fs.copyFile(tmp, DB_PATH);
+      } else {
+        await fs.rename(tmp, DB_PATH);
+      }
     } finally {
       await fs.unlink(tmp).catch(() => undefined);
     }

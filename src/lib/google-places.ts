@@ -19,6 +19,22 @@ function placesApiKey(): string | undefined {
   return process.env.GOOGLE_PLACES_API_KEY?.trim() || undefined;
 }
 
+async function readPlacesJson<T>(res: Response): Promise<{
+  data?: T;
+  raw: string;
+  error?: string;
+}> {
+  const raw = await res.text();
+  if (!raw.trim()) {
+    return { raw, error: "réponse vide" };
+  }
+  try {
+    return { data: JSON.parse(raw) as T, raw };
+  } catch {
+    return { raw, error: `JSON invalide (${raw.slice(0, 80)})` };
+  }
+}
+
 export function isGooglePlacesEnabled(): boolean {
   // Opt-in strict : jamais d'appel sans GOOGLE_PLACES_ENABLED=true
   // (les requêtes Places sont précieuses — à activer seulement en prod pour tester).
@@ -83,20 +99,27 @@ export async function lookupPlacePhone(query: {
     );
     requestsUsed += 1;
 
+    const searchBody = await readPlacesJson<{
+      places?: Array<{ id?: string }>;
+    }>(searchRes);
     if (!searchRes.ok) {
-      const text = await searchRes.text();
       return {
         ok: false,
         matched: false,
         requestsUsed,
-        error: `Places Text Search HTTP ${searchRes.status}: ${text.slice(0, 200)}`,
+        error: `Places Text Search HTTP ${searchRes.status}: ${searchBody.raw.slice(0, 200)}`,
+      };
+    }
+    if (searchBody.error) {
+      return {
+        ok: false,
+        matched: false,
+        requestsUsed,
+        error: `Places Text Search: ${searchBody.error}`,
       };
     }
 
-    const searchData = (await searchRes.json()) as {
-      places?: Array<{ id?: string }>;
-    };
-    const placeId = searchData.places?.[0]?.id;
+    const placeId = searchBody.data?.places?.[0]?.id;
     if (!placeId) {
       return { ok: true, matched: false, requestsUsed };
     }
@@ -114,24 +137,33 @@ export async function lookupPlacePhone(query: {
     );
     requestsUsed += 1;
 
-    if (!detailsRes.ok) {
-      const text = await detailsRes.text();
-      return {
-        ok: false,
-        matched: true,
-        requestsUsed,
-        placeId,
-        error: `Places Details HTTP ${detailsRes.status}: ${text.slice(0, 200)}`,
-      };
-    }
-
-    const details = (await detailsRes.json()) as {
+    const detailsBody = await readPlacesJson<{
       nationalPhoneNumber?: string;
       internationalPhoneNumber?: string;
       websiteUri?: string;
       rating?: number;
       userRatingCount?: number;
-    };
+    }>(detailsRes);
+    if (!detailsRes.ok) {
+      return {
+        ok: false,
+        matched: true,
+        requestsUsed,
+        placeId,
+        error: `Places Details HTTP ${detailsRes.status}: ${detailsBody.raw.slice(0, 200)}`,
+      };
+    }
+    if (detailsBody.error || !detailsBody.data) {
+      return {
+        ok: false,
+        matched: true,
+        requestsUsed,
+        placeId,
+        error: `Places Details: ${detailsBody.error ?? "réponse vide"}`,
+      };
+    }
+
+    const details = detailsBody.data;
 
     const rawPhone =
       details.nationalPhoneNumber ?? details.internationalPhoneNumber ?? "";

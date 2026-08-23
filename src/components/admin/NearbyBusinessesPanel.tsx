@@ -19,6 +19,8 @@ interface ArtisanRow {
   distanceKm: number | null;
   phone?: string;
   hasPhone: boolean;
+  googleRating?: number;
+  googleUserRatingCount?: number;
 }
 
 interface Stats {
@@ -26,6 +28,7 @@ interface Stats {
   young: number;
   established: number;
   withPhone: number;
+  withRating: number;
   returned: number;
 }
 
@@ -76,6 +79,9 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
   const [targetsLoading, setTargetsLoading] = useState(false);
   const [targets, setTargets] = useState<ContactTargets | null>(null);
   const [targetsError, setTargetsError] = useState<string | null>(null);
+  const [placesEnabled, setPlacesEnabled] = useState<boolean | null>(null);
+  const [placesBusy, setPlacesBusy] = useState(false);
+  const [placesNote, setPlacesNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -101,6 +107,7 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
           : null
       );
       setGeoFound(data.geoFound !== false);
+      setPlacesEnabled(data.placesEnabled === true);
       setOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -128,6 +135,43 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
       setTargetsLoading(false);
     }
   }, [requestId, radiusKm]);
+
+  const runPlacesEnrich = useCallback(async () => {
+    setPlacesBusy(true);
+    setPlacesNote(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/demandes/${requestId}/enrich-places`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ radiusKm, maxArtisans: 20 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 503) setPlacesEnabled(false);
+        throw new Error(data.error ?? "Enrichissement Places impossible.");
+      }
+      const r = data.result as {
+        pool?: number;
+        processed?: number;
+        phonesFound?: number;
+        ratingsFound?: number;
+        matched?: number;
+        noMatch?: number;
+        requestsUsed?: number;
+        alreadyComplete?: number;
+      };
+      setPlacesNote(
+        `${r.processed ?? 0} fiches interrogées · ${r.phonesFound ?? 0} tél. · ${r.ratingsFound ?? 0} notes · ${r.matched ?? 0} match Google · ${r.noMatch ?? 0} sans fiche · ${r.requestsUsed ?? 0} req.`
+      );
+      setPlacesEnabled(true);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur Places");
+    } finally {
+      setPlacesBusy(false);
+    }
+  }, [requestId, radiusKm, load]);
 
   return (
     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -195,6 +239,19 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
         >
           {targetsLoading ? "Sélection…" : "Numéros à contacter"}
         </button>
+        <button
+          type="button"
+          onClick={() => void runPlacesEnrich()}
+          disabled={placesBusy || placesEnabled === false}
+          title={
+            placesEnabled === false
+              ? "GOOGLE_PLACES_ENABLED + clé API requis sur le serveur"
+              : "Interroge Google Places sur les 20 plus proches sans tél. ou sans note"
+          }
+          className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-950 hover:bg-emerald-100 disabled:opacity-50"
+        >
+          {placesBusy ? "Places…" : "Chercher notes & tél. (Places)"}
+        </button>
         {open && (
           <a
             href={`/admin/campagnes-sms?request=${requestId}`}
@@ -208,9 +265,14 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
       <p className="mt-2 text-[11px] text-slate-500">
         Filtres obligatoires : statut actif · NAF de la catégorie
         {category ? ` « ${category} »` : ""} (principal ou autre établissement du
-        SIREN). Tri : distance croissante.
+        SIREN). Tri : distance croissante. « Chercher notes & tél. » interroge
+        Google Places sur les 20 plus proches encore sans note ou sans téléphone
+        (~2 requêtes par fiche).
       </p>
 
+      {placesNote && (
+        <p className="mt-2 text-xs text-emerald-800">{placesNote}</p>
+      )}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       {targetsError && (
         <p className="mt-2 text-xs text-red-600">{targetsError}</p>
@@ -277,6 +339,9 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
             <span>
               avec tél. : <strong>{stats.withPhone}</strong>
             </span>
+            <span>
+              avec note : <strong>{stats.withRating ?? 0}</strong>
+            </span>
           </div>
           {nafCodes.length > 0 && (
             <p className="text-[11px] text-slate-500">
@@ -305,6 +370,7 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
                     <th className="px-2 py-1.5">Entreprise</th>
                     <th className="px-2 py-1.5">NAF</th>
                     <th className="px-2 py-1.5">Âge</th>
+                    <th className="px-2 py-1.5">Note</th>
                     <th className="px-2 py-1.5">Tél.</th>
                   </tr>
                 </thead>
@@ -357,6 +423,18 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
                           <div className="mt-0.5 text-[10px] text-slate-400">
                             {a.companyCreatedAt.slice(0, 10)}
                           </div>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1.5 tabular-nums text-slate-700">
+                        {typeof a.googleRating === "number" ? (
+                          <>
+                            {a.googleRating.toFixed(1)}
+                            {typeof a.googleUserRatingCount === "number"
+                              ? ` (${a.googleUserRatingCount})`
+                              : ""}
+                          </>
+                        ) : (
+                          <span className="text-slate-400">—</span>
                         )}
                       </td>
                       <td className="px-2 py-1.5 text-slate-700">

@@ -50,6 +50,10 @@ interface Candidate {
   lastContactedAt?: string;
   source: string;
   selectedByDefault: boolean;
+  googleRating?: number;
+  googleUserRatingCount?: number;
+  bodaccStatus?: "clear" | "active_procedure" | "unavailable" | "unchecked";
+  bodaccNature?: string;
 }
 
 interface Preview {
@@ -64,6 +68,7 @@ interface Preview {
   smsPerArtisan?: number;
   preferEstablishedCompany?: boolean;
   requireRge?: boolean;
+  minGoogleRating?: number;
   geoFound: boolean;
   totalNearby: number;
   gouvCount: number;
@@ -79,6 +84,10 @@ interface Preview {
     companyCreatedAt?: string;
     source: string;
     distanceKm?: number;
+    googleRating?: number;
+    googleUserRatingCount?: number;
+    bodaccStatus?: "clear" | "active_procedure" | "unavailable" | "unchecked";
+    bodaccNature?: string;
   }>;
   placesFill?: {
     enabled: boolean;
@@ -109,7 +118,7 @@ const STATUS_LABELS: Record<SmsCampaign["status"], string> = {
   demo: "Simulé (démo)",
   failed: "Échec partiel",
   pending_review: "Lot à valider",
-  cancelled: "Annulé (objectif atteint / obsolète)",
+  cancelled: "Annulé",
 };
 
 function LoadingBar({ label }: { label: string }) {
@@ -127,6 +136,39 @@ function LoadingBar({ label }: { label: string }) {
       </div>
     </div>
   );
+}
+
+function formatGoogleRating(
+  rating?: number,
+  reviews?: number
+): { text: string; className: string } {
+  if (typeof rating !== "number") {
+    return { text: "—", className: "text-slate-400" };
+  }
+  const suffix =
+    typeof reviews === "number" ? ` (${reviews})` : "";
+  const text = `${rating.toFixed(1).replace(".", ",")}${suffix}`;
+  if (rating < 4) return { text, className: "font-medium text-red-700" };
+  return { text, className: "font-medium text-emerald-800" };
+}
+
+function formatBodaccStatus(
+  status?: "clear" | "active_procedure" | "unavailable" | "unchecked",
+  nature?: string
+): { text: string; className: string } {
+  if (status === "clear") {
+    return { text: "OK", className: "rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800" };
+  }
+  if (status === "active_procedure") {
+    return {
+      text: nature ? `Procédure · ${nature}` : "Procédure",
+      className: "rounded bg-red-100 px-1.5 py-0.5 text-red-800",
+    };
+  }
+  if (status === "unavailable") {
+    return { text: "Indispo", className: "rounded bg-amber-100 px-1.5 py-0.5 text-amber-900" };
+  }
+  return { text: "Non scanné", className: "rounded bg-slate-100 px-1.5 py-0.5 text-slate-600" };
 }
 
 const ACQ_STATUS_LABELS: Record<SmsAcquisitionCampaign["status"], string> = {
@@ -372,7 +414,9 @@ export default function AdminSmsCampaignsPage() {
         new Set(p.candidates.filter((c) => c.selectedByDefault).map((c) => c.siret))
       );
     } catch {
-      setError("Erreur réseau pendant la prévisualisation (SIRENE / géocodage).");
+      setError(
+        "La prévisualisation a échoué ou a trop duré. Places cherche notes et tél. : réessayez, ou baissez le volume du lot."
+      );
     } finally {
       setPreviewLoading(false);
     }
@@ -452,6 +496,37 @@ export default function AdminSmsCampaignsPage() {
       await load();
     } catch {
       setError("Erreur réseau pendant le démarrage.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleDiscardBatch(batchId: string) {
+    if (
+      !window.confirm(
+        "Supprimer ce lot ? Aucun SMS ne sera envoyé. Vous pourrez en préparer un autre."
+      )
+    ) {
+      return;
+    }
+    setSending(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/sms-campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "discard", batchId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Suppression impossible.");
+        return;
+      }
+      setSuccess("Lot supprimé. Aucun SMS envoyé.");
+      await load();
+    } catch {
+      setError("Erreur réseau pendant la suppression.");
     } finally {
       setSending(false);
     }
@@ -1145,6 +1220,8 @@ export default function AdminSmsCampaignsPage() {
                       <th className="py-2 pr-2">SIRET</th>
                       <th className="py-2 pr-2">Ville</th>
                       <th className="py-2 pr-2">Cohorte</th>
+                      <th className="py-2 pr-2">Note Google</th>
+                      <th className="py-2 pr-2">BODACC</th>
                       <th className="py-2 pr-2">Téléphone</th>
                       <th className="py-2">Source</th>
                     </tr>
@@ -1175,6 +1252,14 @@ export default function AdminSmsCampaignsPage() {
                             </td>
                             <td className="py-2 pr-2">{c.city}</td>
                             <td className="py-2 pr-2">{COHORT_LABELS[c.cohort]}</td>
+                            <td className={`py-2 pr-2 tabular-nums ${formatGoogleRating(c.googleRating, c.googleUserRatingCount).className}`}>
+                              {formatGoogleRating(c.googleRating, c.googleUserRatingCount).text}
+                            </td>
+                            <td className="py-2 pr-2">
+                              <span className={formatBodaccStatus(c.bodaccStatus, c.bodaccNature).className}>
+                                {formatBodaccStatus(c.bodaccStatus, c.bodaccNature).text}
+                              </span>
+                            </td>
                             <td className="py-2 pr-2">{c.phone}</td>
                             <td className="py-2">{c.source}</td>
                           </tr>
@@ -1199,6 +1284,14 @@ export default function AdminSmsCampaignsPage() {
                           </td>
                           <td className="py-2 pr-2">{row.city}</td>
                           <td className="py-2 pr-2 text-slate-400">—</td>
+                          <td className={`py-2 pr-2 tabular-nums ${formatGoogleRating(row.googleRating, row.googleUserRatingCount).className}`}>
+                            {formatGoogleRating(row.googleRating, row.googleUserRatingCount).text}
+                          </td>
+                          <td className="py-2 pr-2">
+                            <span className={formatBodaccStatus(row.bodaccStatus, row.bodaccNature).className}>
+                              {formatBodaccStatus(row.bodaccStatus, row.bodaccNature).text}
+                            </span>
+                          </td>
                           <td className="py-2 pr-2">
                             <div className="flex flex-wrap items-center gap-1">
                               <input
@@ -1230,6 +1323,14 @@ export default function AdminSmsCampaignsPage() {
                   </tbody>
                 </table>
               )}
+              <p className="mt-2 text-[11px] text-slate-500">
+                Note Google : issue de Places (— = pas encore de fiche ou pas
+                d’avis). BODACC : scan local + contrôle API des joignables pas
+                encore scannés. OK = pas de procédure collective active.
+                {preview.minGoogleRating != null
+                  ? ` Seuil client : ≥ ${String(preview.minGoogleRating).replace(".", ",")}/5.`
+                  : ""}
+              </p>
             </div>
 
             <div className="mt-4">
@@ -1342,7 +1443,7 @@ export default function AdminSmsCampaignsPage() {
           Lots à valider
         </h2>
         <p className="mt-1 text-xs text-slate-500">
-          Préparés sans OVH. Validez pour envoyer, ou simulez.
+          Préparés sans OVH. Validez pour envoyer, simulez, ou supprimez.
         </p>
         {pendingReview.length === 0 ? (
           <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
@@ -1394,6 +1495,14 @@ export default function AdminSmsCampaignsPage() {
                       className="rounded border border-slate-300 px-3 py-1.5 text-xs disabled:opacity-50"
                     >
                       Simuler (démo)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={disableWhen(sending)}
+                      onClick={() => handleDiscardBatch(batch.id)}
+                      className="rounded border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Supprimer
                     </button>
                   </div>
                 </div>

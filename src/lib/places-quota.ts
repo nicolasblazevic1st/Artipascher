@@ -1,3 +1,4 @@
+import { searchArtisansForChantier } from "./artisans-for-chantier";
 import {
   addEnrichmentJob,
   currentDayKey,
@@ -12,6 +13,7 @@ import type { EnrichedArtisan } from "./artisans-types";
 import { STALE_ENRICHMENT_MS } from "./artisans-types";
 import { isGooglePlacesEnabled, lookupPlacePhone } from "./google-places";
 import { artisanIsRge } from "./rge-verification";
+import type { WorkRequest } from "./store-types";
 
 export type PlacesSpendKind = "production" | "enrichment";
 
@@ -266,6 +268,126 @@ export async function enrichNearbyForProduction(
   });
 
   return { enriched, requestsUsed, errors };
+}
+
+export const DEFAULT_CHANTIER_PLACES_MAX = 20;
+export const MAX_CHANTIER_PLACES_MAX = 40;
+
+function needsChantierPlaces(a: EnrichedArtisan): boolean {
+  return isPlacesPhoneTarget(a) || isPlacesRatingTarget(a);
+}
+
+/**
+ * Places ciblé : les plus proches du chantier, sans tél. ou sans note.
+ * Environ 2 requêtes Google par fiche.
+ */
+export async function enrichArtisansAroundWorkRequest(
+  request: WorkRequest,
+  options?: { radiusKm?: number; maxArtisans?: number }
+): Promise<{
+  enabled: boolean;
+  pool: number;
+  alreadyComplete: number;
+  processed: number;
+  phonesFound: number;
+  ratingsFound: number;
+  matched: number;
+  noMatch: number;
+  requestsUsed: number;
+  errors: string[];
+}> {
+  const empty = {
+    enabled: false,
+    pool: 0,
+    alreadyComplete: 0,
+    processed: 0,
+    phonesFound: 0,
+    ratingsFound: 0,
+    matched: 0,
+    noMatch: 0,
+    requestsUsed: 0,
+    errors: [] as string[],
+  };
+
+  if (!isGooglePlacesEnabled()) {
+    return { ...empty, errors: ["Google Places n’est pas activé."] };
+  }
+
+  const max = Math.min(
+    MAX_CHANTIER_PLACES_MAX,
+    Math.max(
+      1,
+      Math.floor(options?.maxArtisans ?? DEFAULT_CHANTIER_PLACES_MAX)
+    )
+  );
+
+  const search = await searchArtisansForChantier(request, {
+    radiusKm: options?.radiusKm,
+    ageCohort: "all",
+    hasPhone: "all",
+    ignoreMinGoogleRating: true,
+    requireRge: false,
+    limit: 200,
+  });
+
+  const bySiret = new Map(
+    (await listArtisans({ status: "active" })).map((a) => [a.siret, a])
+  );
+
+  const ordered: EnrichedArtisan[] = [];
+  for (const row of search.artisans) {
+    const artisan = bySiret.get(row.siret);
+    if (artisan) ordered.push(artisan);
+  }
+
+  const alreadyComplete = ordered.filter((a) => !needsChantierPlaces(a)).length;
+  const targets = ordered.filter(needsChantierPlaces).slice(0, max);
+
+  let requestsUsed = 0;
+  let phonesFound = 0;
+  let ratingsFound = 0;
+  let matched = 0;
+  let noMatch = 0;
+  const errors: string[] = [];
+
+  for (const a of targets) {
+    const hadPhone = Boolean(a.phone?.trim());
+    const hadRating = typeof a.googleRating === "number";
+    const res = await enrichArtisanWithPlaces(a, "production");
+    requestsUsed += res.requestsUsed;
+    if (res.error) errors.push(`${a.siret}: ${res.error}`);
+    const updated = res.artisan;
+    if (!updated) continue;
+    if (updated.googlePlaceId) matched += 1;
+    if (updated.enrichmentStatus === "no_match") noMatch += 1;
+    if (!hadPhone && updated.phone?.trim()) phonesFound += 1;
+    if (!hadRating && typeof updated.googleRating === "number") {
+      ratingsFound += 1;
+    }
+  }
+
+  await addEnrichmentJob({
+    kind: "places_production",
+    ranAt: new Date().toISOString(),
+    requestsSpent: requestsUsed,
+    processed: targets.length,
+    skipped: alreadyComplete,
+    errors,
+    note: `Chantier ${request.id}: ${phonesFound} tél. · ${ratingsFound} notes (${targets.length} fiches)`,
+  });
+
+  return {
+    enabled: true,
+    pool: search.total,
+    alreadyComplete,
+    processed: targets.length,
+    phonesFound,
+    ratingsFound,
+    matched,
+    noMatch,
+    requestsUsed,
+    errors,
+  };
 }
 
 /**

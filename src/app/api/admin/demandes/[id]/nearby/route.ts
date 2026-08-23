@@ -5,6 +5,7 @@ import {
   type CompanyAgeCohort,
 } from "@/lib/artisans-for-chantier";
 import { defaultNearbyRadiusKm } from "@/lib/geo-distance";
+import { isGooglePlacesEnabled } from "@/lib/google-places";
 import { resolveWorkRequestNafCodes } from "@/lib/naf-codes";
 import { ensureWorkRequestNafCodes } from "@/lib/store";
 
@@ -65,12 +66,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
     origin: result.origin,
     geoFound: result.geoFound,
     radiusKm: result.radiusKm,
+    placesEnabled: isGooglePlacesEnabled(),
     stats: {
       total: result.total,
       withCoords: result.withCoords,
       young: result.young,
       established: result.established,
       withPhone: result.withPhone,
+      withRating: result.withRating,
       returned: result.artisans.length,
     },
     artisans: result.artisans,
