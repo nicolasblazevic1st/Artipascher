@@ -27,6 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: staging
       ? { index: false, follow: false, googleBot: { index: false, follow: false } }
       : { index: true, follow: true },
+    alternates: { canonical: "./" },
     ...(process.env.GOOGLE_SITE_VERIFICATION
       ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
       : {}),

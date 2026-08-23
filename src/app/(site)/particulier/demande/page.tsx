@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   title: "Demande de travaux — Sans compte obligatoire",
   description:
     "Décrivez votre chantier en 2 minutes. Des artisans du Nord et du Pas-de-Calais vous recontactent. Gratuit, sans compte.",
+  alternates: { canonical: "/particulier/demande" },
 };
 
 export default async function PublicDemandePage({
