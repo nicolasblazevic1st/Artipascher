@@ -254,11 +254,10 @@ export async function selectArtisansToContact(
 
   const eligible = search.artisans.filter((row) => {
     if (minGoogleRating == null) return true;
-    const rating = artisanBySiret.get(row.siret)?.googleRating;
-    // Sans note connue : on garde (la BDD n’a souvent pas encore Places).
-    // On n’écarte que les notes déjà mesurées et sous le seuil client.
-    if (typeof rating !== "number") return true;
-    return rating >= minGoogleRating;
+    const rating =
+      artisanBySiret.get(row.siret)?.googleRating ?? row.googleRating;
+    // Seuil client : note Google obligatoire et ≥ seuil. Pas de note = exclu.
+    return typeof rating === "number" && rating >= minGoogleRating;
   });
 
   const phonesBefore = eligible.filter((r) =>
