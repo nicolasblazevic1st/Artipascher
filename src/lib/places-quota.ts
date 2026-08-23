@@ -67,12 +67,13 @@ export async function recordPlacesSpend(
     } else {
       q.requestsEnrichment += count;
     }
-    if ((split?.textSearch ?? 0) > 0) {
-      q.requestsTextSearch = (q.requestsTextSearch ?? 0) + split.textSearch!;
+    const textSearch = split?.textSearch ?? 0;
+    const placeDetails = split?.placeDetails ?? 0;
+    if (textSearch > 0) {
+      q.requestsTextSearch = (q.requestsTextSearch ?? 0) + textSearch;
     }
-    if ((split?.placeDetails ?? 0) > 0) {
-      q.requestsPlaceDetails =
-        (q.requestsPlaceDetails ?? 0) + split.placeDetails!;
+    if (placeDetails > 0) {
+      q.requestsPlaceDetails = (q.requestsPlaceDetails ?? 0) + placeDetails;
     }
     const used = q.requestsProduction + q.requestsEnrichment;
     if (used >= q.monthlyLimit && !q.paidOverageEnabled) {
