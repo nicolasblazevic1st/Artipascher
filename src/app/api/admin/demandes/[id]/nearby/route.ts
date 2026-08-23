@@ -49,6 +49,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     ageCohort,
     hasPhone,
     limit,
+    // Liste admin = vivier réel. La note Google client ne doit pas vider la table.
+    ignoreMinGoogleRating: true,
   });
 
   return NextResponse.json({
@@ -56,6 +58,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     city: workRequest.city,
     department: workRequest.department,
     category: workRequest.category,
+    clientMinGoogleRating: workRequest.minGoogleRating ?? null,
     nafCodes: result.nafCodes.length
       ? result.nafCodes
       : resolveWorkRequestNafCodes(workRequest),

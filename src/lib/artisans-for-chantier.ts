@@ -175,7 +175,8 @@ export async function searchArtisansForChantier(
     if (requireRge && !isRge) continue;
     if (
       minRating != null &&
-      (typeof a.googleRating !== "number" || a.googleRating < minRating)
+      typeof a.googleRating === "number" &&
+      a.googleRating < minRating
     ) {
       continue;
     }

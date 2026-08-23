@@ -222,7 +222,10 @@ export async function selectArtisansToContact(
   const eligible = search.artisans.filter((row) => {
     if (minGoogleRating == null) return true;
     const rating = artisanBySiret.get(row.siret)?.googleRating;
-    return typeof rating === "number" && rating >= minGoogleRating;
+    // Sans note connue : on garde (la BDD n’a souvent pas encore Places).
+    // On n’écarte que les notes déjà mesurées et sous le seuil client.
+    if (typeof rating !== "number") return true;
+    return rating >= minGoogleRating;
   });
 
   const phonesBefore = eligible.filter((r) =>
