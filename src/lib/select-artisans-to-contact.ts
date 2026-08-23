@@ -199,8 +199,14 @@ export async function selectArtisansToContact(
     (await listArtisans({ status: "active" })).map((a) => [a.siret, a])
   );
 
+  const alreadyRated = search.artisans.filter(
+    (row) => typeof row.googleRating === "number"
+  );
+  const notYetRated = search.artisans.filter(
+    (row) => typeof row.googleRating !== "number"
+  );
   const bodaccMap = await lookupBodaccForSirens(
-    search.artisans.map((row) => row.siren || row.siret),
+    [...alreadyRated, ...notYetRated].map((row) => row.siren || row.siret),
     {
       liveCheckUnchecked: true,
       liveLimit: Math.min(80, search.artisans.length),
@@ -210,7 +216,7 @@ export async function selectArtisansToContact(
     const bodacc = bodaccMap.get(sirenKey(row));
     return bodacc?.status !== "active_procedure";
   });
-  const bodaccExcluded = search.artisans.length - afterFree.length;
+  let bodaccExcluded = search.artisans.length - afterFree.length;
 
   const prospects = fillPhonesViaPlaces ? await getArtisanProspects() : [];
   const prospectBySiret = new Map(prospects.map((p) => [p.siret, p]));
@@ -367,6 +373,48 @@ export async function selectArtisansToContact(
     } else {
       extrasWithPhone.push(target);
     }
+  }
+
+  const visibleSirens = [
+    ...selected.map((row) => row.siren || row.siret),
+    ...extrasWithPhone.map((row) => row.siren || row.siret),
+    ...withoutPhone.map((row) => row.siren || row.siret),
+  ].filter((siren) => {
+    const status = bodaccMap.get(sirenKey({ siret: siren, siren }))?.status;
+    return !status || status === "unchecked";
+  });
+  if (visibleSirens.length > 0) {
+    const extraBodacc = await lookupBodaccForSirens(visibleSirens, {
+      liveCheckUnchecked: true,
+      liveLimit: visibleSirens.length,
+    });
+    for (const [key, row] of extraBodacc) {
+      bodaccMap.set(key, row);
+    }
+    const applyBodacc = (row: {
+      siret: string;
+      siren?: string;
+      bodaccStatus?: ContactTargetArtisan["bodaccStatus"];
+      bodaccNature?: string;
+    }) => {
+      const bodacc = bodaccMap.get(sirenKey(row));
+      if (!bodacc) return;
+      row.bodaccStatus = bodacc.status;
+      row.bodaccNature = bodacc.nature;
+    };
+    selected.forEach(applyBodacc);
+    extrasWithPhone.forEach(applyBodacc);
+    withoutPhone.forEach(applyBodacc);
+    const stillOk: ContactTargetArtisan[] = [];
+    for (const row of selected) {
+      if (row.bodaccStatus === "active_procedure") {
+        bodaccExcluded += 1;
+        continue;
+      }
+      stillOk.push(row);
+    }
+    selected.length = 0;
+    selected.push(...stillOk);
   }
 
   if (attempts > 0) {
