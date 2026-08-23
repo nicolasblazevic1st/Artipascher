@@ -35,6 +35,57 @@ async function readPlacesJson<T>(res: Response): Promise<{
   }
 }
 
+function foldName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(sarl|sas|sasu|eurl|ei|eirl|sa|sci|snc|ste|societe)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function nameTokens(value: string): string[] {
+  return foldName(value)
+    .split(" ")
+    .filter((token) => token.length > 0);
+}
+
+/** Refuse un homonyme Google trop éloigné du nom SIRENE. */
+export function placesNameMatchesCompany(
+  companyName: string,
+  googleName?: string
+): boolean {
+  if (!googleName?.trim()) return false;
+  const company = foldName(companyName);
+  const google = foldName(googleName);
+  if (!company || !google) return false;
+  if (company === google) return true;
+  // Jamais l’inverse : « PETIT(X) » contient « petit » et collerait une autre fiche.
+  if (company.length >= 4 && google.includes(company)) return true;
+
+  const companyTokens = new Set(nameTokens(companyName));
+  const googleTokens = new Set(nameTokens(googleName));
+  const overlap = [...companyTokens].filter((token) => googleTokens.has(token));
+  if (overlap.length === 0) return false;
+  if (companyTokens.size <= 2) return overlap.length === companyTokens.size;
+  return overlap.length / companyTokens.size >= 0.6;
+}
+
+function addressContainsLocality(
+  formattedAddress: string | undefined,
+  postalCode?: string,
+  city?: string
+): boolean {
+  if (!formattedAddress?.trim()) return !city && !postalCode;
+  const hay = foldName(formattedAddress);
+  const zip = postalCode?.replace(/\D/g, "") ?? "";
+  if (zip && formattedAddress.replace(/\D/g, "").includes(zip)) return true;
+  const cityFold = city ? foldName(city) : "";
+  return Boolean(cityFold && hay.includes(cityFold));
+}
+
 export function isGooglePlacesEnabled(): boolean {
   // Opt-in strict : jamais d'appel sans GOOGLE_PLACES_ENABLED=true
   // (les requêtes Places sont précieuses — à activer seulement en prod pour tester).
@@ -87,20 +138,25 @@ export async function lookupPlacePhone(query: {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": key,
-          "X-Goog-FieldMask": "places.id,places.displayName",
+          "X-Goog-FieldMask":
+            "places.id,places.displayName,places.formattedAddress",
         },
         body: JSON.stringify({
           textQuery,
           languageCode: "fr",
           regionCode: "FR",
-          maxResultCount: 1,
+          maxResultCount: 5,
         }),
       }
     );
     requestsUsed += 1;
 
     const searchBody = await readPlacesJson<{
-      places?: Array<{ id?: string }>;
+      places?: Array<{
+        id?: string;
+        displayName?: { text?: string };
+        formattedAddress?: string;
+      }>;
     }>(searchRes);
     if (!searchRes.ok) {
       return {
@@ -119,7 +175,19 @@ export async function lookupPlacePhone(query: {
       };
     }
 
-    const placeId = searchBody.data?.places?.[0]?.id;
+    const candidates = searchBody.data?.places ?? [];
+    const chosen = candidates.find((place) => {
+      const googleName = place.displayName?.text;
+      if (!placesNameMatchesCompany(query.companyName, googleName)) {
+        return false;
+      }
+      return addressContainsLocality(
+        place.formattedAddress,
+        query.postalCode,
+        query.city
+      );
+    });
+    const placeId = chosen?.id;
     if (!placeId) {
       return { ok: true, matched: false, requestsUsed };
     }
