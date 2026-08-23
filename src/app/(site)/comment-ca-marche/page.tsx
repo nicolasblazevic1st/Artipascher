@@ -27,6 +27,12 @@ export default function CommentCaMarchePage() {
             demande dans le Nord-Pas-de-Calais ; jusqu&apos;à 5 professionnels
             locaux contrôlés débloquent vos coordonnées et vous joignent.
           </p>
+          <Link
+            href="/particulier/demande"
+            className="mt-6 inline-flex rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
+          >
+            Demander des travaux
+          </Link>
           <WorkTradesIconRow className="mt-6" />
         </div>
       </div>
