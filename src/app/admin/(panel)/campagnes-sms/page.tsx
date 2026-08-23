@@ -74,6 +74,7 @@ interface Preview {
   gouvCount: number;
   platformCount: number;
   alreadyMarketedCount?: number;
+  bodaccExcluded?: number;
   cohortCounts: Record<SmsCohort, number>;
   suggestedCounts: Record<SmsCohort, number>;
   candidates: Candidate[];
@@ -851,7 +852,9 @@ export default function AdminSmsCampaignsPage() {
   }, [selectedRequest]);
   const reviewBeforeSend = settings?.requireReviewBeforeSend !== false;
   const excludedCount =
-    (preview?.platformCount ?? 0) + (preview?.alreadyMarketedCount ?? 0);
+    (preview?.platformCount ?? 0) +
+    (preview?.alreadyMarketedCount ?? 0) +
+    (preview?.bodaccExcluded ?? 0);
 
   const tabs: Array<{
     id: "todo" | "launch" | "track" | "tools";
@@ -1245,14 +1248,14 @@ export default function AdminSmsCampaignsPage() {
               className="mt-3 block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
               {previewLoading
-                ? "Recherche + Places…"
+                ? "SIRENE + BODACC, puis Places si besoin…"
                 : "Prévisualiser les numéros"}
             </button>
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
             {previewLoading && (
-              <LoadingBar label="Du plus proche au plus loin (+ Places si besoin)…" />
+              <LoadingBar label="Filtre gratuit (SIRENE, activité, BODACC) puis Places pour note et mobile…" />
             )}
             {!previewLoading && !preview && (
               <p className="text-slate-500">
@@ -1275,6 +1278,9 @@ export default function AdminSmsCampaignsPage() {
                     {preview.candidates.length} joignables ·{" "}
                     {preview.withoutPhone.length} sans téléphone ·{" "}
                     {excludedCount} exclus
+                    {(preview.bodaccExcluded ?? 0) > 0
+                      ? ` dont ${preview.bodaccExcluded} BODACC`
+                      : ""}
                   </li>
                   <li>
                     Artisans demandés par le client :{" "}

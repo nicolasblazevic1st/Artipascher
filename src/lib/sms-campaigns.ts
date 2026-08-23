@@ -12,7 +12,6 @@ import {
   selectArtisansToContact,
   type ContactTargetArtisan,
 } from "@/lib/select-artisans-to-contact";
-import { lookupBodaccForSirens } from "./bodacc-scan-db";
 import { isMarketingSmsWindowOpen, sendSms } from "./sms";
 import {
   addSmsCampaign,
@@ -86,6 +85,8 @@ export interface SmsCampaignPreviewDetailed {
   platformCount: number;
   /** Déjà contactés par SMS marketing — exclus définitivement. */
   alreadyMarketedCount: number;
+  /** Procédure collective BODACC — exclus avant Places. */
+  bodaccExcluded?: number;
   cohortCounts: Record<SmsCohort, number>;
   suggestedCounts: Record<SmsCohort, number>;
   candidates: SmsCandidate[];
@@ -154,6 +155,8 @@ function toSmsCandidate(
     distanceKm: row.distanceKm ?? undefined,
     googleRating: row.googleRating,
     googleUserRatingCount: row.googleUserRatingCount,
+    bodaccStatus: row.bodaccStatus,
+    bodaccNature: row.bodaccNature,
   };
 }
 
@@ -193,27 +196,6 @@ export async function previewSmsCampaignDetailed(
     ...selected.extras.withPhone.map((row) => toSmsCandidate(row, false)),
   ];
   const withoutPhone = selected.extras.withoutPhone;
-  const bodaccMap = await lookupBodaccForSirens(
-    [
-      ...candidates.map((c) => c.siren || c.siret),
-      ...withoutPhone.map((row) => row.siren || row.siret),
-    ],
-    { liveCheckUnchecked: true, liveLimit: 40 }
-  );
-  for (const candidate of candidates) {
-    const key = (candidate.siren || candidate.siret).replace(/\D/g, "").slice(0, 9);
-    const bodacc = bodaccMap.get(key);
-    if (!bodacc) continue;
-    candidate.bodaccStatus = bodacc.status;
-    candidate.bodaccNature = bodacc.nature;
-  }
-  for (const row of withoutPhone) {
-    const key = (row.siren || row.siret).replace(/\D/g, "").slice(0, 9);
-    const bodacc = bodaccMap.get(key);
-    if (!bodacc) continue;
-    row.bodaccStatus = bodacc.status;
-    row.bodaccNature = bodacc.nature;
-  }
   const geoFound = selected.criteria.geoFound;
   const totalNearby = selected.pool.matchingNearby;
   const gouvCount = selected.pool.matchingNearby;
@@ -258,6 +240,7 @@ export async function previewSmsCampaignDetailed(
     gouvCount,
     platformCount,
     alreadyMarketedCount,
+    bodaccExcluded: selected.pool.bodaccExcluded,
     cohortCounts,
     suggestedCounts,
     candidates,
