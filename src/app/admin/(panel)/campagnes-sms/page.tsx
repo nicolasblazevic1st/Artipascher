@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { readAdminJson } from "@/lib/admin-fetch-json";
+import { estimateSmsCredits } from "@/lib/sms-gsm";
 import type {
   SmsAcquisitionCampaign,
   SmsCampaign,
@@ -856,6 +857,7 @@ export default function AdminSmsCampaignsPage() {
   }
 
   const selectedCount = selectedSirets.size;
+  const smsCost = useMemo(() => estimateSmsCredits(message), [message]);
   const selectedByCohort = useMemo(() => {
     if (!preview) return null;
     const counts = { returning: 0, new_young: 0, new_established: 0 };
@@ -1563,7 +1565,10 @@ export default function AdminSmsCampaignsPage() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
               <p className="mt-1 text-xs text-slate-500">
-                {message.length}/640 · {selectedCount} destinataire
+                {message.length}/640 · {smsCost.credits} crédit
+                {smsCost.credits > 1 ? "s" : ""}/SMS
+                {smsCost.unicode ? " (caractère hors SMS, ex. ê)" : ""} ·{" "}
+                {selectedCount} destinataire
                 {selectedCount > 1 ? "s" : ""} ·{" "}
                 <a
                   href={preview.auctionUrl}
