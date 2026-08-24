@@ -617,6 +617,16 @@ export default function AdminSmsCampaignsPage() {
           demo,
           smsPerDay: campaignSize,
           recipientSirets: preview ? Array.from(selectedSirets) : undefined,
+          recipients: preview
+            ? preview.candidates
+                .filter((c) => selectedSirets.has(c.siret))
+                .map((c) => ({
+                  siret: c.siret,
+                  companyName: c.companyName,
+                  phone: c.phone,
+                  cohort: c.cohort,
+                }))
+            : undefined,
         }),
       });
       const data = await res.json();
