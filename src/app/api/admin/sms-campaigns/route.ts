@@ -12,6 +12,7 @@ import {
   pauseAcquisitionCampaign,
   resumeAcquisitionCampaign,
   runAcquisitionCampaignTick,
+  parseRecipientDrafts,
   startAcquisitionCampaign,
 } from "@/lib/sms-campaigns";
 import { isDemoSmsAllowed, isSmsConfigured } from "@/lib/sms";
@@ -157,6 +158,7 @@ export async function POST(request: NextRequest) {
   let smsPerDay: number | undefined;
   let batchId = "";
   let recipientSirets: string[] | undefined;
+  let recipientDrafts: ReturnType<typeof parseRecipientDrafts> | undefined;
 
   try {
     const body = await request.json();
@@ -182,6 +184,9 @@ export async function POST(request: NextRequest) {
       recipientSirets = body.recipientSirets
         .map((s: unknown) => String(s ?? "").trim())
         .filter(Boolean);
+    }
+    if (Array.isArray(body.recipients)) {
+      recipientDrafts = parseRecipientDrafts(body.recipients);
     }
   } catch {
     return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
@@ -324,6 +329,7 @@ export async function POST(request: NextRequest) {
       trigger: "manual",
       smsPerDay,
       recipientSirets,
+      drafts: recipientDrafts,
     });
     return NextResponse.json({ result }, { status: 201 });
   } catch (e) {

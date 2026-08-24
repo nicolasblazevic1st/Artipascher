@@ -13,6 +13,7 @@ import {
   selectArtisansToContact,
   type ContactTargetArtisan,
 } from "@/lib/select-artisans-to-contact";
+import { normalizeFrenchMobile } from "./phone-format";
 import { isMarketingSmsWindowOpen, sendSms } from "./sms";
 import {
   addSmsCampaign,
@@ -41,6 +42,14 @@ import type {
   SmsCohort,
   WorkRequest,
 } from "./store-types";
+
+export interface SmsRecipientDraft {
+  siret: string;
+  companyName: string;
+  phone: string;
+  cohort?: SmsCohort;
+  proId?: string;
+}
 
 export interface SmsCandidate {
   siret: string;
@@ -298,6 +307,46 @@ export async function previewSmsCampaign(request: WorkRequest) {
   };
 }
 
+function parseRecipientDrafts(rows: unknown): SmsRecipientDraft[] {
+  if (!Array.isArray(rows)) return [];
+  const out: SmsRecipientDraft[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const rec = row as Record<string, unknown>;
+    const siret = String(rec.siret ?? "").replace(/\D/g, "");
+    const companyName = String(rec.companyName ?? "").trim();
+    const phone = normalizeFrenchMobile(String(rec.phone ?? ""));
+    if (siret.length !== 14 || !companyName || !phone) continue;
+    if (seen.has(siret)) continue;
+    seen.add(siret);
+    const cohort =
+      rec.cohort === "returning" ||
+      rec.cohort === "new_young" ||
+      rec.cohort === "new_established"
+        ? rec.cohort
+        : undefined;
+    const proId = String(rec.proId ?? "").trim() || undefined;
+    out.push({ siret, companyName, phone, cohort, proId });
+  }
+  return out;
+}
+
+function draftsToPendingRecipients(
+  drafts: SmsRecipientDraft[]
+): SmsCampaignRecipient[] {
+  return drafts.map((row) => ({
+    proId: row.proId,
+    siret: row.siret,
+    companyName: row.companyName,
+    phone: row.phone,
+    status: "pending" as const,
+    cohort: row.cohort,
+  }));
+}
+
+export { parseRecipientDrafts };
+
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -312,25 +361,32 @@ export async function preparePendingReviewBatch(
     acquisitionCampaignId?: string;
     /** Défaut : prochain jour marketing (préparation la veille). */
     scheduledForDate?: string;
+    /** Destinataires déjà choisis en prévisu — pas de nouvel appel Places. */
+    drafts?: SmsRecipientDraft[];
   }
 ): Promise<SmsCampaign> {
-  const preview = await previewSmsCampaignDetailed(request, {
-    campaignSize: recipientSirets.length || smsQuotaForRequest(request),
-    fillPhonesViaPlaces: false,
-  });
-  const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
-  const selected = recipientSirets
-    .map((s) => bySiret.get(s))
-    .filter((c): c is SmsCandidate => Boolean(c));
-
-  const recipients: SmsCampaignRecipient[] = selected.map((candidate) => ({
-    proId: candidate.proId,
-    siret: candidate.siret,
-    companyName: candidate.companyName,
-    phone: candidate.phone,
-    status: "pending" as const,
-    cohort: candidate.cohort,
-  }));
+  let recipients: SmsCampaignRecipient[];
+  if (options?.drafts && options.drafts.length > 0) {
+    recipients = draftsToPendingRecipients(options.drafts);
+  } else {
+    const preview = await previewSmsCampaignDetailed(request, {
+      campaignSize: recipientSirets.length || smsQuotaForRequest(request),
+      fillPhonesViaPlaces: false,
+    });
+    const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
+    const selected = recipientSirets
+      .map((s) => bySiret.get(s))
+      .filter((c): c is SmsCandidate => Boolean(c));
+    recipients = draftsToPendingRecipients(
+      selected.map((c) => ({
+        siret: c.siret,
+        companyName: c.companyName,
+        phone: c.phone,
+        cohort: c.cohort,
+        proId: c.proId,
+      }))
+    );
+  }
 
   return addSmsCampaign({
     workRequestId: request.id,
@@ -677,6 +733,7 @@ export async function executeSmsCampaignToRecipients(
     acquisitionCampaignId?: string;
     /** Force préparation sans OVH (ignore le réglage). */
     pendingReviewOnly?: boolean;
+    drafts?: SmsRecipientDraft[];
   }
 ): Promise<SmsCampaign> {
   const settings = await getSmsSettings();
@@ -689,19 +746,35 @@ export async function executeSmsCampaignToRecipients(
       trigger: options?.trigger,
       acquisitionCampaignId: options?.acquisitionCampaignId,
       scheduledForDate: parisNextMarketingDayKey(),
+      drafts: options?.drafts,
     });
   }
 
-  // Pas de re-enrichissement Places à l’envoi : déjà fait en preview / tick.
-  const preview = await previewSmsCampaignDetailed(request, {
-    campaignSize: recipientSirets.length || smsQuotaForRequest(request),
-    fillPhonesViaPlaces: false,
-  });
-  const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
-
-  const selected = recipientSirets
-    .map((s) => bySiret.get(s))
-    .filter((c): c is SmsCandidate => Boolean(c));
+  let selected: SmsCandidate[];
+  if (options?.drafts && options.drafts.length > 0) {
+    selected = options.drafts.map((row) => ({
+      siret: row.siret,
+      siren: row.siret.slice(0, 9),
+      companyName: row.companyName,
+      city: request.city,
+      department: request.department,
+      phone: row.phone,
+      cohort: row.cohort ?? classifyCohort(),
+      source: "gouv" as const,
+      selectedByDefault: true,
+      proId: row.proId,
+    }));
+  } else {
+    // Pas de re-enrichissement Places à l’envoi : déjà fait en preview / tick.
+    const preview = await previewSmsCampaignDetailed(request, {
+      campaignSize: recipientSirets.length || smsQuotaForRequest(request),
+      fillPhonesViaPlaces: false,
+    });
+    const bySiret = new Map(preview.candidates.map((c) => [c.siret, c]));
+    selected = recipientSirets
+      .map((s) => bySiret.get(s))
+      .filter((c): c is SmsCandidate => Boolean(c));
+  }
 
   const recipients: SmsCampaignRecipient[] = [];
   let sentCount = 0;
@@ -812,6 +885,7 @@ export async function runAcquisitionCampaignTick(
     recipientSirets?: string[];
     /** Taille du lot choisie en admin. Prioritaire sur le quota 5 × artisans. */
     lotSize?: number;
+    drafts?: SmsRecipientDraft[];
   }
 ): Promise<AcquisitionTickResult> {
   const acquisition = await getSmsAcquisitionCampaignById(acquisitionId);
@@ -901,7 +975,12 @@ export async function runAcquisitionCampaignTick(
     };
   }
 
-  const requested = (options?.recipientSirets ?? [])
+  const drafts = options?.drafts ?? [];
+  const requested = (
+    drafts.length > 0
+      ? drafts.map((row) => row.siret)
+      : (options?.recipientSirets ?? [])
+  )
     .map((s) => s.trim())
     .filter(Boolean);
   const lotSize = Math.min(
@@ -917,19 +996,25 @@ export async function runAcquisitionCampaignTick(
       )
     )
   );
-  const preview = await previewSmsCampaignDetailed(request, {
-    campaignSize: Math.max(lotSize, requested.length, 50),
-    fillPhonesViaPlaces: true,
-  });
-  const sirets =
-    requested.length > 0
-      ? requested.filter((siret) =>
-          preview.candidates.some((c) => c.siret === siret)
-        )
-      : preview.candidates
-          .filter((c) => c.selectedByDefault)
-          .map((c) => c.siret)
-          .slice(0, lotSize);
+
+  let sirets = requested;
+  let previewMessage = "";
+  if (drafts.length === 0) {
+    const preview = await previewSmsCampaignDetailed(request, {
+      campaignSize: Math.max(lotSize, requested.length, 50),
+      fillPhonesViaPlaces: true,
+    });
+    previewMessage = preview.defaultMessage;
+    sirets =
+      requested.length > 0
+        ? requested.filter((siret) =>
+            preview.candidates.some((c) => c.siret === siret)
+          )
+        : preview.candidates
+            .filter((c) => c.selectedByDefault)
+            .map((c) => c.siret)
+            .slice(0, lotSize);
+  }
 
   if (sirets.length === 0) {
     const updated =
@@ -944,7 +1029,7 @@ export async function runAcquisitionCampaignTick(
 
   const message =
     options?.message?.trim() ||
-    preview.defaultMessage ||
+    previewMessage ||
     buildDefaultCampaignMessage(request);
 
   const batch = await executeSmsCampaignToRecipients(request, message, sirets, {
@@ -952,6 +1037,7 @@ export async function runAcquisitionCampaignTick(
     trigger: acquisition.trigger,
     acquisitionCampaignId: acquisition.id,
     pendingReviewOnly: reviewMode,
+    drafts: drafts.length > 0 ? drafts : undefined,
   });
 
   // Lot en revue : pas encore compté dans totalSent (compte à la validation OVH).
@@ -998,6 +1084,7 @@ export async function startAcquisitionCampaign(
     smsPerDay?: number;
     /** SIRET du lot du jour (sélection admin). Sinon sélection auto. */
     recipientSirets?: string[];
+    drafts?: SmsRecipientDraft[];
   }
 ): Promise<AcquisitionTickResult> {
   const lotSize = Math.min(
@@ -1005,9 +1092,11 @@ export async function startAcquisitionCampaign(
     Math.max(
       1,
       Math.floor(
-        options?.recipientSirets && options.recipientSirets.length > 0
-          ? options.recipientSirets.length
-          : options?.smsPerDay ?? smsQuotaForRequest(request)
+        options?.drafts && options.drafts.length > 0
+          ? options.drafts.length
+          : options?.recipientSirets && options.recipientSirets.length > 0
+            ? options.recipientSirets.length
+            : options?.smsPerDay ?? smsQuotaForRequest(request)
       )
     )
   );
@@ -1021,6 +1110,7 @@ export async function startAcquisitionCampaign(
       message: options?.message,
       recipientSirets: options?.recipientSirets,
       lotSize,
+      drafts: options?.drafts,
     });
   }
 
@@ -1041,6 +1131,7 @@ export async function startAcquisitionCampaign(
     message: options?.message,
     recipientSirets: options?.recipientSirets,
     lotSize,
+    drafts: options?.drafts,
   });
 }
 
