@@ -5,6 +5,7 @@ import WorkRequestForm from "@/components/WorkRequestForm";
 import { getIsBetaMode } from "@/lib/beta-server";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientById } from "@/lib/store";
+import { resolveWorkCategoryFromAdsQuery } from "@/lib/work-categories";
 
 export const metadata: Metadata = {
   title: "Demande de travaux — Sans compte obligatoire",
@@ -16,12 +17,24 @@ export const metadata: Metadata = {
 export default async function PublicDemandePage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    utm_content?: string;
+    utm_term?: string;
+    keyword?: string;
+  }>;
 }) {
-  const [{ category: categoryParam }, session] = await Promise.all([
+  const [params, session] = await Promise.all([
     searchParams,
     getClientSession(),
   ]);
+  const { category: categoryParam, utm_content, utm_term, keyword } = params;
+  const resolvedCategory = resolveWorkCategoryFromAdsQuery({
+    category: categoryParam,
+    utmContent: utm_content,
+    utmTerm: utm_term,
+    keyword,
+  });
   const client = session ? await getClientById(session.clientId) : null;
   const loggedIn = Boolean(session && client);
 
@@ -54,7 +67,7 @@ export default async function PublicDemandePage({
               successHref={
                 loggedIn ? "/particulier/espace/demandes" : "/particulier"
               }
-              initialCategory={categoryParam}
+              initialCategory={resolvedCategory}
               defaults={
                 loggedIn && client
                   ? {
