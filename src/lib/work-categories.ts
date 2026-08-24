@@ -56,3 +56,96 @@ export const WORK_TO_TRADE_CATEGORY: Record<string, string> = {
 export function isWorkCategory(value: string): value is WorkCategory {
   return (WORK_CATEGORIES as readonly string[]).includes(value);
 }
+
+function foldAdsToken(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Slugs pubs (utm_content) + libellés URL → catégorie formulaire. */
+const ADS_SLUG_TO_CATEGORY: Record<string, WorkCategory> = {
+  peinture: "Peinture",
+  peintre: "Peinture",
+  plomberie: "Plomberie",
+  plombier: "Plomberie",
+  electricite: "Électricité",
+  electricien: "Électricité",
+  maconnerie: "Maçonnerie",
+  macon: "Maçonnerie",
+  isolation: "Isolation",
+  chauffage: "Chauffage / Pompe à chaleur",
+  chauffagiste: "Chauffage / Pompe à chaleur",
+  pac: "Chauffage / Pompe à chaleur",
+  menuiserie: "Menuiserie (fenêtres, portes, volets)",
+  menuisier: "Menuiserie (fenêtres, portes, volets)",
+  toiture: "Toiture / Couverture",
+  couverture: "Toiture / Couverture",
+  couvreur: "Toiture / Couverture",
+  carrelage: "Carrelage / Revêtements de sol",
+  carreleur: "Carrelage / Revêtements de sol",
+  placo: "Placo / Cloisons",
+  plaquiste: "Placo / Cloisons",
+  paysager: "Extérieur / Aménagement paysager",
+  paysagiste: "Extérieur / Aménagement paysager",
+  jardin: "Extérieur / Aménagement paysager",
+  terrassement: "Terrassement",
+  terrassier: "Terrassement",
+  serrurerie: "Serrurerie",
+  serrurier: "Serrurerie",
+  nettoyage: "Nettoyage / Multi-services",
+};
+
+const SEARCH_PHRASES: Array<{ needle: string; category: WorkCategory }> = [
+  { needle: "pompe a chaleur", category: "Chauffage / Pompe à chaleur" },
+  { needle: "renovation energetique", category: "Rénovation énergétique" },
+  { needle: "renovation complete", category: "Rénovation complète" },
+  { needle: "revetement de sol", category: "Carrelage / Revêtements de sol" },
+  { needle: "amenagement paysager", category: "Extérieur / Aménagement paysager" },
+];
+
+function matchCategoryToken(raw?: string | null): WorkCategory | undefined {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  if (isWorkCategory(trimmed)) return trimmed;
+  const folded = foldAdsToken(trimmed);
+  if (!folded) return undefined;
+  if (ADS_SLUG_TO_CATEGORY[folded]) return ADS_SLUG_TO_CATEGORY[folded];
+  const compact = folded.replace(/ /g, "");
+  return ADS_SLUG_TO_CATEGORY[compact];
+}
+
+function matchCategoryFromSearchText(raw?: string | null): WorkCategory | undefined {
+  if (!raw) return undefined;
+  const folded = foldAdsToken(raw);
+  if (!folded) return undefined;
+  for (const { needle, category } of SEARCH_PHRASES) {
+    if (folded.includes(needle)) return category;
+  }
+  const tokens = folded.split(" ");
+  for (const token of tokens) {
+    const hit = ADS_SLUG_TO_CATEGORY[token];
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
+/** Pubs / UTM / mot-clé Google → métier déjà coché sur le formulaire. */
+export function resolveWorkCategoryFromAdsQuery(input: {
+  category?: string | null;
+  utmContent?: string | null;
+  utmTerm?: string | null;
+  keyword?: string | null;
+}): WorkCategory | undefined {
+  const fromSlug =
+    matchCategoryToken(input.category) ?? matchCategoryToken(input.utmContent);
+  if (fromSlug) return fromSlug;
+  return (
+    matchCategoryFromSearchText(input.keyword) ??
+    matchCategoryFromSearchText(input.utmTerm) ??
+    matchCategoryFromSearchText(input.category)
+  );
+}

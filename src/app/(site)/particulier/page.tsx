@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import BetaClosedNotice from "@/components/BetaClosedNotice";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
@@ -68,7 +69,23 @@ const STEPS = [
   },
 ];
 
-export default async function ParticulierPage() {
+export default async function ParticulierPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const gclid = typeof params.gclid === "string" ? params.gclid : "";
+  const utmMedium =
+    typeof params.utm_medium === "string" ? params.utm_medium : "";
+  if (gclid || utmMedium.toLowerCase() === "cpc") {
+    const qs = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === "string" && value) qs.set(key, value);
+    }
+    redirect(`/particulier/demande?${qs.toString()}`);
+  }
+
   const beta = await getIsBetaMode();
   return (
     <>
