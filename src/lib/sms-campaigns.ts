@@ -810,6 +810,8 @@ export async function runAcquisitionCampaignTick(
     message?: string;
     /** SIRET du lot (sélection admin). Sinon sélection auto. */
     recipientSirets?: string[];
+    /** Taille du lot choisie en admin. Prioritaire sur le quota 5 × artisans. */
+    lotSize?: number;
   }
 ): Promise<AcquisitionTickResult> {
   const acquisition = await getSmsAcquisitionCampaignById(acquisitionId);
@@ -899,30 +901,27 @@ export async function runAcquisitionCampaignTick(
     };
   }
 
-  const remaining = remainingSmsQuota(request, acquisition.totalSent);
-  if (remaining <= 0) {
-    const updated =
-      (await setSmsAcquisitionStatus(acquisition.id, "completed")) ??
-      acquisition;
-    return {
-      acquisition: updated,
-      acceptedCount,
-      skippedReason: "quota_reached",
-    };
-  }
-
   const requested = (options?.recipientSirets ?? [])
     .map((s) => s.trim())
     .filter(Boolean);
+  const lotSize = Math.min(
+    200,
+    Math.max(
+      1,
+      Math.floor(
+        requested.length > 0
+          ? requested.length
+          : options?.lotSize ??
+              acquisition.smsPerDay ??
+              smsQuotaForRequest(request)
+      )
+    )
+  );
   const preview = await previewSmsCampaignDetailed(request, {
-    // Pool assez large pour retrouver les SIRET cochés en admin.
-    campaignSize:
-      requested.length > 0
-        ? Math.max(remaining, requested.length, 50)
-        : remaining,
+    campaignSize: Math.max(lotSize, requested.length, 50),
     fillPhonesViaPlaces: true,
   });
-  const sirets = (
+  const sirets =
     requested.length > 0
       ? requested.filter((siret) =>
           preview.candidates.some((c) => c.siret === siret)
@@ -930,7 +929,7 @@ export async function runAcquisitionCampaignTick(
       : preview.candidates
           .filter((c) => c.selectedByDefault)
           .map((c) => c.siret)
-  ).slice(0, remaining);
+          .slice(0, lotSize);
 
   if (sirets.length === 0) {
     const updated =
@@ -1001,6 +1000,17 @@ export async function startAcquisitionCampaign(
     recipientSirets?: string[];
   }
 ): Promise<AcquisitionTickResult> {
+  const lotSize = Math.min(
+    200,
+    Math.max(
+      1,
+      Math.floor(
+        options?.recipientSirets && options.recipientSirets.length > 0
+          ? options.recipientSirets.length
+          : options?.smsPerDay ?? smsQuotaForRequest(request)
+      )
+    )
+  );
   const existing = await getActiveSmsAcquisitionCampaign(request.id);
   if (existing) {
     if (existing.status === "paused") {
@@ -1010,6 +1020,7 @@ export async function startAcquisitionCampaign(
       demo: options?.demo,
       message: options?.message,
       recipientSirets: options?.recipientSirets,
+      lotSize,
     });
   }
 
@@ -1019,10 +1030,9 @@ export async function startAcquisitionCampaign(
     );
   }
 
-  const smsPerDay = smsQuotaForRequest(request);
   const acquisition = await createSmsAcquisitionCampaign({
     workRequestId: request.id,
-    smsPerDay,
+    smsPerDay: lotSize,
     trigger: options?.trigger ?? "manual",
   });
 
@@ -1030,6 +1040,7 @@ export async function startAcquisitionCampaign(
     demo: options?.demo,
     message: options?.message,
     recipientSirets: options?.recipientSirets,
+    lotSize,
   });
 }
 
