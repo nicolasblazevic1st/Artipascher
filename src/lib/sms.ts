@@ -75,6 +75,82 @@ function ovhSignature(
   return `$1$${createHash("sha1").update(toSign).digest("hex")}`;
 }
 
+async function ovhRequest(
+  method: "GET" | "POST",
+  path: string,
+  body = ""
+): Promise<{ ok: boolean; status: number; text: string }> {
+  const appKey = process.env.OVH_APP_KEY!;
+  const appSecret = process.env.OVH_APP_SECRET!;
+  const consumerKey = process.env.OVH_CONSUMER_KEY!;
+  const url = `https://eu.api.ovh.com/1.0${path}`;
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = ovhSignature(
+    appSecret,
+    consumerKey,
+    method,
+    url,
+    body,
+    timestamp
+  );
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "X-Ovh-Application": appKey,
+      "X-Ovh-Consumer": consumerKey,
+      "X-Ovh-Timestamp": String(timestamp),
+      "X-Ovh-Signature": signature,
+    },
+    body: method === "GET" ? undefined : body,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    text: await response.text(),
+  };
+}
+
+let smsCreditsCache: { at: number; left: number | null } | null = null;
+const SMS_CREDITS_CACHE_MS = 20_000;
+
+async function getOvhSmsCreditsLeft(): Promise<number | null> {
+  const now = Date.now();
+  if (
+    smsCreditsCache &&
+    now - smsCreditsCache.at < SMS_CREDITS_CACHE_MS
+  ) {
+    return smsCreditsCache.left;
+  }
+  const serviceName = process.env.OVH_SMS_SERVICE_NAME?.trim();
+  if (!serviceName) return null;
+  try {
+    const result = await ovhRequest("GET", `/sms/${serviceName}`);
+    if (!result.ok) {
+      smsCreditsCache = { at: now, left: null };
+      return null;
+    }
+    const parsed = JSON.parse(result.text) as { creditsLeft?: number };
+    const left =
+      typeof parsed.creditsLeft === "number" ? parsed.creditsLeft : null;
+    smsCreditsCache = { at: now, left };
+    return left;
+  } catch {
+    smsCreditsCache = { at: now, left: null };
+    return null;
+  }
+}
+
+/** False = OTP SMS impossible (plus de crédit, OVH en erreur, non configuré). */
+export async function isTransactionalSmsAvailable(): Promise<boolean> {
+  if (isSmsConfigured()) {
+    const left = await getOvhSmsCreditsLeft();
+    if (left == null) return false;
+    return left > 0;
+  }
+  return isDemoSmsAllowed();
+}
+
 async function sendViaOvh(
   to: string,
   message: string,
@@ -116,6 +192,9 @@ async function sendViaOvh(
 
     if (!response.ok) {
       const text = await response.text();
+      if (/not enough credits/i.test(text)) {
+        smsCreditsCache = { at: Date.now(), left: 0 };
+      }
       return { ok: false, demo: false, error: text || `OVH SMS HTTP ${response.status}` };
     }
 
