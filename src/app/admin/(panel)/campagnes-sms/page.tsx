@@ -1253,12 +1253,11 @@ export default function AdminSmsCampaignsPage() {
               Volume du lot
             </label>
             <p className="mb-1 text-xs text-slate-500">
-              Nombre de mobiles 06/07 à trouver (du plus proche au plus loin,
-              59+62). Défaut : 5 × artisans du particulier
+              Nombre de SMS du lot (modifiable). Défaut client : 5 × artisans
               {selectedRequest
                 ? ` → 5 × ${maxForSelected} = ${selectedRequest.smsQuota ?? maxForSelected * 5}`
                 : ""}
-              . Mets 25 si tu en veux 25.
+              . Les cases cochées partent toutes, même au-delà de ce défaut.
             </p>
             <input
               type="number"
@@ -1326,9 +1325,10 @@ export default function AdminSmsCampaignsPage() {
                       {preview.artisansWanted ?? maxForSelected}
                     </strong>
                     {" · "}
-                    lot = {(preview.smsPerArtisan ?? 5)} ×{" "}
-                    {preview.artisansWanted ?? maxForSelected} ={" "}
+                    volume choisi :{" "}
                     <strong>{preview.campaignSize}</strong> SMS
+                    {" · "}défaut client {(preview.smsPerArtisan ?? 5)} ×{" "}
+                    {preview.artisansWanted ?? maxForSelected}
                   </li>
                   <li>
                     Contacts déjà débloqués :{" "}
@@ -1606,8 +1606,8 @@ export default function AdminSmsCampaignsPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Les cases cochées sont le lot. Un seul envoi, pas de relance
-                jusqu’à 5/5.
+                Les cases cochées = les SMS du lot (tu peux en mettre plus que
+                le défaut client). Un seul envoi.
               </p>
             </div>
           </>
