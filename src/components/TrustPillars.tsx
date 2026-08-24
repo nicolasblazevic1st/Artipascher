@@ -51,7 +51,7 @@ export default function TrustPillars({ className = "" }: Props) {
         <div>
           <h2
             id="trust-pillars-title"
-            className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl"
+            className="text-3xl font-bold text-slate-900"
           >
             Ce qu&apos;on vérifie chez chaque artisan
           </h2>
