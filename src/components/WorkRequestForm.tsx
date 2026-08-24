@@ -311,6 +311,12 @@ export default function WorkRequestForm({
         setOtpMessage(data.error ?? "Mobile déjà vérifié.");
         return;
       }
+      if (data.smsUnavailable === true) {
+        setOtpMessage(
+          "SMS momentanément indisponible. Vous pouvez envoyer la demande sans code."
+        );
+        return;
+      }
       setOtpMessage(data.error ?? "Envoi du SMS impossible.");
       return;
     }
@@ -490,11 +496,6 @@ export default function WorkRequestForm({
     }
     if (!normalizeFrenchMobile(phoneValue)) {
       setError("Indiquez un mobile français valide (06 ou 07).");
-      setStatus("error");
-      return;
-    }
-    if (!phoneVerified) {
-      setError("Vérifiez votre mobile par SMS avant d'envoyer la demande.");
       setStatus("error");
       return;
     }
@@ -1490,8 +1491,9 @@ export default function WorkRequestForm({
           onChange={(e) => handlePhoneChange(e.target.value)}
         />
         <p className="mt-1 text-xs text-slate-500">
-          Un code SMS pour confirmer que c&apos;est bien vous. Les artisans ne
-          voient le numéro qu&apos;après avoir pris le contact.
+          Un code SMS pour confirmer que c&apos;est bien vous. Si l&apos;envoi
+          SMS échoue, la demande part quand même. Les artisans ne voient le
+          numéro qu&apos;après avoir pris le contact.
         </p>
         {phoneVerified ? (
           <p className="mt-2 text-sm font-medium text-emerald-700">

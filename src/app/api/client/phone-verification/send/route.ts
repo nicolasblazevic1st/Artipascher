@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       {
         error: result.error,
         cooldownSeconds: result.cooldownSeconds,
+        smsUnavailable: result.status === 502 || result.status === 503,
       },
       { status: result.status }
     );

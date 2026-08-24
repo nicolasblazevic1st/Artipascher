@@ -29,6 +29,7 @@ import {
 } from "@/lib/contact-slots";
 import { parseMinGoogleRating } from "@/lib/google-rating";
 import { clientPhoneIsVerified } from "@/lib/phone-verification";
+import { isTransactionalSmsAvailable } from "@/lib/sms";
 import {
   addWorkRequest,
   consumeGuestPhoneVerification,
@@ -313,7 +314,10 @@ export async function POST(request: NextRequest) {
         );
       }
       email = existing.email;
-      if (!clientPhoneIsVerified(existing, phoneNormalized)) {
+      if (clientPhoneIsVerified(existing, phoneNormalized)) {
+        clientId = existing.id;
+        phoneVerifiedAt = existing.phoneVerifiedAt;
+      } else if (await isTransactionalSmsAvailable()) {
         return NextResponse.json(
           {
             error:
@@ -321,12 +325,15 @@ export async function POST(request: NextRequest) {
           },
           { status: 400 }
         );
+      } else {
+        clientId = existing.id;
       }
-      clientId = existing.id;
-      phoneVerifiedAt = existing.phoneVerifiedAt;
     } else {
       const guestOk = await isGuestPhoneVerified(phoneNormalized);
-      if (!guestOk) {
+      if (guestOk) {
+        guest = true;
+        phoneVerifiedAt = new Date().toISOString();
+      } else if (await isTransactionalSmsAvailable()) {
         return NextResponse.json(
           {
             error:
@@ -334,9 +341,9 @@ export async function POST(request: NextRequest) {
           },
           { status: 400 }
         );
+      } else {
+        guest = true;
       }
-      guest = true;
-      phoneVerifiedAt = new Date().toISOString();
     }
 
     const entry = await addWorkRequest({
@@ -381,7 +388,7 @@ export async function POST(request: NextRequest) {
 
     if (clientId) {
       await linkOrphanWorkRequests(clientId, email, phoneNormalized);
-    } else {
+    } else if (phoneVerifiedAt) {
       await consumeGuestPhoneVerification(phoneNormalized);
     }
 
