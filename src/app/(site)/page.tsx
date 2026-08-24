@@ -43,8 +43,8 @@ export default async function HomePage() {
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-brand-100">
             Gratuit pour vous — l&apos;artisan paie le contact. Vous êtes mis en
-            relation avec des professionnels locaux contrôlés (décennale, RC
-            pro, avis Google, ancienneté, procédures collectives).
+            relation avec des professionnels locaux contrôlés (décennale,
+            assurance pro, avis Google, ancienneté, procédures collectives).
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <BetaAwareLink
@@ -62,6 +62,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <TrustPillars />
 
       <section className="bg-white py-12">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -88,8 +90,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      <TrustPillars />
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="text-center">
