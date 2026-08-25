@@ -6,7 +6,7 @@ import {
   COMPANY_AGE_ESTABLISHED_SHORT,
   COMPANY_AGE_YOUNG_SHORT,
   type CompanyAgeCohort,
-} from "@/lib/artisans-for-chantier";
+} from "@/lib/company-age";
 import { formatNafList } from "@/lib/naf-trade-groups";
 
 interface ArtisanRow {

@@ -3,7 +3,7 @@
  */
 
 import { parseMinGoogleRating } from "./google-rating";
-import { COMPANY_AGE_THRESHOLD_YEARS } from "./artisans-for-chantier";
+import { COMPANY_AGE_THRESHOLD_YEARS } from "./company-age";
 import type { WorkRequest } from "./store-types";
 
 export type ClientRequirementSource = Pick<
