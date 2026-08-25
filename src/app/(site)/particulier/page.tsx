@@ -5,10 +5,7 @@ import BetaClosedNotice from "@/components/BetaClosedNotice";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { getIsBetaMode } from "@/lib/beta-server";
-import {
-  isGenericWorkSearch,
-  resolveWorkCategoryFromAdsQuery,
-} from "@/lib/work-categories";
+import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 export const metadata: Metadata = {
   title: "Particulier — Publiez votre demande de travaux",
@@ -16,7 +13,7 @@ export const metadata: Metadata = {
     "Décrivez vos travaux dans le Nord-Pas-de-Calais. Les artisans vérifiés vous contactent. Compte optionnel pour suivre vos demandes.",
 };
 
-const DEMANDE_HREF = "/particulier/demande";
+const DEMANDE_HREF = WORK_REQUEST_FORM_PATH;
 const SIGNUP_HREF =
   "/particulier/espace/inscription?from=/particulier/espace/demandes";
 const LOGIN_HREF =
@@ -87,18 +84,11 @@ export default async function ParticulierPage({
     for (const [key, value] of Object.entries(params)) {
       if (typeof value === "string" && value) qs.set(key, value);
     }
-    const ads = {
-      category: typeof params.category === "string" ? params.category : "",
-      utmContent:
-        typeof params.utm_content === "string" ? params.utm_content : "",
-      utmTerm: typeof params.utm_term === "string" ? params.utm_term : "",
-      keyword: typeof params.keyword === "string" ? params.keyword : "",
-    };
-    const landing =
-      !resolveWorkCategoryFromAdsQuery(ads) && isGenericWorkSearch(ads)
-        ? "/travaux"
-        : "/particulier/demande";
-    redirect(`${landing}?${qs.toString()}`);
+    redirect(
+      qs.size > 0
+        ? `${WORK_REQUEST_FORM_PATH}?${qs.toString()}`
+        : WORK_REQUEST_FORM_PATH
+    );
   }
 
   const beta = await getIsBetaMode();
@@ -117,7 +107,7 @@ export default async function ParticulierPage({
               href={beta ? "#demande" : DEMANDE_HREF}
               className="inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white hover:bg-accent-600"
             >
-              Demander des travaux
+              Remplir le formulaire
             </Link>
             <Link
               href={LOGIN_HREF}
@@ -154,7 +144,7 @@ export default async function ParticulierPage({
 
       <section id="demande" className="bg-slate-100 py-16">
         <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
-          <h2 className="text-2xl font-bold">Demander des travaux</h2>
+          <h2 className="text-2xl font-bold">Remplir le formulaire</h2>
           <p className="mt-2 text-sm text-slate-600">
             Gratuit pour vous · Compte optionnel · Pros vérifiés · 59 / 62
           </p>
@@ -173,7 +163,7 @@ export default async function ParticulierPage({
                   href={DEMANDE_HREF}
                   className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white hover:bg-accent-600"
                 >
-                  Publier ma demande
+                  Remplir le formulaire
                 </Link>
                 <Link
                   href={SIGNUP_HREF}

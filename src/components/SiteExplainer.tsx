@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import BetaAwareLink from "@/components/BetaAwareLink";
 import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
 
@@ -67,9 +68,12 @@ function SlideIntro() {
         </p>
         <WorkTradesIconRow className="mt-4 justify-start" tone="onDark" maxItems={5} />
         <p className="mt-3 text-xs text-brand-200/90">{DATA_HOSTING_NOTICE}</p>
-        <span className="mt-5 inline-block rounded-xl bg-accent-500 px-4 py-2 text-sm font-semibold">
-          Demander des travaux
-        </span>
+        <BetaAwareLink
+          href="/travaux#formulaire"
+          className="mt-5 inline-block rounded-xl bg-accent-500 px-4 py-2 text-sm font-semibold"
+        >
+          Remplir le formulaire
+        </BetaAwareLink>
       </div>
     </div>
   );
@@ -227,9 +231,12 @@ function SlideCta() {
       <p className="mt-2 text-sm text-brand-100">
         Gratuit pour vous · 1 à 5 artisans vérifiés 59/62
       </p>
-      <span className="mt-4 inline-block rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-semibold">
-        Demander des travaux
-      </span>
+      <BetaAwareLink
+        href="/travaux#formulaire"
+        className="mt-4 inline-block rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-semibold"
+      >
+        Remplir le formulaire
+      </BetaAwareLink>
     </div>
   );
 }
@@ -354,8 +361,8 @@ export default function SiteExplainer({ compact = false, autoPlay = true }: Prop
       {!compact && (
         <p className="mt-4 text-center text-sm text-slate-500">
           Présentation animée avec l&apos;interface Nord Artisan Pro ·{" "}
-          <Link href="/particulier" className="font-medium text-brand-700 hover:underline">
-            Essayer maintenant
+          <Link href="/travaux#formulaire" className="font-medium text-brand-700 hover:underline">
+            Remplir le formulaire
           </Link>
         </p>
       )}

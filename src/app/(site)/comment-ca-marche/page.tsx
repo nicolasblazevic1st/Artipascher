@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteExplainer from "@/components/SiteExplainer";
 import TrustPillars from "@/components/TrustPillars";
 import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
@@ -27,12 +28,15 @@ export default function CommentCaMarchePage() {
             demande dans le Nord-Pas-de-Calais ; jusqu&apos;à 5 professionnels
             locaux contrôlés débloquent vos coordonnées et vous joignent.
           </p>
-          <Link
-            href="/particulier/demande"
+          <BetaAwareLink
+            href="/travaux#formulaire"
             className="mt-6 inline-flex rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
           >
-            Demander des travaux
-          </Link>
+            Remplir le formulaire
+          </BetaAwareLink>
+          <p className="mt-3 text-sm text-slate-500">
+            Même si vous ne savez pas le métier — un seul formulaire.
+          </p>
           <WorkTradesIconRow className="mt-6" />
         </div>
       </div>
@@ -55,12 +59,12 @@ export default function CommentCaMarchePage() {
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2">
           <Link
-            href="/particulier"
+            href="/travaux#formulaire"
             className="rounded-2xl border border-client-200 bg-client-50 p-6 transition hover:border-client-300"
           >
             <p className="font-semibold text-client-800">Je suis particulier</p>
             <p className="mt-1 text-sm text-slate-600">
-              Déposer une demande de travaux
+              Formulaire de travaux — métier optionnel
             </p>
           </Link>
           <Link

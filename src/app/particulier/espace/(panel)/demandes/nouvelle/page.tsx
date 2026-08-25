@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BetaClosedNotice from "@/components/BetaClosedNotice";
 import WorkRequestForm from "@/components/WorkRequestForm";
+import WorkRequestLandingIntro from "@/components/WorkRequestLandingIntro";
 import { getIsBetaMode } from "@/lib/beta-server";
 import { getClientSession } from "@/lib/client-auth";
 import { getClientById } from "@/lib/store";
@@ -27,11 +28,15 @@ export default async function NouvelleDemandePage({
       >
         ← Mes demandes
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-slate-900">Nouvelle demande</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Gratuit, sans commission. Des artisans du Nord et du Pas-de-Calais vous
-        recontactent — en général sous 24–48&nbsp;h.
-      </p>
+      <div className="mt-4">
+        <WorkRequestLandingIntro
+          compact
+          heading="Remplissez le formulaire de travaux"
+        >
+          Gratuit, sans commission. Des artisans vérifiés du Nord et du
+          Pas-de-Calais vous recontactent — en général sous 24–48&nbsp;h.
+        </WorkRequestLandingIntro>
+      </div>
 
       {beta ? (
         <div className="mt-6">
@@ -40,6 +45,7 @@ export default async function NouvelleDemandePage({
       ) : (
         <WorkRequestForm
           successHref="/particulier/espace/demandes"
+          variant="general"
           initialCategory={categoryParam}
           defaults={{
             firstName: client?.firstName ?? session.firstName,

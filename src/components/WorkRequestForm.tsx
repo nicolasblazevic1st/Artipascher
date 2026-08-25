@@ -111,16 +111,20 @@ interface Props {
   defaults?: WorkRequestFormDefaults;
   /** Lien après succès (espace client). */
   successHref?: string;
-  /** Catégorie préremplie (ex. depuis l’accueil). */
+  /** Catégorie préremplie (ex. depuis l’accueil ou un mot-clé métier). */
   initialCategory?: string;
+  /**
+   * Mot-clé vague (« trouver un artisan ») : ouvre déjà
+   * « Je ne sais pas / plusieurs métiers ».
+   */
+  initialUnknownTrade?: boolean;
   /**
    * Demande sans compte : champs contact éditables, OTP invité,
    * puis invitation à créer un espace pour suivre les demandes.
    */
   guestMode?: boolean;
   /**
-   * Arrivée mot-clé générique (« travaux ») : on peut envoyer sans
-   * connaître le métier.
+   * Formulaire type : métier optionnel, bouton « Je ne sais pas ».
    */
   variant?: "default" | "general";
 }
@@ -129,9 +133,13 @@ export default function WorkRequestForm({
   defaults,
   successHref = "/particulier/espace/demandes",
   initialCategory,
+  initialUnknownTrade = false,
   guestMode = false,
-  variant = "default",
+  variant = "general",
 }: Props) {
+  const startUnknown =
+    initialUnknownTrade &&
+    !(initialCategory && isWorkCategory(initialCategory));
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -147,16 +155,27 @@ export default function WorkRequestForm({
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
-  const [category, setCategory] = useState(() =>
-    initialCategory && isWorkCategory(initialCategory) ? initialCategory : ""
-  );
-  const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>(() => {
-    if (!initialCategory || !isWorkCategory(initialCategory)) return [];
-    const options = getNafOptionsForCategory(initialCategory);
-    return options.length === 1 ? [options[0].code] : [];
+  const [category, setCategory] = useState(() => {
+    if (initialCategory && isWorkCategory(initialCategory)) return initialCategory;
+    if (startUnknown) return GENERAL_WORK_CATEGORY;
+    return "";
   });
-  const [workOptionId, setWorkOptionId] = useState("");
-  const [pricingTier, setPricingTier] = useState<PricingTierId | "">("");
+  const [selectedNafCodes, setSelectedNafCodes] = useState<string[]>(() => {
+    if (initialCategory && isWorkCategory(initialCategory)) {
+      const options = getNafOptionsForCategory(initialCategory);
+      return options.length === 1 ? [options[0].code] : [];
+    }
+    if (startUnknown) {
+      return getNafOptionsForCategory(GENERAL_WORK_CATEGORY).map((opt) => opt.code);
+    }
+    return [];
+  });
+  const [workOptionId, setWorkOptionId] = useState(() =>
+    startUnknown ? OTHER_WORK_OPTION_ID : ""
+  );
+  const [pricingTier, setPricingTier] = useState<PricingTierId | "">(() =>
+    startUnknown ? "bas" : ""
+  );
   const [workOptionOtherDescription, setWorkOptionOtherDescription] =
     useState("");
   const [descriptionTouched, setDescriptionTouched] = useState(false);
@@ -185,7 +204,7 @@ export default function WorkRequestForm({
   const [verifyingCompany, setVerifyingCompany] = useState(false);
   const [step, setStep] = useState<FormStep>(1);
   const [propertyType, setPropertyType] = useState<PropertyTypeId | "">("");
-  const [unknownTrade, setUnknownTrade] = useState(false);
+  const [unknownTrade, setUnknownTrade] = useState(startUnknown);
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
@@ -217,6 +236,11 @@ export default function WorkRequestForm({
 
   useEffect(() => {
     if (descriptionTouched) return;
+    if (unknownTrade && !workOptionOtherDescription.trim()) {
+      if (descriptionRef.current) descriptionRef.current.value = "";
+      syncDescriptionLength("");
+      return;
+    }
     const selectedOption = workOptions.find((opt) => opt.id === workOptionId);
     const draft = buildDescriptionPrefill({
       category,
@@ -243,6 +267,7 @@ export default function WorkRequestForm({
     workOptionOtherDescription,
     workOptions,
     descriptionTouched,
+    unknownTrade,
   ]);
 
   useEffect(() => {
@@ -745,23 +770,38 @@ export default function WorkRequestForm({
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="space-y-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
+        aria-label="Formulaire de demande de travaux"
+        className="space-y-5 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
       >
+      <div className="-mx-4 -mt-4 border-b border-brand-100 bg-brand-50 px-4 py-3 sm:-mx-6 sm:-mt-6 sm:px-6">
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-800">
+          Formulaire à remplir
+        </p>
+        <p className="mt-0.5 text-sm font-semibold text-slate-900">
+          Demande de travaux · artisans vérifiés 59/62
+        </p>
+        <p className="mt-0.5 text-xs text-slate-600">
+          4 étapes
+          {guestMode
+            ? " · gratuit · sans compte obligatoire"
+            : " · gratuit · sans commission"}
+        </p>
+      </div>
       <div>
         <p className="text-sm font-medium text-slate-900">
           {step === 1 &&
             (variant === "general"
-              ? "De quels travaux avez-vous besoin ?"
-              : "Quels travaux souhaitez-vous réaliser ?")}
-          {step === 2 && "Où se situe le chantier ?"}
-          {step === 3 && "Dites-nous en plus sur le projet…"}
-          {step === 4 && "Dernière étape, vos coordonnées"}
+              ? "Étape 1 — de quels travaux s’agit-il ?"
+              : "Étape 1 — quel type de travaux ?")}
+          {step === 2 && "Étape 2 — où se situe le chantier ?"}
+          {step === 3 && "Étape 3 — décrivez le projet"}
+          {step === 4 && "Étape 4 — vos coordonnées"}
         </p>
         <p className="mt-1 text-sm text-slate-600">
           {step === 1 &&
             (variant === "general"
-              ? "Vous n'êtes pas obligé de connaître le métier."
-              : "Une catégorie suffit pour commencer.")}
+              ? "Remplissez ce formulaire même si vous ne connaissez pas le métier."
+              : "Cochez une catégorie, puis continuez le formulaire.")}
           {step === 2 && "Type de bien et adresse : on trouve les artisans autour de vous."}
           {step === 3 && "Quelques mots sur ce que vous voulez, et des photos si vous en avez."}
           {step === 4 && "On vous rappelle. Gratuit, sans engagement."}
