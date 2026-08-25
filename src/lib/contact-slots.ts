@@ -10,8 +10,12 @@ export const MAX_CONTACT_UNLOCKS_SMALL_JOB = 3;
 
 /** Plafond selon le ticket : le particulier choisit de 1 jusqu’à ce max. */
 export function maxContactArtisansForTier(
-  tier?: PricingTierId | string | null
+  tier?: PricingTierId | string | null,
+  options?: { allowFullCap?: boolean }
 ): number {
+  if (options?.allowFullCap) {
+    return MAX_CONTACT_UNLOCKS_PER_REQUEST;
+  }
   return tier === "bas"
     ? MAX_CONTACT_UNLOCKS_SMALL_JOB
     : MAX_CONTACT_UNLOCKS_PER_REQUEST;

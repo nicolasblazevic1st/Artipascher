@@ -197,7 +197,10 @@ export default function WorkRequestForm({
         ? [nafOptions[0].code]
         : [];
   const workOptions = getWorkOptionsForNafCodes(effectiveNafCodes);
-  const maxContactCap = maxContactArtisansForTier(pricingTier || undefined);
+  const allowFullContactCap = variant === "general" || unknownTrade;
+  const maxContactCap = maxContactArtisansForTier(pricingTier || undefined, {
+    allowFullCap: allowFullContactCap,
+  });
   const phoneE164 = normalizeFrenchMobile(phone);
   const phoneVerified =
     Boolean(phoneE164) &&
@@ -253,6 +256,16 @@ export default function WorkRequestForm({
     setCategory(next);
     const options = getNafOptionsForCategory(next);
     setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
+    setWorkOptionId("");
+    setPricingTier("");
+    setWorkOptionOtherDescription("");
+    setError(null);
+  }
+
+  function clearUnknownTrade() {
+    setUnknownTrade(false);
+    setCategory("");
+    setSelectedNafCodes([]);
     setWorkOptionId("");
     setPricingTier("");
     setWorkOptionOtherDescription("");
@@ -794,6 +807,9 @@ export default function WorkRequestForm({
         ) : null}
         <input type="hidden" name="category" value={category} />
         {variant === "general" ? (
+          <input type="hidden" name="generalWorkForm" value="1" />
+        ) : null}
+        {variant === "general" ? (
           <button
             type="button"
             onClick={handleUnknownTrade}
@@ -812,6 +828,17 @@ export default function WorkRequestForm({
             </span>
           </button>
         ) : null}
+        {unknownTrade ? (
+          <p className="mt-2 text-xs text-slate-600">
+            <button
+              type="button"
+              onClick={clearUnknownTrade}
+              className="font-medium text-brand-700 underline-offset-2 hover:underline"
+            >
+              Choisir un métier à la place
+            </button>
+          </p>
+        ) : (
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {WORK_CATEGORIES.map((cat) => {
             const selected = !unknownTrade && category === cat;
@@ -840,6 +867,7 @@ export default function WorkRequestForm({
             );
           })}
         </div>
+        )}
         {!category && (
           <p className="mt-2 text-xs font-medium text-amber-700">
             {variant === "general"
@@ -1334,7 +1362,9 @@ export default function WorkRequestForm({
         <p className="text-xs text-slate-500">
           Choisissez combien d&apos;artisans pourront débloquer vos
           coordonnées (1 à {maxContactCap}
-          {pricingTier === "bas" ? " pour cette petite intervention" : ""}
+          {pricingTier === "bas" && !allowFullContactCap
+            ? " pour cette petite intervention"
+            : ""}
           ).
         </p>
         <fieldset>
