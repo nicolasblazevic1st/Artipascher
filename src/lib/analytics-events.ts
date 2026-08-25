@@ -1,6 +1,7 @@
 /**
- * Consent-aware GA4 events. No-ops when gtag is absent (consent refused / SSR).
- * Never put PII in params (name, email, phone, address, SIRET, free text).
+ * Consent-aware GA4 events + first-party form funnel (admin).
+ * GA no-ops when gtag is absent (consent refused / SSR).
+ * First-party ingest always runs (no PII: no name, email, phone, address, SIRET, free text).
  */
 
 declare global {
@@ -49,7 +50,45 @@ export type ProFormSectionId =
   | "password"
   | "submit";
 
+export type AnalyticsEventName =
+  (typeof ANALYTICS_EVENT)[keyof typeof ANALYTICS_EVENT];
+
 export type ProRcsFailureReason = "invalid" | "network";
+
+export const ANALYTICS_EVENT_NAMES = new Set<string>(
+  Object.values(ANALYTICS_EVENT)
+);
+
+export const ANALYTICS_PARAM_KEYS = new Set([
+  "form_name",
+  "form_variant",
+  "guest_mode",
+  "step_id",
+  "step_index",
+  "from_step",
+  "to_step",
+  "error_code",
+  "time_on_step_ms",
+  "section_id",
+  "fields_enabled",
+  "reason",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+]);
+
+const FUNNEL_SESSION_PREFIX = "nap_funnel_sid:";
+const FUNNEL_UTM_KEY = "nap_funnel_utm";
+const FUNNEL_INGEST_PATH = "/api/analytics/events";
+const UTM_KEYS = [
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+] as const;
 
 const LEAD_FORM_STEP_IDS: Record<LeadFormStepIndex, LeadFormStepId> = {
   1: "travaux",
@@ -76,23 +115,130 @@ export function isProFormSectionId(value: string): value is ProFormSectionId {
   return (PRO_FORM_SECTION_IDS as readonly string[]).includes(value);
 }
 
+export function isAnalyticsEventName(value: string): value is AnalyticsEventName {
+  return ANALYTICS_EVENT_NAMES.has(value);
+}
+
+export function sanitizeAnalyticsParams(
+  params?: AnalyticsParams | Record<string, unknown>
+): Record<string, GtagParamValue> {
+  if (!params) return {};
+  const cleaned: Record<string, GtagParamValue> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (!ANALYTICS_PARAM_KEYS.has(key) || value === undefined || value === null) {
+      continue;
+    }
+    if (typeof value === "boolean") {
+      cleaned[key] = value;
+      continue;
+    }
+    if (typeof value === "number" && Number.isFinite(value)) {
+      cleaned[key] = value;
+      continue;
+    }
+    if (typeof value === "string") {
+      const trimmed = value.trim().slice(0, 120);
+      if (trimmed) cleaned[key] = trimmed;
+    }
+  }
+  return cleaned;
+}
+
 export function compactAnalyticsParams(
   params?: AnalyticsParams
 ): Record<string, GtagParamValue> | undefined {
-  if (!params) return undefined;
-  const cleaned: Record<string, GtagParamValue> = {};
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined) cleaned[key] = value;
-  }
+  const cleaned = sanitizeAnalyticsParams(params);
   return Object.keys(cleaned).length > 0 ? cleaned : undefined;
 }
 
-export function trackEvent(name: string, params?: AnalyticsParams): void {
-  if (typeof window === "undefined" || typeof window.gtag !== "function") {
-    return;
-  }
+export function formNameFromAnalytics(
+  eventName: string,
+  params?: AnalyticsParams
+): "work_request" | "pro_registration" {
+  const explicit = params?.form_name;
+  if (explicit === "pro_registration") return "pro_registration";
+  if (explicit === "work_request") return "work_request";
+  if (eventName.startsWith("pro_form_")) return "pro_registration";
+  return "work_request";
+}
+
+function getOrCreateFunnelSessionId(formName: string): string {
+  const key = `${FUNNEL_SESSION_PREFIX}${formName}`;
   try {
-    const cleaned = compactAnalyticsParams(params);
+    const existing = sessionStorage.getItem(key);
+    if (existing && /^[a-zA-Z0-9_-]{8,64}$/.test(existing)) return existing;
+    const id =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+    sessionStorage.setItem(key, id);
+    return id;
+  } catch {
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+function readCachedUtm(): Record<string, string> {
+  try {
+    const cached = sessionStorage.getItem(FUNNEL_UTM_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached) as unknown;
+      if (parsed && typeof parsed === "object") {
+        return sanitizeAnalyticsParams(parsed as Record<string, unknown>) as Record<
+          string,
+          string
+        >;
+      }
+    }
+    const params = new URLSearchParams(window.location.search);
+    const utm: Record<string, string> = {};
+    for (const key of UTM_KEYS) {
+      const value = params.get(key)?.trim().slice(0, 120);
+      if (value) utm[key] = value;
+    }
+    sessionStorage.setItem(FUNNEL_UTM_KEY, JSON.stringify(utm));
+    return utm;
+  } catch {
+    return {};
+  }
+}
+
+function ingestFirstPartyEvent(
+  name: string,
+  params?: Record<string, GtagParamValue>
+): void {
+  if (typeof window === "undefined") return;
+  const formName = formNameFromAnalytics(name, params);
+  const payload = JSON.stringify({
+    sessionId: getOrCreateFunnelSessionId(formName),
+    name,
+    params: { ...readCachedUtm(), ...params, form_name: formName },
+    gaSent: typeof window.gtag === "function",
+  });
+  try {
+    const blob = new Blob([payload], { type: "application/json" });
+    if (navigator.sendBeacon(FUNNEL_INGEST_PATH, blob)) return;
+  } catch {
+    // fall through to fetch
+  }
+  void fetch(FUNNEL_INGEST_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {});
+}
+
+export function trackEvent(name: string, params?: AnalyticsParams): void {
+  if (typeof window === "undefined") return;
+  const cleaned = compactAnalyticsParams(params);
+  try {
+    ingestFirstPartyEvent(name, cleaned);
+  } catch {
+    // Never break form UX.
+  }
+  if (typeof window.gtag !== "function") return;
+  try {
     if (cleaned) {
       window.gtag("event", name, cleaned);
     } else {
@@ -103,8 +249,13 @@ export function trackEvent(name: string, params?: AnalyticsParams): void {
   }
 }
 
-export function trackLeadFormConversion(): void {
-  trackEvent(ANALYTICS_EVENT.SUBMIT_LEAD_FORM);
+export function trackLeadFormConversion(
+  ctx?: { variant: WorkRequestFormVariant; guestMode: boolean }
+): void {
+  trackEvent(
+    ANALYTICS_EVENT.SUBMIT_LEAD_FORM,
+    ctx ? leadFormParams(ctx) : { form_name: "work_request" }
+  );
 }
 
 export function leadFormParams(

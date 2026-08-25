@@ -168,7 +168,10 @@ export default function CookiesPage() {
           </p>
           <p className="mt-3 text-slate-600">
             Refuser les cookies de mesure d&apos;audience n&apos;empêche pas
-            l&apos;utilisation du site.
+            l&apos;utilisation du site. Un identifiant anonyme de session
+            (stockage session du navigateur, pas un cookie) sert uniquement à
+            compter jusqu&apos;où un formulaire est rempli, sans nom, e-mail,
+            téléphone ni adresse, et sans envoi à Google.
           </p>
         </section>
 

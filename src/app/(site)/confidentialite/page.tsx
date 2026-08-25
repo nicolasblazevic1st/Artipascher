@@ -274,6 +274,10 @@ export default function ConfidentialitePage() {
             Cookies : selon la{" "}
             <Link href="/cookies">politique de cookies</Link>.
           </li>
+          <li>
+            Parcours des formulaires (étapes anonymes, sans données
+            personnelles) : 90 jours ;
+          </li>
         </ul>
       </section>
 
