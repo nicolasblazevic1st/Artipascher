@@ -6,7 +6,7 @@ import { readAdminJson } from "@/lib/admin-fetch-json";
 import {
   COMPANY_AGE_ESTABLISHED_SHORT,
   COMPANY_AGE_YOUNG_SHORT,
-} from "@/lib/artisans-for-chantier";
+} from "@/lib/company-age";
 import { estimateSmsCredits } from "@/lib/sms-gsm";
 import type {
   SmsAcquisitionCampaign,
