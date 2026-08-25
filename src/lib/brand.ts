@@ -15,5 +15,5 @@ export const BRAND = {
   tagline: "Travaux · Artisans vérifiés · Nord 59/62",
   titleDefault: "Nord Artisan Pro — Travaux & artisans vérifiés Nord 59/62",
   description:
-    "Publiez votre demande de travaux dans le Nord-Pas-de-Calais. Des artisans vérifiés débloquent vos coordonnées pour vous contacter.",
+    "Remplissez le formulaire de travaux dans le Nord-Pas-de-Calais. Des artisans vérifiés du 59 et du 62 vous recontactent. Gratuit, sans compte obligatoire.",
 } as const;

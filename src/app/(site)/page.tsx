@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AuctionCard from "@/components/AuctionCard";
+import WebsiteJsonLd from "@/components/WebsiteJsonLd";
 import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
@@ -33,6 +34,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <WebsiteJsonLd />
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_50%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">

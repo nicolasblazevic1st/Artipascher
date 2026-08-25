@@ -23,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
       default: BRAND.titleDefault,
       template: `%s | ${BRAND.name}`,
     },
+    applicationName: BRAND.name,
     description: BRAND.description,
     robots: staging
       ? { index: false, follow: false, googleBot: { index: false, follow: false } }
