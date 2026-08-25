@@ -88,7 +88,7 @@ export interface SmsCampaignPreviewDetailed {
   campaignSize: number;
   artisansWanted: number;
   smsPerArtisan: number;
-  /** Pref. client : true = 5+, false = 0 à 5 ans, undefined = pas de filtre âge. */
+  /** Pref. client : true = 2+, false = moins de 2 ans, undefined = pas de filtre âge. */
   preferEstablishedCompany?: boolean;
   /** Pref. client : uniquement artisans RGE ADEME. */
   requireRge?: boolean;

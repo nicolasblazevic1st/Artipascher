@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { readAdminJson } from "@/lib/admin-fetch-json";
+import {
+  COMPANY_AGE_ESTABLISHED_SHORT,
+  COMPANY_AGE_YOUNG_SHORT,
+} from "@/lib/artisans-for-chantier";
 import { estimateSmsCredits } from "@/lib/sms-gsm";
 import type {
   SmsAcquisitionCampaign,
@@ -113,8 +117,8 @@ type ListRow =
 
 const COHORT_LABELS: Record<SmsCohort, string> = {
   returning: "Déjà contactés",
-  new_young: "0–5 ans",
-  new_established: "5+",
+  new_young: COMPANY_AGE_YOUNG_SHORT,
+  new_established: COMPANY_AGE_ESTABLISHED_SHORT,
 };
 
 const STATUS_LABELS: Record<SmsCampaign["status"], string> = {
@@ -1366,12 +1370,14 @@ export default function AdminSmsCampaignsPage() {
                   </p>
                 )}
                 <p className="mt-2 text-xs text-slate-500">
-                  Cible âge : {preview.suggestedCounts.new_young} × 0–5 ans /{" "}
-                  {preview.suggestedCounts.new_established} × 5+
+                  Cible âge : {preview.suggestedCounts.new_young} ×{" "}
+                  {COMPANY_AGE_YOUNG_SHORT} /{" "}
+                  {preview.suggestedCounts.new_established} ×{" "}
+                  {COMPANY_AGE_ESTABLISHED_SHORT}
                   {preview.preferEstablishedCompany === true
-                    ? " (client : uniquement 5+)"
+                    ? ` (client : uniquement ${COMPANY_AGE_ESTABLISHED_SHORT})`
                     : preview.preferEstablishedCompany === false
-                      ? " (client : uniquement 0–5 ans)"
+                      ? ` (client : uniquement ${COMPANY_AGE_YOUNG_SHORT})`
                       : " (pas de filtre âge)"}
                   {preview.requireRge ? " · client : uniquement RGE" : ""}
                   {" · "}sélection actuelle : {selectedByCohort.new_young} /{" "}

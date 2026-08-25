@@ -1,4 +1,4 @@
-export const MIN_DESCRIPTION_LENGTH = 100;
+export const MIN_DESCRIPTION_LENGTH = 150;
 export const MAX_PHOTOS = 5;
 export const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
 export const MAX_PROOF_SIZE_BYTES = 10 * 1024 * 1024; // 10 Mo

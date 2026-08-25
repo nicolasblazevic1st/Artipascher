@@ -29,7 +29,8 @@ export default async function NouvelleDemandePage({
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-slate-900">Nouvelle demande</h1>
       <p className="mt-1 text-sm text-slate-600">
-        Trois étapes, et des artisans de votre secteur peuvent vous rappeler.
+        Gratuit, sans commission. Des artisans du Nord et du Pas-de-Calais vous
+        recontactent — en général sous 24–48&nbsp;h.
       </p>
 
       {beta ? (

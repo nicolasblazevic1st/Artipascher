@@ -149,7 +149,7 @@ export async function evaluateProContactMatch(
         ok: false,
         code: "criteria",
         reason:
-          "Le client souhaite une entreprise créée il y a 5 ans ou plus.",
+          "Le client souhaite une entreprise créée il y a 2 ans ou plus.",
       };
     }
   } else if (request.preferEstablishedCompany === false) {
@@ -159,7 +159,7 @@ export async function evaluateProContactMatch(
         ok: false,
         code: "criteria",
         reason:
-          "Le client souhaite une entreprise créée il y a moins de 5 ans.",
+          "Le client souhaite une entreprise créée il y a moins de 2 ans.",
       };
     }
   }
