@@ -23,7 +23,11 @@ import {
   validatePricingSelection,
 } from "@/lib/pricing-tiers";
 import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
-import { isWorkCategory, WORK_CATEGORIES } from "@/lib/work-categories";
+import {
+  GENERAL_WORK_CATEGORY,
+  isWorkCategory,
+  WORK_CATEGORIES,
+} from "@/lib/work-categories";
 import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
@@ -114,6 +118,11 @@ interface Props {
    * puis invitation à créer un espace pour suivre les demandes.
    */
   guestMode?: boolean;
+  /**
+   * Arrivée mot-clé générique (« travaux ») : on peut envoyer sans
+   * connaître le métier.
+   */
+  variant?: "default" | "general";
 }
 
 export default function WorkRequestForm({
@@ -121,6 +130,7 @@ export default function WorkRequestForm({
   successHref = "/particulier/espace/demandes",
   initialCategory,
   guestMode = false,
+  variant = "default",
 }: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -175,6 +185,7 @@ export default function WorkRequestForm({
   const [verifyingCompany, setVerifyingCompany] = useState(false);
   const [step, setStep] = useState<FormStep>(1);
   const [propertyType, setPropertyType] = useState<PropertyTypeId | "">("");
+  const [unknownTrade, setUnknownTrade] = useState(false);
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
@@ -238,12 +249,23 @@ export default function WorkRequestForm({
   }, [maxContactCap]);
 
   function handleCategoryChange(next: string) {
+    setUnknownTrade(false);
     setCategory(next);
     const options = getNafOptionsForCategory(next);
     setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
     setWorkOptionId("");
     setPricingTier("");
     setWorkOptionOtherDescription("");
+    setError(null);
+  }
+
+  function handleUnknownTrade() {
+    const options = getNafOptionsForCategory(GENERAL_WORK_CATEGORY);
+    setUnknownTrade(true);
+    setCategory(GENERAL_WORK_CATEGORY);
+    setSelectedNafCodes(options.map((opt) => opt.code));
+    setWorkOptionId(OTHER_WORK_OPTION_ID);
+    setPricingTier("bas");
     setError(null);
   }
 
@@ -714,13 +736,19 @@ export default function WorkRequestForm({
       >
       <div>
         <p className="text-sm font-medium text-slate-900">
-          {step === 1 && "Quels travaux souhaitez-vous réaliser ?"}
+          {step === 1 &&
+            (variant === "general"
+              ? "De quels travaux avez-vous besoin ?"
+              : "Quels travaux souhaitez-vous réaliser ?")}
           {step === 2 && "Où se situe le chantier ?"}
           {step === 3 && "Dites-nous en plus sur le projet…"}
           {step === 4 && "Dernière étape, vos coordonnées"}
         </p>
         <p className="mt-1 text-sm text-slate-600">
-          {step === 1 && "Une catégorie suffit pour commencer."}
+          {step === 1 &&
+            (variant === "general"
+              ? "Vous n'êtes pas obligé de connaître le métier."
+              : "Une catégorie suffit pour commencer.")}
           {step === 2 && "Type de bien et adresse : on trouve les artisans autour de vous."}
           {step === 3 && "Quelques mots sur ce que vous voulez, et des photos si vous en avez."}
           {step === 4 && "On vous rappelle. Gratuit, sans engagement."}
@@ -756,12 +784,37 @@ export default function WorkRequestForm({
       <div className={step === 1 ? "space-y-4" : "hidden"}>
       <fieldset>
         <legend className="text-sm font-semibold text-slate-900">
-          Type de travaux
+          {variant === "general" ? "De quels travaux s'agit-il ?" : "Type de travaux"}
         </legend>
+        {variant === "general" ? (
+          <p className="mt-1 text-xs text-slate-600">
+            Pas besoin de connaître le métier : décrivez, on s&apos;occupe
+            d&apos;orienter les artisans.
+          </p>
+        ) : null}
         <input type="hidden" name="category" value={category} />
+        {variant === "general" ? (
+          <button
+            type="button"
+            onClick={handleUnknownTrade}
+            className={`mt-3 w-full rounded-xl border px-4 py-3 text-left text-sm transition ${
+              unknownTrade
+                ? "border-brand-500 bg-brand-50 text-slate-900"
+                : "border-slate-200 bg-white text-slate-800 hover:border-brand-300"
+            }`}
+          >
+            <span className="block font-semibold">
+              Je ne sais pas / plusieurs métiers
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-600">
+              Peinture, fuite, toiture… décrivez simplement ce qu&apos;il faut
+              faire.
+            </span>
+          </button>
+        ) : null}
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {WORK_CATEGORIES.map((cat) => {
-            const selected = category === cat;
+            const selected = !unknownTrade && category === cat;
             return (
               <button
                 key={cat}
@@ -789,12 +842,14 @@ export default function WorkRequestForm({
         </div>
         {!category && (
           <p className="mt-2 text-xs font-medium text-amber-700">
-            Sélectionnez un type de travaux pour continuer.
+            {variant === "general"
+              ? "Choisissez un métier, ou « Je ne sais pas / plusieurs métiers »."
+              : "Sélectionnez un type de travaux pour continuer."}
           </p>
         )}
       </fieldset>
 
-      {requiresNafChoice && (
+      {requiresNafChoice && !unknownTrade && (
         <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <legend className="px-1 text-sm font-semibold text-slate-900">
             Précisez un peu
@@ -830,7 +885,39 @@ export default function WorkRequestForm({
         </fieldset>
       )}
 
-      {category && effectiveNafCodes.length > 0 && (
+      {unknownTrade && (
+        <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-4">
+          <label className="mb-1 block text-sm font-semibold text-slate-900">
+            Décrivez vos travaux{" "}
+            <span className="text-red-500">*</span>
+          </label>
+          <p className="mb-2 text-xs text-slate-600">
+            Peinture, fuite, toiture, plusieurs pièces… écrivez comme vous
+            parlez. On orientera vers les bons artisans.
+          </p>
+          <input
+            type="text"
+            name="workOptionOtherDescription"
+            value={workOptionOtherDescription}
+            onChange={(e) =>
+              setWorkOptionOtherDescription(
+                e.target.value.slice(0, OTHER_WORK_DESCRIPTION_MAX)
+              )
+            }
+            placeholder="Ex. repeindre le salon et changer une fenêtre qui frotte"
+            className={inputClass}
+            required
+            minLength={OTHER_WORK_DESCRIPTION_MIN}
+            maxLength={OTHER_WORK_DESCRIPTION_MAX}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            {workOptionOtherDescription.trim().length} /{" "}
+            {OTHER_WORK_DESCRIPTION_MIN} car. min.
+          </p>
+        </div>
+      )}
+
+      {category && effectiveNafCodes.length > 0 && !unknownTrade && (
         <fieldset className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <legend className="px-1 text-sm font-semibold text-slate-900">
             Qu&apos;est-ce qu&apos;il faut faire ?
