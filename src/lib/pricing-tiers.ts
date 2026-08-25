@@ -744,7 +744,7 @@ export const OTHER_WORK_OPTION_ID = "autre";
 /** Ticket appliqué à « Autre » (déblocage). */
 export const OTHER_WORK_PRICING_TIER: PricingTierId = "bas";
 
-export const OTHER_WORK_DESCRIPTION_MIN = 10;
+export const OTHER_WORK_DESCRIPTION_MIN = 100;
 export const OTHER_WORK_DESCRIPTION_MAX = 200;
 
 /** Libellé prestation pour SMS / admin (sans jargon ticket). */
@@ -819,7 +819,7 @@ export function validatePricingSelection(input: {
     if (other.length < OTHER_WORK_DESCRIPTION_MIN) {
       return {
         ok: false,
-        error: `Décrivez brièvement la prestation (au moins ${OTHER_WORK_DESCRIPTION_MIN} caractères).`,
+        error: `Décrivez la prestation (au moins ${OTHER_WORK_DESCRIPTION_MIN} caractères).`,
       };
     }
     if (other.length > OTHER_WORK_DESCRIPTION_MAX) {

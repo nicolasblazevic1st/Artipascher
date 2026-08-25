@@ -923,8 +923,7 @@ export default function WorkRequestForm({
             Peinture, fuite, toiture, plusieurs pièces… écrivez comme vous
             parlez. On orientera vers les bons artisans.
           </p>
-          <input
-            type="text"
+          <textarea
             name="workOptionOtherDescription"
             value={workOptionOtherDescription}
             onChange={(e) =>
@@ -933,10 +932,11 @@ export default function WorkRequestForm({
               )
             }
             placeholder="Ex. repeindre le salon et changer une fenêtre qui frotte"
-            className={inputClass}
+            className={`${inputClass} min-h-[6.5rem] resize-y`}
             required
             minLength={OTHER_WORK_DESCRIPTION_MIN}
             maxLength={OTHER_WORK_DESCRIPTION_MAX}
+            rows={4}
           />
           <p className="mt-1 text-xs text-slate-500">
             {workOptionOtherDescription.trim().length} /{" "}
@@ -1000,20 +1000,20 @@ export default function WorkRequestForm({
           {workOptionId === OTHER_WORK_OPTION_ID && (
             <div className="mt-3">
               <label className="mb-1 block text-xs font-medium text-slate-700">
-                Courte description <span className="text-red-500">*</span>
+                Description <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <textarea
                 name="workOptionOtherDescription"
                 value={workOptionOtherDescription}
                 onChange={(e) =>
                   setWorkOptionOtherDescription(e.target.value.slice(0, OTHER_WORK_DESCRIPTION_MAX))
                 }
                 placeholder="Ex. débouchage WC + remplacement robinet cuisine"
-                className={inputClass}
+                className={`${inputClass} min-h-[5rem] resize-y`}
                 required
                 minLength={OTHER_WORK_DESCRIPTION_MIN}
                 maxLength={OTHER_WORK_DESCRIPTION_MAX}
+                rows={3}
               />
               <p className="mt-1 text-xs text-slate-500">
                 {workOptionOtherDescription.trim().length} /{" "}
