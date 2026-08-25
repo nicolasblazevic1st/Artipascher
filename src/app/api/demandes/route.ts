@@ -15,9 +15,10 @@ import {
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
 } from "@/lib/demandes-validation";
+import { GENERAL_WORK_CATEGORY } from "@/lib/work-categories";
 import { getClientSession } from "@/lib/client-auth";
 import { validateWorkRequestNafSelection } from "@/lib/naf-codes";
-import { validatePricingSelection } from "@/lib/pricing-tiers";
+import { validatePricingSelection, OTHER_WORK_OPTION_ID } from "@/lib/pricing-tiers";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
 import {
   formatFrenchPhoneDisplay,
@@ -270,7 +271,13 @@ export async function POST(request: NextRequest) {
     if (!pricingCheck.ok) {
       return NextResponse.json({ error: pricingCheck.error }, { status: 400 });
     }
-    const contactCap = maxContactArtisansForTier(pricingCheck.pricingTier);
+    const generalWorkForm = String(formData.get("generalWorkForm") ?? "") === "1";
+    const contactCap = maxContactArtisansForTier(pricingCheck.pricingTier, {
+      allowFullCap:
+        generalWorkForm ||
+        (category === GENERAL_WORK_CATEGORY &&
+          pricingCheck.workOptionId === OTHER_WORK_OPTION_ID),
+    });
     const requestedContacts = parseMaxContactArtisans(
       formData.get("maxContactArtisans")
     );
