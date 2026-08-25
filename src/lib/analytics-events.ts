@@ -49,6 +49,7 @@ export type LeadFormAnalyticsCtx = {
   guestMode: boolean;
   workCategory?: string;
   unknownTrade?: boolean;
+  adsCategory?: string;
 };
 
 export type ProFormSectionId =
@@ -88,10 +89,14 @@ export const ANALYTICS_PARAM_KEYS = new Set([
   "utm_content",
   "utm_term",
   "work_category",
+  "ads_category",
+  "device",
+  "ads_click",
 ]);
 
 const FUNNEL_SESSION_PREFIX = "nap_funnel_sid:";
 const FUNNEL_UTM_KEY = "nap_funnel_utm";
+const FUNNEL_ADS_CLICK_KEY = "nap_funnel_ads_click";
 const FUNNEL_INGEST_PATH = "/api/analytics/events";
 const UTM_KEYS = [
   "utm_source",
@@ -160,9 +165,15 @@ export function sanitizeAnalyticsParams(
       continue;
     }
     if (typeof value === "string") {
-      if (key === "work_category") {
+      if (key === "work_category" || key === "ads_category") {
         const category = sanitizeWorkCategoryParam({ workCategory: value });
         if (category) cleaned[key] = category;
+        continue;
+      }
+      if (key === "device") {
+        if (value === "mobile" || value === "tablet" || value === "desktop") {
+          cleaned[key] = value;
+        }
         continue;
       }
       const trimmed = key.startsWith("utm_")
@@ -237,16 +248,72 @@ function readCachedUtm(): Record<string, string> {
   }
 }
 
+function clientDevice(): "mobile" | "tablet" | "desktop" | undefined {
+  if (typeof window === "undefined") return undefined;
+  const width = window.innerWidth;
+  if (!Number.isFinite(width) || width <= 0) return undefined;
+  if (width < 768) return "mobile";
+  if (width < 1024) return "tablet";
+  return "desktop";
+}
+
+function landingAdsClick(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (sessionStorage.getItem(FUNNEL_ADS_CLICK_KEY) === "1") return true;
+    const params = new URLSearchParams(window.location.search);
+    const hit = Boolean(
+      params.get("gclid")?.trim() ||
+        params.get("wbraid")?.trim() ||
+        params.get("gbraid")?.trim()
+    );
+    if (hit) sessionStorage.setItem(FUNNEL_ADS_CLICK_KEY, "1");
+    return hit;
+  } catch {
+    return false;
+  }
+}
+
+/** pagehide misses some mobile kills; visibility/freeze catch more without blocking return visits. */
+export function bindFormLeaveListeners(onHide: () => void): () => void {
+  let sent = false;
+  const fire = () => {
+    if (sent) return;
+    sent = true;
+    onHide();
+  };
+  const onVisibility = () => {
+    if (document.visibilityState === "hidden") fire();
+    else sent = false;
+  };
+  window.addEventListener("pagehide", fire);
+  document.addEventListener("visibilitychange", onVisibility);
+  document.addEventListener("freeze", fire);
+  return () => {
+    window.removeEventListener("pagehide", fire);
+    document.removeEventListener("visibilitychange", onVisibility);
+    document.removeEventListener("freeze", fire);
+  };
+}
+
 function ingestFirstPartyEvent(
   name: string,
   params?: Record<string, GtagParamValue>
 ): void {
   if (typeof window === "undefined") return;
   const formName = formNameFromAnalytics(name, params);
+  const device = clientDevice();
+  const adsClick = landingAdsClick();
   const payload = JSON.stringify({
     sessionId: getOrCreateFunnelSessionId(formName),
     name,
-    params: { ...readCachedUtm(), ...params, form_name: formName },
+    params: {
+      ...readCachedUtm(),
+      ...params,
+      form_name: formName,
+      ...(device ? { device } : {}),
+      ...(adsClick ? { ads_click: true } : {}),
+    },
     gaSent: typeof window.gtag === "function",
   });
   try {
@@ -295,11 +362,15 @@ export function leadFormParams(
   extra?: AnalyticsParams
 ): AnalyticsParams {
   const workCategory = sanitizeWorkCategoryParam(ctx);
+  const adsCategory = sanitizeWorkCategoryParam({
+    workCategory: ctx.adsCategory,
+  });
   return {
     form_name: "work_request",
     form_variant: ctx.variant,
     guest_mode: ctx.guestMode,
     ...(workCategory ? { work_category: workCategory } : {}),
+    ...(adsCategory ? { ads_category: adsCategory } : {}),
     ...extra,
   };
 }

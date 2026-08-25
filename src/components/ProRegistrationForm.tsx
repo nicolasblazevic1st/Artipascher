@@ -6,6 +6,7 @@ import HelpTooltip from "@/components/HelpTooltip";
 import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
 import {
   ANALYTICS_EVENT,
+  bindFormLeaveListeners,
   isProFormSectionId,
   proFormParams,
   trackEvent,
@@ -84,9 +85,8 @@ export default function ProRegistrationForm() {
   }, []);
 
   useEffect(() => {
-    const onPageHide = () => {
+    return bindFormLeaveListeners(() => {
       if (abandonSentRef.current || statusRef.current === "success") return;
-      abandonSentRef.current = true;
       trackEvent(
         ANALYTICS_EVENT.PRO_FORM_ABANDON,
         proFormParams({
@@ -94,9 +94,7 @@ export default function ProRegistrationForm() {
           fields_enabled: fieldsEnabledRef.current,
         })
       );
-    };
-    window.addEventListener("pagehide", onPageHide);
-    return () => window.removeEventListener("pagehide", onPageHide);
+    });
   }, []);
 
   function noteProSection(target: EventTarget | null) {
