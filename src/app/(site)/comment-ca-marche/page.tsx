@@ -5,6 +5,7 @@ import SiteExplainer from "@/components/SiteExplainer";
 import TrustPillars from "@/components/TrustPillars";
 import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
+import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 export const metadata: Metadata = {
   title: "Comment ça marche — Présentation",
@@ -29,7 +30,7 @@ export default function CommentCaMarchePage() {
             locaux contrôlés débloquent vos coordonnées et vous joignent.
           </p>
           <BetaAwareLink
-            href="/travaux#formulaire"
+            href={`${WORK_REQUEST_FORM_PATH}#formulaire`}
             className="mt-6 inline-flex rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
           >
             Remplir le formulaire
@@ -59,7 +60,7 @@ export default function CommentCaMarchePage() {
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2">
           <Link
-            href="/travaux#formulaire"
+            href={`${WORK_REQUEST_FORM_PATH}#formulaire`}
             className="rounded-2xl border border-client-200 bg-client-50 p-6 transition hover:border-client-300"
           >
             <p className="font-semibold text-client-800">Je suis particulier</p>

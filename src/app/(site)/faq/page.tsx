@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import BetaAwareLink from "@/components/BetaAwareLink";
 import { FAQ_ITEMS } from "@/lib/data";
+import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 export const metadata: Metadata = {
   title: "FAQ — Travaux & artisans vérifiés Nord-Pas-de-Calais",
@@ -38,7 +39,7 @@ export default function FaqPage() {
           ou 62.
         </p>
         <BetaAwareLink
-          href="/travaux"
+          href={WORK_REQUEST_FORM_PATH}
           className="mt-4 inline-block text-sm font-semibold text-brand-700"
         >
           Demander des travaux →

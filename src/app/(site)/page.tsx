@@ -8,6 +8,7 @@ import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
 import { FAQ_ITEMS } from "@/lib/data";
 import { listPublicAuctions } from "@/lib/work-request-auctions";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
+import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 const STEPS = [
   {
@@ -48,7 +49,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <BetaAwareLink
-              href="/travaux"
+              href={WORK_REQUEST_FORM_PATH}
               className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
             >
               Remplir le formulaire
@@ -77,7 +78,7 @@ export default async function HomePage() {
             {WORK_CATEGORIES.map((category) => (
               <BetaAwareLink
                 key={category}
-                href={`/travaux?category=${encodeURIComponent(category)}`}
+                href={`${WORK_REQUEST_FORM_PATH}?category=${encodeURIComponent(category)}`}
                 className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:border-brand-300 hover:shadow-sm"
               >
                 <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
@@ -190,7 +191,7 @@ export default async function HomePage() {
             artisans vérifiés du Nord-Pas-de-Calais.
           </p>
           <BetaAwareLink
-            href="/travaux"
+            href={WORK_REQUEST_FORM_PATH}
             className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white transition hover:bg-accent-600"
           >
             Demander des travaux maintenant
