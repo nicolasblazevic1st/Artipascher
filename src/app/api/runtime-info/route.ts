@@ -6,6 +6,7 @@ import {
   normalizeHost,
 } from "@/lib/beta";
 import { isSmsConfigured, isDemoSmsAllowed } from "@/lib/sms";
+import { version as appVersion } from "../../../../package.json";
 
 /**
  * Diagnostic déploiement (pas de secret).
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
     artipascherStaging: process.env.ARTIPASCHER_STAGING ?? null,
     betaModeEnv: process.env.BETA_MODE ?? null,
     nextPublicBeta: process.env.NEXT_PUBLIC_BETA_MODE ?? null,
+    version: appVersion,
     buildId: process.env.ARTIPASCHER_BUILD_ID ?? null,
     cwd: process.cwd(),
   });
