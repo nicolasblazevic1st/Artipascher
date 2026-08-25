@@ -30,6 +30,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/particuliers/comptes", label: "Comptes" },
       { href: "/admin/particuliers/demandes", label: "Demandes travaux" },
+      { href: "/admin/particuliers/parcours", label: "Parcours formulaire" },
       { href: "/admin/particuliers/encheres", label: "Offres publiées" },
     ],
   },

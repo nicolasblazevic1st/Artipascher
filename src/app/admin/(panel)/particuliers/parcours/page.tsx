@@ -1,0 +1,424 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+type RangeDays = 7 | 30 | 90;
+type FormTab = "lead" | "pro";
+
+interface FunnelStepStat {
+  id: string;
+  label: string;
+  sessions: number;
+  percentOfStart: number;
+  dropOffFromPrevious: number | null;
+}
+
+interface CountRow {
+  key: string;
+  label: string;
+  sessions: number;
+  events: number;
+}
+
+interface FunnelSessionRow {
+  sessionShort: string;
+  startedAt: string;
+  lastAt: string;
+  outcome: string;
+  lastLabel: string;
+  variant?: string;
+  guestMode?: boolean;
+  utmContent?: string;
+  utmSource?: string;
+  utmTerm?: string;
+  gaSent: boolean;
+}
+
+interface FormFunnelSide {
+  sessions: number;
+  submitted: number;
+  conversionPercent: number;
+  funnel: FunnelStepStat[];
+  lastStep: CountRow[];
+  abandons: CountRow[];
+  validationErrors: CountRow[];
+  byVariant: CountRow[];
+  byUtmContent: CountRow[];
+  byUtmSource: CountRow[];
+  recent: FunnelSessionRow[];
+}
+
+interface FormFunnelReport {
+  rangeDays: number;
+  since: string;
+  until: string;
+  totalEvents: number;
+  lead: FormFunnelSide;
+  pro: FormFunnelSide;
+}
+
+const VARIANT_LABELS: Record<string, string> = {
+  default: "Métier précoche",
+  general: "Plusieurs métiers",
+};
+
+function formatWhen(iso: string) {
+  try {
+    return new Date(iso).toLocaleString("fr-FR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function FunnelBars({ steps }: { steps: FunnelStepStat[] }) {
+  const max = Math.max(1, ...steps.map((s) => s.sessions));
+  return (
+    <ol className="space-y-3">
+      {steps.map((step) => (
+        <li key={step.id}>
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="font-medium text-slate-800">{step.label}</span>
+            <span className="shrink-0 tabular-nums text-slate-500">
+              {step.sessions}{" "}
+              <span className="text-xs">({step.percentOfStart} %)</span>
+              {step.dropOffFromPrevious != null && step.dropOffFromPrevious > 0 && (
+                <span className="ml-2 text-xs font-medium text-red-600">
+                  −{step.dropOffFromPrevious} %
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-brand-600"
+              style={{
+                width:
+                  step.sessions === 0
+                    ? "0%"
+                    : `${Math.max(2, (step.sessions / max) * 100)}%`,
+              }}
+            />
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function CountTable({
+  title,
+  empty,
+  rows,
+  valueLabel = "Sessions",
+}: {
+  title: string;
+  empty: string;
+  rows: CountRow[];
+  valueLabel?: string;
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <h3 className="font-semibold text-slate-900">{title}</h3>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-500">{empty}</p>
+      ) : (
+        <table className="mt-3 w-full text-left text-sm">
+          <thead className="text-xs uppercase text-slate-400">
+            <tr>
+              <th className="pb-2 font-medium">Libellé</th>
+              <th className="pb-2 text-right font-medium">{valueLabel}</th>
+              <th className="pb-2 text-right font-medium">Événements</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <td className="py-2 text-slate-700">{row.label}</td>
+                <td className="py-2 text-right tabular-nums font-medium">
+                  {row.sessions}
+                </td>
+                <td className="py-2 text-right tabular-nums text-slate-500">
+                  {row.events}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
+function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase text-slate-500">
+            Sessions formulaire
+          </p>
+          <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">
+            {side.sessions}
+          </p>
+        </div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-xs font-medium uppercase text-emerald-700">
+            {form === "lead" ? "Demandes envoyées" : "Inscriptions envoyées"}
+          </p>
+          <p className="mt-1 text-3xl font-bold tabular-nums text-emerald-900">
+            {side.submitted}
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase text-slate-500">
+            Taux de conversion
+          </p>
+          <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">
+            {side.conversionPercent} %
+          </p>
+        </div>
+      </div>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <h3 className="font-semibold text-slate-900">Jusqu&apos;où vont-ils ?</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Sessions uniques par étape. Le % rouge est la perte depuis l&apos;étape
+          précédente.
+        </p>
+        <div className="mt-5">
+          {side.funnel.length === 0 ? (
+            <p className="text-sm text-slate-500">Pas encore de parcours.</p>
+          ) : (
+            <FunnelBars steps={side.funnel} />
+          )}
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <CountTable
+          title="Dernière étape atteinte"
+          empty="Aucune session sur la période."
+          rows={side.lastStep}
+        />
+        <CountTable
+          title="Abandons (fermeture de page)"
+          empty="Aucun abandon enregistré."
+          rows={side.abandons}
+        />
+        <CountTable
+          title="Erreurs de validation"
+          empty="Aucune erreur de validation."
+          rows={side.validationErrors}
+          valueLabel="Personnes"
+        />
+        {form === "lead" ? (
+          <CountTable
+            title="Type de formulaire"
+            empty="Pas encore de ventilation."
+            rows={side.byVariant}
+          />
+        ) : (
+          <CountTable
+            title="Source UTM"
+            empty="Pas de source UTM sur ces sessions."
+            rows={side.byUtmSource}
+          />
+        )}
+      </div>
+
+      {form === "lead" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <CountTable
+            title="Métier pub (utm_content)"
+            empty="Aucun utm_content pour l&apos;instant (annonces métier)."
+            rows={side.byUtmContent}
+          />
+          <CountTable
+            title="Source UTM"
+            empty="Pas de source UTM sur ces sessions."
+            rows={side.byUtmSource}
+          />
+        </div>
+      )}
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <h3 className="font-semibold text-slate-900">Sessions récentes</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Identifiant anonyme (6 derniers caractères). Aucune donnée personnelle.
+        </p>
+        {side.recent.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">Aucune session récente.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="py-2 pr-3 font-medium">Quand</th>
+                  <th className="py-2 pr-3 font-medium">Jusqu&apos;où</th>
+                  <th className="py-2 pr-3 font-medium">Résultat</th>
+                  <th className="hidden py-2 pr-3 font-medium md:table-cell">
+                    Détail
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {side.recent.map((row) => (
+                  <tr key={`${row.sessionShort}-${row.startedAt}`}>
+                    <td className="py-2 pr-3 text-slate-600">
+                      <p className="tabular-nums">{formatWhen(row.lastAt)}</p>
+                      <p className="font-mono text-[10px] text-slate-400">
+                        …{row.sessionShort}
+                      </p>
+                    </td>
+                    <td className="py-2 pr-3 font-medium text-slate-800">
+                      {row.lastLabel}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          row.outcome === "Envoyée"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : row.outcome === "Abandonnée"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {row.outcome}
+                      </span>
+                    </td>
+                    <td className="hidden py-2 text-xs text-slate-500 md:table-cell">
+                      {[
+                        row.variant
+                          ? VARIANT_LABELS[row.variant] ?? row.variant
+                          : null,
+                        row.guestMode ? "Invité" : null,
+                        row.utmContent ? `pub ${row.utmContent}` : null,
+                        row.utmTerm ? row.utmTerm : null,
+                        row.gaSent ? "GA" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default function AdminParcoursFormulairesPage() {
+  const [days, setDays] = useState<RangeDays>(30);
+  const [tab, setTab] = useState<FormTab>("lead");
+  const [report, setReport] = useState<FormFunnelReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const res = await fetch(`/api/admin/form-funnel?days=${days}`);
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setError(data.error ?? "Chargement impossible.");
+      return;
+    }
+    setReport(data as FormFunnelReport);
+  }, [days]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const side = tab === "lead" ? report?.lead : report?.pro;
+
+  return (
+    <div>
+      <p className="text-sm text-slate-600">
+        Entonnoir des balises analytics : où les gens s&apos;arrêtent dans le
+        formulaire de demande, et dans l&apos;inscription artisan. Pas de nom, e-mail,
+        téléphone ni adresse — seulement les étapes.
+      </p>
+
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        {([7, 30, 90] as const).map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => setDays(d)}
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+              days === d
+                ? "bg-brand-600 text-white"
+                : "bg-white text-slate-600 ring-1 ring-slate-200"
+            }`}
+          >
+            {d} jours
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-white"
+        >
+          Actualiser
+        </button>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setTab("lead")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+            tab === "lead"
+              ? "bg-slate-900 text-white"
+              : "bg-white text-slate-600 ring-1 ring-slate-200"
+          }`}
+        >
+          Demandes particuliers
+          {report ? ` (${report.lead.sessions})` : ""}
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("pro")}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+            tab === "pro"
+              ? "bg-slate-900 text-white"
+              : "bg-white text-slate-600 ring-1 ring-slate-200"
+          }`}
+        >
+          Inscription artisans
+          {report ? ` (${report.pro.sessions})` : ""}
+        </button>
+      </div>
+
+      {error && (
+        <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      {loading && !report ? (
+        <p className="mt-8 text-sm text-slate-500">Chargement du parcours…</p>
+      ) : side && report && report.totalEvents === 0 ? (
+        <p className="mt-8 rounded-xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-600">
+          Aucun parcours enregistré pour l&apos;instant. Dès qu&apos;un visiteur ouvre le
+          formulaire, les étapes apparaissent ici (même sans cookies Google).
+        </p>
+      ) : side ? (
+        <div className="mt-6">
+          {loading && (
+            <p className="mb-3 text-xs text-slate-400">Mise à jour…</p>
+          )}
+          <SidePanel side={side} form={tab} />
+        </div>
+      ) : null}
+    </div>
+  );
+}

@@ -52,7 +52,12 @@ export default function AdminDemandesPage() {
       <h2 className="text-lg font-semibold text-slate-900">Demandes de travaux</h2>
       <p className="mt-1 text-sm text-slate-600">
         Validez les demandes pour publier une annonce, ou cliquez sur Modifier
-        pour corriger le contenu avant / après publication.
+        pour corriger le contenu avant / après publication. Pour voir jusqu&apos;où
+        les visiteurs vont dans le formulaire :{" "}
+        <a href="/admin/particuliers/parcours" className="text-brand-700 underline">
+          parcours formulaire
+        </a>
+        .
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">

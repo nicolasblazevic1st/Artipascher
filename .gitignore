@@ -41,6 +41,7 @@ yarn-error.log*
 # local data store (inscriptions / demandes)
 data/store.json
 data/admin-login-log.json
+data/form-funnel.json
 deploy/allowed-dev-ip
 deploy/dev-basic-auth
 data/sirene/

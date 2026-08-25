@@ -858,7 +858,7 @@ export default function WorkRequestForm({
     const body = (await res.json()) as { id?: string; guest?: boolean };
     statusRef.current = "success";
     abandonSentRef.current = true;
-    trackLeadFormConversion();
+    trackLeadFormConversion({ variant, guestMode });
     setCreatedRequestId(body.id ?? null);
     setSubmittedContact({
       email: String(formData.get("email") ?? "").trim(),
