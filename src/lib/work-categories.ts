@@ -133,13 +133,20 @@ function matchCategoryFromSearchText(raw?: string | null): WorkCategory | undefi
   return undefined;
 }
 
-/** Pubs / UTM / mot-clé Google → métier déjà coché sur le formulaire. */
-export function resolveWorkCategoryFromAdsQuery(input: {
+export type AdsWorkQuery = {
   category?: string | null;
   utmContent?: string | null;
   utmTerm?: string | null;
   keyword?: string | null;
-}): WorkCategory | undefined {
+};
+
+/** Catch-all admin / SMS quand le particulier ne sait pas le métier. */
+export const GENERAL_WORK_CATEGORY: WorkCategory = "Rénovation complète";
+
+/** Pubs / UTM / mot-clé Google → métier déjà coché sur le formulaire. */
+export function resolveWorkCategoryFromAdsQuery(
+  input: AdsWorkQuery
+): WorkCategory | undefined {
   const fromSlug =
     matchCategoryToken(input.category) ?? matchCategoryToken(input.utmContent);
   if (fromSlug) return fromSlug;
@@ -147,5 +154,31 @@ export function resolveWorkCategoryFromAdsQuery(input: {
     matchCategoryFromSearchText(input.keyword) ??
     matchCategoryFromSearchText(input.utmTerm) ??
     matchCategoryFromSearchText(input.category)
+  );
+}
+
+function adsQueryBlob(input: AdsWorkQuery): string {
+  return foldAdsToken(
+    [input.keyword, input.utmTerm, input.utmContent, input.category]
+      .filter(Boolean)
+      .join(" ")
+  );
+}
+
+/**
+ * Mot-clé générique (« travaux », « devis travaux ») sans métier précis.
+ * Dans ce cas on ouvre le formulaire général, pas une landing plomberie/peinture.
+ */
+export function isGenericWorkSearch(input: AdsWorkQuery): boolean {
+  if (resolveWorkCategoryFromAdsQuery(input)) return false;
+  const blob = adsQueryBlob(input);
+  if (!blob) return false;
+  const tokens = new Set(blob.split(" "));
+  if (tokens.has("travaux") || tokens.has("devis")) return true;
+  return (
+    blob === "artisan" ||
+    blob === "artisans" ||
+    blob.includes("artisan batiment") ||
+    blob.includes("entreprise batiment")
   );
 }

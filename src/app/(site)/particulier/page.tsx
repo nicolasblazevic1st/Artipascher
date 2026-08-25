@@ -5,6 +5,10 @@ import BetaClosedNotice from "@/components/BetaClosedNotice";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { getIsBetaMode } from "@/lib/beta-server";
+import {
+  isGenericWorkSearch,
+  resolveWorkCategoryFromAdsQuery,
+} from "@/lib/work-categories";
 
 export const metadata: Metadata = {
   title: "Particulier — Publiez votre demande de travaux",
@@ -83,7 +87,18 @@ export default async function ParticulierPage({
     for (const [key, value] of Object.entries(params)) {
       if (typeof value === "string" && value) qs.set(key, value);
     }
-    redirect(`/particulier/demande?${qs.toString()}`);
+    const ads = {
+      category: typeof params.category === "string" ? params.category : "",
+      utmContent:
+        typeof params.utm_content === "string" ? params.utm_content : "",
+      utmTerm: typeof params.utm_term === "string" ? params.utm_term : "",
+      keyword: typeof params.keyword === "string" ? params.keyword : "",
+    };
+    const landing =
+      !resolveWorkCategoryFromAdsQuery(ads) && isGenericWorkSearch(ads)
+        ? "/travaux"
+        : "/particulier/demande";
+    redirect(`${landing}?${qs.toString()}`);
   }
 
   const beta = await getIsBetaMode();
