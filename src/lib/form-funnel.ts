@@ -53,6 +53,13 @@ export interface IntentRow {
   conversionPercent: number;
 }
 
+export interface StepTimeRow {
+  key: string;
+  label: string;
+  samples: number;
+  medianSeconds: number;
+}
+
 export interface FunnelSessionRow {
   sessionShort: string;
   startedAt: string;
@@ -63,7 +70,10 @@ export interface FunnelSessionRow {
   guestMode?: boolean;
   utmContent?: string;
   utmSource?: string;
+  utmCampaign?: string;
   utmTerm?: string;
+  device?: string;
+  adsClick?: boolean;
   gaSent: boolean;
 }
 
@@ -78,8 +88,12 @@ export interface FormFunnelSide {
   byVariant: CountRow[];
   byUtmContent: CountRow[];
   byUtmSource: CountRow[];
+  byUtmCampaign: IntentRow[];
   byUtmTerm: IntentRow[];
   byWorkCategory: IntentRow[];
+  byDevice: IntentRow[];
+  byAdsMismatch: IntentRow[];
+  stepTimes: StepTimeRow[];
   recent: FunnelSessionRow[];
 }
 
@@ -271,7 +285,13 @@ interface SessionAgg {
   utmContent?: string;
   utmSource?: string;
   utmTerm?: string;
+  utmCampaign?: string;
   workCategory?: string;
+  adsCategory?: string;
+  device?: string;
+  adsClick?: boolean;
+  lastEventName?: string;
+  stepDurations: Map<number, number>;
   lastSection?: string;
   sections: Set<string>;
   rcsAttempt: boolean;
@@ -354,6 +374,48 @@ function toIntentRows(
     .slice(0, 40);
 }
 
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[mid]
+    : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+}
+
+function categoryIntentLabel(value: string): string {
+  return value === "unknown" ? "Je ne sais pas / plusieurs métiers" : value;
+}
+
+const DEVICE_LABELS: Record<string, string> = {
+  mobile: "Téléphone",
+  tablet: "Tablette",
+  desktop: "Ordinateur",
+};
+
+function toStepTimeRows(sessions: SessionAgg[]): StepTimeRow[] {
+  const byStep = new Map<number, number[]>();
+  for (const session of sessions) {
+    for (const [step, ms] of session.stepDurations) {
+      if (!Number.isFinite(ms) || ms < 0) continue;
+      const list = byStep.get(step) ?? [];
+      list.push(ms);
+      byStep.set(step, list);
+    }
+  }
+  return [...byStep.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([step, samples]) => {
+      const med = median(samples) ?? 0;
+      return {
+        key: String(step),
+        label: LEAD_STEP_LABELS[step] ?? `Étape ${step}`,
+        samples: samples.length,
+        medianSeconds: Math.max(0, Math.round(med / 1000)),
+      };
+    });
+}
+
 function funnelSteps(
   sessions: SessionAgg[],
   steps: Array<{ id: string; label: string; match: (s: SessionAgg) => boolean }>
@@ -387,8 +449,12 @@ function emptySide(): FormFunnelSide {
     byVariant: [],
     byUtmContent: [],
     byUtmSource: [],
+    byUtmCampaign: [],
     byUtmTerm: [],
     byWorkCategory: [],
+    byDevice: [],
+    byAdsMismatch: [],
+    stepTimes: [],
     recent: [],
   };
 }
@@ -494,6 +560,9 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
     byVariant: toCountRows(variants, VARIANT_LABELS),
     byUtmContent: toCountRows(utmContent, {}),
     byUtmSource: toCountRows(utmSource, {}),
+    byUtmCampaign: toIntentRows(sessions, (s) =>
+      s.utmCampaign ? { key: s.utmCampaign, label: s.utmCampaign } : undefined
+    ),
     byUtmTerm: toIntentRows(sessions, (s) => {
       if (!s.utmTerm) return undefined;
       const key = keywordGroupKey(s.utmTerm);
@@ -504,12 +573,24 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
       if (!s.workCategory) return undefined;
       return {
         key: s.workCategory,
-        label:
-          s.workCategory === "unknown"
-            ? "Je ne sais pas / plusieurs métiers"
-            : s.workCategory,
+        label: categoryIntentLabel(s.workCategory),
       };
     }),
+    byDevice: toIntentRows(sessions, (s) =>
+      s.device
+        ? { key: s.device, label: DEVICE_LABELS[s.device] ?? s.device }
+        : undefined
+    ),
+    byAdsMismatch: toIntentRows(sessions, (s) => {
+      if (!s.adsCategory || !s.workCategory || s.adsCategory === s.workCategory) {
+        return undefined;
+      }
+      return {
+        key: `${s.adsCategory}→${s.workCategory}`,
+        label: `${categoryIntentLabel(s.adsCategory)} → ${categoryIntentLabel(s.workCategory)}`,
+      };
+    }),
+    stepTimes: toStepTimeRows(sessions),
     recent: sessions
       .slice()
       .sort((a, b) => b.lastAt - a.lastAt)
@@ -530,7 +611,10 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
         guestMode: s.guestMode,
         utmContent: s.utmContent,
         utmSource: s.utmSource,
+        utmCampaign: s.utmCampaign,
         utmTerm: s.utmTerm,
+        device: s.device,
+        adsClick: s.adsClick,
         gaSent: s.gaSent,
       })),
   };
@@ -620,8 +704,18 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
     byVariant: [],
     byUtmContent: [],
     byUtmSource: toCountRows(utmSource, {}),
+    byUtmCampaign: toIntentRows(sessions, (s) =>
+      s.utmCampaign ? { key: s.utmCampaign, label: s.utmCampaign } : undefined
+    ),
     byUtmTerm: [],
     byWorkCategory: [],
+    byDevice: toIntentRows(sessions, (s) =>
+      s.device
+        ? { key: s.device, label: DEVICE_LABELS[s.device] ?? s.device }
+        : undefined
+    ),
+    byAdsMismatch: [],
+    stepTimes: [],
     recent: sessions
       .slice()
       .sort((a, b) => b.lastAt - a.lastAt)
@@ -639,7 +733,10 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
           ? "Inscription envoyée"
           : PRO_SECTION_LABELS[s.lastSection ?? ""] ?? "Ouverture",
         utmSource: s.utmSource,
+        utmCampaign: s.utmCampaign,
         utmTerm: s.utmTerm,
+        device: s.device,
+        adsClick: s.adsClick,
         gaSent: s.gaSent,
       })),
   };
@@ -671,12 +768,16 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
         rcsSuccess: false,
         gaSent: false,
         errorCounts: new Map(),
+        stepDurations: new Map(),
       };
       byId.set(key, session);
     }
 
     session.firstAt = Math.min(session.firstAt, at);
-    session.lastAt = Math.max(session.lastAt, at);
+    if (at >= session.lastAt) {
+      session.lastAt = at;
+      session.lastEventName = event.name;
+    }
     session.names.add(event.name);
     if (event.gaSent) session.gaSent = true;
 
@@ -690,10 +791,30 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
     if (utmSource) session.utmSource = utmSource;
     const utmTerm = cleanTrackingParam(asString(event.params.utm_term));
     if (utmTerm) session.utmTerm = utmTerm;
+    const utmCampaign = cleanTrackingParam(asString(event.params.utm_campaign));
+    if (utmCampaign) session.utmCampaign = utmCampaign;
     const workCategory = asString(event.params.work_category);
     if (workCategory) session.workCategory = workCategory;
+    const adsCategory = asString(event.params.ads_category);
+    if (adsCategory && !session.adsCategory) session.adsCategory = adsCategory;
+    const device = asString(event.params.device);
+    if (device === "mobile" || device === "tablet" || device === "desktop") {
+      session.device = device;
+    }
+    if (asBoolean(event.params.ads_click) === true) session.adsClick = true;
+
+    const durationMs = asNumber(event.params.time_on_step_ms);
 
     const stepIndex = asNumber(event.params.step_index);
+    if (
+      durationMs != null &&
+      durationMs >= 0 &&
+      stepIndex &&
+      (event.name === ANALYTICS_EVENT.LEAD_FORM_STEP_COMPLETE ||
+        event.name === ANALYTICS_EVENT.LEAD_FORM_ABANDON)
+    ) {
+      session.stepDurations.set(stepIndex, durationMs);
+    }
     if (
       event.name === ANALYTICS_EVENT.LEAD_FORM_STEP_VIEW &&
       stepIndex &&
@@ -753,6 +874,29 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
   return [...byId.values()];
 }
 
+const STALE_ABANDON_MS = 15 * 60 * 1000;
+
+function finalizeAbandons(sessions: SessionAgg[], until: number) {
+  for (const session of sessions) {
+    if (session.submitted) {
+      session.abandoned = false;
+      continue;
+    }
+    const lastIsAbandon =
+      session.lastEventName === ANALYTICS_EVENT.LEAD_FORM_ABANDON ||
+      session.lastEventName === ANALYTICS_EVENT.PRO_FORM_ABANDON;
+    const stale = until - session.lastAt >= STALE_ABANDON_MS;
+    session.abandoned = lastIsAbandon || stale;
+    if (!session.abandoned) continue;
+    if (session.form === "work_request" && !session.abandonStep) {
+      session.abandonStep = session.maxStepViewed || undefined;
+    }
+    if (session.form === "pro_registration" && !session.abandonSection) {
+      session.abandonSection = session.lastSection;
+    }
+  }
+}
+
 export function parseFunnelRangeDays(raw: string | null): 7 | 30 | 90 {
   if (raw === "7" || raw === "90") return Number(raw) as 7 | 90;
   return 30;
@@ -769,6 +913,7 @@ export async function getFormFunnelReport(
     return Number.isFinite(t) && t >= since && t <= until;
   });
   const sessions = aggregateSessions(events);
+  finalizeAbandons(sessions, until);
   const lead = sessions.filter((s) => s.form === "work_request");
   const pro = sessions.filter((s) => s.form === "pro_registration");
 

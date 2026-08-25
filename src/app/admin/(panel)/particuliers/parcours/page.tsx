@@ -28,6 +28,13 @@ interface IntentRow {
   conversionPercent: number;
 }
 
+interface StepTimeRow {
+  key: string;
+  label: string;
+  samples: number;
+  medianSeconds: number;
+}
+
 interface FunnelSessionRow {
   sessionShort: string;
   startedAt: string;
@@ -38,7 +45,10 @@ interface FunnelSessionRow {
   guestMode?: boolean;
   utmContent?: string;
   utmSource?: string;
+  utmCampaign?: string;
   utmTerm?: string;
+  device?: string;
+  adsClick?: boolean;
   gaSent: boolean;
 }
 
@@ -53,8 +63,12 @@ interface FormFunnelSide {
   byVariant: CountRow[];
   byUtmContent: CountRow[];
   byUtmSource: CountRow[];
+  byUtmCampaign: IntentRow[];
   byUtmTerm: IntentRow[];
   byWorkCategory: IntentRow[];
+  byDevice: IntentRow[];
+  byAdsMismatch: IntentRow[];
+  stepTimes: StepTimeRow[];
   recent: FunnelSessionRow[];
 }
 
@@ -71,6 +85,19 @@ const VARIANT_LABELS: Record<string, string> = {
   default: "Métier précoche",
   general: "Plusieurs métiers",
 };
+
+const DEVICE_LABELS: Record<string, string> = {
+  mobile: "Téléphone",
+  tablet: "Tablette",
+  desktop: "Ordinateur",
+};
+
+function formatMedian(seconds: number) {
+  if (seconds < 60) return `${seconds} s`;
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return sec === 0 ? `${min} min` : `${min} min ${sec} s`;
+}
 
 function formatWhen(iso: string) {
   try {
@@ -211,6 +238,45 @@ function IntentTable({
   );
 }
 
+function StepTimeTable({ rows }: { rows: StepTimeRow[] }) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <h3 className="font-semibold text-slate-900">Temps médian par étape</h3>
+      <p className="mt-1 text-sm text-slate-500">
+        Entre l&apos;ouverture de l&apos;étape et la validation ou l&apos;abandon.
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-500">
+          Pas encore de durées : elles s&apos;enregistrent aux prochaines visites.
+        </p>
+      ) : (
+        <table className="mt-3 w-full text-left text-sm">
+          <thead className="text-xs uppercase text-slate-400">
+            <tr>
+              <th className="pb-2 font-medium">Étape</th>
+              <th className="pb-2 text-right font-medium">Médiane</th>
+              <th className="pb-2 text-right font-medium">Mesures</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <td className="py-2 text-slate-700">{row.label}</td>
+                <td className="py-2 text-right tabular-nums font-medium">
+                  {formatMedian(row.medianSeconds)}
+                </td>
+                <td className="py-2 text-right tabular-nums text-slate-500">
+                  {row.samples}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
   return (
     <div className="space-y-6">
@@ -255,6 +321,44 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
             empty="Pas encore de métier enregistré sur cette période."
             rows={side.byWorkCategory ?? []}
           />
+          <IntentTable
+            title="Campagnes (utm_campaign)"
+            hint="Nom de campagne Google Ads, souvent la ville (ex. loc-bailleul)."
+            empty="Aucune campagne UTM pour l’instant."
+            rows={side.byUtmCampaign ?? []}
+          />
+          <IntentTable
+            title="Téléphone / ordinateur"
+            hint="Largeur d’écran à l’ouverture du formulaire."
+            empty="Pas encore de ventilation appareil."
+            rows={side.byDevice ?? []}
+          />
+        </div>
+      )}
+
+      {form === "lead" && (
+        <IntentTable
+          title="Pub vs métier coché"
+          hint="Ils sont arrivés via une annonce métier, puis ont choisi autre chose."
+          empty="Aucun écart pub / métier pour l’instant."
+          rows={side.byAdsMismatch ?? []}
+        />
+      )}
+
+      {form === "pro" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <IntentTable
+            title="Téléphone / ordinateur"
+            hint="Largeur d’écran à l’ouverture du formulaire."
+            empty="Pas encore de ventilation appareil."
+            rows={side.byDevice ?? []}
+          />
+          <IntentTable
+            title="Campagnes (utm_campaign)"
+            hint="UTM campagne si l’artisan vient d’une pub."
+            empty="Aucune campagne UTM pour l’instant."
+            rows={side.byUtmCampaign ?? []}
+          />
         </div>
       )}
 
@@ -273,6 +377,8 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
         </div>
       </section>
 
+      {form === "lead" && <StepTimeTable rows={side.stepTimes ?? []} />}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <CountTable
           title="Dernière étape atteinte"
@@ -280,7 +386,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
           rows={side.lastStep}
         />
         <CountTable
-          title="Abandons (fermeture de page)"
+          title="Abandons"
           empty="Aucun abandon enregistré."
           rows={side.abandons}
         />
@@ -372,7 +478,10 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                           : null,
                         row.guestMode ? "Invité" : null,
                         row.utmContent ? `pub ${row.utmContent}` : null,
+                        row.utmCampaign ? row.utmCampaign : null,
                         row.utmTerm ? `mot-clé « ${row.utmTerm} »` : null,
+                        row.device ? DEVICE_LABELS[row.device] ?? row.device : null,
+                        row.adsClick ? "clic Ads" : null,
                         row.gaSent ? "GA" : null,
                       ]
                         .filter(Boolean)

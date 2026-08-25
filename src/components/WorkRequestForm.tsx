@@ -47,12 +47,14 @@ import BanAddressAutocomplete, {
 } from "@/components/BanAddressAutocomplete";
 import {
   ANALYTICS_EVENT,
+  bindFormLeaveListeners,
   leadFormDescriptionErrorCode,
   leadFormNafErrorCode,
   leadFormParams,
   leadFormPhotoErrorCode,
   leadFormPricingErrorCode,
   leadFormStepId,
+  sanitizeWorkCategoryParam,
   trackEvent,
   trackLeadFormConversion,
 } from "@/lib/analytics-events";
@@ -214,6 +216,12 @@ export default function WorkRequestForm({
   const statusRef = useRef(status);
   const categoryRef = useRef(category);
   const unknownTradeRef = useRef(unknownTrade);
+  const adsCategoryRef = useRef(
+    sanitizeWorkCategoryParam({
+      workCategory: initialCategory,
+      unknownTrade: startUnknown,
+    })
+  );
   const stepEnteredAtRef = useRef(Date.now());
   const abandonSentRef = useRef(false);
   stepRef.current = step;
@@ -228,6 +236,7 @@ export default function WorkRequestForm({
         guestMode,
         workCategory: categoryRef.current || undefined,
         unknownTrade: unknownTradeRef.current,
+        adsCategory: adsCategoryRef.current,
       },
       extra
     );
@@ -288,9 +297,8 @@ export default function WorkRequestForm({
   }, [step, variant, guestMode]);
 
   useEffect(() => {
-    const onPageHide = () => {
+    return bindFormLeaveListeners(() => {
       if (abandonSentRef.current || statusRef.current === "success") return;
-      abandonSentRef.current = true;
       const current = stepRef.current;
       trackEvent(
         ANALYTICS_EVENT.LEAD_FORM_ABANDON,
@@ -300,9 +308,7 @@ export default function WorkRequestForm({
           time_on_step_ms: Math.max(0, Date.now() - stepEnteredAtRef.current),
         })
       );
-    };
-    window.addEventListener("pagehide", onPageHide);
-    return () => window.removeEventListener("pagehide", onPageHide);
+    });
   }, [variant, guestMode]);
 
   useEffect(() => {
@@ -645,9 +651,11 @@ export default function WorkRequestForm({
     }
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_STEP_COMPLETE,
-      leadTrack(
-        { step_id: leadFormStepId(step), step_index: step }
-      )
+      leadTrack({
+        step_id: leadFormStepId(step),
+        step_index: step,
+        time_on_step_ms: Math.max(0, Date.now() - stepEnteredAtRef.current),
+      })
     );
     if (step < 4) goToStep((step + 1) as FormStep);
   }
