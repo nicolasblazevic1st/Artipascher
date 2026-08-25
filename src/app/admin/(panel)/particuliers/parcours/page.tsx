@@ -20,6 +20,14 @@ interface CountRow {
   events: number;
 }
 
+interface IntentRow {
+  key: string;
+  label: string;
+  sessions: number;
+  submitted: number;
+  conversionPercent: number;
+}
+
 interface FunnelSessionRow {
   sessionShort: string;
   startedAt: string;
@@ -45,6 +53,8 @@ interface FormFunnelSide {
   byVariant: CountRow[];
   byUtmContent: CountRow[];
   byUtmSource: CountRow[];
+  byUtmTerm: IntentRow[];
+  byWorkCategory: IntentRow[];
   recent: FunnelSessionRow[];
 }
 
@@ -152,6 +162,55 @@ function CountTable({
   );
 }
 
+function IntentTable({
+  title,
+  hint,
+  empty,
+  rows,
+}: {
+  title: string;
+  hint: string;
+  empty: string;
+  rows: IntentRow[];
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <h3 className="font-semibold text-slate-900">{title}</h3>
+      <p className="mt-1 text-sm text-slate-500">{hint}</p>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-500">{empty}</p>
+      ) : (
+        <table className="mt-3 w-full text-left text-sm">
+          <thead className="text-xs uppercase text-slate-400">
+            <tr>
+              <th className="pb-2 font-medium">Libellé</th>
+              <th className="pb-2 text-right font-medium">Visites</th>
+              <th className="pb-2 text-right font-medium">Demandes</th>
+              <th className="pb-2 text-right font-medium">Conv.</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <td className="py-2 text-slate-700">{row.label}</td>
+                <td className="py-2 text-right tabular-nums font-medium">
+                  {row.sessions}
+                </td>
+                <td className="py-2 text-right tabular-nums text-slate-700">
+                  {row.submitted}
+                </td>
+                <td className="py-2 text-right tabular-nums text-slate-500">
+                  {row.conversionPercent} %
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
   return (
     <div className="space-y-6">
@@ -181,6 +240,23 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
           </p>
         </div>
       </div>
+
+      {form === "lead" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <IntentTable
+            title="Mots-clés Google"
+            hint="Mot-clé de l’annonce qui a matché (pas forcément la requête tapée). Classé par nombre de visites."
+            empty="Aucun mot-clé réel pour l’instant. Ils arrivent dès qu’un clic Search envoie utm_term avec {keyword} remplacé (suffixe d’URL Google Ads)."
+            rows={side.byUtmTerm ?? []}
+          />
+          <IntentTable
+            title="Métiers choisis"
+            hint="Ce que la personne a coché à l’étape 1 — y compris hors pub. Meilleur signal de demande réelle."
+            empty="Pas encore de métier enregistré sur cette période."
+            rows={side.byWorkCategory ?? []}
+          />
+        </div>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h3 className="font-semibold text-slate-900">Jusqu&apos;où vont-ils ?</h3>
@@ -296,7 +372,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                           : null,
                         row.guestMode ? "Invité" : null,
                         row.utmContent ? `pub ${row.utmContent}` : null,
-                        row.utmTerm ? row.utmTerm : null,
+                        row.utmTerm ? `mot-clé « ${row.utmTerm} »` : null,
                         row.gaSent ? "GA" : null,
                       ]
                         .filter(Boolean)

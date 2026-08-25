@@ -4,6 +4,9 @@
  * First-party ingest always runs (no PII: no name, email, phone, address, SIRET, free text).
  */
 
+import { isWorkCategory } from "@/lib/work-categories";
+import { cleanTrackingParam } from "@/lib/utm";
+
 declare global {
   interface Window {
     dataLayer?: unknown[];
@@ -41,6 +44,13 @@ export type FormStepId = LeadFormStepId;
 export type LeadFormStepIndex = 1 | 2 | 3 | 4;
 export type WorkRequestFormVariant = "default" | "general";
 
+export type LeadFormAnalyticsCtx = {
+  variant: WorkRequestFormVariant;
+  guestMode: boolean;
+  workCategory?: string;
+  unknownTrade?: boolean;
+};
+
 export type ProFormSectionId =
   | "siret_verify"
   | "identity"
@@ -77,6 +87,7 @@ export const ANALYTICS_PARAM_KEYS = new Set([
   "utm_campaign",
   "utm_content",
   "utm_term",
+  "work_category",
 ]);
 
 const FUNNEL_SESSION_PREFIX = "nap_funnel_sid:";
@@ -119,6 +130,18 @@ export function isAnalyticsEventName(value: string): value is AnalyticsEventName
   return ANALYTICS_EVENT_NAMES.has(value);
 }
 
+/** Allowlisted métier only — never free-text project description. */
+export function sanitizeWorkCategoryParam(input: {
+  workCategory?: string;
+  unknownTrade?: boolean;
+}): string | undefined {
+  if (input.unknownTrade) return "unknown";
+  const raw = input.workCategory?.trim();
+  if (!raw) return undefined;
+  if (raw === "unknown") return "unknown";
+  return isWorkCategory(raw) ? raw : undefined;
+}
+
 export function sanitizeAnalyticsParams(
   params?: AnalyticsParams | Record<string, unknown>
 ): Record<string, GtagParamValue> {
@@ -137,7 +160,14 @@ export function sanitizeAnalyticsParams(
       continue;
     }
     if (typeof value === "string") {
-      const trimmed = value.trim().slice(0, 120);
+      if (key === "work_category") {
+        const category = sanitizeWorkCategoryParam({ workCategory: value });
+        if (category) cleaned[key] = category;
+        continue;
+      }
+      const trimmed = key.startsWith("utm_")
+        ? cleanTrackingParam(value)
+        : value.trim().slice(0, 120);
       if (trimmed) cleaned[key] = trimmed;
     }
   }
@@ -193,9 +223,13 @@ function readCachedUtm(): Record<string, string> {
     const params = new URLSearchParams(window.location.search);
     const utm: Record<string, string> = {};
     for (const key of UTM_KEYS) {
-      const value = params.get(key)?.trim().slice(0, 120);
+      const value = cleanTrackingParam(params.get(key));
       if (value) utm[key] = value;
     }
+    const keyword =
+      cleanTrackingParam(params.get("keyword")) ??
+      cleanTrackingParam(params.get("kwd"));
+    if (!utm.utm_term && keyword) utm.utm_term = keyword;
     sessionStorage.setItem(FUNNEL_UTM_KEY, JSON.stringify(utm));
     return utm;
   } catch {
@@ -249,9 +283,7 @@ export function trackEvent(name: string, params?: AnalyticsParams): void {
   }
 }
 
-export function trackLeadFormConversion(
-  ctx?: { variant: WorkRequestFormVariant; guestMode: boolean }
-): void {
+export function trackLeadFormConversion(ctx?: LeadFormAnalyticsCtx): void {
   trackEvent(
     ANALYTICS_EVENT.SUBMIT_LEAD_FORM,
     ctx ? leadFormParams(ctx) : { form_name: "work_request" }
@@ -259,13 +291,15 @@ export function trackLeadFormConversion(
 }
 
 export function leadFormParams(
-  ctx: { variant: WorkRequestFormVariant; guestMode: boolean },
+  ctx: LeadFormAnalyticsCtx,
   extra?: AnalyticsParams
 ): AnalyticsParams {
+  const workCategory = sanitizeWorkCategoryParam(ctx);
   return {
     form_name: "work_request",
     form_variant: ctx.variant,
     guest_mode: ctx.guestMode,
+    ...(workCategory ? { work_category: workCategory } : {}),
     ...extra,
   };
 }
