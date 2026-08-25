@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteLogo from "@/components/SiteLogo";
+import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 const NAV_LINKS = [
   { href: "/particulier", label: "Particulier" },
@@ -121,7 +122,7 @@ export default function Header() {
             </Link>
 
             <BetaAwareLink
-              href="/travaux"
+              href={WORK_REQUEST_FORM_PATH}
               className="flex items-center gap-1.5 rounded-lg bg-accent-500 px-2.5 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-accent-600 xl:px-4 xl:py-2 xl:text-base"
             >
               <HammerIcon className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
@@ -165,7 +166,7 @@ export default function Header() {
               </Link>
 
               <BetaAwareLink
-                href="/travaux"
+                href={WORK_REQUEST_FORM_PATH}
                 className="flex items-center gap-2 rounded-lg bg-accent-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-600"
                 onClick={() => setMobileOpen(false)}
               >

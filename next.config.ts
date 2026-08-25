@@ -5,10 +5,9 @@ const nextConfig: NextConfig = {
     return [
       { source: "/encheres", destination: "/offres", permanent: true },
       { source: "/encheres/:id", destination: "/offres/:id", permanent: true },
-      { source: "/devis-travaux", destination: "/travaux", permanent: true },
       {
-        source: "/particulier/demande",
-        destination: "/travaux",
+        source: "/devis-travaux",
+        destination: "/particulier/demande",
         permanent: true,
       },
     ];
