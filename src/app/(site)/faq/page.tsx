@@ -38,7 +38,7 @@ export default function FaqPage() {
           ou 62.
         </p>
         <BetaAwareLink
-          href="/particulier"
+          href="/travaux"
           className="mt-4 inline-block text-sm font-semibold text-brand-700"
         >
           Demander des travaux →

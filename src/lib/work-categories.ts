@@ -140,6 +140,27 @@ export type AdsWorkQuery = {
   keyword?: string | null;
 };
 
+function firstParam(
+  value: string | string[] | null | undefined
+): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+/** Query string Google Ads / landing → champs de matching. */
+export function adsWorkQueryFromParams(params: {
+  category?: string | string[];
+  utm_content?: string | string[];
+  utm_term?: string | string[];
+  keyword?: string | string[];
+}): AdsWorkQuery {
+  return {
+    category: firstParam(params.category),
+    utmContent: firstParam(params.utm_content),
+    utmTerm: firstParam(params.utm_term),
+    keyword: firstParam(params.keyword),
+  };
+}
+
 /** Catch-all admin / SMS quand le particulier ne sait pas le métier. */
 export const GENERAL_WORK_CATEGORY: WorkCategory = "Rénovation complète";
 
@@ -166,19 +187,41 @@ function adsQueryBlob(input: AdsWorkQuery): string {
 }
 
 /**
- * Mot-clé générique (« travaux », « devis travaux ») sans métier précis.
- * Dans ce cas on ouvre le formulaire général, pas une landing plomberie/peinture.
+ * Recherche vague d’artisan / de travaux, sans métier dans la requête.
+ * Ex. « trouver un artisan », « artisan pas de calais », « devis travaux ».
  */
 export function isGenericWorkSearch(input: AdsWorkQuery): boolean {
   if (resolveWorkCategoryFromAdsQuery(input)) return false;
   const blob = adsQueryBlob(input);
   if (!blob) return false;
   const tokens = new Set(blob.split(" "));
-  if (tokens.has("travaux") || tokens.has("devis")) return true;
+  if (
+    tokens.has("travaux") ||
+    tokens.has("devis") ||
+    tokens.has("renovation") ||
+    tokens.has("renovations")
+  ) {
+    return true;
+  }
+  if (tokens.has("artisan") || tokens.has("artisans")) return true;
   return (
-    blob === "artisan" ||
-    blob === "artisans" ||
-    blob.includes("artisan batiment") ||
+    blob.includes("mise en relation") ||
     blob.includes("entreprise batiment")
   );
+}
+
+export type AdsFormPrefill = {
+  category?: WorkCategory;
+  unknownTrade: boolean;
+};
+
+/**
+ * Métier dans le mot-clé / UTM → catégorie précochée.
+ * Recherche vague d’artisan → « Je ne sais pas / plusieurs métiers ».
+ */
+export function resolveAdsFormPrefill(input: AdsWorkQuery): AdsFormPrefill {
+  const category = resolveWorkCategoryFromAdsQuery(input);
+  if (category) return { category, unknownTrade: false };
+  if (isGenericWorkSearch(input)) return { unknownTrade: true };
+  return { unknownTrade: false };
 }

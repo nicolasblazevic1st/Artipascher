@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
       { source: "/encheres", destination: "/offres", permanent: true },
       { source: "/encheres/:id", destination: "/offres/:id", permanent: true },
       { source: "/devis-travaux", destination: "/travaux", permanent: true },
+      {
+        source: "/particulier/demande",
+        destination: "/travaux",
+        permanent: true,
+      },
     ];
   },
 };
