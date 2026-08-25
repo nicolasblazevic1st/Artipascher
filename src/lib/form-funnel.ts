@@ -8,6 +8,7 @@ import {
   sanitizeAnalyticsParams,
   type GtagParamValue,
 } from "@/lib/analytics-events";
+import { cleanTrackingParam, keywordGroupKey } from "@/lib/utm";
 
 const DB_PATH = path.join(process.cwd(), "data", "form-funnel.json");
 const MAX_EVENTS = 25_000;
@@ -44,6 +45,14 @@ export interface CountRow {
   events: number;
 }
 
+export interface IntentRow {
+  key: string;
+  label: string;
+  sessions: number;
+  submitted: number;
+  conversionPercent: number;
+}
+
 export interface FunnelSessionRow {
   sessionShort: string;
   startedAt: string;
@@ -69,6 +78,8 @@ export interface FormFunnelSide {
   byVariant: CountRow[];
   byUtmContent: CountRow[];
   byUtmSource: CountRow[];
+  byUtmTerm: IntentRow[];
+  byWorkCategory: IntentRow[];
   recent: FunnelSessionRow[];
 }
 
@@ -260,6 +271,7 @@ interface SessionAgg {
   utmContent?: string;
   utmSource?: string;
   utmTerm?: string;
+  workCategory?: string;
   lastSection?: string;
   sections: Set<string>;
   rcsAttempt: boolean;
@@ -292,6 +304,54 @@ function toCountRows(
       events: row.events,
     }))
     .sort((a, b) => b.sessions - a.sessions || b.events - a.events);
+}
+
+function toIntentRows(
+  sessions: SessionAgg[],
+  pick: (session: SessionAgg) => { key: string; label: string } | undefined
+): IntentRow[] {
+  const map = new Map<
+    string,
+    { label: string; labelCounts: Map<string, number>; ids: Set<string>; submitted: Set<string> }
+  >();
+  for (const session of sessions) {
+    const picked = pick(session);
+    if (!picked) continue;
+    const row =
+      map.get(picked.key) ?? {
+        label: picked.label,
+        labelCounts: new Map<string, number>(),
+        ids: new Set<string>(),
+        submitted: new Set<string>(),
+      };
+    row.ids.add(session.id);
+    if (session.submitted) row.submitted.add(session.id);
+    row.labelCounts.set(
+      picked.label,
+      (row.labelCounts.get(picked.label) ?? 0) + 1
+    );
+    map.set(picked.key, row);
+  }
+  return [...map.entries()]
+    .map(([key, row]) => {
+      let label = row.label;
+      let best = 0;
+      for (const [candidate, count] of row.labelCounts) {
+        if (count > best) {
+          best = count;
+          label = candidate;
+        }
+      }
+      return {
+        key,
+        label,
+        sessions: row.ids.size,
+        submitted: row.submitted.size,
+        conversionPercent: percent(row.submitted.size, row.ids.size),
+      };
+    })
+    .sort((a, b) => b.sessions - a.sessions || b.submitted - a.submitted)
+    .slice(0, 40);
 }
 
 function funnelSteps(
@@ -327,6 +387,8 @@ function emptySide(): FormFunnelSide {
     byVariant: [],
     byUtmContent: [],
     byUtmSource: [],
+    byUtmTerm: [],
+    byWorkCategory: [],
     recent: [],
   };
 }
@@ -432,6 +494,22 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
     byVariant: toCountRows(variants, VARIANT_LABELS),
     byUtmContent: toCountRows(utmContent, {}),
     byUtmSource: toCountRows(utmSource, {}),
+    byUtmTerm: toIntentRows(sessions, (s) => {
+      if (!s.utmTerm) return undefined;
+      const key = keywordGroupKey(s.utmTerm);
+      if (!key) return undefined;
+      return { key, label: s.utmTerm };
+    }),
+    byWorkCategory: toIntentRows(sessions, (s) => {
+      if (!s.workCategory) return undefined;
+      return {
+        key: s.workCategory,
+        label:
+          s.workCategory === "unknown"
+            ? "Je ne sais pas / plusieurs métiers"
+            : s.workCategory,
+      };
+    }),
     recent: sessions
       .slice()
       .sort((a, b) => b.lastAt - a.lastAt)
@@ -542,6 +620,8 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
     byVariant: [],
     byUtmContent: [],
     byUtmSource: toCountRows(utmSource, {}),
+    byUtmTerm: [],
+    byWorkCategory: [],
     recent: sessions
       .slice()
       .sort((a, b) => b.lastAt - a.lastAt)
@@ -604,12 +684,14 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
     if (variant) session.variant = variant;
     const guest = asBoolean(event.params.guest_mode);
     if (guest !== undefined) session.guestMode = guest;
-    const utmContent = asString(event.params.utm_content);
+    const utmContent = cleanTrackingParam(asString(event.params.utm_content));
     if (utmContent) session.utmContent = utmContent;
-    const utmSource = asString(event.params.utm_source);
+    const utmSource = cleanTrackingParam(asString(event.params.utm_source));
     if (utmSource) session.utmSource = utmSource;
-    const utmTerm = asString(event.params.utm_term);
+    const utmTerm = cleanTrackingParam(asString(event.params.utm_term));
     if (utmTerm) session.utmTerm = utmTerm;
+    const workCategory = asString(event.params.work_category);
+    if (workCategory) session.workCategory = workCategory;
 
     const stepIndex = asNumber(event.params.step_index);
     if (

@@ -1,3 +1,5 @@
+import { cleanTrackingParam } from "@/lib/utm";
+
 /** Catégories de travaux proposées aux particuliers (demande de prix / enchères). */
 export const WORK_CATEGORIES = [
   "Peinture",
@@ -143,7 +145,8 @@ export type AdsWorkQuery = {
 function firstParam(
   value: string | string[] | null | undefined
 ): string | undefined {
-  return typeof value === "string" && value.trim() ? value : undefined;
+  const raw = Array.isArray(value) ? value[0] : value;
+  return cleanTrackingParam(typeof raw === "string" ? raw : undefined);
 }
 
 /** Query string Google Ads / landing → champs de matching. */

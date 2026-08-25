@@ -212,10 +212,26 @@ export default function WorkRequestForm({
 
   const stepRef = useRef(step);
   const statusRef = useRef(status);
+  const categoryRef = useRef(category);
+  const unknownTradeRef = useRef(unknownTrade);
   const stepEnteredAtRef = useRef(Date.now());
   const abandonSentRef = useRef(false);
   stepRef.current = step;
   statusRef.current = status;
+  categoryRef.current = category;
+  unknownTradeRef.current = unknownTrade;
+
+  function leadTrack(extra?: Parameters<typeof leadFormParams>[1]) {
+    return leadFormParams(
+      {
+        variant,
+        guestMode,
+        workCategory: categoryRef.current || undefined,
+        unknownTrade: unknownTradeRef.current,
+      },
+      extra
+    );
+  }
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
@@ -251,7 +267,7 @@ export default function WorkRequestForm({
       if (cancelled) return;
       trackEvent(
         ANALYTICS_EVENT.LEAD_FORM_START,
-        leadFormParams({ variant, guestMode })
+        leadTrack()
       );
     }, 0);
     return () => {
@@ -265,8 +281,7 @@ export default function WorkRequestForm({
     stepEnteredAtRef.current = Date.now();
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_STEP_VIEW,
-      leadFormParams(
-        { variant, guestMode },
+      leadTrack(
         { step_id: leadFormStepId(step), step_index: step }
       )
     );
@@ -279,14 +294,11 @@ export default function WorkRequestForm({
       const current = stepRef.current;
       trackEvent(
         ANALYTICS_EVENT.LEAD_FORM_ABANDON,
-        leadFormParams(
-          { variant, guestMode },
-          {
-            step_id: leadFormStepId(current),
-            step_index: current,
-            time_on_step_ms: Math.max(0, Date.now() - stepEnteredAtRef.current),
-          }
-        )
+        leadTrack({
+          step_id: leadFormStepId(current),
+          step_index: current,
+          time_on_step_ms: Math.max(0, Date.now() - stepEnteredAtRef.current),
+        })
       );
     };
     window.addEventListener("pagehide", onPageHide);
@@ -445,7 +457,7 @@ export default function WorkRequestForm({
     setOtpMessage(data.message ?? "Code envoyé par SMS.");
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_OTP_SENT,
-      leadFormParams({ variant, guestMode })
+      leadTrack()
     );
   }
 
@@ -473,7 +485,7 @@ export default function WorkRequestForm({
     setOtpMessage("Mobile vérifié.");
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_OTP_VERIFIED,
-      leadFormParams({ variant, guestMode })
+      leadTrack()
     );
   }
 
@@ -597,8 +609,7 @@ export default function WorkRequestForm({
   function trackLeadValidationError(stepIndex: FormStep, errorCode: string) {
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_VALIDATION_ERROR,
-      leadFormParams(
-        { variant, guestMode },
+      leadTrack(
         {
           step_id: leadFormStepId(stepIndex),
           step_index: stepIndex,
@@ -611,8 +622,7 @@ export default function WorkRequestForm({
   function trackLeadStepBack(from: FormStep, to: FormStep) {
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_STEP_BACK,
-      leadFormParams(
-        { variant, guestMode },
+      leadTrack(
         {
           from_step: leadFormStepId(from),
           to_step: leadFormStepId(to),
@@ -635,8 +645,7 @@ export default function WorkRequestForm({
     }
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_STEP_COMPLETE,
-      leadFormParams(
-        { variant, guestMode },
+      leadTrack(
         { step_id: leadFormStepId(step), step_index: step }
       )
     );
@@ -662,8 +671,7 @@ export default function WorkRequestForm({
 
     trackEvent(
       ANALYTICS_EVENT.LEAD_FORM_SUBMIT_ATTEMPT,
-      leadFormParams(
-        { variant, guestMode },
+      leadTrack(
         { step_id: leadFormStepId(4), step_index: 4 }
       )
     );
@@ -858,7 +866,12 @@ export default function WorkRequestForm({
     const body = (await res.json()) as { id?: string; guest?: boolean };
     statusRef.current = "success";
     abandonSentRef.current = true;
-    trackLeadFormConversion({ variant, guestMode });
+    trackLeadFormConversion({
+      variant,
+      guestMode,
+      workCategory: category || undefined,
+      unknownTrade,
+    });
     setCreatedRequestId(body.id ?? null);
     setSubmittedContact({
       email: String(formData.get("email") ?? "").trim(),
