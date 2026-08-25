@@ -679,8 +679,8 @@ export default function AdminListingEditor({ request, backHref }: Props) {
               }
             >
               <option value="any">Indifférent</option>
-              <option value="true">Uniquement 5 ans et +</option>
-              <option value="false">Uniquement moins de 5 ans</option>
+              <option value="true">Uniquement 2 ans et +</option>
+              <option value="false">Uniquement moins de 2 ans</option>
             </select>
           </label>
           <label className="block text-sm">

@@ -1,7 +1,7 @@
 /**
  * Recherche artisans autour d’un chantier (base acquisition locale).
  * Filtres obligatoires : status active + NAF de l’annonce.
- * Tri : distance croissante. Cohortes âge entreprise < / ≥ 5 ans.
+ * Tri : distance croissante. Cohortes âge entreprise < / ≥ 2 ans.
  */
 
 import { listArtisans } from "./artisans-db";
@@ -22,8 +22,10 @@ import {
 } from "./naf-trade-groups";
 import type { WorkRequest } from "./store-types";
 
-/** Seuil client / campagnes : « 0 à 5 » (< 5 ans) vs « 5+ » (≥ 5 ans). */
-export const COMPANY_AGE_THRESHOLD_YEARS = 5;
+/** Seuil client / campagnes : « jeune » (< 2 ans) vs « établi » (≥ 2 ans). */
+export const COMPANY_AGE_THRESHOLD_YEARS = 2;
+export const COMPANY_AGE_YOUNG_SHORT = `0–${COMPANY_AGE_THRESHOLD_YEARS} ans`;
+export const COMPANY_AGE_ESTABLISHED_SHORT = `${COMPANY_AGE_THRESHOLD_YEARS}+`;
 export const COMPANY_AGE_THRESHOLD_MS =
   COMPANY_AGE_THRESHOLD_YEARS * 365.25 * 24 * 60 * 60 * 1000;
 
@@ -69,7 +71,7 @@ export interface SearchArtisansForChantierResult {
   artisans: ChantierArtisanRow[];
 }
 
-/** SIRENE fournit presque toujours la date ; si absente → traité comme 5+ (≥ seuil). */
+/** SIRENE fournit presque toujours la date ; si absente → traité comme établi (≥ seuil). */
 export function companyAgeCohort(companyCreatedAt?: string): CompanyAgeCohort {
   if (!companyCreatedAt) return "established";
   const t = new Date(companyCreatedAt).getTime();

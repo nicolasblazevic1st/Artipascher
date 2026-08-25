@@ -2,7 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { NafCodeLabel, NafCodeList } from "@/components/NafCodeLabel";
-import type { CompanyAgeCohort } from "@/lib/artisans-for-chantier";
+import {
+  COMPANY_AGE_ESTABLISHED_SHORT,
+  COMPANY_AGE_YOUNG_SHORT,
+  type CompanyAgeCohort,
+} from "@/lib/artisans-for-chantier";
 import { formatNafList } from "@/lib/naf-trade-groups";
 
 interface ArtisanRow {
@@ -52,8 +56,8 @@ interface ContactTargets {
 }
 
 const AGE_LABELS: Record<CompanyAgeCohort, string> = {
-  young: "0–5 ans",
-  established: "5+",
+  young: COMPANY_AGE_YOUNG_SHORT,
+  established: COMPANY_AGE_ESTABLISHED_SHORT,
 };
 
 interface Props {
@@ -204,8 +208,8 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
             className="ml-1 rounded border border-slate-300 bg-white px-2 py-1 text-xs"
           >
             <option value="all">Tous</option>
-            <option value="young">0–5 ans</option>
-            <option value="established">5+</option>
+            <option value="young">{COMPANY_AGE_YOUNG_SHORT}</option>
+            <option value="established">{COMPANY_AGE_ESTABLISHED_SHORT}</option>
           </select>
         </label>
         <label className="text-xs text-slate-600">
@@ -331,10 +335,10 @@ export default function NearbyBusinessesPanel({ requestId, category }: Props) {
               <strong>{stats.total}</strong> trouvés
             </span>
             <span>
-              0–5 ans : <strong>{stats.young}</strong>
+              {COMPANY_AGE_YOUNG_SHORT} : <strong>{stats.young}</strong>
             </span>
             <span>
-              5+ : <strong>{stats.established}</strong>
+              {COMPANY_AGE_ESTABLISHED_SHORT} : <strong>{stats.established}</strong>
             </span>
             <span>
               avec tél. : <strong>{stats.withPhone}</strong>

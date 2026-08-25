@@ -172,9 +172,9 @@ export default function AdminDemandesPage() {
                     <div>
                       Ancienneté :{" "}
                       {r.preferEstablishedCompany === true
-                        ? "uniquement 5+"
+                        ? "uniquement 2 ans et plus"
                         : r.preferEstablishedCompany === false
-                          ? "uniquement 0–5 ans"
+                          ? "uniquement moins de 2 ans"
                           : "âge non précisé"}
                     </div>
                     <div>

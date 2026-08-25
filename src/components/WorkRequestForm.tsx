@@ -1449,10 +1449,10 @@ export default function WorkRequestForm({
             />
             <span>
               <span className="font-semibold text-slate-900">
-                5 ans et plus (5+)
+                2 ans ou plus d&apos;ancienneté
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Uniquement des entreprises créées il y a 5 ans ou plus.
+                Uniquement des entreprises créées il y a 2 ans ou plus.
               </span>
             </span>
           </label>

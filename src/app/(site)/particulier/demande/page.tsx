@@ -13,7 +13,7 @@ import {
 export const metadata: Metadata = {
   title: "Demande de travaux — Sans compte obligatoire",
   description:
-    "Décrivez votre chantier en 2 minutes. Des artisans du Nord et du Pas-de-Calais vous recontactent. Gratuit, sans compte.",
+    "Décrivez votre chantier en 2 minutes. Des artisans du Nord et du Pas-de-Calais vous recontactent. Gratuit, sans commission.",
   alternates: { canonical: "/particulier/demande" },
 };
 
@@ -59,8 +59,8 @@ export default async function PublicDemandePage({
           Décrivez votre projet
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Gratuit, sans compte. Des artisans du Nord et du Pas-de-Calais vous
-          recontactent — en général sous 24&nbsp;h.
+          Gratuit, sans commission. Des artisans du Nord et du Pas-de-Calais vous
+          recontactent — en général sous 24–48&nbsp;h.
         </p>
 
         {beta ? (

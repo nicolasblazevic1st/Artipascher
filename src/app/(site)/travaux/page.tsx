@@ -14,7 +14,7 @@ import {
 export const metadata: Metadata = {
   title: "Demande de travaux — Nord et Pas-de-Calais",
   description:
-    "Décrivez vos travaux, même si vous ne savez pas le métier. Des artisans vérifiés du 59 et du 62 vous recontactent. Gratuit, sans compte.",
+    "Décrivez vos travaux, même si vous ne savez pas le métier. Des artisans vérifiés du 59 et du 62 vous recontactent. Gratuit, sans commission.",
   alternates: { canonical: "/travaux" },
   keywords: [
     "travaux",
@@ -65,8 +65,8 @@ export default async function TravauxPage({
         </h1>
         <p className="mt-2 text-sm text-slate-600">
           Peinture, plomberie, toiture ou plusieurs choses à la fois : décrivez
-          simplement. Gratuit, sans compte. Des professionnels du Nord et du
-          Pas-de-Calais vous recontactent — en général sous 24&nbsp;h.
+          simplement. Gratuit, sans commission. Des professionnels du Nord et du
+          Pas-de-Calais vous recontactent — en général sous 24–48&nbsp;h.
         </p>
 
         {beta ? (

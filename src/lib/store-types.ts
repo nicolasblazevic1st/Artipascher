@@ -378,8 +378,8 @@ export interface WorkRequest {
   maxContactArtisans?: number;
   /**
    * Ancienneté d'entreprise exigée pour les contacts / SMS :
-   * - true : uniquement 5+ (≥ 5 ans)
-   * - false : uniquement 0 à 5 ans (&lt; 5 ans) — anciennes demandes
+   * - true : uniquement ≥ 2 ans
+   * - false : uniquement < 2 ans — anciennes demandes
    * - undefined : indifférent (pas de filtre d'âge)
    */
   preferEstablishedCompany?: boolean;

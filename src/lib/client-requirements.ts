@@ -3,6 +3,7 @@
  */
 
 import { parseMinGoogleRating } from "./google-rating";
+import { COMPANY_AGE_THRESHOLD_YEARS } from "./artisans-for-chantier";
 import type { WorkRequest } from "./store-types";
 
 export type ClientRequirementSource = Pick<
@@ -55,9 +56,9 @@ export function listVisibleClientRequirements(
   }
 
   if (request.preferEstablishedCompany === true) {
-    items.push("Entreprise créée il y a 5 ans ou plus (5+)");
+    items.push(`Entreprise créée il y a ${COMPANY_AGE_THRESHOLD_YEARS} ans ou plus`);
   } else if (request.preferEstablishedCompany === false) {
-    items.push("Entreprise créée il y a moins de 5 ans (0 à 5)");
+    items.push(`Entreprise créée il y a moins de ${COMPANY_AGE_THRESHOLD_YEARS} ans`);
   }
 
   const minRating = parseMinGoogleRating(request.minGoogleRating);
