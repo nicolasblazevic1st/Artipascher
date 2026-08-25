@@ -1,9 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import HelpTooltip from "@/components/HelpTooltip";
 import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
+import {
+  ANALYTICS_EVENT,
+  isProFormSectionId,
+  proFormParams,
+  trackEvent,
+  type ProFormSectionId,
+  type ProRcsFailureReason,
+} from "@/lib/analytics-events";
 import {
   PRO_REGISTRATION_COMPARTMENTS,
   PRO_REGISTRATION_DOCUMENTS,
@@ -45,6 +53,16 @@ export default function ProRegistrationForm() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
+  const statusRef = useRef(status);
+  const abandonSentRef = useRef(false);
+  const seenSectionsRef = useRef(new Set<ProFormSectionId>());
+  const lastSectionRef = useRef<ProFormSectionId>("siret_verify");
+  const fieldsEnabledRef = useRef(false);
+  statusRef.current = status;
+
+  const fieldsEnabled = verification?.valid;
+  fieldsEnabledRef.current = Boolean(fieldsEnabled);
+
   const activeGroupIds = useMemo(
     () =>
       GROUPED_QUALIBAT_JOBS.filter(({ group }) => selectedGroups[group.id]).map(
@@ -52,6 +70,61 @@ export default function ProRegistrationForm() {
       ),
     [selectedGroups]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const id = window.setTimeout(() => {
+      if (cancelled) return;
+      trackEvent(ANALYTICS_EVENT.PRO_FORM_START, proFormParams());
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onPageHide = () => {
+      if (abandonSentRef.current || statusRef.current === "success") return;
+      abandonSentRef.current = true;
+      trackEvent(
+        ANALYTICS_EVENT.PRO_FORM_ABANDON,
+        proFormParams({
+          section_id: lastSectionRef.current,
+          fields_enabled: fieldsEnabledRef.current,
+        })
+      );
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, []);
+
+  function noteProSection(target: EventTarget | null) {
+    if (!(target instanceof Element)) return;
+    const raw = target.closest("[data-pro-section]")?.getAttribute("data-pro-section");
+    if (!raw || !isProFormSectionId(raw)) return;
+    lastSectionRef.current = raw;
+    if (seenSectionsRef.current.has(raw)) return;
+    seenSectionsRef.current.add(raw);
+    trackEvent(
+      ANALYTICS_EVENT.PRO_FORM_SECTION_VIEW,
+      proFormParams({ section_id: raw })
+    );
+  }
+
+  function trackProValidationError(errorCode: string) {
+    trackEvent(
+      ANALYTICS_EVENT.PRO_FORM_VALIDATION_ERROR,
+      proFormParams({ error_code: errorCode })
+    );
+  }
+
+  function trackProRcsFailure(reason: ProRcsFailureReason) {
+    trackEvent(
+      ANALYTICS_EVENT.PRO_FORM_RCS_VERIFY_FAILURE,
+      proFormParams({ reason })
+    );
+  }
 
   function resetTradeSelection() {
     setSelectedGroups({});
@@ -95,6 +168,8 @@ export default function ProRegistrationForm() {
   }
 
   async function handleVerifyRcs() {
+    trackEvent(ANALYTICS_EVENT.PRO_FORM_RCS_VERIFY_ATTEMPT, proFormParams());
+    lastSectionRef.current = "siret_verify";
     setError(null);
     const normalized = normalizeSiret(siret);
 
@@ -102,6 +177,7 @@ export default function ProRegistrationForm() {
       setError("SIRET invalide. Saisissez 14 chiffres (ex. 552 100 554 00013).");
       setVerification(null);
       setStatus("error");
+      trackProRcsFailure("invalid");
       return;
     }
 
@@ -123,6 +199,7 @@ export default function ProRegistrationForm() {
         resetTradeSelection();
         setError(data.error ?? "Vérification RCS échouée.");
         setStatus("error");
+        trackProRcsFailure("invalid");
         return;
       }
 
@@ -130,9 +207,11 @@ export default function ProRegistrationForm() {
       if (data.companyName) setCompanyName(data.companyName);
       applyRegisteredActivities(data);
       setStatus("verified");
+      trackEvent(ANALYTICS_EVENT.PRO_FORM_RCS_VERIFY_SUCCESS, proFormParams());
     } catch {
       setError("Impossible de contacter le registre du commerce.");
       setStatus("error");
+      trackProRcsFailure("network");
     }
   }
 
@@ -143,22 +222,27 @@ export default function ProRegistrationForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    lastSectionRef.current = "submit";
+    trackEvent(ANALYTICS_EVENT.PRO_FORM_SUBMIT_ATTEMPT, proFormParams());
 
     if (!verification?.valid) {
       setError("Vous devez d'abord vérifier votre SIRET au registre du commerce.");
       setStatus("error");
+      trackProValidationError("rcs_not_verified");
       return;
     }
 
     if (password !== passwordConfirm) {
       setError("Les mots de passe ne correspondent pas.");
       setStatus("error");
+      trackProValidationError("password_mismatch");
       return;
     }
 
     if (activeGroupIds.length === 0) {
       setError("Cochez au moins un corps de métier.");
       setStatus("error");
+      trackProValidationError("no_trade_group");
       return;
     }
 
@@ -166,6 +250,7 @@ export default function ProRegistrationForm() {
       if (!jobByGroup[groupId]) {
         setError("Choisissez un métier Qualibat pour chaque corps de métier coché.");
         setStatus("error");
+        trackProValidationError("missing_qualibat_job");
         return;
       }
     }
@@ -180,6 +265,7 @@ export default function ProRegistrationForm() {
     if (!tradeSelections) {
       setError("Sélection métier invalide. Vérifiez vos choix.");
       setStatus("error");
+      trackProValidationError("invalid_trade_selection");
       return;
     }
 
@@ -199,6 +285,11 @@ export default function ProRegistrationForm() {
           }`
         );
         setStatus("error");
+        trackProValidationError(
+          decennaleError === "Fichier manquant."
+            ? "missing_guarantee_document"
+            : "invalid_guarantee_document"
+        );
         return;
       }
     }
@@ -207,6 +298,11 @@ export default function ProRegistrationForm() {
     if (documentsError) {
       setError(documentsError);
       setStatus("error");
+      trackProValidationError(
+        documentsError.includes("obligatoire") || documentsError.includes("manquant")
+          ? "missing_documents"
+          : "invalid_document"
+      );
       return;
     }
 
@@ -256,16 +352,22 @@ export default function ProRegistrationForm() {
       return;
     }
 
+    statusRef.current = "success";
+    abandonSentRef.current = true;
+    trackEvent(ANALYTICS_EVENT.PRO_FORM_SUBMIT_SUCCESS, proFormParams());
     setStatus("success");
   }
 
   const inputClass =
     "w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
 
-  const fieldsEnabled = verification?.valid;
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      onFocus={(e) => noteProSection(e.target)}
+      onClick={(e) => noteProSection(e.target)}
+      className="space-y-4"
+    >
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-semibold">Accès réservé aux entreprises inscrites au RCS</p>
         <p className="mt-1 text-amber-800">
@@ -276,7 +378,7 @@ export default function ProRegistrationForm() {
         </p>
       </div>
 
-      <div>
+      <div data-pro-section="siret_verify">
         <label htmlFor="siret" className="mb-1 block text-sm font-medium text-slate-700">
           Numéro SIRET <span className="text-red-500">*</span>
         </label>
@@ -355,36 +457,38 @@ export default function ProRegistrationForm() {
         </p>
       )}
 
-      <input
-        type="text"
-        placeholder="Nom de l'entreprise"
-        value={companyName}
-        onChange={(e) => setCompanyName(e.target.value)}
-        className={inputClass}
-        required={fieldsEnabled}
-        readOnly={!!verification?.companyName}
-        disabled={!fieldsEnabled}
-      />
+      <div className="space-y-4" data-pro-section="identity">
+        <input
+          type="text"
+          placeholder="Nom de l'entreprise"
+          value={companyName}
+          onChange={(e) => setCompanyName(e.target.value)}
+          className={inputClass}
+          required={fieldsEnabled}
+          readOnly={!!verification?.companyName}
+          disabled={!fieldsEnabled}
+        />
 
-      <input
-        type="email"
-        placeholder="Email professionnel"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className={inputClass}
-        required={fieldsEnabled}
-        disabled={!fieldsEnabled}
-      />
+        <input
+          type="email"
+          placeholder="Email professionnel"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className={inputClass}
+          required={fieldsEnabled}
+          disabled={!fieldsEnabled}
+        />
 
-      <input
-        type="tel"
-        placeholder="Téléphone"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className={inputClass}
-        required={fieldsEnabled}
-        disabled={!fieldsEnabled}
-      />
+        <input
+          type="tel"
+          placeholder="Téléphone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className={inputClass}
+          required={fieldsEnabled}
+          disabled={!fieldsEnabled}
+        />
+      </div>
 
       <section
         className={`rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4 ${
@@ -400,7 +504,7 @@ export default function ProRegistrationForm() {
           </p>
         </div>
 
-        <fieldset disabled={!fieldsEnabled}>
+        <fieldset disabled={!fieldsEnabled} data-pro-section="trades_groups">
           <legend className="mb-2 block text-sm font-medium text-slate-700">
             1. Corps de métier <span className="text-red-500">*</span>
           </legend>
@@ -434,7 +538,7 @@ export default function ProRegistrationForm() {
         </fieldset>
 
         {activeGroupIds.length > 0 && (
-          <div className="space-y-3 border-t border-slate-200 pt-4">
+          <div className="space-y-3 border-t border-slate-200 pt-4" data-pro-section="trades_qualibat">
             <p className="text-sm font-medium text-slate-700">
               2. Métier Qualibat par corps de métier{" "}
               <span className="text-red-500">*</span>
@@ -477,7 +581,10 @@ export default function ProRegistrationForm() {
         )}
       </section>
 
-      <section className={`space-y-4 ${!fieldsEnabled ? "opacity-60" : ""}`}>
+      <section
+        className={`space-y-4 ${!fieldsEnabled ? "opacity-60" : ""}`}
+        data-pro-section="documents"
+      >
         <div>
           <h3 className="text-sm font-semibold text-slate-900">
             Documents obligatoires
@@ -650,59 +757,63 @@ export default function ProRegistrationForm() {
         })}
       </section>
 
-      <div>
-        <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
-          Mot de passe <span className="text-red-500">*</span>
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className={inputClass}
-          placeholder="Min. 8 caractères, lettre et chiffre"
-          required={fieldsEnabled}
-          minLength={8}
-          disabled={!fieldsEnabled}
-          autoComplete="new-password"
-        />
+      <div className="space-y-4" data-pro-section="password">
+        <div>
+          <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
+            Mot de passe <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={inputClass}
+            placeholder="Min. 8 caractères, lettre et chiffre"
+            required={fieldsEnabled}
+            minLength={8}
+            disabled={!fieldsEnabled}
+            autoComplete="new-password"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="passwordConfirm"
+            className="mb-1 block text-sm font-medium text-slate-700"
+          >
+            Confirmer le mot de passe <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="passwordConfirm"
+            type="password"
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            className={inputClass}
+            placeholder="Retapez le mot de passe"
+            required={fieldsEnabled}
+            minLength={8}
+            disabled={!fieldsEnabled}
+            autoComplete="new-password"
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Ce mot de passe servira à vous connecter à votre espace pro.
+          </p>
+        </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="passwordConfirm"
-          className="mb-1 block text-sm font-medium text-slate-700"
+      <div data-pro-section="submit">
+        <button
+          type="submit"
+          disabled={!fieldsEnabled || status === "submitting" || status === "success"}
+          className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Confirmer le mot de passe <span className="text-red-500">*</span>
-        </label>
-        <input
-          id="passwordConfirm"
-          type="password"
-          value={passwordConfirm}
-          onChange={(e) => setPasswordConfirm(e.target.value)}
-          className={inputClass}
-          placeholder="Retapez le mot de passe"
-          required={fieldsEnabled}
-          minLength={8}
-          disabled={!fieldsEnabled}
-          autoComplete="new-password"
-        />
-        <p className="mt-1 text-xs text-slate-500">
-          Ce mot de passe servira à vous connecter à votre espace pro.
-        </p>
+          {status === "submitting"
+            ? "Inscription en cours…"
+            : status === "success"
+              ? "Inscription envoyée"
+              : "Finaliser mon inscription"}
+        </button>
       </div>
-
-      <button
-        type="submit"
-        disabled={!fieldsEnabled || status === "submitting" || status === "success"}
-        className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {status === "submitting"
-          ? "Inscription en cours…"
-          : status === "success"
-            ? "Inscription envoyée"
-            : "Finaliser mon inscription"}
-      </button>
 
       {status === "success" && (
         <div className="space-y-2 text-center text-sm text-emerald-700">

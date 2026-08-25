@@ -15,13 +15,6 @@ const GA_MEASUREMENT_ID =
 const GOOGLE_ADS_ID =
   process.env.NEXT_PUBLIC_GOOGLE_ADS_ID ?? "AW-18373726951";
 
-declare global {
-  interface Window {
-    dataLayer?: unknown[];
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
 function applyAnalyticsConsent(granted: boolean) {
   if (typeof window.gtag !== "function") return;
   window.gtag("consent", "update", {
