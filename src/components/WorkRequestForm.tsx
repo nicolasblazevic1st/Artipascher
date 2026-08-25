@@ -45,8 +45,17 @@ import type { ClientKind, WorkScope } from "@/lib/store-types";
 import BanAddressAutocomplete, {
   type SelectedBanAddress,
 } from "@/components/BanAddressAutocomplete";
-
-const LEAD_FORM_CONVERSION_EVENT = "manual_event_SUBMIT_LEAD_FORM";
+import {
+  ANALYTICS_EVENT,
+  leadFormDescriptionErrorCode,
+  leadFormNafErrorCode,
+  leadFormParams,
+  leadFormPhotoErrorCode,
+  leadFormPricingErrorCode,
+  leadFormStepId,
+  trackEvent,
+  trackLeadFormConversion,
+} from "@/lib/analytics-events";
 
 function buildDescriptionPrefill(input: {
   category: string;
@@ -92,11 +101,6 @@ const PROPERTY_TYPES = [
   { id: "autre", label: "Autre" },
 ] as const;
 type PropertyTypeId = (typeof PROPERTY_TYPES)[number]["id"];
-
-function trackLeadFormConversion() {
-  if (typeof window.gtag !== "function") return;
-  window.gtag("event", LEAD_FORM_CONVERSION_EVENT);
-}
 
 export interface WorkRequestFormDefaults {
   firstName: string;
@@ -206,6 +210,13 @@ export default function WorkRequestForm({
   const [propertyType, setPropertyType] = useState<PropertyTypeId | "">("");
   const [unknownTrade, setUnknownTrade] = useState(startUnknown);
 
+  const stepRef = useRef(step);
+  const statusRef = useRef(status);
+  const stepEnteredAtRef = useRef(Date.now());
+  const abandonSentRef = useRef(false);
+  stepRef.current = step;
+  statusRef.current = status;
+
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
   const nafOptions = category ? getNafOptionsForCategory(category) : [];
   const requiresNafChoice = nafOptions.length > 1;
@@ -233,6 +244,54 @@ export default function WorkRequestForm({
     }, 1000);
     return () => window.clearInterval(id);
   }, [otpCooldown]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const id = window.setTimeout(() => {
+      if (cancelled) return;
+      trackEvent(
+        ANALYTICS_EVENT.LEAD_FORM_START,
+        leadFormParams({ variant, guestMode })
+      );
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [variant, guestMode]);
+
+  useEffect(() => {
+    if (statusRef.current === "success") return;
+    stepEnteredAtRef.current = Date.now();
+    trackEvent(
+      ANALYTICS_EVENT.LEAD_FORM_STEP_VIEW,
+      leadFormParams(
+        { variant, guestMode },
+        { step_id: leadFormStepId(step), step_index: step }
+      )
+    );
+  }, [step, variant, guestMode]);
+
+  useEffect(() => {
+    const onPageHide = () => {
+      if (abandonSentRef.current || statusRef.current === "success") return;
+      abandonSentRef.current = true;
+      const current = stepRef.current;
+      trackEvent(
+        ANALYTICS_EVENT.LEAD_FORM_ABANDON,
+        leadFormParams(
+          { variant, guestMode },
+          {
+            step_id: leadFormStepId(current),
+            step_index: current,
+            time_on_step_ms: Math.max(0, Date.now() - stepEnteredAtRef.current),
+          }
+        )
+      );
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [variant, guestMode]);
 
   useEffect(() => {
     if (descriptionTouched) return;
@@ -384,6 +443,10 @@ export default function WorkRequestForm({
       setOtpCooldown(data.cooldownSeconds);
     }
     setOtpMessage(data.message ?? "Code envoyé par SMS.");
+    trackEvent(
+      ANALYTICS_EVENT.LEAD_FORM_OTP_SENT,
+      leadFormParams({ variant, guestMode })
+    );
   }
 
   async function verifyPhoneOtp() {
@@ -408,6 +471,10 @@ export default function WorkRequestForm({
     if (data.phoneDisplay) setPhone(data.phoneDisplay);
     setOtpCode("");
     setOtpMessage("Mobile vérifié.");
+    trackEvent(
+      ANALYTICS_EVENT.LEAD_FORM_OTP_VERIFIED,
+      leadFormParams({ variant, guestMode })
+    );
   }
 
   function syncDescriptionLength(value: string) {
@@ -456,11 +523,20 @@ export default function WorkRequestForm({
     setError(null);
   }
 
-  function validateCurrentStep(current: FormStep): string | null {
+  function currentStepValidation(
+    current: FormStep
+  ): { message: string; code: string } | null {
     if (current === 1) {
-      if (!category) return "Choisissez le type de travaux.";
+      if (!category) {
+        return { message: "Choisissez le type de travaux.", code: "category_required" };
+      }
       const nafCheck = validateWorkRequestNafSelection(category, selectedNafCodes);
-      if (!nafCheck.ok) return nafCheck.error;
+      if (!nafCheck.ok) {
+        return {
+          message: nafCheck.error,
+          code: leadFormNafErrorCode(nafCheck.error),
+        };
+      }
       const pricingCheck = validatePricingSelection({
         pricingTier,
         workOptionId: workOptionId || undefined,
@@ -470,31 +546,79 @@ export default function WorkRequestForm({
             : undefined,
         nafCodes: nafCheck.nafCodes,
       });
-      if (!pricingCheck.ok) return pricingCheck.error;
+      if (!pricingCheck.ok) {
+        return {
+          message: pricingCheck.error,
+          code: leadFormPricingErrorCode(pricingCheck.error),
+        };
+      }
       return null;
     }
 
     if (current === 2) {
-      if (!propertyType) return "Indiquez le type de bien.";
+      if (!propertyType) {
+        return { message: "Indiquez le type de bien.", code: "property_type_required" };
+      }
       if (clientKind === "company" && !companyVerification?.valid) {
-        return "Vérifiez le SIRET de l'entreprise pour continuer.";
+        return {
+          message: "Vérifiez le SIRET de l'entreprise pour continuer.",
+          code: "company_siret_not_verified",
+        };
       }
       if (clientKind === "copropriete" && !workScope) {
-        return "Précisez si ce sont les parties communes ou un lot privatif.";
+        return {
+          message: "Précisez si ce sont les parties communes ou un lot privatif.",
+          code: "work_scope_required",
+        };
       }
       if (!selectedAddress?.banAddressId) {
-        return "Indiquez l'adresse du chantier et choisissez une suggestion.";
+        return {
+          message: "Indiquez l'adresse du chantier et choisissez une suggestion.",
+          code: "address_required",
+        };
       }
       return null;
     }
 
     if (current === 3) {
       const descError = validateDescription(getDescriptionValue());
-      if (descError) return descError;
+      if (descError) {
+        return {
+          message: descError,
+          code: leadFormDescriptionErrorCode(descError),
+        };
+      }
       return null;
     }
 
     return null;
+  }
+
+  function trackLeadValidationError(stepIndex: FormStep, errorCode: string) {
+    trackEvent(
+      ANALYTICS_EVENT.LEAD_FORM_VALIDATION_ERROR,
+      leadFormParams(
+        { variant, guestMode },
+        {
+          step_id: leadFormStepId(stepIndex),
+          step_index: stepIndex,
+          error_code: errorCode,
+        }
+      )
+    );
+  }
+
+  function trackLeadStepBack(from: FormStep, to: FormStep) {
+    trackEvent(
+      ANALYTICS_EVENT.LEAD_FORM_STEP_BACK,
+      leadFormParams(
+        { variant, guestMode },
+        {
+          from_step: leadFormStepId(from),
+          to_step: leadFormStepId(to),
+        }
+      )
+    );
   }
 
   function goToStep(next: FormStep) {
@@ -503,16 +627,28 @@ export default function WorkRequestForm({
   }
 
   function goNext() {
-    const message = validateCurrentStep(step);
-    if (message) {
-      setError(message);
+    const invalid = currentStepValidation(step);
+    if (invalid) {
+      setError(invalid.message);
+      trackLeadValidationError(step, invalid.code);
       return;
     }
+    trackEvent(
+      ANALYTICS_EVENT.LEAD_FORM_STEP_COMPLETE,
+      leadFormParams(
+        { variant, guestMode },
+        { step_id: leadFormStepId(step), step_index: step }
+      )
+    );
     if (step < 4) goToStep((step + 1) as FormStep);
   }
 
   function goBack() {
-    if (step > 1) goToStep((step - 1) as FormStep);
+    if (step > 1) {
+      const next = (step - 1) as FormStep;
+      trackLeadStepBack(step, next);
+      goToStep(next);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -524,10 +660,19 @@ export default function WorkRequestForm({
       return;
     }
 
+    trackEvent(
+      ANALYTICS_EVENT.LEAD_FORM_SUBMIT_ATTEMPT,
+      leadFormParams(
+        { variant, guestMode },
+        { step_id: leadFormStepId(4), step_index: 4 }
+      )
+    );
+
     const descError = validateDescription(getDescriptionValue());
     if (descError) {
       setError(descError);
       setStatus("error");
+      trackLeadValidationError(4, leadFormDescriptionErrorCode(descError));
       return;
     }
 
@@ -535,6 +680,7 @@ export default function WorkRequestForm({
     if (photosError) {
       setError(photosError);
       setStatus("error");
+      trackLeadValidationError(4, leadFormPhotoErrorCode(photosError));
       return;
     }
 
@@ -545,6 +691,7 @@ export default function WorkRequestForm({
         "Sélectionnez votre adresse dans la liste officielle (Base Adresse Nationale)."
       );
       setStatus("error");
+      trackLeadValidationError(4, "address_required");
       return;
     }
 
@@ -552,11 +699,13 @@ export default function WorkRequestForm({
     if (!phoneValue) {
       setError("Le numéro de téléphone est obligatoire.");
       setStatus("error");
+      trackLeadValidationError(4, "phone_required");
       return;
     }
     if (!normalizeFrenchMobile(phoneValue)) {
       setError("Indiquez un mobile français valide (06 ou 07).");
       setStatus("error");
+      trackLeadValidationError(4, "phone_invalid");
       return;
     }
 
@@ -564,6 +713,7 @@ export default function WorkRequestForm({
       if (!companyVerification?.valid) {
         setError("Vérifiez le SIRET de votre entreprise avant d'envoyer.");
         setStatus("error");
+        trackLeadValidationError(4, "company_siret_not_verified");
         return;
       }
     }
@@ -573,6 +723,7 @@ export default function WorkRequestForm({
         "Indiquez si les travaux concernent les parties communes ou un lot privatif."
       );
       setStatus("error");
+      trackLeadValidationError(4, "work_scope_required");
       return;
     }
 
@@ -581,12 +732,14 @@ export default function WorkRequestForm({
         "Vous devez accepter les CGU / CGV pour autoriser la mise en contact avec les artisans."
       );
       setStatus("error");
+      trackLeadValidationError(4, "terms_not_accepted");
       return;
     }
 
     if (!category) {
       setError("Choisissez un type de travaux.");
       setStatus("error");
+      trackLeadValidationError(4, "category_required");
       return;
     }
 
@@ -594,6 +747,7 @@ export default function WorkRequestForm({
     if (!nafCheck.ok) {
       setError(nafCheck.error);
       setStatus("error");
+      trackLeadValidationError(4, leadFormNafErrorCode(nafCheck.error));
       return;
     }
 
@@ -609,6 +763,7 @@ export default function WorkRequestForm({
     if (!pricingCheck.ok) {
       setError(pricingCheck.error);
       setStatus("error");
+      trackLeadValidationError(4, leadFormPricingErrorCode(pricingCheck.error));
       return;
     }
 
@@ -701,6 +856,8 @@ export default function WorkRequestForm({
     }
 
     const body = (await res.json()) as { id?: string; guest?: boolean };
+    statusRef.current = "success";
+    abandonSentRef.current = true;
     trackLeadFormConversion();
     setCreatedRequestId(body.id ?? null);
     setSubmittedContact({
@@ -815,7 +972,10 @@ export default function WorkRequestForm({
                 <button
                   type="button"
                   onClick={() => {
-                    if (item.id < step) goToStep(item.id);
+                    if (item.id < step) {
+                      trackLeadStepBack(step, item.id);
+                      goToStep(item.id);
+                    }
                   }}
                   disabled={item.id > step}
                   className={`w-full rounded-lg px-2 py-2 text-center text-xs font-medium ${
