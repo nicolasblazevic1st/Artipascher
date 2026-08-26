@@ -1,7 +1,8 @@
 /**
  * Consent-aware GA4 events + first-party form funnel (admin).
  * GA no-ops when gtag is absent (consent refused / SSR).
- * First-party ingest always runs (no PII: no name, email, phone, address, SIRET, free text).
+ * First-party ingest always runs (no PII: no name, email, phone, address, SIRET).
+ * Form text drafts go to a separate admin-only endpoint, never to Google Analytics.
  */
 
 import { isWorkCategory } from "@/lib/work-categories";
@@ -100,6 +101,7 @@ const FUNNEL_SESSION_PREFIX = "nap_funnel_sid:";
 const FUNNEL_UTM_KEY = "nap_funnel_utm";
 const FUNNEL_ADS_CLICK_KEY = "nap_funnel_ads_click";
 const FUNNEL_INGEST_PATH = "/api/analytics/events";
+const FUNNEL_DRAFT_PATH = "/api/analytics/form-draft";
 const UTM_KEYS = [
   "utm_source",
   "utm_medium",
@@ -356,6 +358,37 @@ function ingestFirstPartyEvent(
     // fall through to fetch
   }
   void fetch(FUNNEL_INGEST_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {});
+}
+
+/** Admin-only: keep "Autre" / description typed in the lead form. Never sent to GA. */
+export function saveLeadFormDraft(input: {
+  workCategory?: string;
+  unknownTrade?: boolean;
+  otherWork?: string;
+  description?: string;
+}): void {
+  if (typeof window === "undefined") return;
+  const otherWork = input.otherWork?.trim() ?? "";
+  const description = input.description?.trim() ?? "";
+  if (!otherWork && !description) return;
+  const payload = JSON.stringify({
+    sessionId: getOrCreateFunnelSessionId("work_request"),
+    workCategory: sanitizeWorkCategoryParam(input),
+    ...(otherWork ? { otherWork: otherWork.slice(0, 200) } : {}),
+    ...(description ? { description: description.slice(0, 2000) } : {}),
+  });
+  try {
+    const blob = new Blob([payload], { type: "application/json" });
+    if (navigator.sendBeacon(FUNNEL_DRAFT_PATH, blob)) return;
+  } catch {
+    // fall through to fetch
+  }
+  void fetch(FUNNEL_DRAFT_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: payload,

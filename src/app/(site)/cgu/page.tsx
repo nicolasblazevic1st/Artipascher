@@ -261,8 +261,9 @@ export default function CguPage() {
           / prospects), à partir de <strong>sources publiques</strong>{" "} et/ou
           d&apos;un enrichissement (SIRET, NAF, ville, téléphone), pour
           signaler des chantiers ou inviter à s&apos;inscrire sur la Plateforme.
-          Cette prospection B2B peut prendre la forme de <strong>SMS</strong>{" "}
-          et/ou d&apos;<strong>appels téléphoniques</strong>.
+          Cette prospection B2B peut prendre la forme de <strong>SMS</strong>,
+          d&apos;<strong>emails</strong>{" "} et/ou d&apos;
+          <strong>appels téléphoniques</strong>.
         </p>
 
         <h3 className="mt-4">8.1 Prospection par SMS</h3>
@@ -277,7 +278,8 @@ export default function CguPage() {
           </li>
           <li>
             les SMS marketing sont transmis via le prestataire technique{" "}
-            <strong>OVH SMS</strong>{" "} ; dès qu&apos;un envoi est effectivement
+            <strong>OVH SMS</strong>{" "} et, en secours, via{" "}
+            <strong>Brevo</strong>{" "} ; dès qu&apos;un envoi est effectivement
             soumis à ce prestataire, le message est pris en charge pour
             livraison (sous réserve des règles du réseau) ;
           </li>
@@ -339,6 +341,34 @@ export default function CguPage() {
           service une fois le Professionnel inscrit (compte, support, alertes
           de chantier).
         </p>
+
+        <h3 className="mt-4">8.3 Prospection par email (B2B)</h3>
+        <p className="mt-3">
+          L&apos;Éditeur peut adresser des{" "}
+          <strong>emails d&apos;information professionnelle</strong>{" "} à des
+          entreprises du bâtiment (Professionnels inscrits ou prospects dont
+          l&apos;email est connu), pour signaler des chantiers ou présenter la
+          Plateforme. Cette prospection relève de l&apos;intérêt légitime B2B,
+          avec droit d&apos;opposition.
+        </p>
+        <ul>
+          <li>
+            les envois marketing ne transitent{" "}
+            <strong>pas</strong> par l&apos;offre MX Plan OVH ; ils sont
+            acheminés via un prestataire d&apos;emailing (
+            <strong>Brevo</strong>) ;
+          </li>
+          <li>
+            chaque message comporte un{" "}
+            <strong>lien de désinscription</strong> ; l&apos;opposition est
+            enregistrée et respectée ;
+          </li>
+          <li>
+            les emails transactionnels (confirmation de compte, mot de passe,
+            alertes liées à un chantier) restent distincts et peuvent continuer
+            d&apos;être envoyés après une désinscription marketing.
+          </li>
+        </ul>
       </section>
 
       <section>

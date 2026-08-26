@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClientIp } from "@/lib/request-client";
-import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { appendFormFunnelEvent } from "@/lib/form-funnel";
+import { upsertFormFunnelDraft } from "@/lib/form-funnel";
 
 const WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 60;
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
   let body: unknown;
   try {
     const text = await request.text();
-    if (!text || text.length > 8_192) {
+    if (!text || text.length > 6_144) {
       return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
     }
     body = JSON.parse(text) as unknown;
@@ -67,20 +66,21 @@ export async function POST(request: NextRequest) {
 
   const payload = body as {
     sessionId?: unknown;
-    name?: unknown;
-    params?: unknown;
-    gaSent?: unknown;
+    workCategory?: unknown;
+    otherWork?: unknown;
+    description?: unknown;
   };
 
-  const result = await appendFormFunnelEvent({
+  const result = await upsertFormFunnelDraft({
     sessionId: typeof payload.sessionId === "string" ? payload.sessionId : "",
-    name: typeof payload.name === "string" ? payload.name : "",
-    params:
-      payload.params && typeof payload.params === "object"
-        ? (payload.params as Record<string, unknown>)
+    workCategory:
+      typeof payload.workCategory === "string"
+        ? payload.workCategory
         : undefined,
-    gaSent: payload.gaSent === true,
-    internal: await isAdminAuthenticated(),
+    otherWork:
+      typeof payload.otherWork === "string" ? payload.otherWork : undefined,
+    description:
+      typeof payload.description === "string" ? payload.description : undefined,
   });
 
   if (!result.ok) {

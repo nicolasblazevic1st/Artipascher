@@ -177,46 +177,62 @@ export default function AdminListingEditor({ request, backHref }: Props) {
       return;
     }
 
-    const payload: Record<string, unknown> = {
-      firstName,
-      lastName,
-      email,
-      phone,
-      clientKind,
-      workScope: workScope || null,
-      companyName,
-      clientSiret,
-      category,
-      nafCodes: effectiveNafCodes,
-      workOptionId:
-        workOptionId ||
-        (category === request.category ? request.workOptionId : null) ||
-        null,
-      workOptionOtherDescription: workOptionOtherDescription || null,
-      pricingTier: request.pricingTier ?? null,
-      description,
-      requestedWorkStartDate: requestedWorkStartDate || null,
-      addressLine2,
-      auctionDurationHours,
-      ...(publishedAt
-        ? { reviewedAt: new Date(publishedAt).toISOString() }
-        : {}),
-      ...(published
-        ? {
-            auctionEndsAt: auctionEndsAt
-              ? new Date(auctionEndsAt).toISOString()
-              : null,
-            recalculateEndsAt,
-          }
-        : {}),
-      maxContactArtisans,
-      preferEstablishedCompany: null,
-      minGoogleRating: minGoogleRating === "" ? null : minGoogleRating,
-      requireRge,
-      isTest,
-      adminNote,
-      ...extra,
-    };
+    const payload: Record<string, unknown> = extra?.action
+      ? {
+          auctionDurationHours,
+          ...(publishedAt
+            ? { reviewedAt: new Date(publishedAt).toISOString() }
+            : {}),
+          ...(published
+            ? {
+                auctionEndsAt: auctionEndsAt
+                  ? new Date(auctionEndsAt).toISOString()
+                  : null,
+                recalculateEndsAt,
+              }
+            : {}),
+          ...extra,
+        }
+      : {
+          firstName,
+          lastName,
+          email: email.trim(),
+          phone,
+          clientKind,
+          workScope: workScope || null,
+          companyName,
+          clientSiret,
+          category,
+          nafCodes: effectiveNafCodes,
+          workOptionId:
+            workOptionId ||
+            (category === request.category ? request.workOptionId : null) ||
+            null,
+          workOptionOtherDescription: workOptionOtherDescription || null,
+          pricingTier: request.pricingTier ?? null,
+          description,
+          requestedWorkStartDate: requestedWorkStartDate || null,
+          addressLine2,
+          auctionDurationHours,
+          ...(publishedAt
+            ? { reviewedAt: new Date(publishedAt).toISOString() }
+            : {}),
+          ...(published
+            ? {
+                auctionEndsAt: auctionEndsAt
+                  ? new Date(auctionEndsAt).toISOString()
+                  : null,
+                recalculateEndsAt,
+              }
+            : {}),
+          maxContactArtisans,
+          preferEstablishedCompany: null,
+          minGoogleRating: minGoogleRating === "" ? null : minGoogleRating,
+          requireRge,
+          isTest,
+          adminNote,
+          ...extra,
+        };
 
     if (changingAddress && newAddress) {
       payload.addressLine = newAddress.addressLine;
@@ -729,6 +745,13 @@ export default function AdminListingEditor({ request, backHref }: Props) {
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h3 className="font-semibold text-slate-900">Client</h3>
+        {!request.clientId ? (
+          <p className="mt-2 text-sm text-slate-600">
+            Demande <strong>sans compte</strong> : le mobile suffit. L&apos;e-mail
+            est facultatif, tu n&apos;as pas besoin de créer d&apos;espace
+            particulier pour publier ou republier.
+          </p>
+        ) : null}
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-slate-700">Prénom</span>
@@ -739,8 +762,16 @@ export default function AdminListingEditor({ request, backHref }: Props) {
             <input className={INPUT} value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">E-mail</span>
-            <input className={INPUT} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <span className="mb-1 block font-medium text-slate-700">
+              E-mail{request.clientId ? "" : " (facultatif)"}
+            </span>
+            <input
+              className={INPUT}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={request.clientId ? "" : "Pas obligatoire sans compte"}
+            />
           </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-slate-700">Téléphone</span>

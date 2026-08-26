@@ -6,6 +6,7 @@ import {
   formNameFromAnalytics,
   isAnalyticsEventName,
   sanitizeAnalyticsParams,
+  sanitizeWorkCategoryParam,
   type GtagParamValue,
 } from "@/lib/analytics-events";
 import { cleanTrackingParam, keywordGroupKey } from "@/lib/utm";
@@ -13,8 +14,11 @@ import { resolveWorkCategoryFromAdsQuery } from "@/lib/work-categories";
 
 const DB_PATH = path.join(process.cwd(), "data", "form-funnel.json");
 const MAX_EVENTS = 25_000;
+const MAX_DRAFTS = 3_000;
 const RETENTION_DAYS = 90;
 const MAX_SESSION_ID_LEN = 64;
+const MAX_DRAFT_OTHER_LEN = 200;
+const MAX_DRAFT_DESCRIPTION_LEN = 2_000;
 
 export type FormFunnelFormName = "work_request" | "pro_registration";
 
@@ -25,10 +29,21 @@ export interface FormFunnelEvent {
   name: string;
   params: Record<string, GtagParamValue>;
   gaSent: boolean;
+  /** True when the visitor had a valid admin session cookie. */
+  internal?: boolean;
+}
+
+export interface FormFunnelDraft {
+  sessionId: string;
+  updatedAt: string;
+  workCategory?: string;
+  otherWork?: string;
+  description?: string;
 }
 
 interface FormFunnelDb {
   events: FormFunnelEvent[];
+  drafts: FormFunnelDraft[];
 }
 
 export interface FunnelStepStat {
@@ -79,6 +94,19 @@ export interface FunnelSessionRow {
   adsCategory?: string;
   keywordCategory?: string;
   gaSent: boolean;
+  otherWork?: string;
+  descriptionDraft?: string;
+  internal?: boolean;
+}
+
+export interface FunnelSavedTextRow {
+  sessionShort: string;
+  updatedAt: string;
+  workCategory?: string;
+  otherWork?: string;
+  description?: string;
+  submitted: boolean;
+  internal?: boolean;
 }
 
 export interface FormFunnelSide {
@@ -99,6 +127,7 @@ export interface FormFunnelSide {
   byAdsMismatch: IntentRow[];
   stepTimes: StepTimeRow[];
   recent: FunnelSessionRow[];
+  savedTexts: FunnelSavedTextRow[];
 }
 
 export interface FormFunnelReport {
@@ -106,11 +135,13 @@ export interface FormFunnelReport {
   since: string;
   until: string;
   totalEvents: number;
+  internalLeadSessions: number;
+  internalProSessions: number;
   lead: FormFunnelSide;
   pro: FormFunnelSide;
 }
 
-const EMPTY_DB: FormFunnelDb = { events: [] };
+const EMPTY_DB: FormFunnelDb = { events: [], drafts: [] };
 
 const LEAD_STEP_LABELS: Record<number, string> = {
   1: "Étape 1 — Travaux",
@@ -209,14 +240,38 @@ async function ensureDb(): Promise<void> {
   }
 }
 
+function clipDraftText(value: unknown, max: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const cleaned = value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")
+    .trim()
+    .slice(0, max);
+  return cleaned || undefined;
+}
+
+function isFormFunnelDraft(value: unknown): value is FormFunnelDraft {
+  if (!value || typeof value !== "object") return false;
+  const rec = value as Record<string, unknown>;
+  return (
+    typeof rec.sessionId === "string" &&
+    isValidFunnelSessionId(rec.sessionId) &&
+    typeof rec.updatedAt === "string"
+  );
+}
+
 async function readDb(): Promise<FormFunnelDb> {
   await ensureDb();
   try {
     const raw = await fs.readFile(DB_PATH, "utf-8");
     const parsed = JSON.parse(raw) as Partial<FormFunnelDb>;
-    return { events: Array.isArray(parsed.events) ? parsed.events : [] };
+    return {
+      events: Array.isArray(parsed.events) ? parsed.events : [],
+      drafts: Array.isArray(parsed.drafts)
+        ? parsed.drafts.filter(isFormFunnelDraft)
+        : [],
+    };
   } catch {
-    return { events: [] };
+    return { events: [], drafts: [] };
   }
 }
 
@@ -237,11 +292,27 @@ function pruneEvents(events: FormFunnelEvent[], now = Date.now()): FormFunnelEve
   return kept;
 }
 
+function pruneDrafts(drafts: FormFunnelDraft[], now = Date.now()): FormFunnelDraft[] {
+  const cutoff = now - RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const kept = drafts.filter((draft) => {
+    const t = Date.parse(draft.updatedAt);
+    return Number.isFinite(t) && t >= cutoff;
+  });
+  if (kept.length > MAX_DRAFTS) {
+    return kept
+      .slice()
+      .sort((a, b) => Date.parse(a.updatedAt) - Date.parse(b.updatedAt))
+      .slice(kept.length - MAX_DRAFTS);
+  }
+  return kept;
+}
+
 export async function appendFormFunnelEvent(input: {
   sessionId: string;
   name: string;
   params?: Record<string, unknown>;
   gaSent?: boolean;
+  internal?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isValidFunnelSessionId(input.sessionId)) {
     return { ok: false, error: "session invalide" };
@@ -261,11 +332,59 @@ export async function appendFormFunnelEvent(input: {
     name: input.name,
     params,
     gaSent: input.gaSent === true,
+    ...(input.internal ? { internal: true } : {}),
   };
 
   await enqueueWrite(async () => {
     const db = await readDb();
     db.events = pruneEvents([...db.events, event]);
+    db.drafts = pruneDrafts(db.drafts);
+    await writeDb(db);
+  });
+
+  return { ok: true };
+}
+
+export async function upsertFormFunnelDraft(input: {
+  sessionId: string;
+  workCategory?: string;
+  otherWork?: string;
+  description?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isValidFunnelSessionId(input.sessionId)) {
+    return { ok: false, error: "session invalide" };
+  }
+
+  const otherWork = clipDraftText(input.otherWork, MAX_DRAFT_OTHER_LEN);
+  const description = clipDraftText(
+    input.description,
+    MAX_DRAFT_DESCRIPTION_LEN
+  );
+  const workCategory = sanitizeWorkCategoryParam({
+    workCategory: input.workCategory,
+  });
+
+  if (!otherWork && !description) {
+    return { ok: true };
+  }
+
+  const now = new Date().toISOString();
+
+  await enqueueWrite(async () => {
+    const db = await readDb();
+    const drafts = pruneDrafts(db.drafts);
+    const index = drafts.findIndex((row) => row.sessionId === input.sessionId);
+    const previous = index >= 0 ? drafts[index] : undefined;
+    const next: FormFunnelDraft = {
+      sessionId: input.sessionId,
+      updatedAt: now,
+      workCategory: workCategory ?? previous?.workCategory,
+      otherWork: otherWork ?? previous?.otherWork,
+      description: description ?? previous?.description,
+    };
+    if (index >= 0) drafts[index] = next;
+    else drafts.push(next);
+    db.drafts = pruneDrafts(drafts);
     await writeDb(db);
   });
 
@@ -301,6 +420,7 @@ interface SessionAgg {
   rcsAttempt: boolean;
   rcsSuccess: boolean;
   gaSent: boolean;
+  internal?: boolean;
   errorCounts: Map<string, number>;
 }
 
@@ -482,11 +602,45 @@ function emptySide(): FormFunnelSide {
     byAdsMismatch: [],
     stepTimes: [],
     recent: [],
+    savedTexts: [],
   };
 }
 
-function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
-  if (sessions.length === 0) return emptySide();
+function toSavedTextRows(
+  sessions: SessionAgg[],
+  drafts: FormFunnelDraft[]
+): FunnelSavedTextRow[] {
+  const submittedIds = new Set(
+    sessions.filter((session) => session.submitted).map((session) => session.id)
+  );
+  const internalIds = new Set(
+    sessions.filter((session) => session.internal).map((session) => session.id)
+  );
+  const categoryById = new Map(
+    sessions.map((session) => [session.id, session.workCategory])
+  );
+  return drafts
+    .filter((draft) => Boolean(draft.otherWork || draft.description))
+    .slice()
+    .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+    .map((draft) => ({
+      sessionShort: draft.sessionId.slice(-6),
+      updatedAt: draft.updatedAt,
+      workCategory:
+        draft.workCategory ?? categoryById.get(draft.sessionId),
+      otherWork: draft.otherWork,
+      description: draft.description,
+      submitted: submittedIds.has(draft.sessionId),
+      internal: internalIds.has(draft.sessionId),
+    }));
+}
+
+function buildLeadSide(
+  sessions: SessionAgg[],
+  drafts: FormFunnelDraft[] = []
+): FormFunnelSide {
+  const savedTexts = toSavedTextRows(sessions, drafts);
+  if (sessions.length === 0) return { ...emptySide(), savedTexts };
 
   const submitted = sessions.filter((s) => s.submitted).length;
   const lastStep = new Map<string, { sessions: Set<string>; events: number }>();
@@ -529,6 +683,9 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
     "3": LEAD_STEP_LABELS[3],
     "4": LEAD_STEP_LABELS[4],
   };
+  const draftBySession = new Map(
+    drafts.map((draft) => [draft.sessionId, draft])
+  );
 
   return {
     sessions: sessions.length,
@@ -647,7 +804,11 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
         adsCategory: s.adsCategory,
         keywordCategory: sessionKeywordCategory(s),
         gaSent: s.gaSent,
+        otherWork: draftBySession.get(s.id)?.otherWork,
+        descriptionDraft: draftBySession.get(s.id)?.description,
+        internal: s.internal,
       })),
+    savedTexts,
   };
 }
 
@@ -769,7 +930,9 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
         device: s.device,
         adsClick: s.adsClick,
         gaSent: s.gaSent,
+        internal: s.internal,
       })),
+    savedTexts: [],
   };
 }
 
@@ -798,6 +961,7 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
         rcsAttempt: false,
         rcsSuccess: false,
         gaSent: false,
+        internal: false,
         errorCounts: new Map(),
         stepDurations: new Map(),
       };
@@ -811,6 +975,7 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
     }
     session.names.add(event.name);
     if (event.gaSent) session.gaSent = true;
+    if (event.internal) session.internal = true;
 
     const variant = asString(event.params.form_variant);
     if (variant) session.variant = variant;
@@ -934,7 +1099,8 @@ export function parseFunnelRangeDays(raw: string | null): 7 | 30 | 90 {
 }
 
 export async function getFormFunnelReport(
-  rangeDays: 7 | 30 | 90
+  rangeDays: 7 | 30 | 90,
+  options?: { excludeInternal?: boolean }
 ): Promise<FormFunnelReport> {
   const db = await readDb();
   const until = Date.now();
@@ -945,15 +1111,38 @@ export async function getFormFunnelReport(
   });
   const sessions = aggregateSessions(events);
   finalizeAbandons(sessions, until);
-  const lead = sessions.filter((s) => s.form === "work_request");
-  const pro = sessions.filter((s) => s.form === "pro_registration");
+  const leadAll = sessions.filter((s) => s.form === "work_request");
+  const proAll = sessions.filter((s) => s.form === "pro_registration");
+  const internalLeadSessions = leadAll.filter((s) => s.internal).length;
+  const internalProSessions = proAll.filter((s) => s.internal).length;
+  const hiddenInternalIds = new Set(
+    [...leadAll, ...proAll]
+      .filter((s) => s.internal)
+      .map((s) => s.id)
+  );
+  const lead = options?.excludeInternal
+    ? leadAll.filter((s) => !s.internal)
+    : leadAll;
+  const pro = options?.excludeInternal
+    ? proAll.filter((s) => !s.internal)
+    : proAll;
+  const drafts = pruneDrafts(db.drafts).filter((draft) => {
+    const t = Date.parse(draft.updatedAt);
+    if (!Number.isFinite(t) || t < since || t > until) return false;
+    if (options?.excludeInternal && hiddenInternalIds.has(draft.sessionId)) {
+      return false;
+    }
+    return true;
+  });
 
   return {
     rangeDays,
     since: new Date(since).toISOString(),
     until: new Date(until).toISOString(),
     totalEvents: events.length,
-    lead: buildLeadSide(lead),
+    internalLeadSessions,
+    internalProSessions,
+    lead: buildLeadSide(lead, drafts),
     pro: buildProSide(pro),
   };
 }

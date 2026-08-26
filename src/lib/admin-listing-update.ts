@@ -93,8 +93,8 @@ export async function applyAdminListingUpdate(
     patch.lastName = lastName;
   }
   if (hasField("email")) {
-    const email = asTrimmedString(body.email);
-    if (!email || !isValidEmail(email)) {
+    const email = asTrimmedString(body.email) ?? "";
+    if (email && !isValidEmail(email)) {
       return { ok: false, error: "Indiquez un e-mail valide.", status: 400 };
     }
     patch.email = email;
