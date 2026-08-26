@@ -7,6 +7,7 @@ import {
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 } from "@/lib/contact-slots";
 import { formatUnlockPriceRange } from "@/lib/pricing-tiers";
+import RgeBadge from "@/components/RgeBadge";
 
 interface InterestItem {
   id: string;
