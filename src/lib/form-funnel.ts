@@ -11,6 +11,7 @@ import {
 } from "@/lib/analytics-events";
 import { cleanTrackingParam, keywordGroupKey } from "@/lib/utm";
 import { resolveWorkCategoryFromAdsQuery } from "@/lib/work-categories";
+import { normalizeStoredClientIp } from "@/lib/request-client";
 
 const DB_PATH = path.join(process.cwd(), "data", "form-funnel.json");
 const MAX_EVENTS = 25_000;
@@ -31,6 +32,8 @@ export interface FormFunnelEvent {
   gaSent: boolean;
   /** True when the visitor had a valid admin session cookie. */
   internal?: boolean;
+  /** Client IP (server-side). Security / abuse / diagnosis. Never sent to GA. */
+  ip?: string;
 }
 
 export interface FormFunnelDraft {
@@ -39,6 +42,7 @@ export interface FormFunnelDraft {
   workCategory?: string;
   otherWork?: string;
   description?: string;
+  ip?: string;
 }
 
 interface FormFunnelDb {
@@ -97,6 +101,7 @@ export interface FunnelSessionRow {
   otherWork?: string;
   descriptionDraft?: string;
   internal?: boolean;
+  ip?: string;
 }
 
 export interface FunnelSavedTextRow {
@@ -107,6 +112,7 @@ export interface FunnelSavedTextRow {
   description?: string;
   submitted: boolean;
   internal?: boolean;
+  ip?: string;
 }
 
 export interface FormFunnelSide {
@@ -221,6 +227,10 @@ function asBoolean(value: GtagParamValue | undefined): boolean | undefined {
   return undefined;
 }
 
+function storedIp(value: unknown): string | undefined {
+  return typeof value === "string" ? normalizeStoredClientIp(value) : undefined;
+}
+
 function percent(part: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((part / total) * 1000) / 10;
@@ -259,15 +269,35 @@ function isFormFunnelDraft(value: unknown): value is FormFunnelDraft {
   );
 }
 
+function normalizeDraft(draft: FormFunnelDraft): FormFunnelDraft {
+  const ip = storedIp(draft.ip);
+  if (ip === draft.ip) return draft;
+  const next = { ...draft };
+  if (ip) next.ip = ip;
+  else delete next.ip;
+  return next;
+}
+
+function normalizeEvent(event: FormFunnelEvent): FormFunnelEvent {
+  const ip = storedIp(event.ip);
+  if (ip === event.ip) return event;
+  const next = { ...event };
+  if (ip) next.ip = ip;
+  else delete next.ip;
+  return next;
+}
+
 async function readDb(): Promise<FormFunnelDb> {
   await ensureDb();
   try {
     const raw = await fs.readFile(DB_PATH, "utf-8");
     const parsed = JSON.parse(raw) as Partial<FormFunnelDb>;
     return {
-      events: Array.isArray(parsed.events) ? parsed.events : [],
+      events: Array.isArray(parsed.events)
+        ? (parsed.events as FormFunnelEvent[]).map(normalizeEvent)
+        : [],
       drafts: Array.isArray(parsed.drafts)
-        ? parsed.drafts.filter(isFormFunnelDraft)
+        ? parsed.drafts.filter(isFormFunnelDraft).map(normalizeDraft)
         : [],
     };
   } catch {
@@ -313,6 +343,7 @@ export async function appendFormFunnelEvent(input: {
   params?: Record<string, unknown>;
   gaSent?: boolean;
   internal?: boolean;
+  ip?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isValidFunnelSessionId(input.sessionId)) {
     return { ok: false, error: "session invalide" };
@@ -324,6 +355,7 @@ export async function appendFormFunnelEvent(input: {
   const params = sanitizeAnalyticsParams(input.params);
   const formName = formNameFromAnalytics(input.name, params);
   params.form_name = formName;
+  const ip = storedIp(input.ip);
 
   const event: FormFunnelEvent = {
     id: randomBytes(8).toString("hex"),
@@ -333,6 +365,7 @@ export async function appendFormFunnelEvent(input: {
     params,
     gaSent: input.gaSent === true,
     ...(input.internal ? { internal: true } : {}),
+    ...(ip ? { ip } : {}),
   };
 
   await enqueueWrite(async () => {
@@ -350,6 +383,7 @@ export async function upsertFormFunnelDraft(input: {
   workCategory?: string;
   otherWork?: string;
   description?: string;
+  ip?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!isValidFunnelSessionId(input.sessionId)) {
     return { ok: false, error: "session invalide" };
@@ -369,6 +403,7 @@ export async function upsertFormFunnelDraft(input: {
   }
 
   const now = new Date().toISOString();
+  const ip = storedIp(input.ip);
 
   await enqueueWrite(async () => {
     const db = await readDb();
@@ -381,6 +416,7 @@ export async function upsertFormFunnelDraft(input: {
       workCategory: workCategory ?? previous?.workCategory,
       otherWork: otherWork ?? previous?.otherWork,
       description: description ?? previous?.description,
+      ...(ip ? { ip } : previous?.ip ? { ip: previous.ip } : {}),
     };
     if (index >= 0) drafts[index] = next;
     else drafts.push(next);
@@ -421,6 +457,8 @@ interface SessionAgg {
   rcsSuccess: boolean;
   gaSent: boolean;
   internal?: boolean;
+  ip?: string;
+  ipAt?: number;
   errorCounts: Map<string, number>;
 }
 
@@ -619,6 +657,11 @@ function toSavedTextRows(
   const categoryById = new Map(
     sessions.map((session) => [session.id, session.workCategory])
   );
+  const ipById = new Map(
+    sessions
+      .filter((session) => session.ip)
+      .map((session) => [session.id, session.ip])
+  );
   return drafts
     .filter((draft) => Boolean(draft.otherWork || draft.description))
     .slice()
@@ -632,6 +675,7 @@ function toSavedTextRows(
       description: draft.description,
       submitted: submittedIds.has(draft.sessionId),
       internal: internalIds.has(draft.sessionId),
+      ip: draft.ip ?? ipById.get(draft.sessionId),
     }));
 }
 
@@ -807,6 +851,7 @@ function buildLeadSide(
         otherWork: draftBySession.get(s.id)?.otherWork,
         descriptionDraft: draftBySession.get(s.id)?.description,
         internal: s.internal,
+        ip: s.ip ?? draftBySession.get(s.id)?.ip,
       })),
     savedTexts,
   };
@@ -931,6 +976,7 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
         adsClick: s.adsClick,
         gaSent: s.gaSent,
         internal: s.internal,
+        ip: s.ip,
       })),
     savedTexts: [],
   };
@@ -976,6 +1022,11 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
     session.names.add(event.name);
     if (event.gaSent) session.gaSent = true;
     if (event.internal) session.internal = true;
+    const eventIp = storedIp(event.ip);
+    if (eventIp && (session.ipAt == null || at >= session.ipAt)) {
+      session.ip = eventIp;
+      session.ipAt = at;
+    }
 
     const variant = asString(event.params.form_variant);
     if (variant) session.variant = variant;

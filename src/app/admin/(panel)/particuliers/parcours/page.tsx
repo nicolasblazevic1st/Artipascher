@@ -56,6 +56,7 @@ interface FunnelSessionRow {
   otherWork?: string;
   descriptionDraft?: string;
   internal?: boolean;
+  ip?: string;
 }
 
 interface FunnelSavedTextRow {
@@ -66,6 +67,7 @@ interface FunnelSavedTextRow {
   description?: string;
   submitted: boolean;
   internal?: boolean;
+  ip?: string;
 }
 
 interface FormFunnelSide {
@@ -181,6 +183,11 @@ function SavedTextsTable({ rows }: { rows: FunnelSavedTextRow[] }) {
                 <span className="ml-2 font-mono text-[10px] text-slate-400">
                   …{row.sessionShort}
                 </span>
+                {row.ip ? (
+                  <span className="ml-2 font-mono text-[10px] text-slate-400">
+                    {row.ip}
+                  </span>
+                ) : null}
                 {workCategoryLabel(row.workCategory) ? (
                   <span className="ml-2">{workCategoryLabel(row.workCategory)}</span>
                 ) : null}
@@ -540,8 +547,8 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h3 className="font-semibold text-slate-900">Sessions récentes</h3>
         <p className="mt-1 text-sm text-slate-500">
-          Identifiant anonyme (6 derniers caractères). Les textes saisis sont
-          dans le bloc ci-dessus.
+          Identifiant anonyme (6 derniers caractères) et adresse IP (sécurité /
+          diagnostic, 90 jours). Les textes saisis sont dans le bloc ci-dessus.
         </p>
         {side.recent.length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">Aucune session récente.</p>
@@ -553,6 +560,9 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                   <th className="py-2 pr-3 font-medium">Quand</th>
                   <th className="py-2 pr-3 font-medium">Jusqu&apos;où</th>
                   <th className="py-2 pr-3 font-medium">Résultat</th>
+                  <th className="hidden py-2 pr-3 font-medium lg:table-cell">
+                    IP
+                  </th>
                   <th className="hidden py-2 pr-3 font-medium md:table-cell">
                     Détail
                   </th>
@@ -587,6 +597,9 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                           Toi
                         </span>
                       ) : null}
+                    </td>
+                    <td className="hidden py-2 pr-3 font-mono text-[11px] text-slate-500 lg:table-cell">
+                      {row.ip ?? "—"}
                     </td>
                     <td className="hidden py-2 text-xs text-slate-500 md:table-cell">
                       {[
@@ -655,9 +668,10 @@ export default function AdminParcoursFormulairesPage() {
       <p className="text-sm text-slate-600">
         Entonnoir des balises analytics : où les gens s&apos;arrêtent dans le
         formulaire de demande, et dans l&apos;inscription artisan. Pas de nom,
-        e-mail, téléphone ni adresse. Les textes « Autre » / description sont
-        conservés 90 jours (admin seulement). Si tu es connecté à l&apos;admin
-        dans le même navigateur, tes tests sont marqués <strong>Toi</strong>.
+        e-mail, téléphone ni adresse postale. L&apos;IP est conservée 90 jours
+        (sécurité / diagnostic, admin seulement). Les textes « Autre » /
+        description aussi. Si tu es connecté à l&apos;admin dans le même
+        navigateur, tes tests sont marqués <strong>Toi</strong>.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">

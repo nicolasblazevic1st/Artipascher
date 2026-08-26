@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
       typeof payload.otherWork === "string" ? payload.otherWork : undefined,
     description:
       typeof payload.description === "string" ? payload.description : undefined,
+    ip,
   });
 
   if (!result.ok) {
