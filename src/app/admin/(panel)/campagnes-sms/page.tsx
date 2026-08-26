@@ -15,6 +15,25 @@ import type {
   SmsCohort,
 } from "@/lib/store-types";
 
+interface SearchRow {
+  workRequestId: string;
+  clientLabel: string;
+  category: string;
+  city: string;
+  department: string;
+  lastSearchAt?: string;
+  lastSentAt?: string;
+  lotCount: number;
+  smsSent: number;
+  smsFailed: number;
+  contactedCount: number;
+  lastLotSize?: number;
+  remainingReachable: number | null;
+  remainingWithoutPhone: number | null;
+  poolSize: number | null;
+  radiusKm?: number;
+}
+
 interface AcquisitionRow extends SmsAcquisitionCampaign {
   category?: string;
   city?: string;
@@ -302,10 +321,13 @@ export default function AdminSmsCampaignsPage() {
   const [campaigns, setCampaigns] = useState<SmsCampaign[]>([]);
   const [pendingReview, setPendingReview] = useState<SmsCampaign[]>([]);
   const [acquisitions, setAcquisitions] = useState<AcquisitionRow[]>([]);
+  const [searchRows, setSearchRows] = useState<SearchRow[]>([]);
   const [requests, setRequests] = useState<WorkRequestOption[]>([]);
   const [settings, setSettings] = useState<SmsCampaignSettings | null>(null);
   const [smsConfigured, setSmsConfigured] = useState(false);
   const [demoAllowed, setDemoAllowed] = useState(false);
+  const [ovhCreditsLeft, setOvhCreditsLeft] = useState<number | null>(null);
+  const [brevoSmsConfigured, setBrevoSmsConfigured] = useState(false);
   // false au 1er rendu (SSR = client) pour éviter mismatch hydration sur disabled
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -385,11 +407,15 @@ export default function AdminSmsCampaignsPage() {
       setCampaigns(data.campaigns ?? []);
       setPendingReview(data.pendingReview ?? []);
       setAcquisitions(data.acquisitions ?? []);
+      setSearchRows(data.searchRows ?? []);
       setRequests(data.requests ?? []);
       setSettings(data.settings ?? null);
-      setCampaignSize(5);
       setSmsConfigured(data.smsConfigured === true);
       setDemoAllowed(data.demoAllowed === true);
+      setOvhCreditsLeft(
+        typeof data.ovhCreditsLeft === "number" ? data.ovhCreditsLeft : null
+      );
+      setBrevoSmsConfigured(data.brevoSmsConfigured === true);
     } catch {
       setLoadError("Impossible de joindre l’API admin SMS.");
     } finally {
@@ -521,8 +547,7 @@ export default function AdminSmsCampaignsPage() {
     }
   }
 
-  async function handlePreview() {
-    if (!selectedId) return;
+  async function runPreview(workRequestId: string, size: number) {
     setPreviewLoading(true);
     setError(null);
     setSuccess(null);
@@ -530,7 +555,7 @@ export default function AdminSmsCampaignsPage() {
 
     try {
       const res = await fetch(
-        `/api/admin/sms-campaigns/preview?workRequestId=${encodeURIComponent(selectedId)}&campaignSize=${campaignSize}`
+        `/api/admin/sms-campaigns/preview?workRequestId=${encodeURIComponent(workRequestId)}&campaignSize=${size}`
       );
       const data = await res.json();
 
@@ -561,7 +586,35 @@ export default function AdminSmsCampaignsPage() {
     } finally {
       setPreviewLoading(false);
       void loadArtisanStats();
+      try {
+        const refresh = await fetch("/api/admin/sms-campaigns");
+        const data = await refresh.json();
+        if (refresh.ok) {
+          setSearchRows(data.searchRows ?? []);
+          setCampaigns(data.campaigns ?? []);
+        }
+      } catch {
+        // le tableau se mettra à jour au prochain chargement
+      }
     }
+  }
+
+  async function handlePreview() {
+    if (!selectedId) return;
+    await runPreview(selectedId, campaignSize);
+  }
+
+  async function continueFromSearch(row: SearchRow) {
+    const size = row.lastLotSize && row.lastLotSize > 0 ? row.lastLotSize : 25;
+    setSelectedId(row.workRequestId);
+    setCampaignSize(size);
+    setTab("launch");
+    await runPreview(row.workRequestId, size);
+    setSuccess(
+      row.remainingReachable != null
+        ? `Suite pour ${row.clientLabel} : ${row.remainingReachable} artisan(s) encore joignables (déjà SMS exclus).`
+        : `Suite pour ${row.clientLabel} : nouvelle recherche, les artisans déjà SMS sont exclus.`
+    );
   }
 
   function toggleSiret(siret: string) {
@@ -902,9 +955,15 @@ export default function AdminSmsCampaignsPage() {
 
   useEffect(() => {
     if (!selectedRequest) return;
-    const quota = selectedRequest.smsQuota ?? (selectedRequest.maxContactArtisans ?? 5) * 5;
+    const quota =
+      selectedRequest.smsQuota ??
+      (selectedRequest.maxContactArtisans ?? 5) * 5;
     setCampaignSize(quota);
-  }, [selectedRequest]);
+  }, [
+    selectedRequest?.id,
+    selectedRequest?.smsQuota,
+    selectedRequest?.maxContactArtisans,
+  ]);
   const reviewBeforeSend = settings?.requireReviewBeforeSend !== false;
   const excludedCount =
     (preview?.platformCount ?? 0) +
@@ -928,20 +987,31 @@ export default function AdminSmsCampaignsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Campagnes SMS</h1>
-      <p className="mt-1 text-sm text-slate-600">
-        Une <strong>campagne</strong> court jusqu&apos;à 5 contacts. Chaque jour
-        un <strong>lot</strong> (budget SMS) est préparé ou envoyé. Plus proches
-        d&apos;abord (59+62).
-      </p>
-      <p className="mt-1 text-xs text-slate-500">
-        <Link
-          href="/admin/conversions-sms"
-          className="font-medium text-brand-700 underline"
-        >
-          Conversions SMS → comptes
-        </Link>
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Campagnes SMS</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Une <strong>campagne</strong> court jusqu&apos;à 5 contacts. Chaque jour
+            un <strong>lot</strong> (budget SMS) est préparé ou envoyé. Plus proches
+            d&apos;abord (59+62).
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            <Link
+              href="/admin/conversions-sms"
+              className="font-medium text-brand-700 underline"
+            >
+              Conversions SMS → comptes
+            </Link>
+            {" · "}
+            <Link
+              href="/admin/campagnes-email"
+              className="font-medium text-brand-700 underline"
+            >
+              Campagnes email
+            </Link>
+          </p>
+        </div>
+      </div>
 
       {loading && (
         <div className="mt-4">
@@ -984,11 +1054,33 @@ export default function AdminSmsCampaignsPage() {
           }`}
         >
           {loading
-            ? "OVH SMS : chargement…"
+            ? "SMS : chargement…"
             : smsConfigured
-              ? "OVH SMS configuré"
-              : "OVH SMS non configuré"}
+              ? "Envoi SMS prêt (OVH et/ou Brevo)"
+              : "SMS non configuré"}
         </span>
+        {!loading && ovhCreditsLeft != null && (
+          <span
+            className={`rounded-full px-3 py-1 font-medium ${
+              ovhCreditsLeft > 0
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-amber-100 text-amber-800"
+            }`}
+          >
+            Crédits OVH : {ovhCreditsLeft}
+          </span>
+        )}
+        {!loading && (
+          <span
+            className={`rounded-full px-3 py-1 font-medium ${
+              brevoSmsConfigured
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-slate-100 text-slate-700"
+            }`}
+          >
+            Repli Brevo {brevoSmsConfigured ? "actif" : "off"}
+          </span>
+        )}
         <span
           className={`rounded-full px-3 py-1 font-medium ${
             loading
@@ -1223,10 +1315,82 @@ export default function AdminSmsCampaignsPage() {
         <PlacesFreeQuotaCard stats={artisanStats} />
         <h2 className="mt-5 text-lg font-semibold">Lancer une campagne</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Un lot unique : prévisualisez, cochez, préparez. Pas de vagues
-          suivantes jusqu’à 5/5. Envoi à 8h si « Prêt à partir », ou tout de
-          suite. STOP + lun–sam 8h–20h Paris.
+          Un lot : prévisualisez, cochez, envoyez. Pour continuer sur le même
+          client, utilisez le tableau ci-dessous : les artisans déjà SMS sont
+          exclus, les suivants arrivent. STOP + lun–sam 8h–20h Paris. L’ancienneté
+          n’est plus un filtre.
         </p>
+
+        {searchRows.length > 0 && (
+          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
+            <h3 className="border-b border-slate-100 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+              Recherches déjà effectuées
+            </h3>
+            <table className="min-w-full text-left text-xs">
+              <thead className="border-b border-slate-200 text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 pr-2">Client</th>
+                  <th className="py-2 pr-2">Chantier</th>
+                  <th className="py-2 pr-2">Dernière recherche</th>
+                  <th className="py-2 pr-2">SMS partis</th>
+                  <th className="py-2 pr-2">Reste joignables</th>
+                  <th className="py-2 pr-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {searchRows.map((row) => (
+                  <tr key={row.workRequestId} className="border-b border-slate-100">
+                    <td className="px-3 py-2 pr-2 font-medium text-slate-800">
+                      {row.clientLabel}
+                    </td>
+                    <td className="py-2 pr-2">
+                      {row.category} · {row.city} ({row.department})
+                    </td>
+                    <td className="py-2 pr-2 text-slate-600">
+                      {row.lastSearchAt
+                        ? new Date(row.lastSearchAt).toLocaleString("fr-FR")
+                        : row.lastSentAt
+                          ? `lot ${new Date(row.lastSentAt).toLocaleString("fr-FR")}`
+                          : "—"}
+                      {row.radiusKm ? ` · ${row.radiusKm} km` : ""}
+                    </td>
+                    <td className="py-2 pr-2 tabular-nums">
+                      {row.smsSent}
+                      {row.contactedCount > 0
+                        ? ` · ${row.contactedCount} SIRET`
+                        : ""}
+                      {row.lotCount > 1 ? ` · ${row.lotCount} lots` : ""}
+                      {row.smsFailed > 0 ? ` · ${row.smsFailed} échec(s)` : ""}
+                    </td>
+                    <td className="py-2 pr-2 tabular-nums">
+                      {row.remainingReachable == null
+                        ? "Relancer une recherche pour compter"
+                        : `${row.remainingReachable}${
+                            row.remainingWithoutPhone
+                              ? ` (+${row.remainingWithoutPhone} sans tél.)`
+                              : ""
+                          }`}
+                    </td>
+                    <td className="py-2 pr-3">
+                      <button
+                        type="button"
+                        disabled={disableWhen(
+                          previewLoading ||
+                            sending ||
+                            (row.remainingReachable === 0)
+                        )}
+                        onClick={() => void continueFromSearch(row)}
+                        className="rounded bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+                      >
+                        Continuer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <div>
@@ -1370,15 +1534,9 @@ export default function AdminSmsCampaignsPage() {
                   </p>
                 )}
                 <p className="mt-2 text-xs text-slate-500">
-                  Cible âge : {preview.suggestedCounts.new_young} ×{" "}
-                  {COMPANY_AGE_YOUNG_SHORT} /{" "}
-                  {preview.suggestedCounts.new_established} ×{" "}
-                  {COMPANY_AGE_ESTABLISHED_SHORT}
-                  {preview.preferEstablishedCompany === true
-                    ? ` (client : uniquement ${COMPANY_AGE_ESTABLISHED_SHORT})`
-                    : preview.preferEstablishedCompany === false
-                      ? ` (client : uniquement ${COMPANY_AGE_YOUNG_SHORT})`
-                      : " (pas de filtre âge)"}
+                  Mix âge (info, plus un filtre) : {preview.suggestedCounts.new_young}{" "}
+                  × {COMPANY_AGE_YOUNG_SHORT} / {preview.suggestedCounts.new_established}{" "}
+                  × {COMPANY_AGE_ESTABLISHED_SHORT}
                   {preview.requireRge ? " · client : uniquement RGE" : ""}
                   {" · "}sélection actuelle : {selectedByCohort.new_young} /{" "}
                   {selectedByCohort.new_established}

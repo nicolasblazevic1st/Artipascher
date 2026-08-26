@@ -9,6 +9,7 @@ import {
   type GtagParamValue,
 } from "@/lib/analytics-events";
 import { cleanTrackingParam, keywordGroupKey } from "@/lib/utm";
+import { resolveWorkCategoryFromAdsQuery } from "@/lib/work-categories";
 
 const DB_PATH = path.join(process.cwd(), "data", "form-funnel.json");
 const MAX_EVENTS = 25_000;
@@ -74,6 +75,9 @@ export interface FunnelSessionRow {
   utmTerm?: string;
   device?: string;
   adsClick?: boolean;
+  workCategory?: string;
+  adsCategory?: string;
+  keywordCategory?: string;
   gaSent: boolean;
 }
 
@@ -387,6 +391,28 @@ function categoryIntentLabel(value: string): string {
   return value === "unknown" ? "Je ne sais pas / plusieurs métiers" : value;
 }
 
+function realWorkCategory(value: string | undefined): string | undefined {
+  if (!value || value === "unknown") return undefined;
+  return value;
+}
+
+function sessionKeywordCategory(session: SessionAgg): string | undefined {
+  if (!session.utmTerm && !session.utmContent) return undefined;
+  return realWorkCategory(
+    resolveWorkCategoryFromAdsQuery({
+      utmTerm: session.utmTerm,
+      keyword: session.utmTerm,
+      utmContent: session.utmContent,
+    })
+  );
+}
+
+function sessionArrivalCategory(session: SessionAgg): string | undefined {
+  return (
+    realWorkCategory(session.adsCategory) ?? sessionKeywordCategory(session)
+  );
+}
+
 const DEVICE_LABELS: Record<string, string> = {
   mobile: "Téléphone",
   tablet: "Tablette",
@@ -582,12 +608,14 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
         : undefined
     ),
     byAdsMismatch: toIntentRows(sessions, (s) => {
-      if (!s.adsCategory || !s.workCategory || s.adsCategory === s.workCategory) {
-        return undefined;
-      }
+      const chosen = s.workCategory;
+      if (!chosen || chosen === "unknown") return undefined;
+      const arrival = sessionArrivalCategory(s);
+      if (arrival === chosen) return undefined;
+      const from = arrival ?? "Sans métier précoche";
       return {
-        key: `${s.adsCategory}→${s.workCategory}`,
-        label: `${categoryIntentLabel(s.adsCategory)} → ${categoryIntentLabel(s.workCategory)}`,
+        key: `${arrival ?? "none"}→${chosen}`,
+        label: `${from} → ${chosen}`,
       };
     }),
     stepTimes: toStepTimeRows(sessions),
@@ -615,6 +643,9 @@ function buildLeadSide(sessions: SessionAgg[]): FormFunnelSide {
         utmTerm: s.utmTerm,
         device: s.device,
         adsClick: s.adsClick,
+        workCategory: s.workCategory,
+        adsCategory: s.adsCategory,
+        keywordCategory: sessionKeywordCategory(s),
         gaSent: s.gaSent,
       })),
   };

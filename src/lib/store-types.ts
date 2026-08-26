@@ -249,6 +249,8 @@ export interface ProRegistration {
    */
   emailVerified?: boolean;
   emailVerifiedAt?: string;
+  /** Opposition aux emails marketing (prospection B2B). */
+  marketingEmailOptedOut?: boolean;
   /** ID client société Pennylane (API v2). */
   pennylaneCustomerId?: number;
   /** Factures Pennylane liées aux achats Stripe (idempotence). */
@@ -344,7 +346,7 @@ export interface WorkRequest {
   nafCodes?: string[];
   /**
    * Ticket de chantier (bas / moyen / élevé / premium) → prix de déblocage contact.
-   * Absent sur l’historique = ticket élevé (20 €, ancien tarif unique).
+   * Absent sur l’historique = ticket élevé (tarif de référence).
    * Non affiché au particulier.
    */
   pricingTier?: "bas" | "moyen" | "eleve" | "premium";
@@ -604,6 +606,34 @@ export type SmsAcquisitionStatus =
   | "paused"
   | "exhausted";
 
+/** Artisan vu lors d’une prévisualisation SMS (vivier classé par distance). */
+export interface SmsSearchPoolEntry {
+  siret: string;
+  companyName: string;
+  city: string;
+  hasPhone: boolean;
+  distanceKm?: number;
+}
+
+/**
+ * Dernière recherche SMS pour une demande : permet de reprendre
+ * et d’envoyer le lot suivant (artisans pas encore contactés).
+ */
+export interface SmsSearchSnapshot {
+  id: string;
+  workRequestId: string;
+  createdAt: string;
+  category: string;
+  city: string;
+  department: "59" | "62";
+  radiusKm?: number;
+  campaignSize: number;
+  totalNearby: number;
+  alreadyMarketedCount: number;
+  bodaccExcluded?: number;
+  pool: SmsSearchPoolEntry[];
+}
+
 /**
  * Campagne d’acquisition : quota 5 SMS × artisans demandés, jusqu’aux places remplies.
  */
@@ -692,11 +722,50 @@ export const DEFAULT_SMS_SETTINGS: SmsCampaignSettings = {
   throttleMs: 150,
 };
 
+export type EmailCampaignStatus = "demo" | "sent" | "failed" | "partial";
+
+export type EmailCampaignAudience = "platform" | "work_request" | "csv";
+
+export interface EmailCampaignRecipient {
+  email: string;
+  companyName: string;
+  siret?: string;
+  proId?: string;
+  city?: string;
+  department?: "59" | "62";
+  status: "sent" | "failed" | "skipped";
+  error?: string;
+}
+
+export interface EmailCampaign {
+  id: string;
+  subject: string;
+  bodyText: string;
+  status: EmailCampaignStatus;
+  audience: EmailCampaignAudience;
+  workRequestId?: string;
+  category?: string;
+  department?: "59" | "62" | "all";
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  skippedCount: number;
+  recipients: EmailCampaignRecipient[];
+  createdAt: string;
+  sentAt?: string;
+}
+
+export interface EmailMarketingOptOut {
+  email: string;
+  at: string;
+  source: "link" | "admin";
+}
+
 /**
  * @deprecated Packs de solde retirés — paiement unitaire au déblocage.
  * Conservé vide pour compat. lecture d’anciennes sessions / code legacy.
  */
-export const CONTACT_UNLOCK_REF_EUR = 20;
+export const CONTACT_UNLOCK_REF_EUR = 15;
 
 export interface ContactBalancePack {
   /** Solde crédité en euros. */
@@ -837,7 +906,10 @@ export interface DataStore {
   guestPhoneVerifications?: GuestPhoneVerification[];
   smsCampaigns: SmsCampaign[];
   smsAcquisitionCampaigns?: SmsAcquisitionCampaign[];
+  smsSearchSnapshots?: SmsSearchSnapshot[];
   smsSettings?: SmsCampaignSettings;
+  emailCampaigns?: EmailCampaign[];
+  emailMarketingOptOuts?: EmailMarketingOptOut[];
   creditWallets: ProCreditWallet[];
   creditTransactions: ProCreditTransaction[];
   notifications: AppNotification[];
@@ -860,7 +932,10 @@ export const EMPTY_STORE: DataStore = {
   guestPhoneVerifications: [],
   smsCampaigns: [],
   smsAcquisitionCampaigns: [],
+  smsSearchSnapshots: [],
   smsSettings: { ...DEFAULT_SMS_SETTINGS },
+  emailCampaigns: [],
+  emailMarketingOptOuts: [],
   creditWallets: [],
   creditTransactions: [],
   notifications: [],

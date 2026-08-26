@@ -3,14 +3,12 @@
  */
 
 import { parseMinGoogleRating } from "./google-rating";
-import { COMPANY_AGE_THRESHOLD_YEARS } from "./company-age";
 import type { WorkRequest } from "./store-types";
 
 export type ClientRequirementSource = Pick<
   WorkRequest,
   | "category"
   | "maxContactArtisans"
-  | "preferEstablishedCompany"
   | "minGoogleRating"
   | "requireActiveCompany"
   | "requireValidInsurances"
@@ -53,12 +51,6 @@ export function listVisibleClientRequirements(
 
   if (request.requireRge === true) {
     items.push("Artisan RGE (annuaire ADEME)");
-  }
-
-  if (request.preferEstablishedCompany === true) {
-    items.push(`Entreprise créée il y a ${COMPANY_AGE_THRESHOLD_YEARS} ans ou plus`);
-  } else if (request.preferEstablishedCompany === false) {
-    items.push(`Entreprise créée il y a moins de ${COMPANY_AGE_THRESHOLD_YEARS} ans`);
   }
 
   const minRating = parseMinGoogleRating(request.minGoogleRating);

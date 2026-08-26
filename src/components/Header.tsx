@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import BetaAwareLink from "@/components/BetaAwareLink";
+import { useWorkRequestHref } from "@/components/CaptureAdsLanding";
 import SiteLogo from "@/components/SiteLogo";
-import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
+import WorkRequestCta from "@/components/WorkRequestCta";
 
 const NAV_LINKS = [
   { href: "/particulier", label: "Particulier" },
@@ -78,6 +78,7 @@ function MenuIcon({ className }: { className?: string }) {
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const formHref = useWorkRequestHref();
 
   return (
     <nav className="sticky top-0 z-50 bg-white text-gray-800 shadow-md">
@@ -121,13 +122,14 @@ export default function Header() {
               Espace Pro
             </Link>
 
-            <BetaAwareLink
-              href={WORK_REQUEST_FORM_PATH}
+            <WorkRequestCta
+              placement="header"
+              href={formHref}
               className="flex items-center gap-1.5 rounded-lg bg-accent-500 px-2.5 py-1.5 text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-accent-600 xl:px-4 xl:py-2 xl:text-base"
             >
               <HammerIcon className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
               <span>Remplir le formulaire</span>
-            </BetaAwareLink>
+            </WorkRequestCta>
           </div>
         </div>
 
@@ -165,14 +167,15 @@ export default function Header() {
                 Espace Pro
               </Link>
 
-              <BetaAwareLink
-                href={WORK_REQUEST_FORM_PATH}
+              <WorkRequestCta
+                placement="header"
+                href={formHref}
                 className="flex items-center gap-2 rounded-lg bg-accent-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-600"
                 onClick={() => setMobileOpen(false)}
               >
                 <HammerIcon className="h-4 w-4" />
                 <span>Remplir le formulaire</span>
-              </BetaAwareLink>
+              </WorkRequestCta>
             </div>
           </div>
         )}

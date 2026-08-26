@@ -20,30 +20,37 @@ export const PRICING_TIERS: readonly PricingTier[] = [
   {
     id: "bas",
     label: "Ticket bas",
-    unlockPriceEur: 15,
+    unlockPriceEur: 10,
     shortHelp: "Intervention courte, dépannage simple",
   },
   {
     id: "moyen",
     label: "Ticket moyen",
-    unlockPriceEur: 17.5,
+    unlockPriceEur: 12.5,
     shortHelp: "Réparation ou pose unitaire",
   },
   {
     id: "eleve",
     label: "Ticket élevé",
-    unlockPriceEur: 20,
+    unlockPriceEur: 15,
     shortHelp: "Rénovation partielle / technicité",
   },
   {
     id: "premium",
     label: "Ticket premium",
-    unlockPriceEur: 25,
+    unlockPriceEur: 20,
     shortHelp: "Urgence, structure ou chantier lourd",
   },
 ] as const;
 
-/** Défaut = ancien tarif unique (20 €). */
+export const UNLOCK_PRICE_MIN_EUR = Math.min(
+  ...PRICING_TIERS.map((t) => t.unlockPriceEur)
+);
+export const UNLOCK_PRICE_MAX_EUR = Math.max(
+  ...PRICING_TIERS.map((t) => t.unlockPriceEur)
+);
+
+/** Défaut = ticket élevé (tarif de référence). */
 export const DEFAULT_PRICING_TIER: PricingTierId = "eleve";
 
 export function isPricingTierId(value: string): value is PricingTierId {
@@ -80,6 +87,13 @@ export function formatUnlockPriceEur(priceEur: number): string {
     minimumFractionDigits: priceEur % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(priceEur);
+}
+
+/** Ex. « 10 à 20 € » */
+export function formatUnlockPriceRange(): string {
+  const fmt = (n: number) =>
+    n % 1 === 0 ? String(n) : String(n).replace(".", ",");
+  return `${fmt(UNLOCK_PRICE_MIN_EUR)} à ${fmt(UNLOCK_PRICE_MAX_EUR)}\u00a0€`;
 }
 
 export interface NafWorkOption {

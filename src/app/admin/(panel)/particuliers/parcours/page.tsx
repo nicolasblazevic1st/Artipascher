@@ -49,6 +49,9 @@ interface FunnelSessionRow {
   utmTerm?: string;
   device?: string;
   adsClick?: boolean;
+  workCategory?: string;
+  adsCategory?: string;
+  keywordCategory?: string;
   gaSent: boolean;
 }
 
@@ -97,6 +100,28 @@ function formatMedian(seconds: number) {
   const min = Math.floor(seconds / 60);
   const sec = seconds % 60;
   return sec === 0 ? `${min} min` : `${min} min ${sec} s`;
+}
+
+function realTrade(value: string | undefined): string | undefined {
+  if (!value || value === "unknown") return undefined;
+  return value;
+}
+
+function tradeDetailLabel(row: FunnelSessionRow): string {
+  const chosen = realTrade(row.workCategory);
+  const arrival =
+    realTrade(row.adsCategory) ?? realTrade(row.keywordCategory);
+
+  if (chosen) {
+    if (arrival && arrival !== chosen) return `${arrival} → ${chosen}`;
+    return chosen;
+  }
+  if (row.workCategory === "unknown") {
+    if (arrival) return `${arrival} → Je ne sais pas`;
+    return "Aucun métier coché";
+  }
+  if (arrival) return `${arrival} (non coché)`;
+  return "Aucun métier coché";
 }
 
 function formatWhen(iso: string) {
@@ -339,7 +364,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
       {form === "lead" && (
         <IntentTable
           title="Pub vs métier coché"
-          hint="Ils sont arrivés via une annonce métier, puis ont choisi autre chose."
+          hint="Écart entre le métier d’arrivée (annonce, mot-clé ou précoche) et celui coché ensuite — y compris une arrivée sans métier puis un choix réel."
           empty="Aucun écart pub / métier pour l’instant."
           rows={side.byAdsMismatch ?? []}
         />
@@ -473,9 +498,11 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                     </td>
                     <td className="hidden py-2 text-xs text-slate-500 md:table-cell">
                       {[
-                        row.variant
-                          ? VARIANT_LABELS[row.variant] ?? row.variant
-                          : null,
+                        form === "lead"
+                          ? tradeDetailLabel(row)
+                          : row.variant
+                            ? VARIANT_LABELS[row.variant] ?? row.variant
+                            : null,
                         row.guestMode ? "Invité" : null,
                         row.utmContent ? `pub ${row.utmContent}` : null,
                         row.utmCampaign ? row.utmCampaign : null,

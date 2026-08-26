@@ -6,6 +6,7 @@ import ProRegistrationForm from "@/components/ProRegistrationForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { getIsBetaMode } from "@/lib/beta-server";
+import { formatUnlockPriceRange } from "@/lib/pricing-tiers";
 
 export const metadata: Metadata = {
   title: "Professionnel — Développez votre activité",
@@ -42,11 +43,13 @@ const FEATURES = [
   },
 ];
 
+const unlockRange = formatUnlockPriceRange();
+
 const PRICING = [
   {
-    title: `Mise en contact · 15 à 25 € selon ticket`,
+    title: `Mise en contact · ${unlockRange} selon ticket`,
     description:
-      "Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Paiement unitaire au moment du déblocage (15 à 25 € selon le ticket).",
+      `Accédez aux coordonnées du client pour le joindre, visiter le chantier et lui envoyer votre devis. Paiement unitaire au moment du déblocage (${unlockRange} selon le ticket).`,
   },
 ];
 
@@ -59,7 +62,7 @@ const STEPS = [
   {
     title: "Débloquez les contacts",
     description:
-      "Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (15 à 25 € selon le ticket, max. 5 artisans).",
+      `Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (${unlockRange} selon le ticket, max. 5 artisans).`,
   },
   {
     title: "Concluez hors plateforme",

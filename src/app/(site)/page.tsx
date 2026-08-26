@@ -1,15 +1,15 @@
 import Link from "next/link";
 import AuctionCard from "@/components/AuctionCard";
 import WebsiteJsonLd from "@/components/WebsiteJsonLd";
-import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
 import TrustPillars from "@/components/TrustPillars";
+import WorkRequestCta from "@/components/WorkRequestCta";
 import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
+import { workRequestHrefFromNextParams } from "@/lib/ads-landing";
 import { FAQ_ITEMS } from "@/lib/data";
 import { listPublicAuctions } from "@/lib/work-request-auctions";
 import { WORK_CATEGORIES } from "@/lib/work-categories";
-import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 const STEPS = [
   {
@@ -29,8 +29,16 @@ const STEPS = [
   },
 ];
 
-export default async function HomePage() {
-  const auctions = await listPublicAuctions();
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [auctions, params] = await Promise.all([
+    listPublicAuctions(),
+    searchParams,
+  ]);
+  const formHref = workRequestHrefFromNextParams(params);
 
   return (
     <>
@@ -50,12 +58,13 @@ export default async function HomePage() {
             assurance pro, avis Google, ancienneté, procédures collectives).
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
-            <BetaAwareLink
-              href={WORK_REQUEST_FORM_PATH}
+            <WorkRequestCta
+              placement="home_hero"
+              href={formHref}
               className="rounded-xl bg-accent-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-accent-600"
             >
               Remplir le formulaire
-            </BetaAwareLink>
+            </WorkRequestCta>
             <Link
               href="/professionnel"
               className="rounded-xl border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
@@ -78,9 +87,11 @@ export default async function HomePage() {
           </p>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {WORK_CATEGORIES.map((category) => (
-              <BetaAwareLink
+              <WorkRequestCta
                 key={category}
-                href={`${WORK_REQUEST_FORM_PATH}?category=${encodeURIComponent(category)}`}
+                placement="home_category"
+                category={category}
+                href={workRequestHrefFromNextParams(params, { category })}
                 className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:border-brand-300 hover:shadow-sm"
               >
                 <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
@@ -88,7 +99,7 @@ export default async function HomePage() {
                 </span>
                 <p className="mt-3 font-medium text-slate-900">{category}</p>
                 <p className="mt-1 text-xs text-slate-500">Déposer une demande →</p>
-              </BetaAwareLink>
+              </WorkRequestCta>
             ))}
           </div>
         </div>
@@ -192,12 +203,13 @@ export default async function HomePage() {
             Gratuit pour vous — l&apos;artisan paie le contact. Jusqu&apos;à 5
             artisans vérifiés du Nord-Pas-de-Calais.
           </p>
-          <BetaAwareLink
-            href={WORK_REQUEST_FORM_PATH}
+          <WorkRequestCta
+            placement="home_footer"
+            href={formHref}
             className="mt-8 inline-block rounded-xl bg-accent-500 px-8 py-3 font-semibold text-white transition hover:bg-accent-600"
           >
             Demander des travaux maintenant
-          </BetaAwareLink>
+          </WorkRequestCta>
         </div>
       </section>
     </>

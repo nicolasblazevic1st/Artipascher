@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import BetaAwareLink from "@/components/BetaAwareLink";
 import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
+import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
+import { CONTACT_UNLOCK_REF_EUR } from "@/lib/store-types";
 import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 const SLIDE_MS = 9000;
@@ -155,7 +157,7 @@ function SlideContact() {
         </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-xs font-semibold text-emerald-900">
-            Coordonnées client débloquées · 20 €
+            Coordonnées client débloquées · {formatUnlockPriceEur(CONTACT_UNLOCK_REF_EUR)}
           </p>
           <dl className="mt-2 grid grid-cols-2 gap-1 text-[10px] sm:text-xs">
             <div>

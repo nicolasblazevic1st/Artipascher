@@ -168,16 +168,6 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
             </dd>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
-            <dt className="text-xs text-slate-500">Ancienneté souhaitée</dt>
-            <dd className="mt-1 text-sm font-semibold">
-              {request.preferEstablishedCompany === true
-                ? "Uniquement 2 ans et plus"
-                : request.preferEstablishedCompany === false
-                  ? "Uniquement moins de 2 ans"
-                  : "Peu importe"}
-            </dd>
-          </div>
-          <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Note Google minimale</dt>
             <dd className="mt-1 text-sm font-semibold">
               {request.minGoogleRating

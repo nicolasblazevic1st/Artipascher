@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CONTACT_UNLOCK_REF_EUR } from "@/lib/store-types";
-import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
+import {
+  formatUnlockPriceEur,
+  UNLOCK_PRICE_MAX_EUR,
+  UNLOCK_PRICE_MIN_EUR,
+} from "@/lib/pricing-tiers";
 
 interface Txn {
   id: string;
@@ -54,7 +57,7 @@ export default function ProCreditsPanel() {
           <h2 className="font-semibold text-slate-900">Paiements & solde</h2>
           <p className="mt-1 text-sm text-slate-600">
             Chaque mise en contact se paie au ticket du chantier (
-            {CONTACT_UNLOCK_REF_EUR - 5}&nbsp;€ à {CONTACT_UNLOCK_REF_EUR + 5}
+            {UNLOCK_PRICE_MIN_EUR}&nbsp;€ à {UNLOCK_PRICE_MAX_EUR}
             &nbsp;€) via Stripe au moment du déblocage. Un solde résiduel
             (remboursement ou ancien crédit) est débité en priorité s’il est
             suffisant.

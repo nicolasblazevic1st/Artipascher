@@ -25,9 +25,12 @@ import {
 import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
 import {
   GENERAL_WORK_CATEGORY,
+  adsWorkQueryFromParams,
   isWorkCategory,
+  resolveAdsFormPrefill,
   WORK_CATEGORIES,
 } from "@/lib/work-categories";
+import { readPersistedAdsLanding } from "@/lib/ads-landing";
 import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
@@ -186,9 +189,6 @@ export default function WorkRequestForm({
     useState("");
   const [descriptionTouched, setDescriptionTouched] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<SelectedBanAddress | null>(null);
-  const [preferEstablishedCompany, setPreferEstablishedCompany] = useState<
-    boolean | undefined
-  >(undefined);
   const [maxContactArtisans, setMaxContactArtisans] = useState(5);
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">("");
   const [requireRge, setRequireRge] = useState(false);
@@ -269,6 +269,40 @@ export default function WorkRequestForm({
     }, 1000);
     return () => window.clearInterval(id);
   }, [otpCooldown]);
+
+  useEffect(() => {
+    if (initialCategory || startUnknown) return;
+    const prefill = resolveAdsFormPrefill(
+      adsWorkQueryFromParams(readPersistedAdsLanding())
+    );
+    if (prefill.category && isWorkCategory(prefill.category)) {
+      if (!adsCategoryRef.current) {
+        adsCategoryRef.current = sanitizeWorkCategoryParam({
+          workCategory: prefill.category,
+        });
+      }
+      setUnknownTrade(false);
+      setCategory(prefill.category);
+      const options = getNafOptionsForCategory(prefill.category);
+      setSelectedNafCodes(options.length === 1 ? [options[0].code] : []);
+      setWorkOptionId("");
+      setPricingTier("");
+      return;
+    }
+    if (!prefill.unknownTrade) return;
+    if (!adsCategoryRef.current) {
+      adsCategoryRef.current = sanitizeWorkCategoryParam({
+        unknownTrade: true,
+      });
+    }
+    setUnknownTrade(true);
+    setCategory(GENERAL_WORK_CATEGORY);
+    setSelectedNafCodes(
+      getNafOptionsForCategory(GENERAL_WORK_CATEGORY).map((opt) => opt.code)
+    );
+    setWorkOptionId(OTHER_WORK_OPTION_ID);
+    setPricingTier("bas");
+  }, [initialCategory, startUnknown]);
 
   useEffect(() => {
     let cancelled = false;
@@ -818,10 +852,7 @@ export default function WorkRequestForm({
     formData.set("phone", phoneValue);
     formData.delete("auctionDurationHours");
     formData.delete("auctionDurationDays");
-    formData.set(
-      "preferEstablishedCompany",
-      preferEstablishedCompany === true ? "true" : "any"
-    );
+    formData.set("preferEstablishedCompany", "any");
     formData.set("maxContactArtisans", String(maxContactArtisans));
     if (minGoogleRating !== "") {
       formData.set("minGoogleRating", String(minGoogleRating));
@@ -905,7 +936,6 @@ export default function WorkRequestForm({
     setWorkScope("");
     setClientSiret("");
     setCompanyVerification(null);
-    setPreferEstablishedCompany(undefined);
     setMaxContactArtisans(5);
     form.reset();
   }
@@ -1622,63 +1652,6 @@ export default function WorkRequestForm({
             ))}
           </div>
         </fieldset>
-
-      <fieldset>
-        <legend className="mb-2 text-sm font-medium text-slate-700">
-          Ancienneté de l&apos;entreprise <span className="text-red-500">*</span>
-        </legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <label
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-              preferEstablishedCompany !== true
-                ? "border-brand-500 bg-brand-50"
-                : "border-slate-200 bg-white"
-            }`}
-          >
-            <input
-              type="radio"
-              name="preferEstablishedCompany"
-              value="any"
-              checked={preferEstablishedCompany !== true}
-              onChange={() => setPreferEstablishedCompany(undefined)}
-              className="mt-1"
-            />
-            <span>
-              <span className="font-semibold text-slate-900">
-                Indifférent
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Pas de filtre d&apos;ancienneté : tous les artisans
-                correspondants.
-              </span>
-            </span>
-          </label>
-          <label
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-              preferEstablishedCompany
-                ? "border-brand-500 bg-brand-50"
-                : "border-slate-200 bg-white"
-            }`}
-          >
-            <input
-              type="radio"
-              name="preferEstablishedCompany"
-              value="true"
-              checked={preferEstablishedCompany}
-              onChange={() => setPreferEstablishedCompany(true)}
-              className="mt-1"
-            />
-            <span>
-              <span className="font-semibold text-slate-900">
-                2 ans ou plus d&apos;ancienneté
-              </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
-                Uniquement des entreprises créées il y a 2 ans ou plus.
-              </span>
-            </span>
-          </label>
-        </div>
-      </fieldset>
 
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-slate-700">

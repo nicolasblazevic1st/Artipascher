@@ -175,14 +175,6 @@ export default function AdminDemandesPage() {
                         : 5}
                     </div>
                     <div>
-                      Ancienneté :{" "}
-                      {r.preferEstablishedCompany === true
-                        ? "uniquement 2 ans et plus"
-                        : r.preferEstablishedCompany === false
-                          ? "uniquement moins de 2 ans"
-                          : "âge non précisé"}
-                    </div>
-                    <div>
                       Note Google :{" "}
                       {r.minGoogleRating
                         ? `≥ ${String(r.minGoogleRating).replace(".", ",")}/5`

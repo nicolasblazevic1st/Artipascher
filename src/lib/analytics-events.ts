@@ -28,6 +28,7 @@ export const ANALYTICS_EVENT = {
   LEAD_FORM_OTP_VERIFIED: "lead_form_otp_verified",
   LEAD_FORM_ABANDON: "lead_form_abandon",
   SUBMIT_LEAD_FORM: "manual_event_SUBMIT_LEAD_FORM",
+  LEAD_CTA_CLICK: "lead_cta_click",
   PRO_FORM_START: "pro_form_start",
   PRO_FORM_RCS_VERIFY_ATTEMPT: "pro_form_rcs_verify_attempt",
   PRO_FORM_RCS_VERIFY_SUCCESS: "pro_form_rcs_verify_success",
@@ -92,6 +93,7 @@ export const ANALYTICS_PARAM_KEYS = new Set([
   "ads_category",
   "device",
   "ads_click",
+  "cta_placement",
 ]);
 
 const FUNNEL_SESSION_PREFIX = "nap_funnel_sid:";
@@ -219,28 +221,59 @@ function getOrCreateFunnelSessionId(formName: string): string {
   }
 }
 
-function readCachedUtm(): Record<string, string> {
+function utmFromSearchParams(params: URLSearchParams): Record<string, string> {
+  const utm: Record<string, string> = {};
+  for (const key of UTM_KEYS) {
+    const value = cleanTrackingParam(params.get(key));
+    if (value) utm[key] = value;
+  }
+  const keyword =
+    cleanTrackingParam(params.get("keyword")) ??
+    cleanTrackingParam(params.get("kwd"));
+  if (!utm.utm_term && keyword) utm.utm_term = keyword;
+  return utm;
+}
+
+/** À appeler dès l’accueil pub, avant le clic vers le formulaire. */
+export function captureLandingTracking(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const fromUrl = utmFromSearchParams(
+      new URLSearchParams(window.location.search)
+    );
+    if (Object.keys(fromUrl).length > 0) {
+      const prev = readCachedUtmRecord();
+      sessionStorage.setItem(
+        FUNNEL_UTM_KEY,
+        JSON.stringify({ ...prev, ...fromUrl })
+      );
+    }
+    landingAdsClick();
+  } catch {
+    // ignore
+  }
+}
+
+function readCachedUtmRecord(): Record<string, string> {
   try {
     const cached = sessionStorage.getItem(FUNNEL_UTM_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached) as unknown;
-      if (parsed && typeof parsed === "object") {
-        return sanitizeAnalyticsParams(parsed as Record<string, unknown>) as Record<
-          string,
-          string
-        >;
-      }
-    }
-    const params = new URLSearchParams(window.location.search);
-    const utm: Record<string, string> = {};
-    for (const key of UTM_KEYS) {
-      const value = cleanTrackingParam(params.get(key));
-      if (value) utm[key] = value;
-    }
-    const keyword =
-      cleanTrackingParam(params.get("keyword")) ??
-      cleanTrackingParam(params.get("kwd"));
-    if (!utm.utm_term && keyword) utm.utm_term = keyword;
+    if (!cached) return {};
+    const parsed = JSON.parse(cached) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    return sanitizeAnalyticsParams(parsed as Record<string, unknown>) as Record<
+      string,
+      string
+    >;
+  } catch {
+    return {};
+  }
+}
+
+function readCachedUtm(): Record<string, string> {
+  try {
+    const cached = readCachedUtmRecord();
+    if (Object.keys(cached).length > 0) return cached;
+    const utm = utmFromSearchParams(new URLSearchParams(window.location.search));
     sessionStorage.setItem(FUNNEL_UTM_KEY, JSON.stringify(utm));
     return utm;
   } catch {

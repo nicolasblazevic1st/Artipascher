@@ -7,7 +7,6 @@
 import { lookupBodaccForSirens } from "./bodacc-scan-db";
 import { addEnrichmentJob, listArtisans } from "./artisans-db";
 import {
-  ageCohortFromClientPreference,
   searchArtisansForChantier,
   type ChantierArtisanRow,
   type CompanyAgeCohort,
@@ -174,9 +173,7 @@ export async function selectArtisansToContact(
     Math.floor(options?.targetCount ?? smsQuotaForRequest(request))
   );
   const radiusKm = options?.radiusKm ?? SMS_FILL_RADIUS_KM;
-  const ageCohort = ageCohortFromClientPreference(
-    request.preferEstablishedCompany
-  );
+  const ageCohort = "all" as const;
   const requireRge = request.requireRge === true;
   const minGoogleRating = parseMinGoogleRating(request.minGoogleRating);
   const excludeAlreadyMarketed = options?.excludeAlreadyMarketed !== false;
