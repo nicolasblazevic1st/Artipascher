@@ -51,14 +51,18 @@ export default function ConfidentialitePage() {
             <strong>Prospects acquisition</strong>{" "} : données d&apos;entreprises
             (SIRET, code NAF, ville, téléphone enrichi le cas échéant, sources
             publiques type annuaire / enrichissement) utilisées pour la
-            prospection SMS et/ou téléphonique et le suivi d&apos;opposition
-            (STOP SMS / opposition téléphone / déjà contacté) ;
+            prospection SMS, email et/ou téléphonique et le suivi d&apos;opposition
+            (STOP SMS / désinscription email / opposition téléphone / déjà contacté) ;
           </li>
           <li>
             <strong>Campagnes SMS</strong>{" "} : historique des lots / envois
             (destinataires, statut, date), lien éventuel avec une offre
             publiée, et indicateurs d&apos;attribution (ex. inscription après
             SMS) ;
+          </li>
+          <li>
+            <strong>Campagnes email</strong>{" "} : historique des envois
+            marketing (destinataires, statut, date) et liste d&apos;opposition ;
           </li>
           <li>
             <strong>Prospection téléphonique</strong>{" "} : traces de contact /
@@ -76,9 +80,17 @@ export default function ConfidentialitePage() {
             <Link href="/cookies">politique de cookies</Link>) ;
           </li>
           <li>
+            <strong>Brouillons de formulaire</strong>{" "} : texte saisi dans le
+            formulaire de demande (description des travaux, y compris « Autre »),
+            associé à un identifiant de session anonyme, consultable uniquement
+            en administration pour le suivi des parcours interrompus — non
+            transmis à Google Analytics ;
+          </li>
+          <li>
             <strong>Communications</strong>{" "} : emails et SMS transactionnels
-            (code de vérification, alertes de contact), SMS marketing et appels
-            de prospection B2B (invitation Professionnels / prospects).
+            (code de vérification, alertes de contact), emails et SMS marketing
+            et appels de prospection B2B (invitation Professionnels /
+            prospects).
           </li>
         </ul>
       </section>
@@ -110,7 +122,8 @@ export default function ConfidentialitePage() {
         <h2>4. SMS</h2>
         <p className="mt-3">
           Les SMS sont acheminés via le prestataire <strong>OVH SMS</strong>{" "}
-          (API). Expéditeur alphanumérique lorsque disponible (ex. NordArtPro).
+          (API), et le cas échéant via <strong>Brevo</strong> en secours.
+          Expéditeur alphanumérique lorsque disponible (ex. NordArtPro).
         </p>
 
         <h3 className="mt-4">4.1 SMS transactionnels (Clients)</h3>
@@ -147,7 +160,8 @@ export default function ConfidentialitePage() {
             l&apos;objectif de mise en relation ;
           </li>
           <li>
-            transmission via <strong>OVH SMS</strong>{" "} ; dès qu&apos;un envoi
+            transmission via <strong>OVH SMS</strong>{" "} ou{" "}
+            <strong>Brevo</strong>{" "} ; dès qu&apos;un envoi
             est effectivement soumis au prestataire, le message est pris en
             charge pour livraison (sous réserve des règles du réseau). Une phase
             de préparation / validation interne peut précéder cet envoi réel ;
@@ -218,6 +232,18 @@ export default function ConfidentialitePage() {
       </section>
 
       <section>
+        <h2>4 ter. Emails marketing (prospection B2B)</h2>
+        <p className="mt-3">
+          L&apos;Éditeur peut envoyer des emails d&apos;information
+          professionnelle à des entreprises du bâtiment (adresses d&apos;inscrits
+          ou listes B2B), distincts des emails de compte. Acheminement via{" "}
+          <strong>Brevo</strong> (pas via l&apos;offre mail MX Plan OVH). Chaque
+          message comporte un lien de désinscription ; l&apos;opposition est
+          enregistrée et respectée.
+        </p>
+      </section>
+
+      <section>
         <h2>5. Destinataires</h2>
         <p className="mt-3">Les données peuvent être communiquées :</p>
         <ul>
@@ -227,8 +253,8 @@ export default function ConfidentialitePage() {
           </li>
           <li>
             aux sous-traitants techniques : hébergeur ({LEGAL_HOST.name}),
-            email, SMS (OVH), paiement (Stripe), analytics (Google) si
-            consentement ;
+            emails de compte (OVH), emails et SMS marketing (Brevo), SMS (OVH),
+            paiement (Stripe), analytics (Google) si consentement ;
           </li>
           <li>aux autorités compétentes sur réquisition légale.</li>
         </ul>
@@ -275,8 +301,8 @@ export default function ConfidentialitePage() {
             <Link href="/cookies">politique de cookies</Link>.
           </li>
           <li>
-            Parcours des formulaires (étapes anonymes, sans données
-            personnelles) : 90 jours ;
+            Parcours des formulaires (étapes et brouillons de description) : 90
+            jours ;
           </li>
         </ul>
       </section>
@@ -304,6 +330,13 @@ export default function ConfidentialitePage() {
           Concernant la <strong>prospection SMS marketing</strong>, vous pouvez
           vous opposer à tout moment en répondant <strong>STOP</strong>{" "} au
           message reçu, ou en écrivant à{" "}
+          <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
+          .
+        </p>
+        <p className="mt-3">
+          Concernant la <strong>prospection par email</strong>, vous pouvez
+          vous opposer via le lien de désinscription du message, ou en écrivant
+          à{" "}
           <a href={`mailto:${LEGAL_PUBLISHER.email}`}>{LEGAL_PUBLISHER.email}</a>
           .
         </p>

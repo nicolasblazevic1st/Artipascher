@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
   }
 
   const days = parseFunnelRangeDays(request.nextUrl.searchParams.get("days"));
-  const report = await getFormFunnelReport(days);
+  const excludeInternal =
+    request.nextUrl.searchParams.get("excludeInternal") === "1";
+  const report = await getFormFunnelReport(days, { excludeInternal });
   return NextResponse.json(report);
 }

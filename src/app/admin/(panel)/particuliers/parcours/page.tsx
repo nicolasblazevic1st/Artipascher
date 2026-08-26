@@ -53,6 +53,19 @@ interface FunnelSessionRow {
   adsCategory?: string;
   keywordCategory?: string;
   gaSent: boolean;
+  otherWork?: string;
+  descriptionDraft?: string;
+  internal?: boolean;
+}
+
+interface FunnelSavedTextRow {
+  sessionShort: string;
+  updatedAt: string;
+  workCategory?: string;
+  otherWork?: string;
+  description?: string;
+  submitted: boolean;
+  internal?: boolean;
 }
 
 interface FormFunnelSide {
@@ -73,6 +86,7 @@ interface FormFunnelSide {
   byAdsMismatch: IntentRow[];
   stepTimes: StepTimeRow[];
   recent: FunnelSessionRow[];
+  savedTexts?: FunnelSavedTextRow[];
 }
 
 interface FormFunnelReport {
@@ -80,6 +94,8 @@ interface FormFunnelReport {
   since: string;
   until: string;
   totalEvents: number;
+  internalLeadSessions: number;
+  internalProSessions: number;
   lead: FormFunnelSide;
   pro: FormFunnelSide;
 }
@@ -133,6 +149,70 @@ function formatWhen(iso: string) {
   } catch {
     return iso;
   }
+}
+
+function workCategoryLabel(value?: string) {
+  if (!value) return null;
+  return value === "unknown" ? "Je ne sais pas / plusieurs métiers" : value;
+}
+
+function SavedTextsTable({ rows }: { rows: FunnelSavedTextRow[] }) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <h3 className="font-semibold text-slate-900">Textes saisis</h3>
+      <p className="mt-1 text-sm text-slate-500">
+        Ce que la personne a écrit dans le formulaire, même si la demande n&apos;a
+        pas été envoyée. Conservé 90 jours, admin seulement — pas envoyé à Google.
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">
+          Aucun texte conservé sur cette période. Les prochaines saisies
+          (« Autre », description) apparaîtront ici.
+        </p>
+      ) : (
+        <ul className="mt-4 space-y-4">
+          {rows.map((row) => (
+            <li
+              key={`${row.sessionShort}-${row.updatedAt}`}
+              className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3"
+            >
+              <p className="text-xs text-slate-500">
+                {formatWhen(row.updatedAt)}
+                <span className="ml-2 font-mono text-[10px] text-slate-400">
+                  …{row.sessionShort}
+                </span>
+                {workCategoryLabel(row.workCategory) ? (
+                  <span className="ml-2">{workCategoryLabel(row.workCategory)}</span>
+                ) : null}
+                {row.submitted ? (
+                  <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-800">
+                    Envoyée
+                  </span>
+                ) : null}
+                {row.internal ? (
+                  <span className="ml-2 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-white">
+                    Toi (admin)
+                  </span>
+                ) : null}
+              </p>
+              {row.otherWork ? (
+                <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
+                  <span className="font-medium text-slate-500">Autre / travaux : </span>
+                  {row.otherWork}
+                </p>
+              ) : null}
+              {row.description ? (
+                <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
+                  <span className="font-medium text-slate-500">Description : </span>
+                  {row.description}
+                </p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
 }
 
 function FunnelBars({ steps }: { steps: FunnelStepStat[] }) {
@@ -451,10 +531,17 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
         </div>
       )}
 
+      {form === "lead" && (
+        <div className="mb-6">
+          <SavedTextsTable rows={side.savedTexts ?? []} />
+        </div>
+      )}
+
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h3 className="font-semibold text-slate-900">Sessions récentes</h3>
         <p className="mt-1 text-sm text-slate-500">
-          Identifiant anonyme (6 derniers caractères). Aucune donnée personnelle.
+          Identifiant anonyme (6 derniers caractères). Les textes saisis sont
+          dans le bloc ci-dessus.
         </p>
         {side.recent.length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">Aucune session récente.</p>
@@ -495,6 +582,11 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                       >
                         {row.outcome}
                       </span>
+                      {row.internal ? (
+                        <span className="ml-1 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-white">
+                          Toi
+                        </span>
+                      ) : null}
                     </td>
                     <td className="hidden py-2 text-xs text-slate-500 md:table-cell">
                       {[
@@ -510,6 +602,10 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                         row.device ? DEVICE_LABELS[row.device] ?? row.device : null,
                         row.adsClick ? "clic Ads" : null,
                         row.gaSent ? "GA" : null,
+                        row.internal ? "Toi (admin)" : null,
+                        row.otherWork
+                          ? `« ${row.otherWork.slice(0, 80)}${row.otherWork.length > 80 ? "…" : ""} »`
+                          : null,
                       ]
                         .filter(Boolean)
                         .join(" · ") || "—"}
@@ -531,11 +627,14 @@ export default function AdminParcoursFormulairesPage() {
   const [report, setReport] = useState<FormFunnelReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hideMine, setHideMine] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const res = await fetch(`/api/admin/form-funnel?days=${days}`);
+    const qs = new URLSearchParams({ days: String(days) });
+    if (hideMine) qs.set("excludeInternal", "1");
+    const res = await fetch(`/api/admin/form-funnel?${qs.toString()}`);
     const data = await res.json();
     setLoading(false);
     if (!res.ok) {
@@ -543,7 +642,7 @@ export default function AdminParcoursFormulairesPage() {
       return;
     }
     setReport(data as FormFunnelReport);
-  }, [days]);
+  }, [days, hideMine]);
 
   useEffect(() => {
     void load();
@@ -555,8 +654,10 @@ export default function AdminParcoursFormulairesPage() {
     <div>
       <p className="text-sm text-slate-600">
         Entonnoir des balises analytics : où les gens s&apos;arrêtent dans le
-        formulaire de demande, et dans l&apos;inscription artisan. Pas de nom, e-mail,
-        téléphone ni adresse — seulement les étapes.
+        formulaire de demande, et dans l&apos;inscription artisan. Pas de nom,
+        e-mail, téléphone ni adresse. Les textes « Autre » / description sont
+        conservés 90 jours (admin seulement). Si tu es connecté à l&apos;admin
+        dans le même navigateur, tes tests sont marqués <strong>Toi</strong>.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -581,6 +682,19 @@ export default function AdminParcoursFormulairesPage() {
         >
           Actualiser
         </button>
+        <label className="ml-1 inline-flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={hideMine}
+            onChange={(e) => setHideMine(e.target.checked)}
+            className="rounded border-slate-300"
+          />
+          Masquer mes tests
+          {report &&
+          (report.internalLeadSessions > 0 || report.internalProSessions > 0)
+            ? ` (${tab === "lead" ? report.internalLeadSessions : report.internalProSessions})`
+            : ""}
+        </label>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">

@@ -58,6 +58,7 @@ import {
   leadFormPricingErrorCode,
   leadFormStepId,
   sanitizeWorkCategoryParam,
+  saveLeadFormDraft,
   trackEvent,
   trackLeadFormConversion,
 } from "@/lib/analytics-events";
@@ -224,10 +225,14 @@ export default function WorkRequestForm({
   );
   const stepEnteredAtRef = useRef(Date.now());
   const abandonSentRef = useRef(false);
+  const otherWorkRef = useRef(workOptionOtherDescription);
+  const descriptionTouchedRef = useRef(descriptionTouched);
   stepRef.current = step;
   statusRef.current = status;
   categoryRef.current = category;
   unknownTradeRef.current = unknownTrade;
+  otherWorkRef.current = workOptionOtherDescription;
+  descriptionTouchedRef.current = descriptionTouched;
 
   function leadTrack(extra?: Parameters<typeof leadFormParams>[1]) {
     return leadFormParams(
@@ -240,6 +245,20 @@ export default function WorkRequestForm({
       },
       extra
     );
+  }
+
+  function persistLeadDraft() {
+    const other = otherWorkRef.current.trim();
+    const desc = descriptionTouchedRef.current
+      ? (descriptionRef.current?.value ?? "").trim()
+      : "";
+    if (!other && !desc) return;
+    saveLeadFormDraft({
+      workCategory: categoryRef.current || undefined,
+      unknownTrade: unknownTradeRef.current,
+      otherWork: other || undefined,
+      description: desc || undefined,
+    });
   }
 
   const descriptionOk = descriptionLength >= MIN_DESCRIPTION_LENGTH;
@@ -334,6 +353,7 @@ export default function WorkRequestForm({
     return bindFormLeaveListeners(() => {
       if (abandonSentRef.current || statusRef.current === "success") return;
       const current = stepRef.current;
+      persistLeadDraft();
       trackEvent(
         ANALYTICS_EVENT.LEAD_FORM_ABANDON,
         leadTrack({
@@ -677,6 +697,7 @@ export default function WorkRequestForm({
   }
 
   function goNext() {
+    persistLeadDraft();
     const invalid = currentStepValidation(step);
     if (invalid) {
       setError(invalid.message);
@@ -717,6 +738,7 @@ export default function WorkRequestForm({
         { step_id: leadFormStepId(4), step_index: 4 }
       )
     );
+    persistLeadDraft();
 
     const descError = validateDescription(getDescriptionValue());
     if (descError) {

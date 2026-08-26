@@ -33,6 +33,8 @@ function getSmtpConfig() {
   };
 }
 
+/** SMTP OVH MX Plan : mails de compte uniquement. Le marketing passe par email-marketing.ts / Brevo. */
+
 function getFromAddress(): string {
   return process.env.EMAIL_FROM ?? "noreply@nord-artisan-pro.com";
 }
