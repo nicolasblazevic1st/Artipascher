@@ -370,6 +370,24 @@ export async function applyAdminListingUpdate(
     patch.auctionDurationHours = Math.floor(hours);
   }
 
+  if (hasField("reviewedAt")) {
+    const parsed = parseOptionalIsoDate(body.reviewedAt);
+    if (parsed === "invalid") {
+      return { ok: false, error: "Date de publication invalide.", status: 400 };
+    }
+    if (parsed === null || parsed === undefined) {
+      if (existing.status === "approved") {
+        return {
+          ok: false,
+          error: "La date de publication est obligatoire pour une offre publiée.",
+          status: 400,
+        };
+      }
+    } else {
+      patch.reviewedAt = parsed;
+    }
+  }
+
   if (hasField("auctionEndsAt")) {
     const parsed = parseOptionalIsoDate(body.auctionEndsAt);
     if (parsed === "invalid") {

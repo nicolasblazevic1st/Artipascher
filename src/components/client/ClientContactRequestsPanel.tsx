@@ -6,7 +6,7 @@ import {
   isAcceptSlotsFull,
   MAX_ACCEPTED_ARTISANS_PER_AUCTION,
 } from "@/lib/contact-slots";
-import RgeBadge from "@/components/RgeBadge";
+import { formatUnlockPriceRange } from "@/lib/pricing-tiers";
 
 interface InterestItem {
   id: string;
@@ -173,7 +173,7 @@ export default function ClientContactRequestsPanel({ workRequestId }: Props) {
           <h2 className="text-lg font-semibold text-slate-900">Artisans intéressés</h2>
           <p className="mt-1 text-sm text-slate-600">
             Acceptez un artisan pour qu&apos;il puisse débloquer vos coordonnées
-            (15 à 25&nbsp;€ selon le ticket, débit solde).
+            ({formatUnlockPriceRange()} selon le ticket, débit solde).
             Vous avez 48&nbsp;h pour répondre. Après un refus ou une expiration, vous pouvez
             rappeler un artisan une seule fois.
           </p>

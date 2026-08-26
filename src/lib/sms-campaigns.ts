@@ -19,7 +19,7 @@ import {
   type ContactTargetArtisan,
 } from "@/lib/select-artisans-to-contact";
 import { normalizeFrenchMobile } from "./phone-format";
-import { isMarketingSmsWindowOpen, sendSms } from "./sms";
+import { isMarketingSmsWindowOpen, sendMarketingSmsBatch } from "./sms";
 import {
   addSmsCampaign,
   countContactUnlocksForAuction,
@@ -27,9 +27,11 @@ import {
   getActiveSmsAcquisitionCampaign,
   getMarketingSmsContactedSirets,
   getPendingReviewSmsCampaigns,
+  getSmsCampaigns,
   getSmsCampaignsForAcquisition,
   getSmsAcquisitionCampaignById,
   getSmsCampaignById,
+  getSmsSearchSnapshots,
   getSmsSettings,
   getWorkRequestById,
   markProspectsContacted,
@@ -38,6 +40,7 @@ import {
   setSmsAcquisitionStatus,
   updateSmsAcquisitionCampaign,
   updateSmsCampaign,
+  upsertSmsSearchSnapshot,
 } from "./store";
 import type {
   SmsAcquisitionCampaign,
@@ -260,7 +263,7 @@ export async function previewSmsCampaignDetailed(
     ).length,
   };
 
-  return {
+  const preview = {
     workRequestId: request.id,
     category: request.category,
     city: request.city,
@@ -289,6 +292,146 @@ export async function previewSmsCampaignDetailed(
     radiusKm: selected.criteria.radiusKm,
     placesFill,
   };
+
+  await upsertSmsSearchSnapshot({
+    workRequestId: request.id,
+    category: request.category,
+    city: request.city,
+    department: request.department,
+    radiusKm: selected.criteria.radiusKm,
+    campaignSize,
+    totalNearby,
+    alreadyMarketedCount,
+    bodaccExcluded: selected.pool.bodaccExcluded,
+    pool: [
+      ...candidates.map((c) => ({
+        siret: c.siret,
+        companyName: c.companyName,
+        city: c.city,
+        hasPhone: true,
+        distanceKm: c.distanceKm,
+      })),
+      ...withoutPhone.map((row) => ({
+        siret: row.siret,
+        companyName: row.companyName,
+        city: row.city,
+        hasPhone: false,
+        distanceKm: row.distanceKm,
+      })),
+    ],
+  });
+
+  return preview;
+}
+
+function clientSearchLabel(wr: {
+  firstName?: string;
+  lastName?: string;
+  companyName?: string;
+} | null): string {
+  if (!wr) return "Client";
+  const name = [wr.firstName, wr.lastName].filter(Boolean).join(" ").trim();
+  if (wr.companyName?.trim()) {
+    return name ? `${wr.companyName.trim()} · ${name}` : wr.companyName.trim();
+  }
+  return name || "Client";
+}
+
+export interface SmsCampaignSearchRow {
+  workRequestId: string;
+  clientLabel: string;
+  category: string;
+  city: string;
+  department: string;
+  lastSearchAt?: string;
+  lastSentAt?: string;
+  lotCount: number;
+  smsSent: number;
+  smsFailed: number;
+  contactedCount: number;
+  lastLotSize?: number;
+  remainingReachable: number | null;
+  remainingWithoutPhone: number | null;
+  poolSize: number | null;
+  radiusKm?: number;
+}
+
+/** Une ligne par client / demande déjà cherchée ou déjà SMS. */
+export async function listSmsCampaignSearchRows(): Promise<
+  SmsCampaignSearchRow[]
+> {
+  const [campaigns, snapshots, marketed] = await Promise.all([
+    getSmsCampaigns(),
+    getSmsSearchSnapshots(),
+    getMarketingSmsContactedSirets(),
+  ]);
+  const byRequest = new Map<string, typeof campaigns>();
+  for (const c of campaigns) {
+    const list = byRequest.get(c.workRequestId) ?? [];
+    list.push(c);
+    byRequest.set(c.workRequestId, list);
+  }
+  const snapByRequest = new Map(snapshots.map((s) => [s.workRequestId, s]));
+  const ids = new Set([...byRequest.keys(), ...snapByRequest.keys()]);
+  const rows: SmsCampaignSearchRow[] = [];
+
+  for (const workRequestId of ids) {
+    const lots = (byRequest.get(workRequestId) ?? []).slice().sort(
+      (a, b) =>
+        new Date(b.sentAt ?? b.createdAt).getTime() -
+        new Date(a.sentAt ?? a.createdAt).getTime()
+    );
+    const snap = snapByRequest.get(workRequestId);
+    const wr = await getWorkRequestById(workRequestId);
+    const contacted = new Set<string>();
+    let smsSent = 0;
+    let smsFailed = 0;
+    for (const lot of lots) {
+      smsSent += lot.sentCount ?? 0;
+      smsFailed += lot.failedCount ?? 0;
+      for (const r of lot.recipients ?? []) {
+        if (r.status === "sent" && r.siret) contacted.add(r.siret);
+      }
+    }
+    let remainingReachable: number | null = null;
+    let remainingWithoutPhone: number | null = null;
+    let poolSize: number | null = null;
+    if (snap) {
+      poolSize = snap.pool.length;
+      remainingReachable = snap.pool.filter(
+        (p) => p.hasPhone && p.siret && !marketed.has(p.siret)
+      ).length;
+      remainingWithoutPhone = snap.pool.filter(
+        (p) => !p.hasPhone && p.siret && !marketed.has(p.siret)
+      ).length;
+    }
+    const lastLot = lots[0];
+    rows.push({
+      workRequestId,
+      clientLabel: clientSearchLabel(wr),
+      category: wr?.category ?? snap?.category ?? lastLot?.category ?? "—",
+      city: wr?.city ?? snap?.city ?? lastLot?.city ?? "—",
+      department: wr?.department ?? snap?.department ?? lastLot?.department ?? "—",
+      lastSearchAt: snap?.createdAt,
+      lastSentAt: lastLot?.sentAt ?? lastLot?.createdAt,
+      lotCount: lots.length,
+      smsSent,
+      smsFailed,
+      contactedCount: contacted.size,
+      lastLotSize: lastLot?.sentCount || lastLot?.recipientCount,
+      remainingReachable,
+      remainingWithoutPhone,
+      poolSize,
+      radiusKm: snap?.radiusKm,
+    });
+  }
+
+  rows.sort(
+    (a, b) =>
+      new Date(b.lastSearchAt ?? b.lastSentAt ?? 0).getTime() -
+      new Date(a.lastSearchAt ?? a.lastSentAt ?? 0).getTime()
+  );
+  return rows;
 }
 
 /** @deprecated Compat — utilise preview détaillé. */
@@ -355,8 +498,19 @@ function draftsToPendingRecipients(
 
 export { parseRecipientDrafts };
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function marketingResultForPhone(
+  byPhone: Map<string, { ok: boolean; demo: boolean; error?: string }>,
+  phone: string
+): { ok: boolean; demo: boolean; error?: string } {
+  const key = normalizeFrenchMobile(phone);
+  if (!key) return { ok: false, demo: false, error: "Numéro de mobile invalide." };
+  return (
+    byPhone.get(key) ?? {
+      ok: false,
+      demo: false,
+      error: "Non envoyé.",
+    }
+  );
 }
 
 /** Prépare un lot sans aucun appel OVH (relecture admin), prévu pour un jour donné. */
@@ -462,7 +616,6 @@ export async function approvePendingReviewBatch(
     };
   }
 
-  const settings = await getSmsSettings();
   if (!options?.demo && !isMarketingSmsWindowOpen()) {
     throw new Error(
       "SMS marketing hors horaires (lun–sam 8h–20h, heure de Paris)."
@@ -509,31 +662,41 @@ export async function approvePendingReviewBatch(
     }
   }
 
-  for (let i = 0; i < toSend.length; i++) {
-    const row = toSend[i];
+  const dispatch = options?.demo
+    ? {
+        demo: true,
+        byPhone: new Map(
+          toSend
+            .map((row) => normalizeFrenchMobile(row.phone))
+            .filter((p): p is string => Boolean(p))
+            .map((p) => [p, { ok: true, demo: true }] as const)
+        ),
+      }
+    : await sendMarketingSmsBatch(
+        toSend.map((row) => row.phone),
+        batch.message,
+        `nap-${batch.workRequestId}`
+      );
+
+  if ("error" in dispatch && dispatch.error && dispatch.byPhone.size === 0) {
+    throw new Error(dispatch.error);
+  }
+
+  for (const row of toSend) {
     const recipient: SmsCampaignRecipient = { ...row, status: "skipped" };
-
-    const result = options?.demo
-      ? { ok: true, demo: true }
-      : await sendSms(row.phone, batch.message, "marketing");
-
+    const result = marketingResultForPhone(dispatch.byPhone, row.phone);
     if (result.demo) demo = true;
     if (result.ok) {
       recipient.status = "sent";
       sentCount += 1;
     } else {
       recipient.status = "failed";
-      recipient.error =
-        !result.ok && "error" in result ? result.error : "Échec envoi";
+      recipient.error = result.error ?? "Échec envoi";
       failedCount += 1;
       status = "failed";
       if (row.siret) await markArtisanPhoneInvalid(row.siret);
     }
     recipients.push(recipient);
-
-    if (i < toSend.length - 1 && settings.throttleMs > 0 && !options?.demo) {
-      await sleep(settings.throttleMs);
-    }
   }
 
   if (sentCount === 0) status = "failed";
@@ -790,8 +953,27 @@ export async function executeSmsCampaignToRecipients(
   let demo = false;
   let status: SmsCampaign["status"] = "sent";
 
-  for (let i = 0; i < selected.length; i++) {
-    const candidate = selected[i];
+  const dispatch = options?.demo
+    ? {
+        demo: true,
+        byPhone: new Map(
+          selected
+            .map((c) => normalizeFrenchMobile(c.phone))
+            .filter((p): p is string => Boolean(p))
+            .map((p) => [p, { ok: true, demo: true }] as const)
+        ),
+      }
+    : await sendMarketingSmsBatch(
+        selected.map((c) => c.phone),
+        message,
+        `nap-${request.id}`
+      );
+
+  if ("error" in dispatch && dispatch.error && dispatch.byPhone.size === 0) {
+    throw new Error(dispatch.error);
+  }
+
+  for (const candidate of selected) {
     const recipient: SmsCampaignRecipient = {
       proId: candidate.proId,
       siret: candidate.siret,
@@ -801,10 +983,7 @@ export async function executeSmsCampaignToRecipients(
       cohort: candidate.cohort,
     };
 
-    const result = options?.demo
-      ? { ok: true, demo: true }
-      : await sendSms(candidate.phone, message, "marketing");
-
+    const result = marketingResultForPhone(dispatch.byPhone, candidate.phone);
     if (result.demo) demo = true;
 
     if (result.ok) {
@@ -821,10 +1000,6 @@ export async function executeSmsCampaignToRecipients(
     }
 
     recipients.push(recipient);
-
-    if (i < selected.length - 1 && settings.throttleMs > 0 && !options?.demo) {
-      await sleep(settings.throttleMs);
-    }
   }
 
   if (recipients.length === 0 || sentCount === 0) {

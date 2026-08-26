@@ -13,8 +13,8 @@ Voir aussi les CGU.
 ## 2. Produits
 
 - Paiement **unitaire** au moment du déblocage (pas de packs / forfaits de solde à l'achat)
-- Tarif de référence typique : **20 €** (TTC ou HT selon affichage au paiement)
-- Ticket du chantier : **15 € / 17,50 € / 20 € / 25 €** selon l'annonce
+- Tarif de référence typique : **15 €** (TTC ou HT selon affichage au paiement)
+- Ticket du chantier : **10 € / 12,50 € / 15 € / 20 €** selon l'annonce
 - Un solde résiduel (remboursement, ancien crédit) peut être débité en priorité s'il est suffisant
 - Service non remboursable en espèces (sauf obligation légale), sans valeur hors plateforme
 

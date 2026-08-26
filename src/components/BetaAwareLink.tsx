@@ -11,6 +11,8 @@ type Props = {
   onClick?: () => void;
   /** Style du bouton désactivé en mode bêta (défaut = même className + opacité) */
   disabledClassName?: string;
+  "data-nap-cta"?: string;
+  "data-nap-placement"?: string;
 };
 
 /**
@@ -23,6 +25,8 @@ export default function BetaAwareLink({
   children,
   onClick,
   disabledClassName,
+  "data-nap-cta": dataNapCta,
+  "data-nap-placement": dataNapPlacement,
 }: Props) {
   const beta = useBetaMode();
 
@@ -44,7 +48,13 @@ export default function BetaAwareLink({
   }
 
   return (
-    <Link href={href} className={className} onClick={onClick}>
+    <Link
+      href={href}
+      className={className}
+      onClick={onClick}
+      data-nap-cta={dataNapCta}
+      data-nap-placement={dataNapPlacement}
+    >
       {children}
     </Link>
   );

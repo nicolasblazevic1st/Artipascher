@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "crypto";
+import { isBrevoSmsConfigured, sendBrevoSms } from "@/lib/brevo";
 import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
@@ -141,14 +142,115 @@ async function getOvhSmsCreditsLeft(): Promise<number | null> {
   }
 }
 
+export async function getOvhSmsCredits(): Promise<number | null> {
+  if (!isSmsConfigured()) return null;
+  return getOvhSmsCreditsLeft();
+}
+
+export function isAnySmsProviderConfigured(): boolean {
+  return isSmsConfigured() || isBrevoSmsConfigured();
+}
+
+export async function getSmsProviderStatus(): Promise<{
+  ovhConfigured: boolean;
+  brevoConfigured: boolean;
+  canSend: boolean;
+  ovhCreditsLeft: number | null;
+}> {
+  const ovhConfigured = isSmsConfigured();
+  const brevoConfigured = isBrevoSmsConfigured();
+  return {
+    ovhConfigured,
+    brevoConfigured,
+    canSend: ovhConfigured || brevoConfigured,
+    ovhCreditsLeft: ovhConfigured ? await getOvhSmsCreditsLeft() : null,
+  };
+}
+
 /** False = OTP SMS impossible (plus de crédit, OVH en erreur, non configuré). */
 export async function isTransactionalSmsAvailable(): Promise<boolean> {
   if (isSmsConfigured()) {
     const left = await getOvhSmsCreditsLeft();
-    if (left == null) return false;
-    return left > 0;
+    if (left != null && left > 0) return true;
   }
+  if (isBrevoSmsConfigured()) return true;
   return isDemoSmsAllowed();
+}
+
+type OvhJobsResponse = {
+  ids?: number[];
+  validReceivers?: string[];
+  invalidReceivers?: string[];
+};
+
+async function sendViaOvhJobs(params: {
+  receivers: string[];
+  message: string;
+  purpose: SmsPurpose;
+  tag?: string;
+}): Promise<{
+  ok: boolean;
+  error?: string;
+  validReceivers: string[];
+  invalidReceivers: string[];
+  ids: string[];
+}> {
+  const serviceName = process.env.OVH_SMS_SERVICE_NAME!;
+  const sender = process.env.OVH_SMS_SENDER ?? "NordArtPro";
+  const noStopClause = params.purpose === "transactional";
+  const bodyObj: Record<string, unknown> = {
+    message: params.message,
+    receivers: params.receivers,
+    sender,
+    noStopClause,
+  };
+  if (params.tag?.trim()) bodyObj.tag = params.tag.trim().slice(0, 64);
+
+  let result: { ok: boolean; status: number; text: string };
+  try {
+    result = await ovhRequest(
+      "POST",
+      `/sms/${serviceName}/jobs`,
+      JSON.stringify(bodyObj)
+    );
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Erreur réseau OVH SMS.",
+      validReceivers: [],
+      invalidReceivers: params.receivers,
+      ids: [],
+    };
+  }
+  if (!result.ok) {
+    if (/not enough credits/i.test(result.text)) {
+      smsCreditsCache = { at: Date.now(), left: 0 };
+    }
+    return {
+      ok: false,
+      error: result.text || `OVH SMS HTTP ${result.status}`,
+      validReceivers: [],
+      invalidReceivers: params.receivers,
+      ids: [],
+    };
+  }
+
+  let data: OvhJobsResponse = {};
+  try {
+    data = JSON.parse(result.text) as OvhJobsResponse;
+  } catch {
+    data = {};
+  }
+  const validReceivers = Array.isArray(data.validReceivers)
+    ? data.validReceivers
+    : params.receivers;
+  const invalidReceivers = Array.isArray(data.invalidReceivers)
+    ? data.invalidReceivers
+    : [];
+  const ids = Array.isArray(data.ids)
+    ? data.ids.map((id) => String(id))
+    : [];
+  return { ok: true, validReceivers, invalidReceivers, ids };
 }
 
 async function sendViaOvh(
@@ -156,61 +258,157 @@ async function sendViaOvh(
   message: string,
   purpose: SmsPurpose
 ): Promise<SendSmsResult> {
-  const appKey = process.env.OVH_APP_KEY!;
-  const appSecret = process.env.OVH_APP_SECRET!;
-  const consumerKey = process.env.OVH_CONSUMER_KEY!;
-  const serviceName = process.env.OVH_SMS_SERVICE_NAME!;
-  const sender = process.env.OVH_SMS_SENDER ?? "NordArtPro";
-
-  // Marketing : STOP obligatoire (noStopClause false).
-  // Transactionnel : pas de STOP pour éviter de blacklister un client après un OTP.
-  const noStopClause = purpose === "transactional";
-
-  const path = `/sms/${serviceName}/jobs`;
-  const url = `https://eu.api.ovh.com/1.0${path}`;
-  const body = JSON.stringify({
-    message,
+  const job = await sendViaOvhJobs({
     receivers: [to],
-    sender,
-    noStopClause,
+    message,
+    purpose,
   });
-  const timestamp = Math.floor(Date.now() / 1000);
-  const signature = ovhSignature(appSecret, consumerKey, "POST", url, body, timestamp);
+  if (!job.ok) {
+    return { ok: false, demo: false, error: job.error };
+  }
+  if (job.invalidReceivers.length > 0 && job.validReceivers.length === 0) {
+    return { ok: false, demo: false, error: "Numéro rejeté par OVH." };
+  }
+  return {
+    ok: true,
+    demo: false,
+    providerId: job.ids[0],
+  };
+}
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Ovh-Application": appKey,
-        "X-Ovh-Consumer": consumerKey,
-        "X-Ovh-Timestamp": String(timestamp),
-        "X-Ovh-Signature": signature,
-      },
-      body,
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      if (/not enough credits/i.test(text)) {
-        smsCreditsCache = { at: Date.now(), left: 0 };
-      }
-      return { ok: false, demo: false, error: text || `OVH SMS HTTP ${response.status}` };
+export async function sendMarketingSmsBatch(
+  phones: string[],
+  message: string,
+  tag?: string
+): Promise<{ demo: boolean; error?: string; byPhone: Map<string, SendSmsResult> }> {
+  const byPhone = new Map<string, SendSmsResult>();
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of phones) {
+    const normalized = normalizeFrenchMobile(raw);
+    if (!normalized) {
+      continue;
     }
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    unique.push(normalized);
+  }
 
-    const data = (await response.json()) as { ids?: number[] };
+  const text = message.trim();
+  if (text.length === 0) {
     return {
-      ok: true,
       demo: false,
-      providerId: data.ids?.[0] != null ? String(data.ids[0]) : undefined,
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      demo: false,
-      error: err instanceof Error ? err.message : "Erreur réseau OVH SMS.",
+      error: "Message vide.",
+      byPhone,
     };
   }
+  if (text.length > 640) {
+    return {
+      demo: false,
+      error: "Message trop long (max 640 caractères).",
+      byPhone,
+    };
+  }
+  if (!isMarketingSmsWindowOpen()) {
+    return {
+      demo: false,
+      error:
+        "SMS marketing hors horaires autorisés (lun–sam 8h–20h, heure de Paris). Réessayez plus tard.",
+      byPhone,
+    };
+  }
+  if (unique.length === 0) {
+    return { demo: false, error: "Aucun numéro valide.", byPhone };
+  }
+
+  const failAll = (error: string, demo = false) => {
+    for (const phone of unique) {
+      byPhone.set(phone, { ok: false, demo, error });
+    }
+    return { demo, error, byPhone };
+  };
+
+  if (isSmsConfigured()) {
+    const credits = await getOvhSmsCreditsLeft();
+    const ovhHasCredit = credits == null || credits >= unique.length;
+    if (ovhHasCredit) {
+      const job = await sendViaOvhJobs({
+        receivers: unique,
+        message: text,
+        purpose: "marketing",
+        tag,
+      });
+      if (job.ok) {
+        const invalid = new Set(
+          job.invalidReceivers
+            .map((p) => normalizeFrenchMobile(p))
+            .filter((p): p is string => Boolean(p))
+        );
+        const valid = new Set(
+          job.validReceivers
+            .map((p) => normalizeFrenchMobile(p))
+            .filter((p): p is string => Boolean(p))
+        );
+        unique.forEach((phone, index) => {
+          if (invalid.has(phone) && !valid.has(phone)) {
+            byPhone.set(phone, {
+              ok: false,
+              demo: false,
+              error: "Numéro rejeté par OVH.",
+            });
+            return;
+          }
+          byPhone.set(phone, {
+            ok: true,
+            demo: false,
+            providerId: job.ids[index],
+          });
+        });
+        return { demo: false, byPhone };
+      }
+      if (!isBrevoSmsConfigured()) {
+        return failAll(job.error ?? "Échec OVH SMS.");
+      }
+      console.warn("[sms] OVH lot a échoué, repli Brevo :", job.error);
+    } else if (!isBrevoSmsConfigured()) {
+      return failAll("Plus de crédits OVH SMS.");
+    } else {
+      console.warn("[sms] OVH sans crédit, repli Brevo.");
+    }
+  }
+
+  if (isBrevoSmsConfigured()) {
+    for (const phone of unique) {
+      const brevo = await sendBrevoSms({
+        toE164: phone,
+        message: text,
+        type: "marketing",
+      });
+      byPhone.set(
+        phone,
+        brevo.ok
+          ? { ok: true, demo: false, providerId: brevo.messageId }
+          : { ok: false, demo: false, error: brevo.error }
+      );
+    }
+    return { demo: false, byPhone };
+  }
+
+  if (isDemoSmsAllowed()) {
+    console.info("[SMS demo] marketing STOP lot", unique.length, text);
+    for (const phone of unique) {
+      byPhone.set(phone, {
+        ok: true,
+        demo: true,
+        providerId: `demo-${randomBytes(4).toString("hex")}`,
+      });
+    }
+    return { demo: true, byPhone };
+  }
+
+  return failAll(
+    "SMS non configuré. Activez OVH SMS ou BREVO_API_KEY, ou utilisez le mode démo."
+  );
 }
 
 export async function sendSms(
@@ -241,7 +439,40 @@ export async function sendSms(
   }
 
   if (isSmsConfigured()) {
-    return sendViaOvh(normalized, message.trim(), purpose);
+    const credits = await getOvhSmsCreditsLeft();
+    const ovhHasCredit = credits == null || credits > 0;
+    if (ovhHasCredit) {
+      const ovh = await sendViaOvh(normalized, message.trim(), purpose);
+      if (ovh.ok) return ovh;
+      if (isBrevoSmsConfigured()) {
+        console.warn(
+          "[sms] OVH a échoué, repli Brevo :",
+          ovh.error ?? "erreur inconnue"
+        );
+      } else {
+        return ovh;
+      }
+    } else if (!isBrevoSmsConfigured()) {
+      return {
+        ok: false,
+        demo: false,
+        error: "Plus de crédits OVH SMS.",
+      };
+    } else {
+      console.warn("[sms] OVH sans crédit, repli Brevo.");
+    }
+  }
+
+  if (isBrevoSmsConfigured()) {
+    const brevo = await sendBrevoSms({
+      toE164: normalized,
+      message: message.trim(),
+      type: purpose,
+    });
+    if (!brevo.ok) {
+      return { ok: false, demo: false, error: brevo.error };
+    }
+    return { ok: true, demo: false, providerId: brevo.messageId };
   }
 
   if (isDemoSmsAllowed()) {
@@ -258,6 +489,7 @@ export async function sendSms(
   return {
     ok: false,
     demo: false,
-    error: "SMS non configuré. Activez OVH_SMS_ENABLED ou utilisez le mode démo.",
+    error:
+      "SMS non configuré. Activez OVH SMS ou BREVO_API_KEY, ou utilisez le mode démo.",
   };
 }

@@ -11,6 +11,7 @@ import {
   MAX_CONTACT_UNLOCKS_PER_REQUEST,
 } from "@/lib/contact-slots";
 import { CATEGORY_LABELS, formatLocation } from "@/lib/data";
+import { formatUnlockPriceRange } from "@/lib/pricing-tiers";
 import { hasContactUnlock } from "@/lib/store";
 
 export const metadata: Metadata = {
@@ -35,8 +36,8 @@ export default async function ProChantiersPage() {
       <h1 className="text-2xl font-bold text-slate-900">Offres de particuliers</h1>
       <p className="mt-1 text-sm text-slate-600">
         {auctions.length} projet{auctions.length > 1 ? "s" : ""} disponible
-        {auctions.length > 1 ? "s" : ""} en 59/62 · mise en contact 15 à
-        25&nbsp;€ selon le ticket
+        {auctions.length > 1 ? "s" : ""} en 59/62 · mise en contact{" "}
+        {formatUnlockPriceRange()} selon le ticket
       </p>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">

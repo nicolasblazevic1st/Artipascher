@@ -14,8 +14,13 @@ import {
   runAcquisitionCampaignTick,
   parseRecipientDrafts,
   startAcquisitionCampaign,
+  listSmsCampaignSearchRows,
 } from "@/lib/sms-campaigns";
-import { isDemoSmsAllowed, isSmsConfigured } from "@/lib/sms";
+import {
+  getSmsProviderStatus,
+  isAnySmsProviderConfigured,
+  isDemoSmsAllowed,
+} from "@/lib/sms";
 import {
   countAcceptedArtisansForAuction,
   getPendingReviewSmsCampaigns,
@@ -36,6 +41,7 @@ export async function GET() {
   const campaigns = await getSmsCampaigns();
   const pendingReview = await getPendingReviewSmsCampaigns();
   const acquisitions = await getSmsAcquisitionCampaigns();
+  const searchRows = await listSmsCampaignSearchRows();
   const store = await readStore();
   const settings = await getSmsSettings();
   const day = parisDayKey();
@@ -85,13 +91,19 @@ export async function GET() {
       };
     });
 
+  const sms = await getSmsProviderStatus();
+
   return NextResponse.json({
     campaigns,
     pendingReview,
     acquisitions: acquisitionRows,
+    searchRows,
     requests: eligibleRequests,
     settings,
-    smsConfigured: isSmsConfigured(),
+    smsConfigured: sms.canSend,
+    ovhConfigured: sms.ovhConfigured,
+    brevoSmsConfigured: sms.brevoConfigured,
+    ovhCreditsLeft: sms.ovhCreditsLeft,
     demoAllowed: isDemoSmsAllowed(),
   });
 }
@@ -229,9 +241,9 @@ export async function POST(request: NextRequest) {
     if (!batchId) {
       return NextResponse.json({ error: "batchId requis." }, { status: 400 });
     }
-    if (!demo && !isSmsConfigured()) {
+    if (!demo && !isAnySmsProviderConfigured()) {
       return NextResponse.json(
-        { error: "OVH SMS non configuré. Impossible d’envoyer pour de vrai." },
+        { error: "SMS non configuré (OVH ou Brevo). Impossible d’envoyer pour de vrai." },
         { status: 503 }
       );
     }
@@ -276,11 +288,11 @@ export async function POST(request: NextRequest) {
     {
       const settings = await getSmsSettings();
       const reviewOnly = settings.requireReviewBeforeSend && !demo;
-      if (!demo && !reviewOnly && !isSmsConfigured()) {
+      if (!demo && !reviewOnly && !isAnySmsProviderConfigured()) {
         return NextResponse.json(
           {
             error:
-              "OVH SMS non configuré. Activez la validation avant envoi, ou le mode démo.",
+              "SMS non configuré (OVH ou Brevo). Activez la validation avant envoi, ou le mode démo.",
           },
           { status: 503 }
         );
@@ -315,9 +327,9 @@ export async function POST(request: NextRequest) {
 
   const settings = await getSmsSettings();
   const reviewOnly = settings.requireReviewBeforeSend && !demo;
-  if (!demo && !reviewOnly && !isSmsConfigured()) {
+  if (!demo && !reviewOnly && !isAnySmsProviderConfigured()) {
     return NextResponse.json(
-      { error: "OVH SMS non configuré. Activez la validation avant envoi, ou le mode démo." },
+      { error: "SMS non configuré (OVH ou Brevo). Activez la validation avant envoi, ou le mode démo." },
       { status: 503 }
     );
   }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import CoproprieteBanner from "@/components/CoproprieteBanner";
 import { getProSession } from "@/lib/pro-auth";
 import { getUnlockedContactsForPro } from "@/lib/store";
+import { formatUnlockPriceRange } from "@/lib/pricing-tiers";
 
 export const metadata: Metadata = {
   title: "Contacts",
@@ -19,7 +20,7 @@ export default async function ProContactsPage() {
       <h1 className="text-2xl font-bold text-slate-900">Contacts</h1>
       <p className="mt-1 text-sm text-slate-600">
         Coordonnées des particuliers dont vous avez débloqué le contact
-        (15 à 25&nbsp;€ selon le ticket, débit solde).
+        ({formatUnlockPriceRange()} selon le ticket, débit solde).
       </p>
 
       {contacts.length === 0 ? (

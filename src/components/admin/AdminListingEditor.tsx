@@ -101,18 +101,12 @@ export default function AdminListingEditor({ request, backHref }: Props) {
   const [auctionEndsAt, setAuctionEndsAt] = useState(
     toDatetimeLocal(request.auctionEndsAt)
   );
+  const [publishedAt, setPublishedAt] = useState(
+    toDatetimeLocal(request.reviewedAt ?? request.createdAt)
+  );
   const [recalculateEndsAt, setRecalculateEndsAt] = useState(false);
   const [maxContactArtisans, setMaxContactArtisans] = useState(
     request.maxContactArtisans ?? 5
-  );
-  const [preferEstablishedCompany, setPreferEstablishedCompany] = useState<
-    "any" | "true" | "false"
-  >(
-    request.preferEstablishedCompany === true
-      ? "true"
-      : request.preferEstablishedCompany === false
-        ? "false"
-        : "any"
   );
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">(
     request.minGoogleRating ?? ""
@@ -177,6 +171,12 @@ export default function AdminListingEditor({ request, backHref }: Props) {
     setError(null);
     setMessage(null);
 
+    if (published && !publishedAt) {
+      setError("Indiquez une date de publication.");
+      setSaving(false);
+      return;
+    }
+
     const payload: Record<string, unknown> = {
       firstName,
       lastName,
@@ -198,6 +198,9 @@ export default function AdminListingEditor({ request, backHref }: Props) {
       requestedWorkStartDate: requestedWorkStartDate || null,
       addressLine2,
       auctionDurationHours,
+      ...(publishedAt
+        ? { reviewedAt: new Date(publishedAt).toISOString() }
+        : {}),
       ...(published
         ? {
             auctionEndsAt: auctionEndsAt
@@ -207,8 +210,7 @@ export default function AdminListingEditor({ request, backHref }: Props) {
           }
         : {}),
       maxContactArtisans,
-      preferEstablishedCompany:
-        preferEstablishedCompany === "any" ? null : preferEstablishedCompany === "true",
+      preferEstablishedCompany: null,
       minGoogleRating: minGoogleRating === "" ? null : minGoogleRating,
       requireRge,
       isTest,
@@ -259,6 +261,9 @@ export default function AdminListingEditor({ request, backHref }: Props) {
 
       if (data.request?.auctionEndsAt) {
         setAuctionEndsAt(toDatetimeLocal(data.request.auctionEndsAt));
+      }
+      if (data.request?.reviewedAt) {
+        setPublishedAt(toDatetimeLocal(data.request.reviewedAt));
       }
       setMessage(success);
       setRecalculateEndsAt(false);
@@ -349,6 +354,21 @@ export default function AdminListingEditor({ request, backHref }: Props) {
           Contrôle de la visibilité et de la durée de mise en contact.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm sm:col-span-2">
+            <span className="mb-1 block font-medium text-slate-700">
+              Date de publication
+            </span>
+            <input
+              type="datetime-local"
+              className={INPUT}
+              value={publishedAt}
+              onChange={(e) => setPublishedAt(e.target.value)}
+            />
+            <span className="mt-1 block text-xs text-slate-500">
+              Affichée « Publiée le … » sur l’offre. La date de fin se règle à
+              part, ci-dessous.
+            </span>
+          </label>
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-slate-700">
               Durée catalogue
@@ -665,22 +685,6 @@ export default function AdminListingEditor({ request, backHref }: Props) {
                   {n}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">
-              Ancienneté entreprise
-            </span>
-            <select
-              className={INPUT}
-              value={preferEstablishedCompany}
-              onChange={(e) =>
-                setPreferEstablishedCompany(e.target.value as "any" | "true" | "false")
-              }
-            >
-              <option value="any">Indifférent</option>
-              <option value="true">Uniquement 2 ans et +</option>
-              <option value="false">Uniquement moins de 2 ans</option>
             </select>
           </label>
           <label className="block text-sm">

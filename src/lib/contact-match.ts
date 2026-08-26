@@ -3,7 +3,6 @@
  */
 
 import { getArtisanBySiret } from "./artisans-db";
-import { companyAgeCohort } from "./artisans-for-chantier";
 import {
   getNafCodesForCategory,
   resolveWorkRequestNafCodes,
@@ -13,7 +12,6 @@ import {
   isLevel1DocumentsValidated,
   listMissingVerificationDocuments,
 } from "./level1-certification";
-import { getArtisanProspects } from "./store";
 import type { ProRegistration, WorkRequest } from "./store-types";
 import { parseMinGoogleRating } from "./google-rating";
 import { isGooglePlacesEnabled } from "./google-places";
@@ -70,17 +68,6 @@ function requestMatchesProTrade(
   return false;
 }
 
-async function resolveProCompanyCreatedAt(
-  pro: ProRegistration
-): Promise<string | undefined> {
-  const fromDb = await getArtisanBySiret(pro.siret);
-  if (fromDb?.companyCreatedAt) return fromDb.companyCreatedAt;
-
-  const prospects = await getArtisanProspects();
-  const prospect = prospects.find((p) => p.siret === pro.siret);
-  return prospect?.companyCreatedAt;
-}
-
 async function resolveProGoogleRating(
   pro: ProRegistration
 ): Promise<number | undefined> {
@@ -96,7 +83,7 @@ async function resolveProGoogleRating(
 
 /**
  * Critères client pour débloquer un contact (consultation libre tous départements) :
- * métier/NAF, entreprise active, RC + décennale, RGE, ancienneté, note Google.
+ * métier/NAF, entreprise active, RC + décennale, RGE, note Google.
  * Les annonces démo sans critères NAF restent ouvertes aux pros approuvés.
  */
 export async function evaluateProContactMatch(
@@ -140,28 +127,6 @@ export async function evaluateProContactMatch(
           ? missingItems
           : ["RC professionnelle", "Décennale"],
     };
-  }
-
-  if (request.preferEstablishedCompany === true) {
-    const createdAt = await resolveProCompanyCreatedAt(pro);
-    if (createdAt && companyAgeCohort(createdAt) === "young") {
-      return {
-        ok: false,
-        code: "criteria",
-        reason:
-          "Le client souhaite une entreprise créée il y a 2 ans ou plus.",
-      };
-    }
-  } else if (request.preferEstablishedCompany === false) {
-    const createdAt = await resolveProCompanyCreatedAt(pro);
-    if (!createdAt || companyAgeCohort(createdAt) !== "young") {
-      return {
-        ok: false,
-        code: "criteria",
-        reason:
-          "Le client souhaite une entreprise créée il y a moins de 2 ans.",
-      };
-    }
   }
 
   if (request.requireRge === true) {

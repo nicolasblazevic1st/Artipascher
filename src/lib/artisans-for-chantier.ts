@@ -146,9 +146,7 @@ export async function searchArtisansForChantier(
 
   const radiusKm = options?.radiusKm ?? defaultNearbyRadiusKm();
   const origin = await resolveChantierOrigin(request);
-  const ageFilter =
-    options?.ageCohort ??
-    ageCohortFromClientPreference(request.preferEstablishedCompany);
+  const ageFilter = options?.ageCohort ?? "all";
   const phoneFilter = options?.hasPhone ?? "all";
   const requireRge = options?.requireRge ?? request.requireRge === true;
   const minRating = options?.ignoreMinGoogleRating

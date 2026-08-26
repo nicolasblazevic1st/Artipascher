@@ -3,7 +3,7 @@ import Link from "next/link";
 import LegalDocument from "@/components/LegalDocument";
 import { LEGAL_PUBLISHER } from "@/lib/legal";
 import { CONTACT_UNLOCK_REF_EUR } from "@/lib/store-types";
-import { PRICING_TIERS } from "@/lib/pricing-tiers";
+import { formatUnlockPriceEur, PRICING_TIERS } from "@/lib/pricing-tiers";
 
 export const metadata: Metadata = {
   title: "Conditions générales de vente",
@@ -52,7 +52,7 @@ export default function CgvPage() {
           <li>
             le prix exact débité correspond au{" "}
             <strong>ticket du chantier</strong>{" "} affiché avant paiement :{" "}
-            {PRICING_TIERS.map((t) => `${t.unlockPriceEur}\u00a0€`).join(" / ")}{" "}
+            {PRICING_TIERS.map((t) => formatUnlockPriceEur(t.unlockPriceEur)).join(" / ")}{" "}
             ;
           </li>
           <li>

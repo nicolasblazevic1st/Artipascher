@@ -4,10 +4,8 @@ import { getEnrichedAuctions } from "@/lib/pro-dashboard";
 import { shouldShowDemoBannerForProSession } from "@/lib/demo-banners";
 import { CATEGORY_LABELS, formatLocation } from "@/lib/data";
 import { getProDashboardStats, getProForSession, hasContactUnlock } from "@/lib/store";
-import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
-import {
-  UNLOCK_PRICE_EUR,
-} from "@/lib/client-contacts";
+import { formatUnlockPriceEur, formatUnlockPriceRange } from "@/lib/pricing-tiers";
+import { UNLOCK_PRICE_EUR } from "@/lib/client-contacts";
 import {
   MAX_CONTACT_UNLOCKS_PER_REQUEST,
   remainingAcceptSlots,
@@ -106,7 +104,7 @@ export default async function ProDashboardPage() {
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-600">
             <li>Parcourez les offres qui matchent votre métier et votre zone.</li>
             <li>
-              Mise en contact (15 à 25&nbsp;€ selon le ticket, paiement Stripe)
+              Mise en contact ({formatUnlockPriceRange()} selon le ticket, paiement Stripe)
               tant qu’il reste une place (max. 5 artisans).
             </li>
             <li>

@@ -47,6 +47,8 @@ import {
   type DataStore,
   type DecennaleVerificationStatus,
   type DocumentVerificationStatus,
+  type EmailCampaign,
+  type EmailMarketingOptOut,
   type EmailVerificationToken,
   type NotificationAudience,
   type NotificationKind,
@@ -64,6 +66,7 @@ import {
   type SmsCampaign,
   type SmsCampaignSettings,
   type SmsCampaignTrigger,
+  type SmsSearchSnapshot,
   type WorkRequest,
 } from "./store-types";
 
@@ -140,7 +143,10 @@ export async function readStore(): Promise<DataStore> {
     guestPhoneVerifications: parsed.guestPhoneVerifications ?? [],
     smsCampaigns: parsed.smsCampaigns ?? [],
     smsAcquisitionCampaigns: parsed.smsAcquisitionCampaigns ?? [],
+    smsSearchSnapshots: parsed.smsSearchSnapshots ?? [],
     smsSettings: normalizeSmsSettings(parsed.smsSettings),
+    emailCampaigns: parsed.emailCampaigns ?? [],
+    emailMarketingOptOuts: parsed.emailMarketingOptOuts ?? [],
     creditWallets: parsed.creditWallets ?? [],
     creditTransactions: parsed.creditTransactions ?? [],
     notifications: parsed.notifications ?? [],
@@ -2948,6 +2954,62 @@ export async function upsertArtisanProspect(
   return store.artisanProspects[index];
 }
 
+const SMS_SEARCH_POOL_MAX = 400;
+
+export async function getSmsSearchSnapshots(): Promise<SmsSearchSnapshot[]> {
+  const store = await readStore();
+  return (store.smsSearchSnapshots ?? []).slice().sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function getSmsSearchSnapshotForRequest(
+  workRequestId: string
+): Promise<SmsSearchSnapshot | null> {
+  const store = await readStore();
+  return (
+    (store.smsSearchSnapshots ?? []).find(
+      (s) => s.workRequestId === workRequestId
+    ) ?? null
+  );
+}
+
+export async function upsertSmsSearchSnapshot(
+  data: Omit<SmsSearchSnapshot, "id" | "createdAt"> & { id?: string }
+): Promise<SmsSearchSnapshot> {
+  const store = await readStore();
+  const snapshots = store.smsSearchSnapshots ?? [];
+  const pool = data.pool.slice(0, SMS_SEARCH_POOL_MAX);
+  const existingIndex = snapshots.findIndex(
+    (s) => s.workRequestId === data.workRequestId
+  );
+  const entry: SmsSearchSnapshot = {
+    id:
+      existingIndex >= 0
+        ? snapshots[existingIndex].id
+        : data.id ?? newId("sms-search"),
+    createdAt: new Date().toISOString(),
+    workRequestId: data.workRequestId,
+    category: data.category,
+    city: data.city,
+    department: data.department,
+    radiusKm: data.radiusKm,
+    campaignSize: data.campaignSize,
+    totalNearby: data.totalNearby,
+    alreadyMarketedCount: data.alreadyMarketedCount,
+    bodaccExcluded: data.bodaccExcluded,
+    pool,
+  };
+  if (existingIndex >= 0) {
+    snapshots[existingIndex] = entry;
+  } else {
+    snapshots.unshift(entry);
+  }
+  store.smsSearchSnapshots = snapshots;
+  await writeStore(store);
+  return entry;
+}
+
 /**
  * SIRET déjà touchés par un SMS marketing (prospect ou historique campagnes).
  * Ces artisans ne doivent plus être ciblés en prospection.
@@ -3450,4 +3512,98 @@ export async function resolveClientUserIdForRequest(
   if (!workRequest.email.trim()) return null;
   const client = await getClientByEmail(workRequest.email);
   return client?.id ?? null;
+}
+
+export async function getEmailCampaigns(): Promise<EmailCampaign[]> {
+  const store = await readStore();
+  return [...(store.emailCampaigns ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function addEmailCampaign(
+  data: Omit<EmailCampaign, "id" | "createdAt">
+): Promise<EmailCampaign> {
+  const store = await readStore();
+  const entry: EmailCampaign = {
+    ...data,
+    id: newId("eml"),
+    createdAt: new Date().toISOString(),
+  };
+  store.emailCampaigns = store.emailCampaigns ?? [];
+  store.emailCampaigns.unshift(entry);
+  await writeStore(store);
+  return entry;
+}
+
+export async function updateEmailCampaign(
+  id: string,
+  patch: Partial<
+    Pick<
+      EmailCampaign,
+      | "status"
+      | "sentCount"
+      | "failedCount"
+      | "skippedCount"
+      | "recipientCount"
+      | "recipients"
+      | "sentAt"
+    >
+  >
+): Promise<EmailCampaign | null> {
+  const store = await readStore();
+  const list = store.emailCampaigns ?? [];
+  const index = list.findIndex((c) => c.id === id);
+  if (index === -1) return null;
+  list[index] = { ...list[index], ...patch };
+  store.emailCampaigns = list;
+  await writeStore(store);
+  return list[index];
+}
+
+export async function getEmailMarketingOptOuts(): Promise<EmailMarketingOptOut[]> {
+  const store = await readStore();
+  return [...(store.emailMarketingOptOuts ?? [])];
+}
+
+export async function isEmailMarketingOptedOut(email: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
+  const store = await readStore();
+  if (
+    (store.emailMarketingOptOuts ?? []).some((o) => o.email === normalized)
+  ) {
+    return true;
+  }
+  return store.proRegistrations.some(
+    (p) =>
+      p.email.toLowerCase() === normalized && p.marketingEmailOptedOut === true
+  );
+}
+
+export async function addEmailMarketingOptOut(
+  email: string,
+  source: EmailMarketingOptOut["source"]
+): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return false;
+  const store = await readStore();
+  store.emailMarketingOptOuts = store.emailMarketingOptOuts ?? [];
+  const already = store.emailMarketingOptOuts.some((o) => o.email === normalized);
+  if (!already) {
+    store.emailMarketingOptOuts.push({
+      email: normalized,
+      at: new Date().toISOString(),
+      source,
+    });
+  }
+  let changed = !already;
+  for (const pro of store.proRegistrations) {
+    if (pro.email.toLowerCase() === normalized && !pro.marketingEmailOptedOut) {
+      pro.marketingEmailOptedOut = true;
+      changed = true;
+    }
+  }
+  if (changed) await writeStore(store);
+  return true;
 }
