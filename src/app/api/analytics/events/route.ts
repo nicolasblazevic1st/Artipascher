@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
         : undefined,
     gaSent: payload.gaSent === true,
     internal: await isAdminAuthenticated(),
+    ip,
   });
 
   if (!result.ok) {

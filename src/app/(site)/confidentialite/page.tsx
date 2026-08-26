@@ -75,9 +75,17 @@ export default function ConfidentialitePage() {
             numéro complet de carte ;
           </li>
           <li>
-            <strong>Technique</strong>{" "} : logs de connexion, cookies nécessaires,
-            mesure d&apos;audience si consentement (voir{" "}
+            <strong>Technique</strong>{" "} : logs de connexion (adresse IP),
+            cookies nécessaires, mesure d&apos;audience si consentement (voir{" "}
             <Link href="/cookies">politique de cookies</Link>) ;
+          </li>
+          <li>
+            <strong>Parcours de formulaire</strong>{" "} : étapes consultées,
+            métier choisi, identifiant de session anonyme, et adresse IP
+            associée (lue côté serveur, jamais saisie par le visiteur).
+            Finalité : sécurité, prévention des abus et diagnostic des
+            interruptions. Non transmise à Google Analytics. Non utilisée pour
+            recontacter une personne qui n&apos;a pas laissé ses coordonnées ;
           </li>
           <li>
             <strong>Brouillons de formulaire</strong>{" "} : texte saisi dans le
@@ -301,8 +309,8 @@ export default function ConfidentialitePage() {
             <Link href="/cookies">politique de cookies</Link>.
           </li>
           <li>
-            Parcours des formulaires (étapes et brouillons de description) : 90
-            jours ;
+            Parcours des formulaires (étapes, adresse IP et brouillons de
+            description) : 90 jours ;
           </li>
         </ul>
       </section>

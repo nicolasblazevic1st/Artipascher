@@ -33,9 +33,9 @@ export const LEGAL_PUBLISHER = {
   consumerMediator:
     "L’inscription auprès d’un médiateur de la consommation agréé est en cours. Les coordonnées du médiateur seront communiquées sur cette page dès confirmation de l’adhésion.",
   /** Date de dernière mise à jour des documents */
-  lastUpdated: "22 août 2026",
+  lastUpdated: "26 août 2026",
   /** Version des documents */
-  version: "1.8-brouillon",
+  version: "1.9-brouillon",
 } as const;
 
 /** Hébergeur (OVH) — données publiques usuelles */
