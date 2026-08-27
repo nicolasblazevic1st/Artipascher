@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClientIp } from "@/lib/request-client";
+import { getClientIp, getClientUserAgent } from "@/lib/request-client";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { isAnalyticsCrawler } from "@/lib/analytics-bots";
 import { appendFormFunnelEvent } from "@/lib/form-funnel";
 
 const WINDOW_MS = 60_000;
@@ -46,6 +47,14 @@ export async function POST(request: NextRequest) {
   }
 
   const ip = getClientIp(request);
+  if (
+    isAnalyticsCrawler({
+      ip,
+      userAgent: getClientUserAgent(request),
+    })
+  ) {
+    return NextResponse.json({ ok: true });
+  }
   if (ip !== "unknown" && isRateLimited(ip)) {
     return NextResponse.json({ error: "Trop de requêtes." }, { status: 429 });
   }
