@@ -10,6 +10,11 @@ export async function GET(request: NextRequest) {
   const days = parseFunnelRangeDays(request.nextUrl.searchParams.get("days"));
   const excludeInternal =
     request.nextUrl.searchParams.get("excludeInternal") === "1";
-  const report = await getFormFunnelReport(days, { excludeInternal });
+  const excludeNoise =
+    request.nextUrl.searchParams.get("excludeNoise") === "1";
+  const report = await getFormFunnelReport(days, {
+    excludeInternal,
+    excludeNoise,
+  });
   return NextResponse.json(report);
 }
