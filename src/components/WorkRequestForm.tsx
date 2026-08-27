@@ -92,13 +92,7 @@ function buildDescriptionPrefill(input: {
   return `${first}\n\nMerci de me recontacter pour un devis. Je préciserai les détails lors de l'échange.`;
 }
 
-const FORM_STEPS = [
-  { id: 1, label: "Travaux" },
-  { id: 2, label: "Bien" },
-  { id: 3, label: "Projet" },
-  { id: 4, label: "Contact" },
-] as const;
-type FormStep = (typeof FORM_STEPS)[number]["id"];
+type FormStep = 1 | 2 | 3 | 4;
 
 const PROPERTY_TYPES = [
   { id: "maison", label: "Maison" },
@@ -1011,21 +1005,20 @@ export default function WorkRequestForm({
           Demande de travaux · artisans vérifiés 59/62
         </p>
         <p className="mt-0.5 text-xs text-slate-600">
-          4 étapes
           {guestMode
-            ? " · gratuit · sans compte obligatoire"
-            : " · gratuit · sans commission"}
+            ? "Gratuit · sans compte obligatoire"
+            : "Gratuit · sans commission"}
         </p>
       </div>
       <div>
         <p className="text-sm font-medium text-slate-900">
           {step === 1 &&
             (variant === "general"
-              ? "Étape 1 — de quels travaux s’agit-il ?"
-              : "Étape 1 — quel type de travaux ?")}
-          {step === 2 && "Étape 2 — où se situe le chantier ?"}
-          {step === 3 && "Étape 3 — décrivez le projet"}
-          {step === 4 && "Étape 4 — vos coordonnées"}
+              ? "De quels travaux s’agit-il ?"
+              : "Quel type de travaux ?")}
+          {step === 2 && "Où se situe le chantier ?"}
+          {step === 3 && "Décrivez le projet"}
+          {step === 4 && "Vos coordonnées"}
         </p>
         <p className="mt-1 text-sm text-slate-600">
           {step === 1 &&
@@ -1036,40 +1029,11 @@ export default function WorkRequestForm({
           {step === 3 && "Quelques mots sur ce que vous voulez, et des photos si vous en avez."}
           {step === 4 && "On vous rappelle. Gratuit, sans engagement."}
         </p>
-        <ol className="mt-4 grid grid-cols-4 gap-2">
-          {FORM_STEPS.map((item) => {
-            const done = step > item.id;
-            const current = step === item.id;
-            return (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (item.id < step) {
-                      trackLeadStepBack(step, item.id);
-                      goToStep(item.id);
-                    }
-                  }}
-                  disabled={item.id > step}
-                  className={`w-full rounded-lg px-2 py-2 text-center text-xs font-medium ${
-                    current
-                      ? "bg-brand-600 text-white"
-                      : done
-                        ? "bg-brand-50 text-brand-800"
-                        : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {item.id}. {item.label}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
       </div>
 
       <div className={step === 1 ? "space-y-4" : "hidden"}>
       <fieldset>
-        <legend className="text-sm font-semibold text-slate-900">
+        <legend className="sr-only">
           {variant === "general" ? "De quels travaux s'agit-il ?" : "Type de travaux"}
         </legend>
         {variant === "general" ? (
@@ -1515,7 +1479,7 @@ export default function WorkRequestForm({
           Description du projet
         </label>
         <p className="mb-2 text-xs text-slate-500">
-          Préremplie avec vos choix de l&apos;étape 1 — complétez ou corrigez
+          Préremplie avec vos choix — complétez ou corrigez
           si besoin.
         </p>
         <textarea
