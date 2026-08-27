@@ -1,16 +1,20 @@
 import { isIP } from "node:net";
 import type { NextRequest } from "next/server";
 
-/** IP client derrière reverse proxy (Nginx / OVH). */
-export function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
+export function getClientIpFromHeaders(headers: Headers): string {
+  const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
     const first = forwarded.split(",")[0]?.trim();
     if (first) return first;
   }
-  const realIp = request.headers.get("x-real-ip")?.trim();
+  const realIp = headers.get("x-real-ip")?.trim();
   if (realIp) return realIp;
   return "unknown";
+}
+
+/** IP client derrière reverse proxy (Nginx / OVH). */
+export function getClientIp(request: NextRequest): string {
+  return getClientIpFromHeaders(request.headers);
 }
 
 /** IPv4 / IPv6 worth storing. Drops "unknown" and non-IP garbage. */

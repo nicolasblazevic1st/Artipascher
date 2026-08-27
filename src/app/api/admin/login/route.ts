@@ -4,6 +4,7 @@ import {
   createSessionToken,
   getAdminPassword,
 } from "@/lib/admin-auth";
+import { rememberAdminAccessIp } from "@/lib/admin-known-ips";
 import {
   adminLoginRateLimitMessage,
   appendAdminLoginLog,
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
     success: true,
     reason: "ok",
   });
+  await rememberAdminAccessIp(ip);
 
   const response = NextResponse.json({ success: true });
   const isProd = process.env.NODE_ENV === "production";
