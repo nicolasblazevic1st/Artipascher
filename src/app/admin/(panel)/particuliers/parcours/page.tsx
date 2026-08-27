@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 
 type RangeDays = 1 | 7 | 30 | 90;
 type FormTab = "lead" | "pro";
@@ -35,7 +35,14 @@ interface StepTimeRow {
   medianSeconds: number;
 }
 
+interface FunnelSessionEvent {
+  at: string;
+  label: string;
+  detail?: string;
+}
+
 interface FunnelSessionRow {
+  sessionId?: string;
   sessionShort: string;
   startedAt: string;
   lastAt: string;
@@ -59,6 +66,7 @@ interface FunnelSessionRow {
   descriptionDraft?: string;
   internal?: boolean;
   ip?: string;
+  events?: FunnelSessionEvent[];
 }
 
 interface FunnelSavedTextRow {
@@ -172,6 +180,18 @@ function formatWhen(iso: string) {
     return new Date(iso).toLocaleString("fr-FR", {
       dateStyle: "short",
       timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function formatEventClock(iso: string) {
+  try {
+    return new Date(iso).toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   } catch {
     return iso;
@@ -415,6 +435,8 @@ function StepTimeTable({ rows }: { rows: StepTimeRow[] }) {
 }
 
 function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
@@ -578,7 +600,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
           Identifiant anonyme (6 derniers caractères) et adresse IP (sécurité /
           diagnostic, 90 jours). Durée = premier → dernier événement enregistré.
           Un clic Google Ads qui ne va pas jusqu&apos;au formulaire apparaît ici
-          (« Arrivée pub »).
+          (« Arrivée pub »). Cliquez une ligne pour voir le fil d&apos;actions.
         </p>
         {side.recent.length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">Aucune session récente.</p>
@@ -601,8 +623,17 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {side.recent.map((row) => (
-                  <tr key={`${row.sessionShort}-${row.startedAt}`}>
+                {side.recent.map((row) => {
+                  const rowId = row.sessionId ?? `${row.sessionShort}-${row.startedAt}`;
+                  const open = openId === rowId;
+                  const events = row.events ?? [];
+                  return (
+                    <Fragment key={rowId}>
+                  <tr
+                    className="cursor-pointer hover:bg-slate-50"
+                    onClick={() => setOpenId(open ? null : rowId)}
+                    aria-expanded={open}
+                  >
                     <td className="py-2 pr-3 text-slate-600">
                       <p className="tabular-nums">{formatWhen(row.lastAt)}</p>
                       <p className="font-mono text-[10px] text-slate-400">
@@ -663,7 +694,49 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                         .join(" · ") || "—"}
                     </td>
                   </tr>
-                ))}
+                  {open ? (
+                    <tr>
+                      <td colSpan={7} className="bg-slate-50 px-3 py-3">
+                        {events.length === 0 ? (
+                          <p className="text-sm text-slate-500">
+                            Aucun événement détaillé pour cette session.
+                          </p>
+                        ) : (
+                          <ol className="space-y-1.5">
+                            {events.map((event, index) => (
+                              <li
+                                key={`${event.at}-${index}`}
+                                className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm"
+                              >
+                                <span className="w-20 shrink-0 font-mono tabular-nums text-xs text-slate-400">
+                                  {formatEventClock(event.at)}
+                                </span>
+                                <span className="font-medium text-slate-800">
+                                  {event.label}
+                                </span>
+                                {event.detail ? (
+                                  <span className="text-slate-500">
+                                    {event.detail}
+                                  </span>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                        {row.descriptionDraft ? (
+                          <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">
+                            <span className="font-medium text-slate-500">
+                              Description :{" "}
+                            </span>
+                            {row.descriptionDraft}
+                          </p>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ) : null}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -813,7 +886,7 @@ export default function AdminParcoursFormulairesPage() {
           {loading && (
             <p className="mb-3 text-xs text-slate-400">Mise à jour…</p>
           )}
-          <SidePanel side={side} form={tab} />
+          <SidePanel key={tab} side={side} form={tab} />
         </div>
       ) : null}
     </div>

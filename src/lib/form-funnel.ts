@@ -82,7 +82,14 @@ export interface StepTimeRow {
   medianSeconds: number;
 }
 
+export interface FunnelSessionEvent {
+  at: string;
+  label: string;
+  detail?: string;
+}
+
 export interface FunnelSessionRow {
+  sessionId: string;
   sessionShort: string;
   startedAt: string;
   lastAt: string;
@@ -106,6 +113,7 @@ export interface FunnelSessionRow {
   descriptionDraft?: string;
   internal?: boolean;
   ip?: string;
+  events?: FunnelSessionEvent[];
 }
 
 export interface FunnelSavedTextRow {
@@ -202,6 +210,30 @@ const VARIANT_LABELS: Record<string, string> = {
   general: "Je ne sais pas / plusieurs métiers",
 };
 
+const EVENT_LABELS: Record<string, string> = {
+  lead_ads_landing: "Arrivée pub",
+  lead_form_start: "Ouverture du formulaire",
+  lead_form_step_view: "Vue d’une étape",
+  lead_form_step_complete: "Étape validée",
+  lead_form_step_back: "Retour en arrière",
+  lead_form_validation_error: "Erreur de saisie",
+  lead_form_submit_attempt: "Clic sur envoyer",
+  lead_form_otp_sent: "SMS de vérification envoyé",
+  lead_form_otp_verified: "Mobile vérifié",
+  lead_form_abandon: "A quitté la page",
+  manual_event_SUBMIT_LEAD_FORM: "Demande envoyée",
+  lead_cta_click: "Clic vers le formulaire",
+  pro_form_start: "Ouverture de l’inscription",
+  pro_form_rcs_verify_attempt: "Vérification SIRET",
+  pro_form_rcs_verify_success: "SIRET validé",
+  pro_form_rcs_verify_failure: "SIRET refusé",
+  pro_form_section_view: "Vue d’une section",
+  pro_form_validation_error: "Erreur de saisie",
+  pro_form_submit_attempt: "Clic sur envoyer",
+  pro_form_submit_success: "Inscription envoyée",
+  pro_form_abandon: "A quitté la page",
+};
+
 let writeQueue: Promise<void> = Promise.resolve();
 
 function enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
@@ -240,6 +272,53 @@ function storedIp(value: unknown): string | undefined {
 function percent(part: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((part / total) * 1000) / 10;
+}
+
+function formatEventMs(ms: number): string | undefined {
+  if (!Number.isFinite(ms) || ms < 0) return undefined;
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  const seconds = Math.round(ms / 100) / 10;
+  if (seconds < 60) return `${seconds.toLocaleString("fr-FR")} s`;
+  const min = Math.floor(seconds / 60);
+  const sec = Math.round(seconds % 60);
+  return sec === 0 ? `${min} min` : `${min} min ${sec} s`;
+}
+
+function sessionEventDetail(
+  _name: string,
+  params: Record<string, GtagParamValue>
+): string | undefined {
+  const bits: string[] = [];
+  const landing = asString(params.landing_path);
+  if (landing) bits.push(`page ${landing}`);
+  const step = asNumber(params.step_index);
+  if (step) bits.push(LEAD_STEP_LABELS[step] ?? `Étape ${step}`);
+  const section = asString(params.section_id);
+  if (section) bits.push(PRO_SECTION_LABELS[section] ?? section);
+  const work = asString(params.work_category);
+  if (work) bits.push(work === "unknown" ? "Je ne sais pas" : work);
+  const error = asString(params.error_code);
+  if (error) bits.push(ERROR_LABELS[error] ?? error);
+  const time = asNumber(params.time_on_step_ms);
+  if (time != null) {
+    const label = formatEventMs(time);
+    if (label) bits.push(`temps ${label}`);
+  }
+  const reason = asString(params.reason);
+  if (reason) bits.push(reason);
+  return bits.length > 0 ? bits.join(" · ") : undefined;
+}
+
+function toSessionEvents(session: SessionAgg): FunnelSessionEvent[] {
+  return session.timeline
+    .slice()
+    .sort((a, b) => a.at - b.at)
+    .slice(0, 100)
+    .map((event) => ({
+      at: new Date(event.at).toISOString(),
+      label: EVENT_LABELS[event.name] ?? event.name,
+      detail: sessionEventDetail(event.name, event.params),
+    }));
 }
 
 export function isValidFunnelSessionId(value: string): boolean {
@@ -477,6 +556,11 @@ interface SessionAgg {
   ip?: string;
   ipAt?: number;
   errorCounts: Map<string, number>;
+  timeline: Array<{
+    at: number;
+    name: string;
+    params: Record<string, GtagParamValue>;
+  }>;
 }
 
 function bumpCount(
@@ -883,6 +967,7 @@ function buildLeadSide(
       .sort((a, b) => b.lastAt - a.lastAt)
       .slice(0, 40)
       .map((s) => ({
+        sessionId: s.id,
         sessionShort: s.id.slice(-6),
         startedAt: new Date(s.firstAt).toISOString(),
         lastAt: new Date(s.lastAt).toISOString(),
@@ -918,6 +1003,7 @@ function buildLeadSide(
         descriptionDraft: draftBySession.get(s.id)?.description,
         internal: s.internal,
         ip: s.ip ?? draftBySession.get(s.id)?.ip,
+        events: toSessionEvents(s),
       })),
     savedTexts,
   };
@@ -1024,6 +1110,7 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
       .sort((a, b) => b.lastAt - a.lastAt)
       .slice(0, 40)
       .map((s) => ({
+        sessionId: s.id,
         sessionShort: s.id.slice(-6),
         startedAt: new Date(s.firstAt).toISOString(),
         lastAt: new Date(s.lastAt).toISOString(),
@@ -1044,6 +1131,7 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
         gaSent: s.gaSent,
         internal: s.internal,
         ip: s.ip,
+        events: toSessionEvents(s),
       })),
     savedTexts: [],
   };
@@ -1077,9 +1165,16 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
         internal: false,
         errorCounts: new Map(),
         stepDurations: new Map(),
+        timeline: [],
       };
       byId.set(key, session);
     }
+
+    session.timeline.push({
+      at,
+      name: event.name,
+      params: event.params,
+    });
 
     session.firstAt = Math.min(session.firstAt, at);
     if (at >= session.lastAt) {
