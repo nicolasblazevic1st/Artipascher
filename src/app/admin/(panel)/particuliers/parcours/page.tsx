@@ -656,7 +656,7 @@ export default function AdminParcoursFormulairesPage() {
   const [report, setReport] = useState<FormFunnelReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hideMine, setHideMine] = useState(false);
+  const [hideMine, setHideMine] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -687,8 +687,9 @@ export default function AdminParcoursFormulairesPage() {
         e-mail, téléphone ni adresse postale. L&apos;IP est conservée 90 jours
         (sécurité / diagnostic, admin seulement). Les textes « Autre » /
         description aussi. Tes tests sont marqués <strong>Toi</strong> si tu
-        es connecté à l&apos;admin dans ce navigateur, ou si l&apos;IP a déjà
-        servi pour un test admin.
+        es connecté à l&apos;admin, ou si l&apos;IP a déjà ouvert l&apos;admin
+        (ordinateur ou téléphone). « Masquer mes tests » les retire de
+        l&apos;entonnoir.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">

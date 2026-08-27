@@ -10,6 +10,7 @@ import {
   type GtagParamValue,
 } from "@/lib/analytics-events";
 import { cleanTrackingParam, keywordGroupKey } from "@/lib/utm";
+import { listKnownAdminIps } from "@/lib/admin-known-ips";
 import { resolveWorkCategoryFromAdsQuery } from "@/lib/work-categories";
 import { normalizeStoredClientIp } from "@/lib/request-client";
 
@@ -373,9 +374,10 @@ export async function appendFormFunnelEvent(input: {
     const db = await readDb();
     const knownAdminIp =
       Boolean(ip) &&
-      db.events.some(
+      (db.events.some(
         (row) => row.internal === true && storedIp(row.ip) === ip
-      );
+      ) ||
+        (await listKnownAdminIps()).has(ip));
     if (input.internal || knownAdminIp) event.internal = true;
     db.events = pruneEvents([...db.events, event]);
     db.drafts = pruneDrafts(db.drafts);
@@ -1192,7 +1194,11 @@ export async function getFormFunnelReport(
   });
   const sessions = aggregateSessions(events);
   finalizeAbandons(sessions, until);
-  markSessionsInternalByAdminIp(sessions, adminIpsFromEvents(db.events));
+  const adminIps = new Set<string>([
+    ...adminIpsFromEvents(db.events),
+    ...(await listKnownAdminIps()),
+  ]);
+  markSessionsInternalByAdminIp(sessions, adminIps);
   const leadAll = sessions.filter((s) => s.form === "work_request");
   const proAll = sessions.filter((s) => s.form === "pro_registration");
   const internalLeadSessions = leadAll.filter((s) => s.internal).length;
@@ -1211,8 +1217,10 @@ export async function getFormFunnelReport(
   const drafts = pruneDrafts(db.drafts).filter((draft) => {
     const t = Date.parse(draft.updatedAt);
     if (!Number.isFinite(t) || t < since || t > until) return false;
-    if (options?.excludeInternal && hiddenInternalIds.has(draft.sessionId)) {
-      return false;
+    if (options?.excludeInternal) {
+      if (hiddenInternalIds.has(draft.sessionId)) return false;
+      const draftIp = storedIp(draft.ip);
+      if (draftIp && adminIps.has(draftIp)) return false;
     }
     return true;
   });

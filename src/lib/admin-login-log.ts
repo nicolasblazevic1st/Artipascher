@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
+import { normalizeStoredClientIp } from "@/lib/request-client";
 
 const LOG_PATH = path.join(process.cwd(), "data", "admin-login-log.json");
 const MAX_ENTRIES = 500;
@@ -95,6 +96,17 @@ export async function listAdminLoginLog(options?: {
     total: db.entries.length,
     entries: db.entries.slice(offset, offset + limit),
   };
+}
+
+export async function listSuccessfulAdminLoginIps(): Promise<string[]> {
+  const db = await readLogDb();
+  const ips = new Set<string>();
+  for (const entry of db.entries) {
+    if (!entry.success) continue;
+    const ip = normalizeStoredClientIp(entry.ip);
+    if (ip) ips.add(ip);
+  }
+  return [...ips];
 }
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
