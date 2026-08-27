@@ -6,7 +6,7 @@ const META_CRAWLER_V4: Array<[number, number]> = [
 ];
 
 const CRAWLER_UA =
-  /facebookexternalhit|facebot|meta-externalagent|meta-externalads|meta-externalfetcher|meta-webindexer|meta-externalhits/i;
+  /facebookexternalhit|facebot|meta-externalagent|meta-externalads|meta-externalfetcher|meta-webindexer|meta-externalhits|googlebot|adsbot-google|mediapartners-google|bingbot|slurp|duckduckbot|yandexbot|baiduspider|semrushbot|ahrefsbot|dotbot|petalbot|bytespider|gptbot|claudebot|applebot|twitterbot|linkedinbot/i;
 
 function ipv4ToInt(ip: string): number {
   const parts = ip.split(".").map(Number);

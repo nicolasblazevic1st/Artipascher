@@ -100,6 +100,7 @@ interface FormFunnelReport {
   totalEvents: number;
   internalLeadSessions: number;
   internalProSessions: number;
+  noiseLeadSessions: number;
   lead: FormFunnelSide;
   pro: FormFunnelSide;
 }
@@ -679,12 +680,14 @@ export default function AdminParcoursFormulairesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hideMine, setHideMine] = useState(true);
+  const [hideNoise, setHideNoise] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     const qs = new URLSearchParams({ days: String(days) });
     if (hideMine) qs.set("excludeInternal", "1");
+    if (hideNoise) qs.set("excludeNoise", "1");
     const res = await fetch(`/api/admin/form-funnel?${qs.toString()}`);
     const data = await res.json();
     setLoading(false);
@@ -693,7 +696,7 @@ export default function AdminParcoursFormulairesPage() {
       return;
     }
     setReport(data as FormFunnelReport);
-  }, [days, hideMine]);
+  }, [days, hideMine, hideNoise]);
 
   useEffect(() => {
     void load();
@@ -711,7 +714,9 @@ export default function AdminParcoursFormulairesPage() {
         seulement). Les textes « Autre » / description aussi. Tes tests sont
         marqués <strong>Toi</strong> si tu es connecté à l&apos;admin, ou si
         l&apos;IP a déjà ouvert l&apos;admin (ordinateur ou téléphone).
-        « Masquer mes tests » les retire de l&apos;entonnoir.
+        « Masquer mes tests » les retire de l&apos;entonnoir. « Masquer le
+        bruit » retire les ouvertures trop rapides pour un humain, et les
+        URLs pub Google sans identifiant de clic (scrapers).
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -747,6 +752,18 @@ export default function AdminParcoursFormulairesPage() {
           {report &&
           (report.internalLeadSessions > 0 || report.internalProSessions > 0)
             ? ` (${tab === "lead" ? report.internalLeadSessions : report.internalProSessions})`
+            : ""}
+        </label>
+        <label className="ml-1 inline-flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={hideNoise}
+            onChange={(e) => setHideNoise(e.target.checked)}
+            className="rounded border-slate-300"
+          />
+          Masquer le bruit
+          {report && report.noiseLeadSessions > 0
+            ? ` (${report.noiseLeadSessions})`
             : ""}
         </label>
       </div>

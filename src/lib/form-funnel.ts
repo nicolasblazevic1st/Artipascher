@@ -147,6 +147,8 @@ export interface FormFunnelReport {
   totalEvents: number;
   internalLeadSessions: number;
   internalProSessions: number;
+  /** Lead sessions that look like scrapers / invalid ads hits, not people. */
+  noiseLeadSessions: number;
   lead: FormFunnelSide;
   pro: FormFunnelSide;
 }
@@ -456,6 +458,7 @@ interface SessionAgg {
   guestMode?: boolean;
   utmContent?: string;
   utmSource?: string;
+  utmMedium?: string;
   utmTerm?: string;
   utmCampaign?: string;
   workCategory?: string;
@@ -584,6 +587,29 @@ function sessionOpenedLeadForm(session: SessionAgg): boolean {
     session.maxStepViewed >= 1 ||
     session.names.has(ANALYTICS_EVENT.LEAD_FORM_START)
   );
+}
+
+/** Hits that execute the form JS but are not a person (scrapers, tagged URL farms). */
+const NOISE_INSTANT_MS = 500;
+
+function isPaidAdsTagged(session: SessionAgg): boolean {
+  const source = (session.utmSource ?? "").toLowerCase();
+  const medium = (session.utmMedium ?? "").toLowerCase();
+  return source === "google" || medium === "cpc";
+}
+
+function isNoiseLeadSession(session: SessionAgg): boolean {
+  if (session.form !== "work_request" || session.submitted) return false;
+  const durationMs = Math.max(0, session.lastAt - session.firstAt);
+  if (durationMs < NOISE_INSTANT_MS) return true;
+  if (
+    isPaidAdsTagged(session) &&
+    session.adsClick !== true &&
+    session.completedSteps.size === 0
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function sessionArrivalCategory(session: SessionAgg): string | undefined {
@@ -1077,6 +1103,8 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
     if (utmContent) session.utmContent = utmContent;
     const utmSource = cleanTrackingParam(asString(event.params.utm_source));
     if (utmSource) session.utmSource = utmSource;
+    const utmMedium = cleanTrackingParam(asString(event.params.utm_medium));
+    if (utmMedium) session.utmMedium = utmMedium;
     const utmTerm = cleanTrackingParam(asString(event.params.utm_term));
     if (utmTerm) session.utmTerm = utmTerm;
     const utmCampaign = cleanTrackingParam(asString(event.params.utm_campaign));
@@ -1224,7 +1252,7 @@ export function parseFunnelRangeDays(raw: string | null): FormFunnelRangeDays {
 
 export async function getFormFunnelReport(
   rangeDays: FormFunnelRangeDays,
-  options?: { excludeInternal?: boolean }
+  options?: { excludeInternal?: boolean; excludeNoise?: boolean }
 ): Promise<FormFunnelReport> {
   const db = await readDb();
   const until = Date.now();
@@ -1246,14 +1274,20 @@ export async function getFormFunnelReport(
   const proAll = sessions.filter((s) => s.form === "pro_registration");
   const internalLeadSessions = leadAll.filter((s) => s.internal).length;
   const internalProSessions = proAll.filter((s) => s.internal).length;
+  const noiseLeadSessions = leadAll.filter((s) => isNoiseLeadSession(s)).length;
   const hiddenInternalIds = new Set(
     [...leadAll, ...proAll]
       .filter((s) => s.internal)
       .map((s) => s.id)
   );
-  const lead = options?.excludeInternal
-    ? leadAll.filter((s) => !s.internal)
-    : leadAll;
+  const hiddenNoiseIds = new Set(
+    leadAll.filter((s) => isNoiseLeadSession(s)).map((s) => s.id)
+  );
+  const lead = leadAll.filter((s) => {
+    if (options?.excludeInternal && s.internal) return false;
+    if (options?.excludeNoise && isNoiseLeadSession(s)) return false;
+    return true;
+  });
   const pro = options?.excludeInternal
     ? proAll.filter((s) => !s.internal)
     : proAll;
@@ -1264,6 +1298,9 @@ export async function getFormFunnelReport(
       if (hiddenInternalIds.has(draft.sessionId)) return false;
       const draftIp = storedIp(draft.ip);
       if (draftIp && adminIps.has(draftIp)) return false;
+    }
+    if (options?.excludeNoise && hiddenNoiseIds.has(draft.sessionId)) {
+      return false;
     }
     if (isMetaCrawlerIp(draft.ip)) return false;
     return true;
@@ -1276,6 +1313,7 @@ export async function getFormFunnelReport(
     totalEvents: events.length,
     internalLeadSessions,
     internalProSessions,
+    noiseLeadSessions,
     lead: buildLeadSide(lead, drafts),
     pro: buildProSide(pro),
   };
