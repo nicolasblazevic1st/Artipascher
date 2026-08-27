@@ -80,12 +80,14 @@ export default function ConfidentialitePage() {
             <Link href="/cookies">politique de cookies</Link>) ;
           </li>
           <li>
-            <strong>Parcours de formulaire</strong>{" "} : étapes consultées,
-            métier choisi, identifiant de session anonyme, et adresse IP
-            associée (lue côté serveur, jamais saisie par le visiteur).
-            Finalité : sécurité, prévention des abus et diagnostic des
-            interruptions. Non transmise à Google Analytics. Non utilisée pour
-            recontacter une personne qui n&apos;a pas laissé ses coordonnées ;
+            <strong>Parcours de formulaire</strong>{" "} : clic Google Ads
+            (arrivée sur le site, même sans ouvrir le formulaire), étapes
+            consultées, métier choisi, identifiant de session anonyme, et
+            adresse IP associée (lue côté serveur, jamais saisie par le
+            visiteur). Finalité : sécurité, prévention des abus et diagnostic
+            des interruptions. Non transmise à Google Analytics. Non utilisée
+            pour recontacter une personne qui n&apos;a pas laissé ses
+            coordonnées ;
           </li>
           <li>
             <strong>Brouillons de formulaire</strong>{" "} : texte saisi dans le
