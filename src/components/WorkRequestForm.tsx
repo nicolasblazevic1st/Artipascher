@@ -698,6 +698,61 @@ export default function WorkRequestForm({
     return 4;
   }
 
+  function missingToUnlockNext(): string[] {
+    if (step === 1) {
+      if (!category) return ["le type de travaux"];
+      const nafCheck = validateWorkRequestNafSelection(
+        category,
+        selectedNafCodes
+      );
+      if (!nafCheck.ok) return ["cochez au moins une activité"];
+      if (!workOptionId) return ["une prestation"];
+      const pricingCheck = validatePricingSelection({
+        pricingTier,
+        workOptionId: workOptionId || undefined,
+        workOptionOtherDescription:
+          workOptionId === OTHER_WORK_OPTION_ID
+            ? workOptionOtherDescription
+            : undefined,
+        nafCodes: nafCheck.nafCodes,
+      });
+      if (!pricingCheck.ok) {
+        return workOptionId === OTHER_WORK_OPTION_ID
+          ? [
+              `décrivez la prestation (au moins ${OTHER_WORK_DESCRIPTION_MIN} caractères)`,
+            ]
+          : ["une prestation"];
+      }
+      return [];
+    }
+
+    if (step === 2) {
+      const missing: string[] = [];
+      if (!propertyType) missing.push("le type de bien");
+      if (clientKind === "company" && !companyVerification?.valid) {
+        missing.push("le SIRET de l'entreprise");
+      }
+      if (clientKind === "copropriete" && !workScope) {
+        missing.push("parties communes ou lot privatif");
+      }
+      if (!selectedAddress?.banAddressId) {
+        missing.push("l'adresse du chantier (choisir une suggestion)");
+      }
+      return missing;
+    }
+
+    if (step === 3) {
+      const remaining = Math.max(0, MIN_DESCRIPTION_LENGTH - descriptionLength);
+      if (remaining > 0) {
+        return [
+          `encore ${remaining} caractère${remaining > 1 ? "s" : ""} dans la description (${descriptionLength}/${MIN_DESCRIPTION_LENGTH})`,
+        ];
+      }
+    }
+
+    return [];
+  }
+
   useEffect(() => {
     if (status === "success") return;
     const maxUnlocked = unlockedStep();
@@ -1020,6 +1075,8 @@ export default function WorkRequestForm({
 
   const inputClass =
     "w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm";
+  const unlockHints =
+    status === "success" || step >= 4 ? [] : missingToUnlockNext();
 
   return (
     <div className="space-y-6">
@@ -1935,6 +1992,13 @@ export default function WorkRequestForm({
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      )}
+
+      {unlockHints.length > 0 && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950">
+          <span className="font-semibold">Pour dérouler la suite</span>
+          {` — ${unlockHints.join(" · ")}.`}
+        </p>
       )}
 
       {step >= 4 && (
