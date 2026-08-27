@@ -84,6 +84,7 @@ export interface FunnelSessionRow {
   sessionShort: string;
   startedAt: string;
   lastAt: string;
+  durationMs: number;
   outcome: string;
   lastLabel: string;
   variant?: string;
@@ -828,6 +829,7 @@ function buildLeadSide(
         sessionShort: s.id.slice(-6),
         startedAt: new Date(s.firstAt).toISOString(),
         lastAt: new Date(s.lastAt).toISOString(),
+        durationMs: Math.max(0, s.lastAt - s.firstAt),
         outcome: s.submitted
           ? "Envoyée"
           : s.abandoned
@@ -961,6 +963,7 @@ function buildProSide(sessions: SessionAgg[]): FormFunnelSide {
         sessionShort: s.id.slice(-6),
         startedAt: new Date(s.firstAt).toISOString(),
         lastAt: new Date(s.lastAt).toISOString(),
+        durationMs: Math.max(0, s.lastAt - s.firstAt),
         outcome: s.submitted
           ? "Envoyée"
           : s.abandoned

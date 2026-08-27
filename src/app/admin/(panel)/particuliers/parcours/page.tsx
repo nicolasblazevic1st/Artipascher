@@ -39,6 +39,7 @@ interface FunnelSessionRow {
   sessionShort: string;
   startedAt: string;
   lastAt: string;
+  durationMs: number;
   outcome: string;
   lastLabel: string;
   variant?: string;
@@ -118,6 +119,16 @@ function formatMedian(seconds: number) {
   const min = Math.floor(seconds / 60);
   const sec = seconds % 60;
   return sec === 0 ? `${min} min` : `${min} min ${sec} s`;
+}
+
+function formatSessionDuration(ms: number | undefined) {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return "—";
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  if (ms < 60_000) {
+    const rounded = Math.round(ms / 100) / 10;
+    return `${rounded.toLocaleString("fr-FR")} s`;
+  }
+  return formatMedian(Math.round(ms / 1000));
 }
 
 function realTrade(value: string | undefined): string | undefined {
@@ -548,7 +559,8 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
         <h3 className="font-semibold text-slate-900">Sessions récentes</h3>
         <p className="mt-1 text-sm text-slate-500">
           Identifiant anonyme (6 derniers caractères) et adresse IP (sécurité /
-          diagnostic, 90 jours). Les textes saisis sont dans le bloc ci-dessus.
+          diagnostic, 90 jours). Durée = premier → dernier événement enregistré.
+          Les textes saisis sont dans le bloc ci-dessus.
         </p>
         {side.recent.length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">Aucune session récente.</p>
@@ -558,6 +570,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
               <thead className="border-b border-slate-200 text-xs uppercase text-slate-400">
                 <tr>
                   <th className="py-2 pr-3 font-medium">Quand</th>
+                  <th className="py-2 pr-3 font-medium">Durée</th>
                   <th className="py-2 pr-3 font-medium">Jusqu&apos;où</th>
                   <th className="py-2 pr-3 font-medium">Résultat</th>
                   <th className="hidden py-2 pr-3 font-medium lg:table-cell">
@@ -576,6 +589,9 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                       <p className="font-mono text-[10px] text-slate-400">
                         …{row.sessionShort}
                       </p>
+                    </td>
+                    <td className="py-2 pr-3 tabular-nums text-slate-700">
+                      {formatSessionDuration(row.durationMs)}
                     </td>
                     <td className="py-2 pr-3 font-medium text-slate-800">
                       {row.lastLabel}
