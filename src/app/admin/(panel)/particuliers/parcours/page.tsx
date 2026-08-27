@@ -686,8 +686,9 @@ export default function AdminParcoursFormulairesPage() {
         formulaire de demande, et dans l&apos;inscription artisan. Pas de nom,
         e-mail, téléphone ni adresse postale. L&apos;IP est conservée 90 jours
         (sécurité / diagnostic, admin seulement). Les textes « Autre » /
-        description aussi. Si tu es connecté à l&apos;admin dans le même
-        navigateur, tes tests sont marqués <strong>Toi</strong>.
+        description aussi. Tes tests sont marqués <strong>Toi</strong> si tu
+        es connecté à l&apos;admin dans ce navigateur, ou si l&apos;IP a déjà
+        servi pour un test admin.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">

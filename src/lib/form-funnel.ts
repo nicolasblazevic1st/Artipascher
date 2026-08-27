@@ -371,6 +371,12 @@ export async function appendFormFunnelEvent(input: {
 
   await enqueueWrite(async () => {
     const db = await readDb();
+    const knownAdminIp =
+      Boolean(ip) &&
+      db.events.some(
+        (row) => row.internal === true && storedIp(row.ip) === ip
+      );
+    if (input.internal || knownAdminIp) event.internal = true;
     db.events = pruneEvents([...db.events, event]);
     db.drafts = pruneDrafts(db.drafts);
     await writeDb(db);
@@ -1126,6 +1132,27 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
 
 const STALE_ABANDON_MS = 15 * 60 * 1000;
 
+function adminIpsFromEvents(events: FormFunnelEvent[]): Set<string> {
+  const ips = new Set<string>();
+  for (const event of events) {
+    const ip = storedIp(event.ip);
+    if (event.internal && ip) ips.add(ip);
+  }
+  return ips;
+}
+
+function markSessionsInternalByAdminIp(
+  sessions: SessionAgg[],
+  adminIps: Set<string>
+) {
+  if (adminIps.size === 0) return;
+  for (const session of sessions) {
+    if (!session.internal && session.ip && adminIps.has(session.ip)) {
+      session.internal = true;
+    }
+  }
+}
+
 function finalizeAbandons(sessions: SessionAgg[], until: number) {
   for (const session of sessions) {
     if (session.submitted) {
@@ -1165,6 +1192,7 @@ export async function getFormFunnelReport(
   });
   const sessions = aggregateSessions(events);
   finalizeAbandons(sessions, until);
+  markSessionsInternalByAdminIp(sessions, adminIpsFromEvents(db.events));
   const leadAll = sessions.filter((s) => s.form === "work_request");
   const proAll = sessions.filter((s) => s.form === "pro_registration");
   const internalLeadSessions = leadAll.filter((s) => s.internal).length;
