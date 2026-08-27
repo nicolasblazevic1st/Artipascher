@@ -11,6 +11,7 @@ import {
 } from "@/lib/analytics-events";
 import { cleanTrackingParam, keywordGroupKey } from "@/lib/utm";
 import { listKnownAdminIps } from "@/lib/admin-known-ips";
+import { isMetaCrawlerIp } from "@/lib/analytics-bots";
 import { resolveWorkCategoryFromAdsQuery } from "@/lib/work-categories";
 import { normalizeStoredClientIp } from "@/lib/request-client";
 
@@ -316,7 +317,9 @@ function pruneEvents(events: FormFunnelEvent[], now = Date.now()): FormFunnelEve
   const cutoff = now - RETENTION_DAYS * 24 * 60 * 60 * 1000;
   const kept = events.filter((e) => {
     const t = Date.parse(e.at);
-    return Number.isFinite(t) && t >= cutoff;
+    if (!Number.isFinite(t) || t < cutoff) return false;
+    if (isMetaCrawlerIp(e.ip)) return false;
+    return true;
   });
   if (kept.length > MAX_EVENTS) {
     return kept.slice(kept.length - MAX_EVENTS);
@@ -1194,7 +1197,9 @@ export async function getFormFunnelReport(
   const since = until - rangeDays * 24 * 60 * 60 * 1000;
   const events = db.events.filter((event) => {
     const t = Date.parse(event.at);
-    return Number.isFinite(t) && t >= since && t <= until;
+    if (!Number.isFinite(t) || t < since || t > until) return false;
+    if (isMetaCrawlerIp(event.ip)) return false;
+    return true;
   });
   const sessions = aggregateSessions(events);
   finalizeAbandons(sessions, until);
@@ -1226,6 +1231,7 @@ export async function getFormFunnelReport(
       const draftIp = storedIp(draft.ip);
       if (draftIp && adminIps.has(draftIp)) return false;
     }
+    if (isMetaCrawlerIp(draft.ip)) return false;
     return true;
   });
 
