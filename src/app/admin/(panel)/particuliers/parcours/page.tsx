@@ -571,6 +571,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                 <tr>
                   <th className="py-2 pr-3 font-medium">Quand</th>
                   <th className="py-2 pr-3 font-medium">Durée</th>
+                  <th className="py-2 pr-3 font-medium">Métier</th>
                   <th className="py-2 pr-3 font-medium">Jusqu&apos;où</th>
                   <th className="py-2 pr-3 font-medium">Résultat</th>
                   <th className="hidden py-2 pr-3 font-medium lg:table-cell">
@@ -594,6 +595,13 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                       {formatSessionDuration(row.durationMs)}
                     </td>
                     <td className="py-2 pr-3 font-medium text-slate-800">
+                      {form === "lead"
+                        ? tradeDetailLabel(row)
+                        : row.variant
+                          ? VARIANT_LABELS[row.variant] ?? row.variant
+                          : "—"}
+                    </td>
+                    <td className="py-2 pr-3 text-slate-700">
                       {row.lastLabel}
                     </td>
                     <td className="py-2 pr-3">
@@ -619,11 +627,6 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                     </td>
                     <td className="hidden py-2 text-xs text-slate-500 md:table-cell">
                       {[
-                        form === "lead"
-                          ? tradeDetailLabel(row)
-                          : row.variant
-                            ? VARIANT_LABELS[row.variant] ?? row.variant
-                            : null,
                         row.guestMode ? "Invité" : null,
                         row.utmContent ? `pub ${row.utmContent}` : null,
                         row.utmCampaign ? row.utmCampaign : null,
