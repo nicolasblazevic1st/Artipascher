@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type RangeDays = 7 | 30 | 90;
+type RangeDays = 1 | 7 | 30 | 90;
 type FormTab = "lead" | "pro";
 
 interface FunnelStepStat {
@@ -107,6 +107,13 @@ const VARIANT_LABELS: Record<string, string> = {
   default: "Métier précoche",
   general: "Plusieurs métiers",
 };
+
+const RANGE_OPTIONS: Array<{ value: RangeDays; label: string }> = [
+  { value: 1, label: "24 h" },
+  { value: 7, label: "7 jours" },
+  { value: 30, label: "30 jours" },
+  { value: 90, label: "90 jours" },
+];
 
 const DEVICE_LABELS: Record<string, string> = {
   mobile: "Téléphone",
@@ -654,7 +661,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
 }
 
 export default function AdminParcoursFormulairesPage() {
-  const [days, setDays] = useState<RangeDays>(30);
+  const [days, setDays] = useState<RangeDays>(1);
   const [tab, setTab] = useState<FormTab>("lead");
   const [report, setReport] = useState<FormFunnelReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -696,18 +703,18 @@ export default function AdminParcoursFormulairesPage() {
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">
-        {([7, 30, 90] as const).map((d) => (
+        {RANGE_OPTIONS.map((option) => (
           <button
-            key={d}
+            key={option.value}
             type="button"
-            onClick={() => setDays(d)}
+            onClick={() => setDays(option.value)}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-              days === d
+              days === option.value
                 ? "bg-brand-600 text-white"
                 : "bg-white text-slate-600 ring-1 ring-slate-200"
             }`}
           >
-            {d} jours
+            {option.label}
           </button>
         ))}
         <button
