@@ -50,6 +50,7 @@ interface FunnelSessionRow {
   utmTerm?: string;
   device?: string;
   adsClick?: boolean;
+  landingPath?: string;
   workCategory?: string;
   adsCategory?: string;
   keywordCategory?: string;
@@ -147,6 +148,11 @@ function tradeDetailLabel(row: FunnelSessionRow): string {
   const chosen = realTrade(row.workCategory);
   const arrival =
     realTrade(row.adsCategory) ?? realTrade(row.keywordCategory);
+
+  if (row.lastLabel === "Arrivée pub") {
+    if (arrival) return `${arrival} (annonce)`;
+    return "—";
+  }
 
   if (chosen) {
     if (arrival && arrival !== chosen) return `${arrival} → ${chosen}`;
@@ -413,7 +419,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <p className="text-xs font-medium uppercase text-slate-500">
-            Sessions formulaire
+            {form === "lead" ? "Sessions" : "Sessions formulaire"}
           </p>
           <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">
             {side.sessions}
@@ -497,6 +503,9 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
         <p className="mt-1 text-sm text-slate-500">
           Sessions uniques par étape. Le % rouge est la perte depuis l&apos;étape
           précédente.
+          {form === "lead"
+            ? " Un clic Ads qui n&apos;ouvre pas le formulaire compte comme une arrivée, pas comme une ouverture."
+            : ""}
         </p>
         <div className="mt-5">
           {side.funnel.length === 0 ? (
@@ -567,7 +576,8 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
         <p className="mt-1 text-sm text-slate-500">
           Identifiant anonyme (6 derniers caractères) et adresse IP (sécurité /
           diagnostic, 90 jours). Durée = premier → dernier événement enregistré.
-          Les textes saisis sont dans le bloc ci-dessus.
+          Un clic Google Ads qui ne va pas jusqu&apos;au formulaire apparaît ici
+          (« Arrivée pub »).
         </p>
         {side.recent.length === 0 ? (
           <p className="mt-4 text-sm text-slate-500">Aucune session récente.</p>
@@ -616,7 +626,8 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                           row.outcome === "Envoyée"
                             ? "bg-emerald-100 text-emerald-800"
-                            : row.outcome === "Abandonnée"
+                            : row.outcome === "Abandonnée" ||
+                                row.outcome === "Arrivé, pas de formulaire"
                               ? "bg-amber-100 text-amber-800"
                               : "bg-slate-100 text-slate-700"
                         }`}
@@ -640,6 +651,7 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                         row.utmTerm ? `mot-clé « ${row.utmTerm} »` : null,
                         row.device ? DEVICE_LABELS[row.device] ?? row.device : null,
                         row.adsClick ? "clic Ads" : null,
+                        row.landingPath ? `page ${row.landingPath}` : null,
                         row.gaSent ? "GA" : null,
                         row.internal ? "Toi (admin)" : null,
                         row.otherWork
@@ -692,14 +704,14 @@ export default function AdminParcoursFormulairesPage() {
   return (
     <div>
       <p className="text-sm text-slate-600">
-        Entonnoir des balises analytics : où les gens s&apos;arrêtent dans le
-        formulaire de demande, et dans l&apos;inscription artisan. Pas de nom,
-        e-mail, téléphone ni adresse postale. L&apos;IP est conservée 90 jours
-        (sécurité / diagnostic, admin seulement). Les textes « Autre » /
-        description aussi. Tes tests sont marqués <strong>Toi</strong> si tu
-        es connecté à l&apos;admin, ou si l&apos;IP a déjà ouvert l&apos;admin
-        (ordinateur ou téléphone). « Masquer mes tests » les retire de
-        l&apos;entonnoir.
+        Entonnoir des balises analytics : clics Google Ads (même sans ouvrir le
+        formulaire) et parcours dans le formulaire de demande, puis
+        l&apos;inscription artisan. Pas de nom, e-mail, téléphone ni adresse
+        postale. L&apos;IP est conservée 90 jours (sécurité / diagnostic, admin
+        seulement). Les textes « Autre » / description aussi. Tes tests sont
+        marqués <strong>Toi</strong> si tu es connecté à l&apos;admin, ou si
+        l&apos;IP a déjà ouvert l&apos;admin (ordinateur ou téléphone).
+        « Masquer mes tests » les retire de l&apos;entonnoir.
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">

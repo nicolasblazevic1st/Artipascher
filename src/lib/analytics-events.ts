@@ -30,6 +30,7 @@ export const ANALYTICS_EVENT = {
   LEAD_FORM_ABANDON: "lead_form_abandon",
   SUBMIT_LEAD_FORM: "manual_event_SUBMIT_LEAD_FORM",
   LEAD_CTA_CLICK: "lead_cta_click",
+  LEAD_ADS_LANDING: "lead_ads_landing",
   PRO_FORM_START: "pro_form_start",
   PRO_FORM_RCS_VERIFY_ATTEMPT: "pro_form_rcs_verify_attempt",
   PRO_FORM_RCS_VERIFY_SUCCESS: "pro_form_rcs_verify_success",
@@ -95,11 +96,14 @@ export const ANALYTICS_PARAM_KEYS = new Set([
   "device",
   "ads_click",
   "cta_placement",
+  "landing_path",
 ]);
 
 const FUNNEL_SESSION_PREFIX = "nap_funnel_sid:";
 const FUNNEL_UTM_KEY = "nap_funnel_utm";
 const FUNNEL_ADS_CLICK_KEY = "nap_funnel_ads_click";
+const FUNNEL_ADS_LANDING_SENT_KEY = "nap_funnel_ads_landing_sent";
+const FUNNEL_FORM_STARTED_KEY = "nap_funnel_form_started";
 const FUNNEL_INGEST_PATH = "/api/analytics/events";
 const FUNNEL_DRAFT_PATH = "/api/analytics/form-draft";
 const UTM_KEYS = [
@@ -180,6 +184,11 @@ export function sanitizeAnalyticsParams(
         }
         continue;
       }
+      if (key === "landing_path") {
+        const path = value.trim().split(/[?#]/)[0].slice(0, 80);
+        if (path.startsWith("/")) cleaned[key] = path;
+        continue;
+      }
       const trimmed = key.startsWith("utm_")
         ? cleanTrackingParam(value)
         : value.trim().slice(0, 120);
@@ -251,9 +260,45 @@ export function captureLandingTracking(): void {
       );
     }
     landingAdsClick();
+    maybeTrackAdsLanding();
   } catch {
     // ignore
   }
+}
+
+function maybeTrackAdsLanding(): void {
+  if (!landingAdsClick()) return;
+  try {
+    if (sessionStorage.getItem(FUNNEL_ADS_LANDING_SENT_KEY) === "1") return;
+    sessionStorage.setItem(FUNNEL_ADS_LANDING_SENT_KEY, "1");
+  } catch {
+    return;
+  }
+  const path = window.location.pathname.slice(0, 80);
+  ingestFirstPartyEvent(
+    ANALYTICS_EVENT.LEAD_ADS_LANDING,
+    {
+      form_name: "work_request",
+      ...(path.startsWith("/") ? { landing_path: path } : {}),
+    },
+    { gaSent: false }
+  );
+  const enteredAt = Date.now();
+  bindFormLeaveListeners(() => {
+    try {
+      if (sessionStorage.getItem(FUNNEL_FORM_STARTED_KEY) === "1") return;
+    } catch {
+      // still send
+    }
+    ingestFirstPartyEvent(
+      ANALYTICS_EVENT.LEAD_FORM_ABANDON,
+      {
+        form_name: "work_request",
+        time_on_step_ms: Math.max(0, Date.now() - enteredAt),
+      },
+      { gaSent: false }
+    );
+  });
 }
 
 function readCachedUtmRecord(): Record<string, string> {
@@ -333,10 +378,18 @@ export function bindFormLeaveListeners(onHide: () => void): () => void {
 
 function ingestFirstPartyEvent(
   name: string,
-  params?: Record<string, GtagParamValue>
+  params?: Record<string, GtagParamValue>,
+  options?: { gaSent?: boolean }
 ): void {
   if (typeof window === "undefined") return;
   const formName = formNameFromAnalytics(name, params);
+  if (name === ANALYTICS_EVENT.LEAD_FORM_START) {
+    try {
+      sessionStorage.setItem(FUNNEL_FORM_STARTED_KEY, "1");
+    } catch {
+      // ignore
+    }
+  }
   const device = clientDevice();
   const adsClick = landingAdsClick();
   const payload = JSON.stringify({
@@ -349,7 +402,11 @@ function ingestFirstPartyEvent(
       ...(device ? { device } : {}),
       ...(adsClick ? { ads_click: true } : {}),
     },
-    gaSent: typeof window.gtag === "function",
+    gaSent:
+      options?.gaSent ??
+      (name === ANALYTICS_EVENT.LEAD_ADS_LANDING
+        ? false
+        : typeof window.gtag === "function"),
   });
   try {
     const blob = new Blob([payload], { type: "application/json" });
@@ -404,6 +461,7 @@ export function trackEvent(name: string, params?: AnalyticsParams): void {
   } catch {
     // Never break form UX.
   }
+  if (name === ANALYTICS_EVENT.LEAD_ADS_LANDING) return;
   if (typeof window.gtag !== "function") return;
   try {
     if (cleaned) {

@@ -97,6 +97,7 @@ export interface FunnelSessionRow {
   utmTerm?: string;
   device?: string;
   adsClick?: boolean;
+  landingPath?: string;
   workCategory?: string;
   adsCategory?: string;
   keywordCategory?: string;
@@ -461,6 +462,7 @@ interface SessionAgg {
   adsCategory?: string;
   device?: string;
   adsClick?: boolean;
+  landingPath?: string;
   lastEventName?: string;
   stepDurations: Map<number, number>;
   lastSection?: string;
@@ -574,6 +576,13 @@ function sessionKeywordCategory(session: SessionAgg): string | undefined {
       keyword: session.utmTerm,
       utmContent: session.utmContent,
     })
+  );
+}
+
+function sessionOpenedLeadForm(session: SessionAgg): boolean {
+  return (
+    session.maxStepViewed >= 1 ||
+    session.names.has(ANALYTICS_EVENT.LEAD_FORM_START)
   );
 }
 
@@ -709,14 +718,20 @@ function buildLeadSide(
   for (const session of sessions) {
     const lastKey = session.submitted
       ? "submitted"
-      : session.maxStepViewed >= 1
-        ? String(session.maxStepViewed)
-        : "start";
+      : sessionOpenedLeadForm(session)
+        ? session.maxStepViewed >= 1
+          ? String(session.maxStepViewed)
+          : "start"
+        : "landing";
     bumpCount(lastStep, lastKey, session.id);
     if (session.abandoned && !session.submitted) {
       bumpCount(
         abandons,
-        session.abandonStep ? String(session.abandonStep) : "unknown",
+        sessionOpenedLeadForm(session)
+          ? session.abandonStep
+            ? String(session.abandonStep)
+            : "unknown"
+          : "landing",
         session.id
       );
     }
@@ -732,6 +747,7 @@ function buildLeadSide(
   }
 
   const lastStepLabels: Record<string, string> = {
+    landing: "Arrivée pub, pas de formulaire",
     start: "Ouverture seulement",
     submitted: "Demande envoyée",
     "1": LEAD_STEP_LABELS[1],
@@ -748,11 +764,11 @@ function buildLeadSide(
     submitted,
     conversionPercent: percent(submitted, sessions.length),
     funnel: funnelSteps(sessions, [
-      { id: "start", label: "Ouverture du formulaire", match: () => true },
+      { id: "arrival", label: "Arrivée sur le site", match: () => true },
       {
-        id: "step1",
-        label: LEAD_STEP_LABELS[1],
-        match: (s) => s.maxStepViewed >= 1 || s.names.has(ANALYTICS_EVENT.LEAD_FORM_START),
+        id: "start",
+        label: "Ouverture du formulaire",
+        match: sessionOpenedLeadForm,
       },
       {
         id: "step1_done",
@@ -794,7 +810,11 @@ function buildLeadSide(
       },
     ]),
     lastStep: toCountRows(lastStep, lastStepLabels),
-    abandons: toCountRows(abandons, LEAD_STEP_LABELS, (key) => `Étape ${key}`),
+    abandons: toCountRows(
+      abandons,
+      { ...LEAD_STEP_LABELS, landing: "Arrivée, pas de formulaire" },
+      (key) => `Étape ${key}`
+    ),
     validationErrors: toCountRows(errors, ERROR_LABELS),
     byVariant: toCountRows(variants, VARIANT_LABELS),
     byUtmContent: toCountRows(utmContent, {}),
@@ -843,12 +863,18 @@ function buildLeadSide(
         durationMs: Math.max(0, s.lastAt - s.firstAt),
         outcome: s.submitted
           ? "Envoyée"
-          : s.abandoned
-            ? "Abandonnée"
-            : "En cours / quittée",
+          : !sessionOpenedLeadForm(s)
+            ? s.abandoned
+              ? "Arrivé, pas de formulaire"
+              : "En cours / quittée"
+            : s.abandoned
+              ? "Abandonnée"
+              : "En cours / quittée",
         lastLabel: s.submitted
           ? "Demande envoyée"
-          : LEAD_STEP_LABELS[s.maxStepViewed] ?? "Ouverture",
+          : !sessionOpenedLeadForm(s)
+            ? "Arrivée pub"
+            : LEAD_STEP_LABELS[s.maxStepViewed] ?? "Ouverture",
         variant: s.variant,
         guestMode: s.guestMode,
         utmContent: s.utmContent,
@@ -857,6 +883,7 @@ function buildLeadSide(
         utmTerm: s.utmTerm,
         device: s.device,
         adsClick: s.adsClick,
+        landingPath: s.landingPath,
         workCategory: s.workCategory,
         adsCategory: s.adsCategory,
         keywordCategory: sessionKeywordCategory(s),
@@ -1063,6 +1090,13 @@ function aggregateSessions(events: FormFunnelEvent[]): SessionAgg[] {
       session.device = device;
     }
     if (asBoolean(event.params.ads_click) === true) session.adsClick = true;
+    if (
+      event.name === ANALYTICS_EVENT.LEAD_ADS_LANDING &&
+      !session.landingPath
+    ) {
+      const landingPath = asString(event.params.landing_path);
+      if (landingPath?.startsWith("/")) session.landingPath = landingPath;
+    }
 
     const durationMs = asNumber(event.params.time_on_step_ms);
 
