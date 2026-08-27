@@ -66,7 +66,7 @@ const STEPS = [
   {
     title: "Suivez vos demandes (recommandé)",
     description:
-      "Créez un compte gratuit pour retrouver vos demandes. Vous pouvez aussi filtrer les artisans (ancienneté, note Google).",
+      "Créez un compte gratuit pour retrouver vos demandes. Vous pouvez aussi filtrer les artisans (note Google).",
   },
 ];
 

@@ -55,7 +55,7 @@ export default async function HomePage({
           <p className="mt-6 max-w-2xl text-lg text-brand-100">
             Gratuit pour vous — l&apos;artisan paie le contact. Vous êtes mis en
             relation avec des professionnels locaux contrôlés (décennale,
-            assurance pro, avis Google, ancienneté, procédures collectives).
+            assurance pro, avis Google, procédures collectives).
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <WorkRequestCta

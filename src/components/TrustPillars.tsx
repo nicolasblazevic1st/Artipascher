@@ -16,12 +16,6 @@ export const TRUST_PILLARS = [
     detail: "Note vérifiée — Filtrez les artisans selon leur réputation réelle.",
   },
   {
-    id: "age",
-    label: "Ancienneté",
-    detail:
-      "Jeune talent ou artisan confirmé — À vous de choisir : dynamisme ou expérience éprouvée.",
-  },
-  {
     id: "bodacc",
     label: "Procédure collective",
     detail:

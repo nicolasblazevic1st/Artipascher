@@ -129,7 +129,7 @@ export const FAQ_ITEMS = [
   {
     question: "Comment fonctionne Nord Artisan Pro ?",
     answer:
-      "Vous publiez une annonce décrivant vos travaux (éventuellement avec des critères : ancienneté, note Google). Les artisans vérifiés du Nord-Pas-de-Calais qui correspondent peuvent débloquer vos coordonnées pour vous contacter, visiter le chantier et vous envoyer un devis directement.",
+      "Vous publiez une annonce décrivant vos travaux (éventuellement avec un critère de note Google). Les artisans vérifiés du Nord-Pas-de-Calais qui correspondent peuvent débloquer vos coordonnées pour vous contacter, visiter le chantier et vous envoyer un devis directement.",
   },
   {
     question: "Nord Artisan Pro couvre quelles zones ?",
