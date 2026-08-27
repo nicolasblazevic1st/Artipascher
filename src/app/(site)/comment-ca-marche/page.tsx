@@ -10,7 +10,7 @@ import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 export const metadata: Metadata = {
   title: "Comment ça marche — Présentation",
   description:
-    "Jusqu'à 5 artisans vérifiés du Nord 59/62 : décennale, RC pro, avis Google, ancienneté, BODACC. Publiez votre demande, ils vous contactent.",
+    "Jusqu'à 5 artisans vérifiés du Nord 59/62 : décennale, RC pro, avis Google, BODACC. Publiez votre demande, ils vous contactent.",
 };
 
 export default function CommentCaMarchePage() {
