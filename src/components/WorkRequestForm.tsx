@@ -89,7 +89,7 @@ function buildDescriptionPrefill(input: {
     ? `Je souhaite des travaux de ${category.toLowerCase()} : ${besoin}.`
     : `Je souhaite des travaux de ${category.toLowerCase()}.`;
 
-  return `${first}\n\nMerci de me recontacter pour un devis. Je préciserai les détails lors de l'échange.`;
+  return first;
 }
 
 type FormStep = 1 | 2 | 3 | 4;
