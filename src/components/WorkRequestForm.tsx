@@ -221,6 +221,7 @@ export default function WorkRequestForm({
   const abandonSentRef = useRef(false);
   const otherWorkRef = useRef(workOptionOtherDescription);
   const descriptionTouchedRef = useRef(descriptionTouched);
+  const completedStepsRef = useRef<Set<number>>(new Set());
   stepRef.current = step;
   statusRef.current = status;
   categoryRef.current = category;
@@ -627,7 +628,7 @@ export default function WorkRequestForm({
       }
       if (clientKind === "company" && !companyVerification?.valid) {
         return {
-          message: "Vérifiez le SIRET de l'entreprise pour continuer.",
+          message: "Vérifiez le SIRET de l'entreprise.",
           code: "company_siret_not_verified",
         };
       }
@@ -690,40 +691,70 @@ export default function WorkRequestForm({
     setStep(next);
   }
 
-  function goNext() {
-    persistLeadDraft();
-    const invalid = currentStepValidation(step);
-    if (invalid) {
-      setError(invalid.message);
-      trackLeadValidationError(step, invalid.code);
-      return;
-    }
-    trackEvent(
-      ANALYTICS_EVENT.LEAD_FORM_STEP_COMPLETE,
-      leadTrack({
-        step_id: leadFormStepId(step),
-        step_index: step,
-        time_on_step_ms: Math.max(0, Date.now() - stepEnteredAtRef.current),
-      })
-    );
-    if (step < 4) goToStep((step + 1) as FormStep);
+  function unlockedStep(): FormStep {
+    if (currentStepValidation(1)) return 1;
+    if (currentStepValidation(2)) return 2;
+    if (currentStepValidation(3)) return 3;
+    return 4;
   }
 
-  function goBack() {
-    if (step > 1) {
-      const next = (step - 1) as FormStep;
+  useEffect(() => {
+    if (status === "success") return;
+    const maxUnlocked = unlockedStep();
+    const next =
+      maxUnlocked > step ? ((step + 1) as FormStep) : maxUnlocked;
+    if (next === step) return;
+    if (next > step) {
+      persistLeadDraft();
+      if (!completedStepsRef.current.has(step)) {
+        completedStepsRef.current.add(step);
+        trackEvent(
+          ANALYTICS_EVENT.LEAD_FORM_STEP_COMPLETE,
+          leadTrack({
+            step_id: leadFormStepId(step),
+            step_index: step,
+            time_on_step_ms: Math.max(0, Date.now() - stepEnteredAtRef.current),
+          })
+        );
+      }
+    } else {
+      for (let from = next; from <= 4; from += 1) {
+        completedStepsRef.current.delete(from);
+      }
       trackLeadStepBack(step, next);
-      goToStep(next);
     }
-  }
+    goToStep(next);
+  }, [
+    category,
+    selectedNafCodes,
+    pricingTier,
+    workOptionId,
+    workOptionOtherDescription,
+    unknownTrade,
+    propertyType,
+    clientKind,
+    companyVerification,
+    workScope,
+    selectedAddress,
+    descriptionLength,
+    status,
+    step,
+  ]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    if (step < 4) {
-      goNext();
-      return;
+    if (step < 4) return;
+
+    for (const current of [1, 2, 3] as FormStep[]) {
+      const invalid = currentStepValidation(current);
+      if (invalid) {
+        setError(invalid.message);
+        setStatus("error");
+        trackLeadValidationError(current, invalid.code);
+        return;
+      }
     }
 
     trackEvent(
@@ -949,6 +980,7 @@ export default function WorkRequestForm({
     setClientKind("individual");
     setPropertyType("");
     setStep(1);
+    completedStepsRef.current = new Set();
     setWorkScope("");
     setClientSiret("");
     setCompanyVerification(null);
@@ -1012,26 +1044,18 @@ export default function WorkRequestForm({
       </div>
       <div>
         <p className="text-sm font-medium text-slate-900">
-          {step === 1 &&
-            (variant === "general"
-              ? "De quels travaux s’agit-il ?"
-              : "Quel type de travaux ?")}
-          {step === 2 && "Où se situe le chantier ?"}
-          {step === 3 && "Décrivez le projet"}
-          {step === 4 && "Vos coordonnées"}
+          {variant === "general"
+            ? "De quels travaux s’agit-il ?"
+            : "Quel type de travaux ?"}
         </p>
         <p className="mt-1 text-sm text-slate-600">
-          {step === 1 &&
-            (variant === "general"
-              ? "Remplissez ce formulaire même si vous ne connaissez pas le métier."
-              : "Cochez une catégorie, puis continuez le formulaire.")}
-          {step === 2 && "Type de bien et adresse : on trouve les artisans autour de vous."}
-          {step === 3 && "Quelques mots sur ce que vous voulez, et des photos si vous en avez."}
-          {step === 4 && "On vous rappelle. Gratuit, sans engagement."}
+          {variant === "general"
+            ? "Remplissez ce formulaire même si vous ne connaissez pas le métier."
+            : "Cochez une catégorie : la suite s’affiche en dessous."}
         </p>
       </div>
 
-      <div className={step === 1 ? "space-y-4" : "hidden"}>
+      <div className="space-y-4">
       <fieldset>
         <legend className="sr-only">
           {variant === "general" ? "De quels travaux s'agit-il ?" : "Type de travaux"}
@@ -1109,7 +1133,7 @@ export default function WorkRequestForm({
           <p className="mt-2 text-xs font-medium text-amber-700">
             {variant === "general"
               ? "Choisissez un métier, ou « Je ne sais pas / plusieurs métiers »."
-              : "Sélectionnez un type de travaux pour continuer."}
+              : "Sélectionnez un type de travaux."}
           </p>
         )}
       </fieldset>
@@ -1144,7 +1168,7 @@ export default function WorkRequestForm({
           </ul>
           {selectedNafCodes.length === 0 && (
             <p className="mt-2 text-xs font-medium text-amber-700">
-              Sélection obligatoire pour continuer.
+              Sélection obligatoire.
             </p>
           )}
         </fieldset>
@@ -1269,14 +1293,20 @@ export default function WorkRequestForm({
 
           {!workOptionId && (
             <p className="mt-2 text-xs font-medium text-amber-700">
-              Sélectionnez une prestation pour continuer.
+              Sélectionnez une prestation.
             </p>
           )}
         </fieldset>
       )}
       </div>
 
-      <div className={step === 2 ? "space-y-4" : "hidden"}>
+      <div className={step >= 2 ? "space-y-4 border-t border-slate-200 pt-5" : "hidden"}>
+      <div>
+        <p className="text-sm font-medium text-slate-900">Où se situe le chantier ?</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Type de bien et adresse : on trouve les artisans autour de vous.
+        </p>
+      </div>
       <fieldset>
         <legend className="sr-only">Type de bien</legend>
         <div className="grid grid-cols-2 gap-2">
@@ -1470,7 +1500,13 @@ export default function WorkRequestForm({
       </p>
       </div>
 
-      <div className={step === 3 ? "space-y-4" : "hidden"}>
+      <div className={step >= 3 ? "space-y-4 border-t border-slate-200 pt-5" : "hidden"}>
+      <div>
+        <p className="text-sm font-medium text-slate-900">Décrivez le projet</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Quelques mots sur ce que vous voulez, et des photos si vous en avez.
+        </p>
+      </div>
       <div>
         <label
           htmlFor="description"
@@ -1747,7 +1783,13 @@ export default function WorkRequestForm({
       <input type="hidden" name="requireValidInsurances" value="true" />
       </div>
 
-      <div className={step === 4 ? "space-y-4" : "hidden"}>
+      <div className={step >= 4 ? "space-y-4 border-t border-slate-200 pt-5" : "hidden"}>
+      <div>
+        <p className="text-sm font-medium text-slate-900">Vos coordonnées</p>
+        <p className="mt-1 text-sm text-slate-600">
+          On vous rappelle. Gratuit, sans engagement.
+        </p>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <input
           name="firstName"
@@ -1895,25 +1937,8 @@ export default function WorkRequestForm({
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
+      {step >= 4 && (
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
-        {step > 1 && status !== "success" && (
-          <button
-            type="button"
-            onClick={goBack}
-            className="rounded-lg border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Retour
-          </button>
-        )}
-        {step < 4 ? (
-          <button
-            type="button"
-            onClick={goNext}
-            className="w-full rounded-lg bg-accent-500 py-3 text-sm font-semibold text-white hover:bg-accent-600"
-          >
-            Continuer
-          </button>
-        ) : (
           <button
             type="submit"
             disabled={
@@ -1930,8 +1955,8 @@ export default function WorkRequestForm({
                 ? "Demande envoyée ✓"
                 : "Recevoir des propositions"}
           </button>
-        )}
       </div>
+      )}
 
       {status === "success" && (
         <div className="space-y-3 text-center text-sm text-brand-700">
