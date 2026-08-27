@@ -373,7 +373,7 @@ export async function appendFormFunnelEvent(input: {
   await enqueueWrite(async () => {
     const db = await readDb();
     const knownAdminIp =
-      Boolean(ip) &&
+      ip != null &&
       (db.events.some(
         (row) => row.internal === true && storedIp(row.ip) === ip
       ) ||
