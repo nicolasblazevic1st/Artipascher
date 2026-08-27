@@ -1176,13 +1176,17 @@ function finalizeAbandons(sessions: SessionAgg[], until: number) {
   }
 }
 
-export function parseFunnelRangeDays(raw: string | null): 7 | 30 | 90 {
-  if (raw === "7" || raw === "90") return Number(raw) as 7 | 90;
+export type FormFunnelRangeDays = 1 | 7 | 30 | 90;
+
+export function parseFunnelRangeDays(raw: string | null): FormFunnelRangeDays {
+  if (raw === "1" || raw === "7" || raw === "90") {
+    return Number(raw) as FormFunnelRangeDays;
+  }
   return 30;
 }
 
 export async function getFormFunnelReport(
-  rangeDays: 7 | 30 | 90,
+  rangeDays: FormFunnelRangeDays,
   options?: { excludeInternal?: boolean }
 ): Promise<FormFunnelReport> {
   const db = await readDb();
