@@ -63,7 +63,7 @@ export default async function WorkRequestPublicLanding({
               ? `Métier déjà coché : ${prefill.category}. Gratuit, sans commission. Des professionnels vérifiés du Nord et du Pas-de-Calais vous recontactent — en général sous 24–48 h.`
               : prefill.unknownTrade
                 ? "Vous cherchez un artisan sans métier précis : « Je ne sais pas / plusieurs métiers » est déjà sélectionné. Gratuit, sans commission — en général sous 24–48 h."
-                : "Peinture, plomberie, toiture ou plusieurs choses à la fois : un seul formulaire. Gratuit, sans commission. Des professionnels vérifiés du Nord et du Pas-de-Calais vous recontactent — en général sous 24–48 h."}
+                : "Gratuit, sans commission. Des professionnels vérifiés du Nord et du Pas-de-Calais vous recontactent — en général sous 24–48 h."}
           </WorkRequestLandingIntro>
         </div>
 
