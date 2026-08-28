@@ -11,7 +11,7 @@ Remplace le métier et la ville selon le groupe (`Plombier sur Bailleul`, `Couvr
 
 - Marque : **Nord Artisan Pro**
 - Site : `https://nord-artisan-pro.com`
-- Page d’arrivée **unique** : `https://nord-artisan-pro.com/particulier/demande` — même formulaire type partout. Un métier dans `utm_content` / `utm_term={keyword}` **précoche** la catégorie ; une recherche vague (`trouver un artisan`, `devis travaux`) ouvre **« Je ne sais pas / plusieurs métiers »**.
+- Page d’arrivée **accueil** : `https://nord-artisan-pro.com/` — le visiteur voit le site, puis clique vers le formulaire. Un métier dans `utm_content` / `utm_term={keyword}` **précoche** la catégorie sur le formulaire ; une recherche vague (`trouver un artisan`, `devis travaux`) ouvre **« Je ne sais pas / plusieurs métiers »**.
 - Alias **uniquement** pour les pubs / anciens liens déjà envoyés vers `/travaux` (même formulaire). Pas dans le menu ni le sitemap.
 - Hors pub (restent sur le site, pas de groupe) : Rénovation énergétique, Rénovation complète
 
@@ -105,16 +105,22 @@ Ne crée **pas** de groupes « Rénovation énergétique » ni « Rénovation co
 
 ## 3. Noms, UTM, chemins d’affichage
 
-URL finale (finale URL de l’annonce) :
+URL finale (sans paramètre — le suffixe s’ajoute tout seul) :
 
 ```
-https://nord-artisan-pro.com/particulier/demande?utm_source=google&utm_medium=cpc&utm_campaign=loc-{ville-slug}&utm_content={metier-slug}&utm_term={keyword}
+https://nord-artisan-pro.com/
 ```
 
-Exemple Bailleul / Peinture :
+Suffixe d’URL (campagne **Recherche** uniquement, pas Display / PMax) :
 
 ```
-https://nord-artisan-pro.com/particulier/demande?utm_source=google&utm_medium=cpc&utm_campaign=loc-bailleul&utm_content=peinture&utm_term={keyword}
+utm_source=google&utm_medium=cpc&utm_campaign=loc-{ville-slug}&utm_content={metier-slug}&utm_term={keyword}
+```
+
+Exemple Bailleul / Peinture — URL finale `https://nord-artisan-pro.com/` + suffixe :
+
+```
+utm_source=google&utm_medium=cpc&utm_campaign=loc-bailleul&utm_content=peinture&utm_term={keyword}
 ```
 
 Chemins d’affichage (sous l’URL verte, 15 car. max) — visibles dans Google, donc explicites :
@@ -815,10 +821,11 @@ Jusqu'à 5 artisans
 
 - Campagne : `LOC - Bailleul - Recherche`
 - Groupe : `Peinture`
-- URL finale :
+- URL finale : `https://nord-artisan-pro.com/`
+- Suffixe d’URL :
 
 ```
-https://nord-artisan-pro.com/particulier/demande?utm_source=google&utm_medium=cpc&utm_campaign=loc-bailleul&utm_content=peinture&utm_term={keyword}
+utm_source=google&utm_medium=cpc&utm_campaign=loc-bailleul&utm_content=peinture&utm_term={keyword}
 ```
 
 - Chemins : `Bailleul` / `Formulaire`
