@@ -19,7 +19,7 @@ export const TRUST_PILLARS = [
     id: "bodacc",
     label: "Procédure collective",
     detail:
-      "Entreprise saine — Vérifiée financièrement, sans risque d'abandon de chantier.",
+      "Entreprise saine — Vérifiée financièrement, réduction significative du risque d'abandon de chantier.",
   },
   {
     id: "rge",
