@@ -181,7 +181,7 @@ export default async function OffreDetailPage({ params }: Props) {
         )}
 
         <p className="mt-8 text-center text-xs text-slate-500">
-          Jusqu’à 5 artisans correspondant aux attentes du client · Déblocage des
+          Jusqu’à 3 artisans correspondant aux attentes du client · Déblocage des
           coordonnées avec votre solde · Artisans RCS
         </p>
         </div>

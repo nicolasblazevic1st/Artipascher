@@ -15,7 +15,7 @@ export default async function AdminOffresPage() {
       <h2 className="text-lg font-semibold text-slate-900">Offres publiées</h2>
       <p className="mt-1 text-sm text-slate-600">
         Contrôle total des annonces : modifier le contenu, la durée, les
-        photos, ou dépublier. Mise en contact jusqu&apos;à 5 artisans ·{" "}
+        photos, ou dépublier. Mise en contact jusqu&apos;à 3 artisans ·{" "}
         {activeCount} active{activeCount > 1 ? "s" : ""} · {fromSite.length} au
         total
       </p>

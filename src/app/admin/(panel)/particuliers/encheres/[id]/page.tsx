@@ -123,7 +123,7 @@ export default async function AdminOffreDetailPage({ params }: Props) {
           {workRequest && (
             <dl className="mt-4 space-y-2 text-sm">
               <div>
-                <dt className="text-xs text-slate-400">Adresse</dt>
+                <dt className="text-xs text-slate-400">Ville</dt>
                 <dd className="text-slate-700">{formatWorkRequestAddress(workRequest)}</dd>
               </div>
               {workRequest.requestedWorkStartDate && (

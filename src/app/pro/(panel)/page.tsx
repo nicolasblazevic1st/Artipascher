@@ -105,7 +105,7 @@ export default async function ProDashboardPage() {
             <li>Parcourez les offres qui matchent votre métier et votre zone.</li>
             <li>
               Mise en contact ({formatUnlockPriceRange()} selon le ticket, paiement Stripe)
-              tant qu’il reste une place (max. 5 artisans).
+              tant qu’il reste une place (jusqu’à 3 artisans).
             </li>
             <li>
               Contactez le client, visitez le chantier et envoyez votre devis

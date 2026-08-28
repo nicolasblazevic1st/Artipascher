@@ -159,7 +159,7 @@ export const FAQ_ITEMS = [
   {
     question: "Combien coûte le déblocage pour le professionnel ?",
     answer:
-      `Le déblocage se paie à l'unité selon le ticket du chantier (${PRICING_TIERS.map((t) => formatUnlockPriceEur(t.unlockPriceEur)).join(", ").replace(/, ([^,]*)$/, " ou $1")}), via Stripe au moment de la mise en contact. Aucun pack de solde n'est proposé. Chaque demande est limitée à 5 mises en contact maximum.`,
+      `Le déblocage se paie à l'unité selon le ticket du chantier (${PRICING_TIERS.map((t) => formatUnlockPriceEur(t.unlockPriceEur)).join(", ").replace(/, ([^,]*)$/, " ou $1")}), via Stripe au moment de la mise en contact. Aucun pack de solde n'est proposé. Chaque demande met en relation jusqu'à 3 artisans.`,
   },
   {
     question: "Les coordonnées du client sont-elles visibles par tous ?",

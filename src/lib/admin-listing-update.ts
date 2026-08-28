@@ -4,11 +4,14 @@ import {
   validateAuctionDurationHours,
 } from "@/lib/auction-duration";
 import {
-  verifyBanAddress,
-  banFeatureToStoredAddress,
+  verifyBanMunicipality,
+  banFeatureToStoredCity,
 } from "@/lib/ban-address";
-import { validateClientAddress } from "@/lib/client-address";
-import { parseMaxContactArtisans } from "@/lib/contact-slots";
+import { validateClientCityLocation } from "@/lib/client-address";
+import {
+  MAX_CONTACT_UNLOCKS_PUBLIC_FORM,
+  parseMaxContactArtisans,
+} from "@/lib/contact-slots";
 import { parseClientKind, parseWorkScope } from "@/lib/copropriete";
 import { validateDescription } from "@/lib/demandes-validation";
 import { parseMinGoogleRating } from "@/lib/google-rating";
@@ -258,7 +261,17 @@ export async function applyAdminListingUpdate(
     if (maxContactArtisans == null) {
       return {
         ok: false,
-        error: "Le nombre d’artisans contactables doit être entre 1 et 5.",
+        error: "Le nombre d’artisans contactables doit être entre 1 et 3.",
+        status: 400,
+      };
+    }
+    if (
+      maxContactArtisans > MAX_CONTACT_UNLOCKS_PUBLIC_FORM &&
+      maxContactArtisans !== existing.maxContactArtisans
+    ) {
+      return {
+        ok: false,
+        error: "Le nombre d’artisans contactables doit être entre 1 et 3.",
         status: 400,
       };
     }
@@ -306,30 +319,25 @@ export async function applyAdminListingUpdate(
     patch.adminNote = note || null;
   }
 
-  if (hasField("addressLine") || hasField("banAddressId")) {
-    const addressLine = asTrimmedString(body.addressLine) ?? "";
-    const addressLine2 = asTrimmedString(body.addressLine2) ?? "";
+  if (hasField("addressLine") || hasField("banAddressId") || hasField("city")) {
     const postalCode = asTrimmedString(body.postalCode) ?? "";
     const city = asTrimmedString(body.city) ?? "";
     const banAddressId = asTrimmedString(body.banAddressId) ?? "";
-    if (!addressLine || !postalCode || !city || !banAddressId) {
+    if (!postalCode || !city || !banAddressId) {
       return {
         ok: false,
-        error: "Sélectionnez une adresse officielle (BAN) complète.",
+        error: "Sélectionnez une commune officielle (BAN).",
         status: 400,
       };
     }
-    const addressError = validateClientAddress({
-      addressLine,
-      addressLine2,
+    const addressError = validateClientCityLocation({
       postalCode,
       city,
     });
     if (addressError) {
       return { ok: false, error: addressError, status: 400 };
     }
-    const banVerification = await verifyBanAddress({
-      addressLine,
+    const banVerification = await verifyBanMunicipality({
       postalCode,
       city,
       banAddressId,
@@ -337,13 +345,13 @@ export async function applyAdminListingUpdate(
     if (!banVerification.valid || !banVerification.feature) {
       return {
         ok: false,
-        error: banVerification.error ?? "Adresse non confirmée par la BAN.",
+        error: banVerification.error ?? "Ville non confirmée par la BAN.",
         status: 400,
       };
     }
-    const verified = banFeatureToStoredAddress(banVerification.feature);
+    const verified = banFeatureToStoredCity(banVerification.feature);
     patch.addressLine = verified.addressLine;
-    patch.addressLine2 = addressLine2 || null;
+    patch.addressLine2 = null;
     patch.postalCode = verified.postalCode;
     patch.city = verified.city;
     patch.department = verified.department;

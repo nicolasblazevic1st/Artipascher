@@ -853,7 +853,7 @@ export default function WorkRequestForm({
               Combien d&apos;artisans peuvent vous contacter ?
             </legend>
             <p className="mb-2 text-xs text-slate-500">
-              Ils débloquent vos coordonnées. 1 à 3, à vous de choisir.
+              Ils débloquent vos coordonnées. Jusqu&apos;à 3 artisans.
             </p>
             <div className="grid grid-cols-3 gap-2">
               {Array.from(

@@ -2,16 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import BanAddressAutocomplete, {
-  type SelectedBanAddress,
-} from "@/components/BanAddressAutocomplete";
+import BanCityAutocomplete from "@/components/BanCityAutocomplete";
+import type { SelectedBanAddress } from "@/components/BanAddressAutocomplete";
 import {
   AUCTION_DURATION_OPTIONS,
   resolveAuctionDurationHours,
 } from "@/lib/auction-duration";
-import { formatWorkRequestAddress } from "@/lib/client-address";
+import { formatPublicLocation } from "@/lib/client-address";
 import {
-  MAX_CONTACT_UNLOCKS_PER_REQUEST,
+  MAX_CONTACT_UNLOCKS_PUBLIC_FORM,
   MIN_CONTACT_ARTISANS,
 } from "@/lib/contact-slots";
 import { CLIENT_KIND_LABELS, WORK_SCOPE_LABELS } from "@/lib/copropriete";
@@ -92,9 +91,8 @@ export default function AdminListingEditor({ request, backHref }: Props) {
   const [requestedWorkStartDate, setRequestedWorkStartDate] = useState(
     request.requestedWorkStartDate ?? ""
   );
-  const [addressLine2, setAddressLine2] = useState(request.addressLine2 ?? "");
-  const [changingAddress, setChangingAddress] = useState(false);
-  const [newAddress, setNewAddress] = useState<SelectedBanAddress | null>(null);
+  const [changingCity, setChangingCity] = useState(false);
+  const [newCity, setNewCity] = useState<SelectedBanAddress | null>(null);
   const [auctionDurationHours, setAuctionDurationHours] = useState(
     resolveAuctionDurationHours(request)
   );
@@ -106,7 +104,7 @@ export default function AdminListingEditor({ request, backHref }: Props) {
   );
   const [recalculateEndsAt, setRecalculateEndsAt] = useState(false);
   const [maxContactArtisans, setMaxContactArtisans] = useState(
-    request.maxContactArtisans ?? 5
+    request.maxContactArtisans ?? MAX_CONTACT_UNLOCKS_PUBLIC_FORM
   );
   const [minGoogleRating, setMinGoogleRating] = useState<number | "">(
     request.minGoogleRating ?? ""
@@ -212,7 +210,6 @@ export default function AdminListingEditor({ request, backHref }: Props) {
           pricingTier: request.pricingTier ?? null,
           description,
           requestedWorkStartDate: requestedWorkStartDate || null,
-          addressLine2,
           auctionDurationHours,
           ...(publishedAt
             ? { reviewedAt: new Date(publishedAt).toISOString() }
@@ -234,11 +231,11 @@ export default function AdminListingEditor({ request, backHref }: Props) {
           ...extra,
         };
 
-    if (changingAddress && newAddress) {
-      payload.addressLine = newAddress.addressLine;
-      payload.postalCode = newAddress.postalCode;
-      payload.city = newAddress.city;
-      payload.banAddressId = newAddress.banAddressId;
+    if (changingCity && newCity) {
+      payload.addressLine = newCity.city;
+      payload.postalCode = newCity.postalCode;
+      payload.city = newCity.city;
+      payload.banAddressId = newCity.banAddressId;
     }
 
     try {
@@ -283,8 +280,8 @@ export default function AdminListingEditor({ request, backHref }: Props) {
       }
       setMessage(success);
       setRecalculateEndsAt(false);
-      setChangingAddress(false);
-      setNewAddress(null);
+      setChangingCity(false);
+      setNewCity(null);
       router.refresh();
       if (extra?.action) {
         router.push(backHref);
@@ -313,8 +310,8 @@ export default function AdminListingEditor({ request, backHref }: Props) {
       className="space-y-6"
       onSubmit={(e) => {
         e.preventDefault();
-        if (changingAddress && !newAddress) {
-          setError("Sélectionnez une nouvelle adresse BAN, ou annulez le changement.");
+        if (changingCity && !newCity) {
+          setError("Sélectionnez une nouvelle ville BAN, ou annulez le changement.");
           return;
         }
         void persist();
@@ -469,6 +466,10 @@ export default function AdminListingEditor({ request, backHref }: Props) {
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h3 className="font-semibold text-slate-900">Chantier</h3>
+        <p className="mt-1 text-sm text-slate-600">
+          Le formulaire public ne demande plus le métier : corrige ici si la
+          détection s’est trompée (ça oriente les SMS).
+        </p>
         <div className="mt-4">
           <p className="text-sm font-medium text-slate-700">Catégorie</p>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -578,37 +579,30 @@ export default function AdminListingEditor({ request, backHref }: Props) {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-5">
-        <h3 className="font-semibold text-slate-900">Adresse</h3>
+        <h3 className="font-semibold text-slate-900">Ville du chantier</h3>
         <p className="mt-2 text-sm text-slate-700">
-          {formatWorkRequestAddress(request)}
+          {formatPublicLocation(request)}
         </p>
-        <label className="mt-3 block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">
-            Complément (bâtiment, appartement…)
-          </span>
-          <input
-            className={INPUT}
-            value={addressLine2}
-            onChange={(e) => setAddressLine2(e.target.value)}
-          />
-        </label>
+        <p className="mt-1 text-xs text-slate-500">
+          Comme le formulaire public : commune 59/62 seulement, pas de rue.
+        </p>
         <div className="mt-3">
           <button
             type="button"
             onClick={() => {
-              setChangingAddress((v) => !v);
-              setNewAddress(null);
+              setChangingCity((v) => !v);
+              setNewCity(null);
             }}
             className="text-sm font-medium text-brand-700 hover:underline"
           >
-            {changingAddress ? "Annuler le changement d’adresse" : "Changer l’adresse"}
+            {changingCity ? "Annuler le changement de ville" : "Changer la ville"}
           </button>
         </div>
-        {changingAddress && (
+        {changingCity && (
           <div className="mt-3">
-            <BanAddressAutocomplete
+            <BanCityAutocomplete
               inputClass={INPUT}
-              onSelect={setNewAddress}
+              onSelect={setNewCity}
               required={false}
             />
           </div>
@@ -686,7 +680,7 @@ export default function AdminListingEditor({ request, backHref }: Props) {
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="block text-sm">
             <span className="mb-1 block font-medium text-slate-700">
-              Artisans max
+              Artisans max (1 à 3)
             </span>
             <select
               className={INPUT}
@@ -694,9 +688,18 @@ export default function AdminListingEditor({ request, backHref }: Props) {
               onChange={(e) => setMaxContactArtisans(Number(e.target.value))}
             >
               {Array.from(
-                { length: MAX_CONTACT_UNLOCKS_PER_REQUEST - MIN_CONTACT_ARTISANS + 1 },
+                {
+                  length:
+                    MAX_CONTACT_UNLOCKS_PUBLIC_FORM - MIN_CONTACT_ARTISANS + 1,
+                },
                 (_, i) => MIN_CONTACT_ARTISANS + i
-              ).map((n) => (
+              )
+                .concat(
+                  maxContactArtisans > MAX_CONTACT_UNLOCKS_PUBLIC_FORM
+                    ? [maxContactArtisans]
+                    : []
+                )
+                .map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>

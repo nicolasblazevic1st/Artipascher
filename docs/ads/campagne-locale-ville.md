@@ -225,7 +225,7 @@ Descriptions partagées (toutes ≤ 90) — 2 à coller dans chaque RSA, plus 2 
 
 ```
 Remplissez un formulaire. Des pros vérifiés RCS vous recontactent. Gratuit, sans compte.
-Un formulaire à remplir. Jusqu'à 5 artisans vérifiés du 59/62 vous joignent. Sans frais.
+Un formulaire à remplir. Jusqu'à 3 artisans vérifiés du 59/62 vous joignent. Sans frais.
 Vous remplissez un formulaire. Des professionnels vérifiés (RCS) vous contactent ensuite.
 Ce n'est pas un annuaire. Remplissez le formulaire, des pros vérifiés vous contactent.
 ```
@@ -810,7 +810,7 @@ Artisans vérifiés RCS
 Gratuit pour vous
 Sans compte obligatoire
 Nord et Pas-de-Calais
-Jusqu'à 5 artisans
+Jusqu'à 3 artisans
 ```
 
 ---
@@ -869,7 +869,7 @@ Descriptions RSA :
 
 ```
 Remplissez un formulaire. Des pros vérifiés RCS vous recontactent. Gratuit, sans compte.
-Un formulaire à remplir. Jusqu'à 5 artisans vérifiés du 59/62 vous joignent. Sans frais.
+Un formulaire à remplir. Jusqu'à 3 artisans vérifiés du 59/62 vous joignent. Sans frais.
 Peinture intérieure ou façade : un formulaire, des pros vérifiés vous joignent. Gratuit.
 Remplissez le formulaire peintre. Des pros vérifiés du 59/62 vous contactent. Gratuit.
 ```
