@@ -60,10 +60,8 @@ export default async function WorkRequestPublicLanding({
         <div className={showParticulierBackLink ? "mt-4" : "mt-2"}>
           <WorkRequestLandingIntro heading="Remplissez le formulaire de travaux">
             {prefill.category
-              ? `Métier déjà coché : ${prefill.category}. Gratuit, sans commission. Des professionnels vérifiés du Nord et du Pas-de-Calais vous recontactent — en général sous 24–48 h.`
-              : prefill.unknownTrade
-                ? "Vous cherchez un artisan sans métier précis : « Je ne sais pas / plusieurs métiers » est déjà sélectionné. Gratuit, sans commission — en général sous 24–48 h."
-                : "Gratuit, sans commission. Des professionnels vérifiés du Nord et du Pas-de-Calais vous recontactent — en général sous 24–48 h."}
+              ? `On oriente déjà vers « ${prefill.category} » d’après votre recherche. Décrivez le projet (150 caractères min.), indiquez la ville, confirmez le mobile. Gratuit, sans commission — en général sous 24–48 h.`
+              : "Décrivez le projet (150 caractères min.), indiquez la ville, confirmez le mobile. On oriente vers les bons artisans. Gratuit, sans commission — en général sous 24–48 h."}
           </WorkRequestLandingIntro>
         </div>
 

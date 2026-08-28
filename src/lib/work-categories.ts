@@ -107,6 +107,32 @@ const SEARCH_PHRASES: Array<{ needle: string; category: WorkCategory }> = [
   { needle: "renovation complete", category: "Rénovation complète" },
   { needle: "revetement de sol", category: "Carrelage / Revêtements de sol" },
   { needle: "amenagement paysager", category: "Extérieur / Aménagement paysager" },
+  { needle: "etancheite", category: "Toiture / Couverture" },
+  { needle: "etancheur", category: "Toiture / Couverture" },
+  { needle: "gouttiere", category: "Toiture / Couverture" },
+  { needle: "zinguerie", category: "Toiture / Couverture" },
+  { needle: "zingueur", category: "Toiture / Couverture" },
+  { needle: "demoussage", category: "Toiture / Couverture" },
+  { needle: "repeindre", category: "Peinture" },
+  { needle: "peindre", category: "Peinture" },
+  { needle: "vitrier", category: "Peinture" },
+  { needle: "double vitrage", category: "Peinture" },
+  { needle: "ramonage", category: "Chauffage / Pompe à chaleur" },
+  { needle: "ramoneur", category: "Chauffage / Pompe à chaleur" },
+  { needle: "climatisation", category: "Chauffage / Pompe à chaleur" },
+  { needle: "poele", category: "Chauffage / Pompe à chaleur" },
+  { needle: "insert", category: "Chauffage / Pompe à chaleur" },
+  { needle: "parquet", category: "Carrelage / Revêtements de sol" },
+  { needle: "facade", category: "Maçonnerie" },
+  { needle: "crepi", category: "Maçonnerie" },
+  { needle: "enduit", category: "Maçonnerie" },
+  { needle: "desamiantage", category: "Isolation" },
+  { needle: "assainissement", category: "Plomberie" },
+  { needle: "fosse septique", category: "Plomberie" },
+  { needle: "piscine", category: "Extérieur / Aménagement paysager" },
+  { needle: "cloture", category: "Extérieur / Aménagement paysager" },
+  { needle: "portail", category: "Serrurerie" },
+  { needle: "interphone", category: "Serrurerie" },
 ];
 
 function matchCategoryToken(raw?: string | null): WorkCategory | undefined {
@@ -120,7 +146,10 @@ function matchCategoryToken(raw?: string | null): WorkCategory | undefined {
   return ADS_SLUG_TO_CATEGORY[compact];
 }
 
-function matchCategoryFromSearchText(raw?: string | null): WorkCategory | undefined {
+/** Texte libre (description, mot-clé Ads) → métier plateforme si un indice est clair. */
+export function matchCategoryFromSearchText(
+  raw?: string | null
+): WorkCategory | undefined {
   if (!raw) return undefined;
   const folded = foldAdsToken(raw);
   if (!folded) return undefined;

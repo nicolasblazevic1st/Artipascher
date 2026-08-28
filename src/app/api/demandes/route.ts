@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { betaClosedJsonResponse, isBetaModeFromRequest } from "@/lib/beta";
 import {
-  verifyBanAddress,
-  banFeatureToStoredAddress,
+  verifyBanMunicipality,
+  banFeatureToStoredCity,
 } from "@/lib/ban-address";
-import { validateClientAddress } from "@/lib/client-address";
+import { validateClientCityLocation } from "@/lib/client-address";
+import { classifyWorkFromDescription } from "@/lib/classify-work-request";
 import {
   DEFAULT_AUCTION_DURATION_HOURS,
   validateAuctionDurationHours,
@@ -15,17 +16,19 @@ import {
   validatePreviousQuotePair,
   validateRequestedWorkStartDate,
 } from "@/lib/demandes-validation";
-import { GENERAL_WORK_CATEGORY } from "@/lib/work-categories";
 import { getClientSession } from "@/lib/client-auth";
 import { validateWorkRequestNafSelection } from "@/lib/naf-codes";
-import { validatePricingSelection, OTHER_WORK_OPTION_ID } from "@/lib/pricing-tiers";
+import {
+  DEFAULT_PRICING_TIER,
+  validatePricingSelection,
+} from "@/lib/pricing-tiers";
 import { normalizeSiret, verifyWithRegistry } from "@/lib/rcs";
 import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
 } from "@/lib/phone-format";
 import {
-  maxContactArtisansForTier,
+  MAX_CONTACT_UNLOCKS_PER_REQUEST,
   parseMaxContactArtisans,
 } from "@/lib/contact-slots";
 import { parseMinGoogleRating } from "@/lib/google-rating";
@@ -63,7 +66,6 @@ export async function POST(request: NextRequest) {
         : undefined;
     const clientSiretRaw = String(formData.get("clientSiret") ?? "").trim();
     const companyNameRaw = String(formData.get("companyName") ?? "").trim();
-    const addressLine = String(formData.get("addressLine") ?? "").trim();
     const addressLine2 = String(formData.get("addressLine2") ?? "").trim();
     const postalCode = String(formData.get("postalCode") ?? "").trim();
     const city = String(formData.get("city") ?? "").trim();
@@ -71,11 +73,7 @@ export async function POST(request: NextRequest) {
     const requestedWorkStartDate = String(
       formData.get("requestedWorkStartDate") ?? ""
     ).trim();
-    const category = String(formData.get("category") ?? "Autre").trim();
-    const nafCodesRaw = formData
-      .getAll("nafCodes")
-      .map((v) => String(v).trim())
-      .filter(Boolean);
+    const adsCategoryHint = String(formData.get("adsHint") ?? "").trim();
     const pricingTierRaw = String(formData.get("pricingTier") ?? "").trim();
     const workOptionIdRaw = String(formData.get("workOptionId") ?? "").trim();
     const workOptionOtherDescriptionRaw = String(
@@ -125,15 +123,7 @@ export async function POST(request: NextRequest) {
     const previousQuoteProof =
       proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
 
-    if (
-      !firstName ||
-      !lastName ||
-      !phoneRaw ||
-      !addressLine ||
-      !postalCode ||
-      !city ||
-      !banAddressId
-    ) {
+    if (!firstName || !lastName || !phoneRaw || !postalCode || !city || !banAddressId) {
       return NextResponse.json(
         { error: "Tous les champs obligatoires doivent être remplis." },
         { status: 400 }
@@ -199,9 +189,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const addressError = validateClientAddress({
-      addressLine,
-      addressLine2,
+    const addressError = validateClientCityLocation({
       postalCode,
       city,
     });
@@ -236,20 +224,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: startDateError }, { status: 400 });
     }
 
-    const banVerification = await verifyBanAddress({
-      addressLine,
+    const banVerification = await verifyBanMunicipality({
       postalCode,
       city,
       banAddressId,
     });
     if (!banVerification.valid || !banVerification.feature) {
       return NextResponse.json(
-        { error: banVerification.error ?? "Adresse non confirmée par la BAN." },
+        { error: banVerification.error ?? "Ville non confirmée par la BAN." },
         { status: 400 }
       );
     }
 
-    const verifiedAddress = banFeatureToStoredAddress(banVerification.feature);
+    const verifiedAddress = banFeatureToStoredCity(banVerification.feature);
     const department = verifiedAddress.department;
 
     const descriptionError = validateDescription(description);
@@ -257,13 +244,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: descriptionError }, { status: 400 });
     }
 
-    const nafCheck = validateWorkRequestNafSelection(category, nafCodesRaw);
+    const classified = await classifyWorkFromDescription(
+      description,
+      adsCategoryHint || undefined
+    );
+    const nafCheck = validateWorkRequestNafSelection(
+      classified.category,
+      classified.nafCodes
+    );
     if (!nafCheck.ok) {
       return NextResponse.json({ error: nafCheck.error }, { status: 400 });
     }
 
     const pricingCheck = validatePricingSelection({
-      pricingTier: pricingTierRaw,
+      pricingTier: pricingTierRaw || DEFAULT_PRICING_TIER,
       workOptionId: workOptionIdRaw || undefined,
       workOptionOtherDescription: workOptionOtherDescriptionRaw || undefined,
       nafCodes: nafCheck.nafCodes,
@@ -271,28 +265,11 @@ export async function POST(request: NextRequest) {
     if (!pricingCheck.ok) {
       return NextResponse.json({ error: pricingCheck.error }, { status: 400 });
     }
-    const generalWorkForm = String(formData.get("generalWorkForm") ?? "") === "1";
-    const contactCap = maxContactArtisansForTier(pricingCheck.pricingTier, {
-      allowFullCap:
-        generalWorkForm ||
-        (category === GENERAL_WORK_CATEGORY &&
-          pricingCheck.workOptionId === OTHER_WORK_OPTION_ID),
-    });
     const requestedContacts = parseMaxContactArtisans(
       formData.get("maxContactArtisans")
     );
-    if (
-      requestedContacts == null ||
-      requestedContacts > contactCap
-    ) {
-      return NextResponse.json(
-        {
-          error: `Indiquez combien d’artisans peuvent vous contacter (de 1 à ${contactCap}).`,
-        },
-        { status: 400 }
-      );
-    }
-    const maxContactArtisans = requestedContacts;
+    const maxContactArtisans =
+      requestedContacts ?? MAX_CONTACT_UNLOCKS_PER_REQUEST;
 
     const photosError = validatePhotoFiles(photos);
     if (photosError) {
@@ -374,7 +351,7 @@ export async function POST(request: NextRequest) {
       longitude: verifiedAddress.longitude,
       addressVerifiedAt: new Date().toISOString(),
       requestedWorkStartDate: requestedWorkStartDate || undefined,
-      category,
+      category: classified.category,
       nafCodes: nafCheck.nafCodes,
       pricingTier: pricingCheck.pricingTier,
       workOptionId: pricingCheck.workOptionId,

@@ -178,10 +178,10 @@ export interface FormFunnelReport {
 const EMPTY_DB: FormFunnelDb = { events: [], drafts: [] };
 
 const LEAD_STEP_LABELS: Record<number, string> = {
-  1: "Étape 1 — Travaux",
-  2: "Étape 2 — Bien",
-  3: "Étape 3 — Projet",
-  4: "Étape 4 — Contact",
+  1: "Étape 1 — Description",
+  2: "Étape 2 — Ville",
+  3: "Étape 3 — Contact",
+  4: "Étape 4 — Contact (ancien formulaire)",
 };
 
 const PRO_SECTION_LABELS: Record<string, string> = {

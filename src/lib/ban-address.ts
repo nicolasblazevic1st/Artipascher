@@ -210,3 +210,67 @@ export function banFeatureToStoredAddress(feature: BanAddressFeature) {
     longitude: feature.lon,
   };
 }
+
+/** Commune BAN (sans rue) — le matching artisans utilise le centroïde. */
+export function banFeatureToStoredCity(feature: BanAddressFeature) {
+  return {
+    ...banFeatureToStoredAddress(feature),
+    addressLine: feature.city,
+  };
+}
+
+export async function verifyBanMunicipality(input: {
+  city: string;
+  postalCode: string;
+  banAddressId?: string;
+}): Promise<BanAddressVerificationResult> {
+  const city = input.city.trim();
+  const postalCode = input.postalCode.trim();
+  const department = departmentFromPostalCode(postalCode);
+  if (!department) {
+    return {
+      valid: false,
+      error: "Ville hors zone Nord Artisan Pro (59 ou 62 uniquement).",
+    };
+  }
+
+  const query = `${city} ${postalCode}`.trim();
+  const [byQuery, byCity] = await Promise.all([
+    searchBanMunicipalities(query, 8),
+    searchBanMunicipalities(city, 8),
+  ]);
+  const seen = new Set<string>();
+  const candidates = [...byQuery, ...byCity].filter((f) => {
+    if (seen.has(f.id)) return false;
+    seen.add(f.id);
+    return true;
+  });
+  if (candidates.length === 0) {
+    return {
+      valid: false,
+      error:
+        "Ville introuvable au registre officiel (BAN). Sélectionnez une suggestion.",
+    };
+  }
+
+  const match =
+    (input.banAddressId
+      ? candidates.find((f) => f.id === input.banAddressId)
+      : undefined) ??
+    candidates.find(
+      (f) =>
+        f.postcode === postalCode &&
+        normalizeText(f.city) === normalizeText(city)
+    ) ??
+    candidates.find((f) => f.postcode === postalCode);
+
+  if (!match) {
+    return {
+      valid: false,
+      error:
+        "Ville non confirmée. Choisissez une commune dans la liste proposée.",
+    };
+  }
+
+  return { valid: true, feature: match };
+}
