@@ -305,16 +305,27 @@ function workCategoryLabel(value?: string) {
 
 function SavedTextsTable({ rows }: { rows: FunnelSavedTextRow[] }) {
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="font-semibold text-slate-900">Textes saisis</h3>
+    <section
+      id="textes-saisis"
+      className="rounded-xl border-2 border-brand-200 bg-white p-5"
+    >
+      <h3 className="font-semibold text-slate-900">
+        Descriptions tapées
+        {rows.length > 0 ? (
+          <span className="ml-2 text-sm font-medium text-slate-500">
+            ({rows.length})
+          </span>
+        ) : null}
+      </h3>
       <p className="mt-1 text-sm text-slate-500">
-        Ce que la personne a écrit dans le formulaire, même si la demande n&apos;a
-        pas été envoyée. Conservé 90 jours, admin seulement — pas envoyé à Google.
+        Tout ce qui a été écrit dans la description, même si la personne est
+        partie sans envoyer. Conservé 90 jours, admin seulement — pas envoyé à
+        Google. Tes tests restent visibles ici (badge « Toi »).
       </p>
       {rows.length === 0 ? (
         <p className="mt-4 text-sm text-slate-500">
-          Aucun texte conservé sur cette période. Les prochaines saisies
-          (« Autre », description) apparaîtront ici.
+          Personne n&apos;a encore tapé de texte sur cette période. Choisis « 7
+          jours » en haut si tu regardes plus loin.
         </p>
       ) : (
         <ul className="mt-4 space-y-4">
@@ -574,6 +585,8 @@ function SidePanel({
         </div>
       </div>
 
+      {form === "lead" && <SavedTextsTable rows={side.savedTexts ?? []} />}
+
       {form === "lead" && (
         <div className="grid gap-6 lg:grid-cols-2">
           <IntentTable
@@ -693,12 +706,6 @@ function SidePanel({
             empty="Pas de source UTM sur ces sessions."
             rows={side.byUtmSource}
           />
-        </div>
-      )}
-
-      {form === "lead" && (
-        <div className="mb-6">
-          <SavedTextsTable rows={side.savedTexts ?? []} />
         </div>
       )}
 
@@ -862,7 +869,7 @@ function SidePanel({
 }
 
 export default function AdminParcoursFormulairesPage() {
-  const [days, setDays] = useState<RangeDays>(1);
+  const [days, setDays] = useState<RangeDays>(7);
   const [tab, setTab] = useState<FormTab>("lead");
   const [report, setReport] = useState<FormFunnelReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -891,6 +898,17 @@ export default function AdminParcoursFormulairesPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (loading || !report) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#textes-saisis") return;
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("textes-saisis")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [loading, report]);
+
   const side = tab === "lead" ? report?.lead : report?.pro;
 
   return (
@@ -898,14 +916,15 @@ export default function AdminParcoursFormulairesPage() {
       <p className="text-sm text-slate-600">
         Entonnoir des balises analytics : clics Google Ads (même sans ouvrir le
         formulaire) et parcours dans le formulaire de demande, puis
-        l&apos;inscription artisan. Pas de nom, e-mail, téléphone ni adresse
-        postale. L&apos;IP est conservée 90 jours (sécurité / diagnostic, admin
-        seulement). Les textes « Autre » / description aussi. Tes tests sont
-        marqués <strong>Toi</strong> si tu es connecté à l&apos;admin, ou si
-        l&apos;IP a déjà ouvert l&apos;admin (ordinateur ou téléphone).
-        « Masquer mes tests » les retire de l&apos;entonnoir. « Masquer le
-        bruit » retire les ouvertures trop rapides pour un humain, et les
-        URLs pub Google sans identifiant de clic (scrapers).
+        l&apos;inscription artisan. Les <strong>descriptions tapées</strong> (même
+        sans envoyer) sont en haut de l&apos;onglet Demandes particuliers. Pas de
+        nom, e-mail, téléphone ni adresse postale. L&apos;IP est conservée 90 jours
+        (sécurité / diagnostic, admin seulement). Tes tests sont marqués{" "}
+        <strong>Toi</strong> si tu es connecté à l&apos;admin, ou si l&apos;IP a
+        déjà ouvert l&apos;admin (ordinateur ou téléphone). « Masquer mes tests »
+        les retire de l&apos;entonnoir, pas des descriptions. « Masquer le bruit »
+        retire les ouvertures trop rapides pour un humain, et les URLs pub Google
+        sans identifiant de clic (scrapers).
       </p>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">

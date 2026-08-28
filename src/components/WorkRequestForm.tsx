@@ -79,6 +79,7 @@ export default function WorkRequestForm({
   googleError = null,
 }: Props) {
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const draftTimerRef = useRef<number | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<
@@ -156,6 +157,13 @@ export default function WorkRequestForm({
     saveLeadFormDraft({ description: desc });
   }
 
+  function scheduleLeadDraft() {
+    if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = window.setTimeout(() => {
+      persistLeadDraft();
+    }, 1500);
+  }
+
   function persistGoogleFormDraft() {
     saveGoogleWorkFormDraft({
       description: descriptionRef.current?.value ?? "",
@@ -215,6 +223,12 @@ export default function WorkRequestForm({
       leadTrack({ step_id: leadFormStepId(step), step_index: step })
     );
   }, [step, variant, guestMode]);
+
+  useEffect(() => {
+    return () => {
+      if (draftTimerRef.current) window.clearTimeout(draftTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     return bindFormLeaveListeners(() => {
@@ -624,8 +638,15 @@ export default function WorkRequestForm({
             }`}
             required
             minLength={MIN_DESCRIPTION_LENGTH}
-            onInput={(e) => syncDescriptionLength(e.currentTarget.value)}
-            onChange={(e) => syncDescriptionLength(e.currentTarget.value)}
+            onInput={(e) => {
+              syncDescriptionLength(e.currentTarget.value);
+              scheduleLeadDraft();
+            }}
+            onChange={(e) => {
+              syncDescriptionLength(e.currentTarget.value);
+              scheduleLeadDraft();
+            }}
+            onBlur={() => persistLeadDraft()}
           />
           <p
             className={`mt-1 text-xs ${
