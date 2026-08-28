@@ -148,6 +148,18 @@ export interface FormFunnelSide {
   savedTexts: FunnelSavedTextRow[];
 }
 
+export interface AdsClickBurst {
+  ip: string;
+  clicks: number;
+  startedAt: string;
+  lastAt: string;
+  durationMs: number;
+  submitted: number;
+  device?: string;
+  utmCampaign?: string;
+  sessionIds: string[];
+}
+
 export interface FormFunnelReport {
   rangeDays: number;
   since: string;
@@ -157,6 +169,8 @@ export interface FormFunnelReport {
   internalProSessions: number;
   /** Lead sessions that look like scrapers / invalid ads hits, not people. */
   noiseLeadSessions: number;
+  /** Same IP, ≥ 3 Google Ads clicks in 5 minutes (internal tests excluded). */
+  adsClickBursts: AdsClickBurst[];
   lead: FormFunnelSide;
   pro: FormFunnelSide;
 }
@@ -696,6 +710,80 @@ function isNoiseLeadSession(session: SessionAgg): boolean {
   return false;
 }
 
+const ADS_BURST_WINDOW_MS = 5 * 60 * 1000;
+const ADS_BURST_MIN_CLICKS = 3;
+
+function detectAdsClickBursts(sessions: SessionAgg[]): AdsClickBurst[] {
+  const byIp = new Map<string, SessionAgg[]>();
+  for (const session of sessions) {
+    if (session.internal || !session.ip || session.adsClick !== true) continue;
+    const list = byIp.get(session.ip) ?? [];
+    list.push(session);
+    byIp.set(session.ip, list);
+  }
+
+  const bursts: AdsClickBurst[] = [];
+  for (const [ip, list] of byIp) {
+    const sorted = list.slice().sort((a, b) => {
+      const delta = a.firstAt - b.firstAt;
+      return delta !== 0 ? delta : a.id.localeCompare(b.id);
+    });
+    const ranges: Array<[number, number]> = [];
+    let start = 0;
+    for (let end = 0; end < sorted.length; end++) {
+      while (sorted[end].firstAt - sorted[start].firstAt > ADS_BURST_WINDOW_MS) {
+        start += 1;
+      }
+      if (end - start + 1 >= ADS_BURST_MIN_CLICKS) {
+        ranges.push([start, end]);
+      }
+    }
+    const merged: Array<[number, number]> = [];
+    for (const range of ranges) {
+      const last = merged[merged.length - 1];
+      if (last && range[0] <= last[1]) {
+        last[1] = Math.max(last[1], range[1]);
+      } else {
+        merged.push([range[0], range[1]]);
+      }
+    }
+    for (const [from, to] of merged) {
+      const slice = sorted.slice(from, to + 1);
+      const first = slice[0];
+      const last = slice[slice.length - 1];
+      if (!first || !last) continue;
+      const campaigns = [
+        ...new Set(
+          slice
+            .map((session) => session.utmCampaign)
+            .filter((value): value is string => Boolean(value))
+        ),
+      ];
+      const devices = [
+        ...new Set(
+          slice
+            .map((session) => session.device)
+            .filter((value): value is string => Boolean(value))
+        ),
+      ];
+      bursts.push({
+        ip,
+        clicks: slice.length,
+        startedAt: new Date(first.firstAt).toISOString(),
+        lastAt: new Date(last.firstAt).toISOString(),
+        durationMs: Math.max(0, last.firstAt - first.firstAt),
+        submitted: slice.filter((session) => session.submitted).length,
+        device: devices.length === 1 ? devices[0] : undefined,
+        utmCampaign: campaigns.length === 1 ? campaigns[0] : undefined,
+        sessionIds: slice.map((session) => session.id),
+      });
+    }
+  }
+  return bursts.sort(
+    (a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt)
+  );
+}
+
 function sessionArrivalCategory(session: SessionAgg): string | undefined {
   return (
     realWorkCategory(session.adsCategory) ?? sessionKeywordCategory(session)
@@ -810,9 +898,65 @@ function toSavedTextRows(
     }));
 }
 
+function toRecentLeadRows(
+  sessions: SessionAgg[],
+  draftBySession: Map<string, FormFunnelDraft>,
+  pinSessionIds: string[] = []
+): FunnelSessionRow[] {
+  const pin = new Set(pinSessionIds);
+  const sorted = sessions.slice().sort((a, b) => b.lastAt - a.lastAt);
+  const recent = sorted.slice(0, 40);
+  const recentIds = new Set(recent.map((session) => session.id));
+  const extra = sorted.filter(
+    (session) => pin.has(session.id) && !recentIds.has(session.id)
+  );
+  return [...extra, ...recent]
+    .sort((a, b) => b.lastAt - a.lastAt)
+    .map((s) => ({
+      sessionId: s.id,
+      sessionShort: s.id.slice(-6),
+      startedAt: new Date(s.firstAt).toISOString(),
+      lastAt: new Date(s.lastAt).toISOString(),
+      durationMs: Math.max(0, s.lastAt - s.firstAt),
+      outcome: s.submitted
+        ? "Envoyée"
+        : !sessionOpenedLeadForm(s)
+          ? s.abandoned
+            ? "Arrivé, pas de formulaire"
+            : "En cours / quittée"
+          : s.abandoned
+            ? "Abandonnée"
+            : "En cours / quittée",
+      lastLabel: s.submitted
+        ? "Demande envoyée"
+        : !sessionOpenedLeadForm(s)
+          ? "Arrivée pub"
+          : LEAD_STEP_LABELS[s.maxStepViewed] ?? "Ouverture",
+      variant: s.variant,
+      guestMode: s.guestMode,
+      utmContent: s.utmContent,
+      utmSource: s.utmSource,
+      utmCampaign: s.utmCampaign,
+      utmTerm: s.utmTerm,
+      device: s.device,
+      adsClick: s.adsClick,
+      landingPath: s.landingPath,
+      workCategory: s.workCategory,
+      adsCategory: s.adsCategory,
+      keywordCategory: sessionKeywordCategory(s),
+      gaSent: s.gaSent,
+      otherWork: draftBySession.get(s.id)?.otherWork,
+      descriptionDraft: draftBySession.get(s.id)?.description,
+      internal: s.internal,
+      ip: s.ip ?? draftBySession.get(s.id)?.ip,
+      events: toSessionEvents(s),
+    }));
+}
+
 function buildLeadSide(
   sessions: SessionAgg[],
-  drafts: FormFunnelDraft[] = []
+  drafts: FormFunnelDraft[] = [],
+  pinSessionIds: string[] = []
 ): FormFunnelSide {
   const savedTexts = toSavedTextRows(sessions, drafts);
   if (sessions.length === 0) return { ...emptySide(), savedTexts };
@@ -962,49 +1106,7 @@ function buildLeadSide(
       };
     }),
     stepTimes: toStepTimeRows(sessions),
-    recent: sessions
-      .slice()
-      .sort((a, b) => b.lastAt - a.lastAt)
-      .slice(0, 40)
-      .map((s) => ({
-        sessionId: s.id,
-        sessionShort: s.id.slice(-6),
-        startedAt: new Date(s.firstAt).toISOString(),
-        lastAt: new Date(s.lastAt).toISOString(),
-        durationMs: Math.max(0, s.lastAt - s.firstAt),
-        outcome: s.submitted
-          ? "Envoyée"
-          : !sessionOpenedLeadForm(s)
-            ? s.abandoned
-              ? "Arrivé, pas de formulaire"
-              : "En cours / quittée"
-            : s.abandoned
-              ? "Abandonnée"
-              : "En cours / quittée",
-        lastLabel: s.submitted
-          ? "Demande envoyée"
-          : !sessionOpenedLeadForm(s)
-            ? "Arrivée pub"
-            : LEAD_STEP_LABELS[s.maxStepViewed] ?? "Ouverture",
-        variant: s.variant,
-        guestMode: s.guestMode,
-        utmContent: s.utmContent,
-        utmSource: s.utmSource,
-        utmCampaign: s.utmCampaign,
-        utmTerm: s.utmTerm,
-        device: s.device,
-        adsClick: s.adsClick,
-        landingPath: s.landingPath,
-        workCategory: s.workCategory,
-        adsCategory: s.adsCategory,
-        keywordCategory: sessionKeywordCategory(s),
-        gaSent: s.gaSent,
-        otherWork: draftBySession.get(s.id)?.otherWork,
-        descriptionDraft: draftBySession.get(s.id)?.description,
-        internal: s.internal,
-        ip: s.ip ?? draftBySession.get(s.id)?.ip,
-        events: toSessionEvents(s),
-      })),
+    recent: toRecentLeadRows(sessions, draftBySession, pinSessionIds),
     savedTexts,
   };
 }
@@ -1400,6 +1502,8 @@ export async function getFormFunnelReport(
     if (isMetaCrawlerIp(draft.ip)) return false;
     return true;
   });
+  const adsClickBursts = detectAdsClickBursts(leadAll);
+  const burstSessionIds = adsClickBursts.flatMap((burst) => burst.sessionIds);
 
   return {
     rangeDays,
@@ -1409,7 +1513,8 @@ export async function getFormFunnelReport(
     internalLeadSessions,
     internalProSessions,
     noiseLeadSessions,
-    lead: buildLeadSide(lead, drafts),
+    adsClickBursts,
+    lead: buildLeadSide(lead, drafts, burstSessionIds),
     pro: buildProSide(pro),
   };
 }

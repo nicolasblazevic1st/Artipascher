@@ -109,8 +109,21 @@ interface FormFunnelReport {
   internalLeadSessions: number;
   internalProSessions: number;
   noiseLeadSessions: number;
+  adsClickBursts?: AdsClickBurst[];
   lead: FormFunnelSide;
   pro: FormFunnelSide;
+}
+
+interface AdsClickBurst {
+  ip: string;
+  clicks: number;
+  startedAt: string;
+  lastAt: string;
+  durationMs: number;
+  submitted: number;
+  device?: string;
+  utmCampaign?: string;
+  sessionIds: string[];
 }
 
 const VARIANT_LABELS: Record<string, string> = {
@@ -196,6 +209,93 @@ function formatEventClock(iso: string) {
   } catch {
     return iso;
   }
+}
+
+async function copyText(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function AdsClickBurstsBanner({
+  bursts,
+  highlightIp,
+  onSelect,
+}: {
+  bursts: AdsClickBurst[];
+  highlightIp: string | null;
+  onSelect: (burst: AdsClickBurst) => void;
+}) {
+  const [copiedIp, setCopiedIp] = useState<string | null>(null);
+  if (bursts.length === 0) return null;
+
+  return (
+    <section className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-5">
+      <h3 className="font-semibold text-amber-950">
+        Rafale de clics Ads
+      </h3>
+      <p className="mt-1 text-sm text-amber-900/80">
+        Même IP, au moins 3 clics Google Ads en 5 minutes. Souvent un reclic
+        (concurrent ou doigt malheureux). Copie l&apos;IP → Google Ads → Admin →
+        Paramètres du compte → Exclusion d&apos;adresses IP. Ne bloque pas tout
+        un bloc Orange (ex. 90.103.*).
+      </p>
+      <ul className="mt-4 space-y-2">
+        {bursts.map((burst) => {
+          const active = highlightIp === burst.ip;
+          const span = formatSessionDuration(burst.durationMs);
+          return (
+            <li
+              key={`${burst.ip}-${burst.startedAt}`}
+              className={`flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
+                active
+                  ? "border-amber-500 bg-white"
+                  : "border-amber-200/80 bg-white/70"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => onSelect(burst)}
+                className="min-w-0 flex-1 text-left"
+              >
+                <p className="font-mono text-sm font-semibold text-slate-900">
+                  {burst.ip}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  {burst.clicks} clics en {span}
+                  {" · "}
+                  {formatWhen(burst.startedAt)}
+                  {burst.device
+                    ? ` · ${DEVICE_LABELS[burst.device] ?? burst.device}`
+                    : ""}
+                  {burst.utmCampaign ? ` · ${burst.utmCampaign}` : ""}
+                  {burst.submitted > 0
+                    ? ` · ${burst.submitted} demande${burst.submitted > 1 ? "s" : ""}`
+                    : " · aucune demande"}
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const ok = await copyText(burst.ip);
+                  if (ok) {
+                    setCopiedIp(burst.ip);
+                    window.setTimeout(() => setCopiedIp(null), 1500);
+                  }
+                }}
+                className="shrink-0 rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800"
+              >
+                {copiedIp === burst.ip ? "Copiée" : "Copier l’IP"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 function workCategoryLabel(value?: string) {
@@ -434,7 +534,15 @@ function StepTimeTable({ rows }: { rows: StepTimeRow[] }) {
   );
 }
 
-function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
+function SidePanel({
+  side,
+  form,
+  highlightIp,
+}: {
+  side: FormFunnelSide;
+  form: FormTab;
+  highlightIp?: string | null;
+}) {
   const [openId, setOpenId] = useState<string | null>(null);
 
   return (
@@ -594,7 +702,10 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
         </div>
       )}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <section
+        id="sessions-recent"
+        className="rounded-xl border border-slate-200 bg-white p-5"
+      >
         <h3 className="font-semibold text-slate-900">Sessions récentes</h3>
         <p className="mt-1 text-sm text-slate-500">
           Identifiant anonyme (6 derniers caractères) et adresse IP (sécurité /
@@ -630,7 +741,11 @@ function SidePanel({ side, form }: { side: FormFunnelSide; form: FormTab }) {
                   return (
                     <Fragment key={rowId}>
                   <tr
-                    className="cursor-pointer hover:bg-slate-50"
+                    className={`cursor-pointer hover:bg-slate-50 ${
+                      highlightIp && row.ip === highlightIp
+                        ? "bg-amber-50 hover:bg-amber-50"
+                        : ""
+                    }`}
                     onClick={() => setOpenId(open ? null : rowId)}
                     aria-expanded={open}
                   >
@@ -754,6 +869,7 @@ export default function AdminParcoursFormulairesPage() {
   const [error, setError] = useState<string | null>(null);
   const [hideMine, setHideMine] = useState(true);
   const [hideNoise, setHideNoise] = useState(true);
+  const [highlightIp, setHighlightIp] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -874,6 +990,22 @@ export default function AdminParcoursFormulairesPage() {
         </p>
       )}
 
+      {report?.adsClickBursts && report.adsClickBursts.length > 0 ? (
+        <AdsClickBurstsBanner
+          bursts={report.adsClickBursts}
+          highlightIp={highlightIp}
+          onSelect={(burst) => {
+            setHighlightIp(burst.ip);
+            setTab("lead");
+            window.requestAnimationFrame(() => {
+              document
+                .getElementById("sessions-recent")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          }}
+        />
+      ) : null}
+
       {loading && !report ? (
         <p className="mt-8 text-sm text-slate-500">Chargement du parcours…</p>
       ) : side && report && report.totalEvents === 0 ? (
@@ -886,7 +1018,12 @@ export default function AdminParcoursFormulairesPage() {
           {loading && (
             <p className="mb-3 text-xs text-slate-400">Mise à jour…</p>
           )}
-          <SidePanel key={tab} side={side} form={tab} />
+          <SidePanel
+            key={tab}
+            side={side}
+            form={tab}
+            highlightIp={highlightIp}
+          />
         </div>
       ) : null}
     </div>
