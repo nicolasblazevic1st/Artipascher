@@ -1144,8 +1144,39 @@ export default function WorkRequestForm({
   const unlockHints =
     status === "success" || step >= 4 ? [] : missingToUnlockNext();
 
+  const googleContinue =
+    googleEnabled && guestMode ? (
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <p className="text-sm font-semibold text-slate-900">
+          Continuer avec Google
+        </p>
+        <p className="mt-1 text-xs text-slate-600">
+          Nom et email préremplis. Le mobile se confirme toujours par SMS. Le
+          formulaire déjà commencé est conservé.
+        </p>
+        {googleError ? (
+          <p className="mt-2 text-xs font-medium text-amber-800">
+            {GOOGLE_AUTH_MESSAGES[googleError] ?? googleError}
+          </p>
+        ) : null}
+        <div className="mt-3">
+          <GoogleSignInButton
+            href={googleAuthHref("client", googleReturnTo)}
+            label="Continuer avec Google"
+            onNavigate={persistGoogleFormDraft}
+          />
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div className="space-y-6">
+      {googleContinue}
+      {googleContinue ? (
+        <p className="text-center text-xs font-medium uppercase tracking-wide text-slate-400">
+          ou remplissez sans compte
+        </p>
+      ) : null}
       <form
         onSubmit={handleSubmit}
         noValidate
@@ -1165,27 +1196,6 @@ export default function WorkRequestForm({
             : "Gratuit · sans commission"}
         </p>
       </div>
-      {googleEnabled && guestMode ? (
-        <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-medium text-slate-900">
-            Continuer avec Google
-          </p>
-          <p className="text-xs text-slate-600">
-            Nom et email préremplis. Le mobile se confirme toujours par SMS. Le
-            formulaire déjà commencé est conservé.
-          </p>
-          {googleError ? (
-            <p className="text-xs font-medium text-amber-800">
-              {GOOGLE_AUTH_MESSAGES[googleError] ?? googleError}
-            </p>
-          ) : null}
-          <GoogleSignInButton
-            href={googleAuthHref("client", googleReturnTo)}
-            label="Continuer avec Google"
-            onNavigate={persistGoogleFormDraft}
-          />
-        </div>
-      ) : null}
       <div>
         <p className="text-sm font-medium text-slate-900">
           {variant === "general"
