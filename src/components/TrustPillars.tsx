@@ -50,8 +50,8 @@ export default function TrustPillars({ className = "" }: Props) {
             Ce qu&apos;on vérifie chez chaque artisan
           </h2>
           <p className="mt-1 text-sm text-slate-600">
-            100&nbsp;% Nord-Pas-de-Calais (59 / 62) · jusqu&apos;à 5 mises en
-            contact par annonce
+            100&nbsp;% Nord-Pas-de-Calais (59 / 62) · jusqu&apos;à 3 artisans
+            par annonce
           </p>
         </div>
 
