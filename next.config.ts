@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Deploy builds into .next-build so the live .next is not overwritten mid-serve.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async redirects() {
     return [
       { source: "/encheres", destination: "/offres", permanent: true },
