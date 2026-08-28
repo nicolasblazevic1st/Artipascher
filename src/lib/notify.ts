@@ -7,6 +7,11 @@ import {
 } from "@/lib/store";
 import type { WorkRequest } from "@/lib/store-types";
 import { formatPrice } from "@/lib/data";
+import {
+  formatUnlockPriceEur,
+  formatWorkPrestationLabel,
+  resolveUnlockPricing,
+} from "@/lib/pricing-tiers";
 import { absoluteUrl } from "@/lib/share";
 import { sendSms } from "@/lib/sms";
 
@@ -189,9 +194,16 @@ function adminRequestWho(workRequest: WorkRequest): string {
 export async function notifyAdminNewWorkRequest(workRequest: WorkRequest) {
   const who = adminRequestWho(workRequest);
   const url = absoluteUrl("/admin/particuliers/demandes");
+  const prestation = formatWorkPrestationLabel(workRequest);
+  const ticket = formatUnlockPriceEur(
+    resolveUnlockPricing({
+      pricingTier: workRequest.pricingTier,
+      workOptionId: workRequest.workOptionId,
+    }).unlockPriceEur
+  );
   const message =
     `Nord Artisan Pro : nouvelle demande a valider.\n` +
-    `${workRequest.category} a ${workRequest.city} (${who}).\n` +
+    `${workRequest.category} · ${prestation} · ${ticket} a ${workRequest.city} (${who}).\n` +
     url;
   await sendAdminTransactionalSms(workRequest, message, "admin new request");
 }

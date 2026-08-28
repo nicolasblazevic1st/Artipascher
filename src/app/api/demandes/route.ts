@@ -74,11 +74,6 @@ export async function POST(request: NextRequest) {
       formData.get("requestedWorkStartDate") ?? ""
     ).trim();
     const adsCategoryHint = String(formData.get("adsHint") ?? "").trim();
-    const pricingTierRaw = String(formData.get("pricingTier") ?? "").trim();
-    const workOptionIdRaw = String(formData.get("workOptionId") ?? "").trim();
-    const workOptionOtherDescriptionRaw = String(
-      formData.get("workOptionOtherDescription") ?? ""
-    ).trim();
     const description = String(formData.get("description") ?? "");
     const durationRaw = String(
       formData.get("auctionDurationHours") ??
@@ -257,9 +252,8 @@ export async function POST(request: NextRequest) {
     }
 
     const pricingCheck = validatePricingSelection({
-      pricingTier: pricingTierRaw || DEFAULT_PRICING_TIER,
-      workOptionId: workOptionIdRaw || undefined,
-      workOptionOtherDescription: workOptionOtherDescriptionRaw || undefined,
+      pricingTier: classified.pricingTier || DEFAULT_PRICING_TIER,
+      workOptionId: classified.workOptionId,
       nafCodes: nafCheck.nafCodes,
     });
     if (!pricingCheck.ok) {

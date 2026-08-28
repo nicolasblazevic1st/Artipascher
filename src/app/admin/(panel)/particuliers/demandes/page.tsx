@@ -10,6 +10,11 @@ import { formatWorkRequestAuctionDuration } from "@/lib/auction-duration";
 import { formatRequestedWorkStartDate } from "@/lib/demandes-validation";
 import { formatNafList } from "@/lib/naf-trade-groups";
 import { listingEditorHref } from "@/lib/admin-listing-paths";
+import {
+  formatUnlockPriceEur,
+  formatWorkPrestationLabel,
+  resolveUnlockPricing,
+} from "@/lib/pricing-tiers";
 import type { WorkRequest } from "@/lib/store-types";
 
 const STATUS_LABELS = {
@@ -162,6 +167,17 @@ export default function AdminDemandesPage() {
                           {" "}
                           · {formatNafList(r.nafCodes, ", ")}
                         </span>
+                      )}
+                    </div>
+                    <div>
+                      Prestation : {formatWorkPrestationLabel(r)}
+                      {" · "}
+                      ticket artisan{" "}
+                      {formatUnlockPriceEur(
+                        resolveUnlockPricing({
+                          pricingTier: r.pricingTier,
+                          workOptionId: r.workOptionId,
+                        }).unlockPriceEur
                       )}
                     </div>
                     <div>

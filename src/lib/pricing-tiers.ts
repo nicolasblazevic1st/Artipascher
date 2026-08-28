@@ -754,6 +754,87 @@ export function getWorkOptionById(id: string): NafWorkOption | undefined {
   return NAF_WORK_OPTIONS.find((o) => o.id === id);
 }
 
+function foldWorkText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const WORK_OPTION_STOPWORDS = new Set([
+  "sans",
+  "avec",
+  "pour",
+  "plus",
+  "piece",
+  "unite",
+  "unitaire",
+  "pose",
+  "complet",
+  "complete",
+  "locale",
+  "localisee",
+  "apres",
+  "avant",
+  "dans",
+  "hors",
+  "type",
+  "acces",
+  "facile",
+  "rapport",
+  "controle",
+  "annuel",
+  "standard",
+  "maison",
+  "logement",
+]);
+
+/**
+ * Associe une description libre à une prestation du catalogue (ticket artisan).
+ */
+export function matchWorkOptionFromDescription(
+  description: string,
+  nafCodes: readonly string[]
+): NafWorkOption | undefined {
+  const folded = foldWorkText(description);
+  if (!folded) return undefined;
+  const options = getWorkOptionsForNafCodes(nafCodes);
+  let best: { opt: NafWorkOption; score: number } | undefined;
+  const wantsUrgency = /urgenc|nuit|week end|weekend|hors horaire/.test(
+    folded
+  );
+
+  for (const opt of options) {
+    const name = foldWorkText(opt.name);
+    const detail = foldWorkText(opt.detail);
+    const hay = `${name} ${detail}`;
+    let score = 0;
+    if (name.length >= 10 && folded.includes(name)) {
+      score = 200 + name.length;
+    } else {
+      const tokens = [
+        ...new Set(
+          name
+            .split(" ")
+            .filter((t) => t.length >= 4 && !WORK_OPTION_STOPWORDS.has(t))
+        ),
+      ];
+      const hits = tokens.filter((t) => folded.includes(t));
+      if (hits.length === 0) continue;
+      const strong = hits.filter((t) => t.length >= 7);
+      if (hits.length < 2 && strong.length === 0) continue;
+      score =
+        hits.length * 12 + strong.reduce((sum, t) => sum + t.length, 0);
+    }
+    if (wantsUrgency && /urgenc/.test(hay)) score += 40;
+    if (!wantsUrgency && /urgenc/.test(hay)) score -= 20;
+    if (!best || score > best.score) best = { opt, score };
+  }
+  return best?.opt;
+}
+
 export const OTHER_WORK_OPTION_ID = "autre";
 /** Ticket appliqué à « Autre » (déblocage). */
 export const OTHER_WORK_PRICING_TIER: PricingTierId = "bas";

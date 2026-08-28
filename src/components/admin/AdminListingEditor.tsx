@@ -551,7 +551,11 @@ export default function AdminListingEditor({ request, backHref }: Props) {
           </label>
         )}
         <p className="mt-2 text-xs text-slate-500">
-          Prix de déblocage actuel : {formatUnlockPriceEur(unlock.unlockPriceEur)}
+          Prix de déblocage artisan :{" "}
+          {formatUnlockPriceEur(unlock.unlockPriceEur)}
+          {unlock.workOption
+            ? ` · ${unlock.workOption.name}`
+            : " (modifiable via la prestation)"}
         </p>
 
         <label className="mt-4 block text-sm">
