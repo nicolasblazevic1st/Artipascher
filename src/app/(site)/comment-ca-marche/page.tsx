@@ -22,7 +22,7 @@ export default function CommentCaMarchePage() {
             Présentation · ~90 secondes
           </p>
           <h1 className="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">
-            Jusqu&apos;à 5 artisans vérifiés pour vos travaux
+            Nos artisans vérifiés pour vos travaux
           </h1>
           <p className="mx-auto mt-3 max-w-2xl text-slate-600">
             Gratuit pour vous — l&apos;artisan paie le contact. Vous publiez une
