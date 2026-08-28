@@ -189,6 +189,7 @@ export async function GET(request: NextRequest) {
       googleSub: profile.sub,
       firstName: profile.firstName,
       lastName: profile.lastName,
+      pictureUrl: profile.pictureUrl,
     }),
     oauthCookieOptions(30 * 60)
   );

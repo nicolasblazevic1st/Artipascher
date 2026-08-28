@@ -110,7 +110,7 @@ export default function CookiesPage() {
                   </td>
                   <td className="px-4 py-3">
                     Préremplissage de l&apos;inscription artisan après Google
-                    (email, nom), avant dépôt SIRET / documents
+                    (email, nom, photo de profil), avant dépôt SIRET / documents
                   </td>
                   <td className="px-4 py-3">30 minutes</td>
                 </tr>

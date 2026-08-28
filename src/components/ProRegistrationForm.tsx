@@ -6,6 +6,7 @@ import GoogleSignInButton, {
   GoogleAuthDivider,
   googleAuthHref,
 } from "@/components/GoogleSignInButton";
+import { GoogleConnectedLabel } from "@/components/GoogleAccountAvatar";
 import HelpTooltip from "@/components/HelpTooltip";
 import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
 import {
@@ -54,6 +55,7 @@ export default function ProRegistrationForm({
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [googleLinked, setGoogleLinked] = useState(false);
+  const [googlePictureUrl, setGooglePictureUrl] = useState<string | null>(null);
   const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({});
   const [jobByGroup, setJobByGroup] = useState<Record<string, string>>({});
   const [rcsGroupIds, setRcsGroupIds] = useState<Set<string>>(new Set());
@@ -105,10 +107,11 @@ export default function ProRegistrationForm({
     let cancelled = false;
     fetch("/api/pro/auth/google/pending")
       .then((res) => res.json())
-      .then((data: { linked?: boolean; email?: string }) => {
+      .then((data: { linked?: boolean; email?: string; pictureUrl?: string | null }) => {
         if (cancelled || !data?.linked || !data.email) return;
         setGoogleLinked(true);
         setEmail(data.email);
+        setGooglePictureUrl(data.pictureUrl ?? null);
       })
       .catch(() => {});
     return () => {
@@ -413,11 +416,11 @@ export default function ProRegistrationForm({
       )}
       {googleLinked && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          <p className="font-semibold">Compte Google relié</p>
-          <p className="mt-1">
-            Email prérempli. Il reste à vérifier le SIRET, les métiers et les
-            assurances — sans mot de passe.
-          </p>
+          <GoogleConnectedLabel
+            pictureUrl={googlePictureUrl}
+            name={email || "Compte Google"}
+            detail="Email prérempli. Il reste à vérifier le SIRET, les métiers et les assurances — sans mot de passe."
+          />
         </div>
       )}
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

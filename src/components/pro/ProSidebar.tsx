@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { GoogleAccountAvatar } from "@/components/GoogleAccountAvatar";
 import NotificationBell from "@/components/NotificationBell";
 import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import ProLogoutButton from "./ProLogoutButton";
@@ -16,9 +17,13 @@ const NAV = [
 export default function ProSidebar({
   companyName,
   creditBalance,
+  googleLinked = false,
+  googlePictureUrl = null,
 }: {
   companyName: string;
   creditBalance: number;
+  googleLinked?: boolean;
+  googlePictureUrl?: string | null;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const close = () => setMobileOpen(false);
@@ -29,7 +34,16 @@ export default function ProSidebar({
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-brand-900 bg-brand-800 px-4 py-3 text-white md:hidden">
         <Link href="/pro" className="min-w-0">
           <p className="truncate text-sm font-bold">Nord Artisan Pro</p>
-          <p className="truncate text-xs text-brand-200">{companyName}</p>
+          <p className="flex items-center gap-2 truncate text-xs text-brand-200">
+            {googleLinked ? (
+              <GoogleAccountAvatar
+                pictureUrl={googlePictureUrl}
+                name={companyName}
+                size={20}
+              />
+            ) : null}
+            <span className="truncate">{companyName}</span>
+          </p>
         </Link>
         <div className="flex shrink-0 items-center gap-2">
           <Link
@@ -84,7 +98,25 @@ export default function ProSidebar({
               ×
             </button>
           </div>
-          <p className="mt-3 truncate text-xs font-medium text-white">{companyName}</p>
+          {googleLinked ? (
+            <p className="mt-3 flex items-center gap-2 text-xs font-medium text-white">
+              <GoogleAccountAvatar
+                pictureUrl={googlePictureUrl}
+                name={companyName}
+                size={28}
+              />
+              <span className="min-w-0">
+                <span className="block truncate">{companyName}</span>
+                <span className="block text-[11px] font-normal text-brand-200">
+                  Connecté avec Google
+                </span>
+              </span>
+            </p>
+          ) : (
+            <p className="mt-3 truncate text-xs font-medium text-white">
+              {companyName}
+            </p>
+          )}
           <Link
             href="/pro/compte#credits"
             onClick={close}

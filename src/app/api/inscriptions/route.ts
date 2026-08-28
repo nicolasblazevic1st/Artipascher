@@ -219,6 +219,7 @@ export async function POST(request: NextRequest) {
       level1Audit,
       passwordHash: googleSignup ? undefined : hashPassword(password),
       googleSub: googleSignup ? pendingGoogle?.googleSub : undefined,
+      googlePictureUrl: googleSignup ? pendingGoogle?.pictureUrl : undefined,
       emailVerified: googleSignup ? true : false,
       emailVerifiedAt: googleSignup ? new Date().toISOString() : undefined,
       documents: [],

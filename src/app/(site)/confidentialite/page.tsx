@@ -38,8 +38,8 @@ export default function ConfidentialitePage() {
           <li>
             <strong>Compte Client</strong>{" "} : identité, email, téléphone
             (mobile), statut de vérification SMS, identifiant de compte Google
-            le cas échéant (email, nom, identifiant technique fourni par
-            Google), mot de passe (hashé, facultatif si connexion Google),
+            le cas échéant (email, nom, photo de profil, identifiant technique
+            fourni par Google), mot de passe (hashé, facultatif si connexion Google),
             adresse
             de chantier, description et photos du projet, préférences (ex.
             ancienneté d&apos;entreprise souhaitée, alerte SMS contact),
@@ -47,8 +47,8 @@ export default function ConfidentialitePage() {
           </li>
           <li>
             <strong>Compte Professionnel</strong>{" "} : raison sociale, SIRET/SIREN,
-            email, téléphone, identifiant de compte Google le cas échéant,
-            documents (décennale, RC pro…), métiers,
+            email, téléphone, identifiant de compte Google le cas échéant
+            (email, nom, photo de profil), documents (décennale, RC pro…), métiers,
             historique de déblocages et éventuel solde résiduel ;
           </li>
           <li>
@@ -78,7 +78,8 @@ export default function ConfidentialitePage() {
           <li>
             <strong>Connexion Google</strong>{" "} : si vous choisissez « Continuer
             avec Google », l&apos;Éditeur reçoit de Google (via le protocole
-            OAuth) votre email, votre nom et un identifiant technique, pour
+            OAuth) votre email, votre nom, votre photo de profil et un
+            identifiant technique, pour
             créer ou ouvrir votre compte. Le mot de passe Google n&apos;est
             jamais transmis. Le mobile reste vérifié par SMS pour publier une
             demande ;

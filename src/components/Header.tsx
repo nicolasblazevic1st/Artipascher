@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useWorkRequestHref } from "@/components/CaptureAdsLanding";
+import { GoogleAccountAvatar } from "@/components/GoogleAccountAvatar";
 import SiteLogo from "@/components/SiteLogo";
 import WorkRequestCta from "@/components/WorkRequestCta";
+
+export type HeaderAccount = {
+  href: string;
+  label: string;
+  name: string;
+  googleLinked: boolean;
+  googlePictureUrl?: string | null;
+};
 
 const NAV_LINKS = [
   { href: "/particulier", label: "Particulier" },
@@ -16,6 +25,42 @@ const NAV_LINKS = [
 
 const navLinkClass =
   "rounded-lg px-2 py-1.5 text-sm font-medium whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-100 xl:px-3 xl:py-2 xl:text-base";
+
+function AccountNavLink({
+  account,
+  className,
+  fallbackIcon,
+  onClick,
+}: {
+  account: HeaderAccount;
+  className: string;
+  fallbackIcon?: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={account.href}
+      className={className}
+      onClick={onClick}
+      title={
+        account.googleLinked
+          ? `${account.name} — connecté avec Google`
+          : account.name
+      }
+    >
+      {account.googleLinked ? (
+        <GoogleAccountAvatar
+          pictureUrl={account.googlePictureUrl}
+          name={account.name}
+          size={22}
+        />
+      ) : (
+        fallbackIcon
+      )}
+      {account.label}
+    </Link>
+  );
+}
 
 function BriefcaseIcon({ className }: { className?: string }) {
   return (
@@ -76,9 +121,28 @@ function MenuIcon({ className }: { className?: string }) {
   );
 }
 
-export default function Header() {
+export default function Header({
+  clientAccount = null,
+  proAccount = null,
+}: {
+  clientAccount?: HeaderAccount | null;
+  proAccount?: HeaderAccount | null;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const formHref = useWorkRequestHref();
+
+  const clientLink = clientAccount ?? {
+    href: "/particulier/espace/login",
+    label: "Mon espace",
+    name: "Mon espace",
+    googleLinked: false,
+  };
+  const proLink = proAccount ?? {
+    href: "/pro/login",
+    label: "Espace Pro",
+    name: "Espace Pro",
+    googleLinked: false,
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white text-gray-800 shadow-md">
@@ -107,20 +171,18 @@ export default function Header() {
               </Link>
             ))}
 
-            <Link
-              href="/particulier/espace/login"
-              className="inline-flex h-9 items-center justify-center rounded-lg border-2 border-client-700 px-3 text-sm font-medium leading-none whitespace-nowrap text-client-800 transition-colors hover:bg-client-700 hover:text-white xl:h-10 xl:px-4 xl:text-base"
-            >
-              Mon espace
-            </Link>
+            <AccountNavLink
+              account={clientLink}
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border-2 border-client-700 px-3 text-sm font-medium leading-none whitespace-nowrap text-client-800 transition-colors hover:bg-client-700 hover:text-white xl:h-10 xl:px-4 xl:text-base"
+            />
 
-            <Link
-              href="/pro/login"
+            <AccountNavLink
+              account={proLink}
+              fallbackIcon={
+                <BriefcaseIcon className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
+              }
               className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border-2 border-gray-800 px-3 text-sm font-medium leading-none whitespace-nowrap text-gray-800 transition-colors hover:bg-gray-800 hover:text-white xl:h-10 xl:px-4 xl:text-base"
-            >
-              <BriefcaseIcon className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
-              Espace Pro
-            </Link>
+            />
 
             <WorkRequestCta
               placement="header"
@@ -150,22 +212,18 @@ export default function Header() {
                 </Link>
               ))}
 
-              <Link
-                href="/particulier/espace/login"
-                className="inline-flex h-10 items-center justify-center rounded-lg border-2 border-client-700 px-3 text-sm font-medium leading-none text-client-800 transition-colors hover:bg-client-700 hover:text-white"
+              <AccountNavLink
+                account={clientLink}
                 onClick={() => setMobileOpen(false)}
-              >
-                Mon espace
-              </Link>
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border-2 border-client-700 px-3 text-sm font-medium leading-none text-client-800 transition-colors hover:bg-client-700 hover:text-white"
+              />
 
-              <Link
-                href="/pro/login"
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border-2 border-gray-800 px-3 text-sm font-medium leading-none text-gray-800 transition-colors hover:bg-gray-800 hover:text-white"
+              <AccountNavLink
+                account={proLink}
+                fallbackIcon={<BriefcaseIcon className="h-4 w-4" />}
                 onClick={() => setMobileOpen(false)}
-              >
-                <BriefcaseIcon className="h-4 w-4" />
-                Espace Pro
-              </Link>
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border-2 border-gray-800 px-3 text-sm font-medium leading-none text-gray-800 transition-colors hover:bg-gray-800 hover:text-white"
+              />
 
               <WorkRequestCta
                 placement="header"

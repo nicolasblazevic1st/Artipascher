@@ -13,6 +13,8 @@ export type GoogleProfile = {
   emailVerified: boolean;
   firstName: string;
   lastName: string;
+  /** URL https googleusercontent.com, si Google l’a fournie. */
+  pictureUrl?: string;
 };
 
 type SignedCookiePayload = {
@@ -30,8 +32,26 @@ export type GoogleProPending = {
   googleSub: string;
   firstName: string;
   lastName: string;
+  pictureUrl?: string;
   exp: number;
 };
+
+const GOOGLE_PICTURE_HOST = /^([a-z0-9-]+\.)*googleusercontent\.com$/i;
+
+export function sanitizeGooglePictureUrl(
+  raw: string | null | undefined
+): string | undefined {
+  const value = raw?.trim();
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return undefined;
+    if (!GOOGLE_PICTURE_HOST.test(url.hostname)) return undefined;
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -308,6 +328,7 @@ export async function exchangeGoogleCode(input: {
     given_name?: string;
     family_name?: string;
     name?: string;
+    picture?: string;
   };
 
   const email = info.email?.trim().toLowerCase() ?? "";
@@ -332,6 +353,7 @@ export async function exchangeGoogleCode(input: {
     emailVerified: info.email_verified === true,
     firstName,
     lastName,
+    pictureUrl: sanitizeGooglePictureUrl(info.picture),
   };
 }
 

@@ -1624,6 +1624,7 @@ export async function upsertClientFromGoogle(profile: {
   email: string;
   firstName: string;
   lastName: string;
+  pictureUrl?: string;
 }): Promise<ClientAccount> {
   const store = await readStore();
   const emailLower = profile.email.trim().toLowerCase();
@@ -1637,6 +1638,9 @@ export async function upsertClientFromGoogle(profile: {
     existing.googleSub = profile.sub;
     existing.emailVerified = true;
     existing.emailVerifiedAt = existing.emailVerifiedAt ?? now;
+    if (profile.pictureUrl) {
+      existing.googlePictureUrl = profile.pictureUrl;
+    }
     if (!existing.firstName && profile.firstName) {
       existing.firstName = profile.firstName;
     }
@@ -1651,6 +1655,7 @@ export async function upsertClientFromGoogle(profile: {
     id: newId("client"),
     email: profile.email.trim(),
     googleSub: profile.sub,
+    googlePictureUrl: profile.pictureUrl,
     firstName: profile.firstName.trim(),
     lastName: profile.lastName.trim(),
     emailVerified: true,
@@ -1665,6 +1670,7 @@ export async function upsertClientFromGoogle(profile: {
 export async function linkGoogleToEligiblePro(profile: {
   sub: string;
   email: string;
+  pictureUrl?: string;
 }): Promise<ProRegistration | null> {
   const store = await readStore();
   const emailLower = profile.email.trim().toLowerCase();
@@ -1682,6 +1688,9 @@ export async function linkGoogleToEligiblePro(profile: {
     );
   if (!pro) return null;
   pro.googleSub = profile.sub;
+  if (profile.pictureUrl) {
+    pro.googlePictureUrl = profile.pictureUrl;
+  }
   pro.emailVerified = true;
   pro.emailVerifiedAt = pro.emailVerifiedAt ?? now;
   await writeStore(store);
