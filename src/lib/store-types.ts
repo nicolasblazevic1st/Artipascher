@@ -232,6 +232,8 @@ export interface ProRegistration {
   passwordHash?: string;
   /** Identifiant Google (`sub`) si le compte est lié. */
   googleSub?: string;
+  /** Photo de profil Google (URL googleusercontent), si fournie. */
+  googlePictureUrl?: string;
   status: AdminReviewStatus;
   createdAt: string;
   reviewedAt?: string;
@@ -280,6 +282,8 @@ export interface ClientAccount {
   passwordHash?: string;
   /** Identifiant Google (`sub`) si le compte est lié. */
   googleSub?: string;
+  /** Photo de profil Google (URL googleusercontent), si fournie. */
+  googlePictureUrl?: string;
   firstName: string;
   lastName: string;
   phone?: string;

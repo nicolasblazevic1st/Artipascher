@@ -18,5 +18,7 @@ export async function GET() {
     firstName: client.firstName,
     lastName: client.lastName,
     email: client.email,
+    googleLinked: Boolean(client.googleSub),
+    googlePictureUrl: client.googlePictureUrl ?? null,
   });
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { GoogleAccountAvatar } from "@/components/GoogleAccountAvatar";
 import NotificationBell from "@/components/NotificationBell";
 import ClientLogoutButton from "./ClientLogoutButton";
 
@@ -14,19 +15,31 @@ const NAV = [
 export default function ClientSidebar({
   firstName,
   lastName,
+  googleLinked = false,
+  googlePictureUrl = null,
 }: {
   firstName: string;
   lastName: string;
+  googleLinked?: boolean;
+  googlePictureUrl?: string | null;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const fullName = `${firstName} ${lastName}`.trim();
 
   return (
     <>
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-client-900 bg-client-800 px-4 py-3 text-white md:hidden">
         <Link href="/particulier/espace" className="min-w-0">
           <p className="truncate text-sm font-bold">Nord Artisan Pro</p>
-          <p className="truncate text-xs text-client-200">
-            {firstName} {lastName}
+          <p className="flex items-center gap-2 truncate text-xs text-client-200">
+            {googleLinked ? (
+              <GoogleAccountAvatar
+                pictureUrl={googlePictureUrl}
+                name={fullName}
+                size={20}
+              />
+            ) : null}
+            <span className="truncate">{fullName}</span>
           </p>
         </Link>
         <button
@@ -73,9 +86,25 @@ export default function ClientSidebar({
               ×
             </button>
           </div>
-          <p className="mt-3 truncate text-xs font-medium text-white">
-            {firstName} {lastName}
-          </p>
+          {googleLinked ? (
+            <p className="mt-3 flex items-center gap-2 text-xs font-medium text-white">
+              <GoogleAccountAvatar
+                pictureUrl={googlePictureUrl}
+                name={fullName}
+                size={28}
+              />
+              <span className="min-w-0">
+                <span className="block truncate">{fullName}</span>
+                <span className="block text-[11px] font-normal text-client-200">
+                  Connecté avec Google
+                </span>
+              </span>
+            </p>
+          ) : (
+            <p className="mt-3 truncate text-xs font-medium text-white">
+              {fullName}
+            </p>
+          )}
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           <NotificationBell

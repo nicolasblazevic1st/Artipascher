@@ -14,5 +14,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     linked: true,
     email: pending.email,
+    pictureUrl: pending.pictureUrl ?? null,
   });
 }

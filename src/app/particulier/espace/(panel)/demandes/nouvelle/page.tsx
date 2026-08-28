@@ -54,6 +54,8 @@ export default async function NouvelleDemandePage({
             phone: client?.phone,
             phoneVerifiedE164: client?.phoneVerifiedE164,
             phoneVerifiedAt: client?.phoneVerifiedAt,
+            googleLinked: Boolean(client?.googleSub),
+            googlePictureUrl: client?.googlePictureUrl,
           }}
         />
       )}

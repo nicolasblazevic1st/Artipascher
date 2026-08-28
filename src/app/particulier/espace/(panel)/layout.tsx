@@ -27,7 +27,12 @@ export default async function ClientPanelLayout({
         />
       )}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-        <ClientSidebar firstName={client.firstName} lastName={client.lastName} />
+        <ClientSidebar
+          firstName={client.firstName}
+          lastName={client.lastName}
+          googleLinked={Boolean(client.googleSub)}
+          googlePictureUrl={client.googlePictureUrl}
+        />
         <div className="min-w-0 flex-1 overflow-auto bg-slate-100">
           <div className="mx-auto max-w-6xl p-4 sm:p-8">{children}</div>
         </div>

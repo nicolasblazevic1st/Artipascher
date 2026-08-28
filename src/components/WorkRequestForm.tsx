@@ -52,6 +52,7 @@ import GoogleSignInButton, {
   GOOGLE_AUTH_MESSAGES,
   googleAuthHref,
 } from "@/components/GoogleSignInButton";
+import { GoogleConnectedLabel } from "@/components/GoogleAccountAvatar";
 import {
   readGoogleWorkFormDraft,
   saveGoogleWorkFormDraft,
@@ -118,6 +119,8 @@ export interface WorkRequestFormDefaults {
   phone?: string;
   phoneVerifiedE164?: string;
   phoneVerifiedAt?: string;
+  googleLinked?: boolean;
+  googlePictureUrl?: string | null;
 }
 
 interface Props {
@@ -1167,12 +1170,20 @@ export default function WorkRequestForm({
           />
         </div>
       </div>
+    ) : !guestMode && defaults?.googleLinked ? (
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <GoogleConnectedLabel
+          pictureUrl={defaults.googlePictureUrl}
+          name={`${defaults.firstName} ${defaults.lastName}`.trim()}
+          detail="Connecté avec Google — le mobile se confirme toujours par SMS."
+        />
+      </div>
     ) : null;
 
   return (
     <div className="space-y-6">
       {googleContinue}
-      {googleContinue ? (
+      {googleEnabled && guestMode ? (
         <p className="text-center text-xs font-medium uppercase tracking-wide text-slate-400">
           ou remplissez sans compte
         </p>

@@ -9,7 +9,6 @@ import { getClientById } from "@/lib/store";
 import {
   adsWorkQueryFromParams,
   resolveAdsFormPrefill,
-  WORK_CATEGORIES,
 } from "@/lib/work-categories";
 import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
@@ -94,34 +93,14 @@ export default async function WorkRequestPublicLanding({
                       phone: client.phone,
                       phoneVerifiedE164: client.phoneVerifiedE164,
                       phoneVerifiedAt: client.phoneVerifiedAt,
+                      googleLinked: Boolean(client.googleSub),
+                      googlePictureUrl: client.googlePictureUrl,
                     }
                   : undefined
               }
             />
           </div>
         )}
-
-        <section className="mt-12 border-t border-slate-200 pt-8">
-          <h2 className="text-lg font-semibold text-slate-900">
-            Tous types de travaux
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Vous connaissez déjà le métier ? Même formulaire, catégorie déjà
-            cochée.
-          </p>
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {WORK_CATEGORIES.map((category) => (
-              <li key={category}>
-                <Link
-                  href={`${WORK_REQUEST_FORM_PATH}?category=${encodeURIComponent(category)}#formulaire`}
-                  className="inline-block rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:border-brand-300 hover:text-brand-800"
-                >
-                  {category}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
 
         {!loggedIn ? (
           <p className="mt-6 text-center text-sm text-slate-600">
