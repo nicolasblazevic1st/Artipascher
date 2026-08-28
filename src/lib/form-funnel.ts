@@ -956,9 +956,10 @@ function toRecentLeadRows(
 function buildLeadSide(
   sessions: SessionAgg[],
   drafts: FormFunnelDraft[] = [],
-  pinSessionIds: string[] = []
+  pinSessionIds: string[] = [],
+  textSessions?: SessionAgg[]
 ): FormFunnelSide {
-  const savedTexts = toSavedTextRows(sessions, drafts);
+  const savedTexts = toSavedTextRows(textSessions ?? sessions, drafts);
   if (sessions.length === 0) return { ...emptySide(), savedTexts };
 
   const submitted = sessions.filter((s) => s.submitted).length;
@@ -1472,14 +1473,6 @@ export async function getFormFunnelReport(
   const internalLeadSessions = leadAll.filter((s) => s.internal).length;
   const internalProSessions = proAll.filter((s) => s.internal).length;
   const noiseLeadSessions = leadAll.filter((s) => isNoiseLeadSession(s)).length;
-  const hiddenInternalIds = new Set(
-    [...leadAll, ...proAll]
-      .filter((s) => s.internal)
-      .map((s) => s.id)
-  );
-  const hiddenNoiseIds = new Set(
-    leadAll.filter((s) => isNoiseLeadSession(s)).map((s) => s.id)
-  );
   const lead = leadAll.filter((s) => {
     if (options?.excludeInternal && s.internal) return false;
     if (options?.excludeNoise && isNoiseLeadSession(s)) return false;
@@ -1491,14 +1484,6 @@ export async function getFormFunnelReport(
   const drafts = pruneDrafts(db.drafts).filter((draft) => {
     const t = Date.parse(draft.updatedAt);
     if (!Number.isFinite(t) || t < since || t > until) return false;
-    if (options?.excludeInternal) {
-      if (hiddenInternalIds.has(draft.sessionId)) return false;
-      const draftIp = storedIp(draft.ip);
-      if (draftIp && adminIps.has(draftIp)) return false;
-    }
-    if (options?.excludeNoise && hiddenNoiseIds.has(draft.sessionId)) {
-      return false;
-    }
     if (isMetaCrawlerIp(draft.ip)) return false;
     return true;
   });
@@ -1514,7 +1499,7 @@ export async function getFormFunnelReport(
     internalProSessions,
     noiseLeadSessions,
     adsClickBursts,
-    lead: buildLeadSide(lead, drafts, burstSessionIds),
+    lead: buildLeadSide(lead, drafts, burstSessionIds, leadAll),
     pro: buildProSide(pro),
   };
 }
