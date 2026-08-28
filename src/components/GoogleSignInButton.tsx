@@ -30,13 +30,16 @@ export function googleAuthHref(role: "client" | "pro", from?: string): string {
 export default function GoogleSignInButton({
   href,
   label = "Continuer avec Google",
+  onNavigate,
 }: {
   href: string;
   label?: string;
+  onNavigate?: () => void;
 }) {
   return (
     <a
       href={href}
+      onClick={() => onNavigate?.()}
       className="flex w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
     >
       <GoogleMark />

@@ -48,6 +48,15 @@ import type { ClientKind, WorkScope } from "@/lib/store-types";
 import BanAddressAutocomplete, {
   type SelectedBanAddress,
 } from "@/components/BanAddressAutocomplete";
+import GoogleSignInButton, {
+  GOOGLE_AUTH_MESSAGES,
+  googleAuthHref,
+} from "@/components/GoogleSignInButton";
+import {
+  readGoogleWorkFormDraft,
+  saveGoogleWorkFormDraft,
+} from "@/lib/work-request-google-draft";
+import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 import {
   ANALYTICS_EVENT,
   bindFormLeaveListeners,
@@ -131,6 +140,9 @@ interface Props {
    * Formulaire type : métier optionnel, bouton « Je ne sais pas ».
    */
   variant?: "default" | "general";
+  googleEnabled?: boolean;
+  googleReturnTo?: string;
+  googleError?: string | null;
 }
 
 export default function WorkRequestForm({
@@ -140,6 +152,9 @@ export default function WorkRequestForm({
   initialUnknownTrade = false,
   guestMode = false,
   variant = "general",
+  googleEnabled = false,
+  googleReturnTo = WORK_REQUEST_FORM_PATH,
+  googleError = null,
 }: Props) {
   const startUnknown =
     initialUnknownTrade &&
@@ -207,6 +222,35 @@ export default function WorkRequestForm({
   const [propertyType, setPropertyType] = useState<PropertyTypeId | "">("");
   const [unknownTrade, setUnknownTrade] = useState(startUnknown);
 
+  useEffect(() => {
+    const draft = readGoogleWorkFormDraft();
+    if (!draft) return;
+    setCategory(draft.category);
+    setUnknownTrade(draft.unknownTrade);
+    setSelectedNafCodes(draft.selectedNafCodes);
+    setWorkOptionId(draft.workOptionId);
+    setPricingTier(draft.pricingTier);
+    setWorkOptionOtherDescription(draft.workOptionOtherDescription);
+    setSelectedAddress(draft.selectedAddress);
+    if (PROPERTY_TYPES.some((item) => item.id === draft.propertyType)) {
+      setPropertyType(draft.propertyType as PropertyTypeId);
+    }
+    setClientKind(draft.clientKind);
+    setWorkScope(draft.workScope);
+    setClientSiret(draft.clientSiret);
+    setMaxContactArtisans(draft.maxContactArtisans);
+    setMinGoogleRating(draft.minGoogleRating);
+    setRequireRge(draft.requireRge);
+    if (draft.phone) setPhone(draft.phone);
+    if (draft.descriptionTouched || draft.description) {
+      setDescriptionTouched(true);
+    }
+    if (descriptionRef.current && draft.description) {
+      descriptionRef.current.value = draft.description;
+      syncDescriptionLength(draft.description);
+    }
+  }, []);
+
   const stepRef = useRef(step);
   const statusRef = useRef(status);
   const categoryRef = useRef(category);
@@ -253,6 +297,28 @@ export default function WorkRequestForm({
       unknownTrade: unknownTradeRef.current,
       otherWork: other || undefined,
       description: desc || undefined,
+    });
+  }
+
+  function persistGoogleFormDraft() {
+    saveGoogleWorkFormDraft({
+      category,
+      unknownTrade,
+      selectedNafCodes,
+      workOptionId,
+      pricingTier,
+      workOptionOtherDescription,
+      description: descriptionRef.current?.value ?? "",
+      descriptionTouched,
+      selectedAddress,
+      propertyType,
+      clientKind,
+      workScope,
+      clientSiret,
+      maxContactArtisans,
+      minGoogleRating,
+      requireRge,
+      phone,
     });
   }
 
@@ -1099,6 +1165,27 @@ export default function WorkRequestForm({
             : "Gratuit · sans commission"}
         </p>
       </div>
+      {googleEnabled && guestMode ? (
+        <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-medium text-slate-900">
+            Continuer avec Google
+          </p>
+          <p className="text-xs text-slate-600">
+            Nom et email préremplis. Le mobile se confirme toujours par SMS. Le
+            formulaire déjà commencé est conservé.
+          </p>
+          {googleError ? (
+            <p className="text-xs font-medium text-amber-800">
+              {GOOGLE_AUTH_MESSAGES[googleError] ?? googleError}
+            </p>
+          ) : null}
+          <GoogleSignInButton
+            href={googleAuthHref("client", googleReturnTo)}
+            label="Continuer avec Google"
+            onNavigate={persistGoogleFormDraft}
+          />
+        </div>
+      ) : null}
       <div>
         <p className="text-sm font-medium text-slate-900">
           {variant === "general"
@@ -1530,6 +1617,7 @@ export default function WorkRequestForm({
       <BanAddressAutocomplete
         inputClass={inputClass}
         onSelect={setSelectedAddress}
+        initialSelected={selectedAddress}
       />
 
       <input type="hidden" name="addressLine" value={selectedAddress?.addressLine ?? ""} />

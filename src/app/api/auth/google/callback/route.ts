@@ -10,8 +10,11 @@ import {
   decodeOAuthStateCookie,
   encodeGoogleProPending,
   exchangeGoogleCode,
+  isPublicWorkFormReturn,
+  oauthAbsoluteUrl,
   oauthCookieOptions,
   publicOriginFromRequest,
+  isTrustedOAuthOrigin,
   type GoogleOAuthRole,
 } from "@/lib/google-oauth";
 import {
@@ -30,10 +33,16 @@ function loginUrl(
   request: NextRequest,
   role: GoogleOAuthRole,
   google: string,
-  from?: string
+  from?: string,
+  origin?: string
 ): URL {
+  if (role === "client" && from && isPublicWorkFormReturn(from)) {
+    const dest = oauthAbsoluteUrl(request, from, origin);
+    dest.searchParams.set("google", google);
+    return dest;
+  }
   const path = role === "client" ? "/particulier/espace/login" : "/pro/login";
-  const dest = new URL(path, request.url);
+  const dest = oauthAbsoluteUrl(request, path, origin);
   dest.searchParams.set("google", google);
   if (from) dest.searchParams.set("from", from);
   return dest;
@@ -57,7 +66,7 @@ export async function GET(request: NextRequest) {
   if (googleError) {
     const role = state?.role ?? "client";
     const response = NextResponse.redirect(
-      loginUrl(request, role, "cancelled", state?.from)
+      loginUrl(request, role, "cancelled", state?.from, state?.origin)
     );
     clearOAuthCookie(response);
     return response;
@@ -65,22 +74,27 @@ export async function GET(request: NextRequest) {
 
   if (!state || !nonce || nonce !== state.nonce || !code) {
     const response = NextResponse.redirect(
-      loginUrl(request, state?.role ?? "client", "invalid")
+      loginUrl(request, state?.role ?? "client", "invalid", undefined, state?.origin)
     );
     clearOAuthCookie(response);
     return response;
   }
 
+  const origin =
+    state.origin && isTrustedOAuthOrigin(state.origin)
+      ? state.origin
+      : publicOriginFromRequest(request);
+
   let profile;
   try {
     profile = await exchangeGoogleCode({
       code,
-      origin: publicOriginFromRequest(request),
+      origin,
       verifier: state.verifier,
     });
   } catch {
     const response = NextResponse.redirect(
-      loginUrl(request, state.role, "failed", state.from)
+      loginUrl(request, state.role, "failed", state.from, origin)
     );
     clearOAuthCookie(response);
     return response;
@@ -88,7 +102,7 @@ export async function GET(request: NextRequest) {
 
   if (!profile.emailVerified) {
     const response = NextResponse.redirect(
-      loginUrl(request, state.role, "unverified", state.from)
+      loginUrl(request, state.role, "unverified", state.from, origin)
     );
     clearOAuthCookie(response);
     return response;
@@ -100,7 +114,7 @@ export async function GET(request: NextRequest) {
       (await getClientByEmail(profile.email));
     if (!existing && isBetaModeFromRequest(request)) {
       const response = NextResponse.redirect(
-        loginUrl(request, "client", "beta", state.from)
+        loginUrl(request, "client", "beta", state.from, origin)
       );
       clearOAuthCookie(response);
       return response;
@@ -109,7 +123,7 @@ export async function GET(request: NextRequest) {
     const client = await upsertClientFromGoogle(profile);
     await linkOrphanWorkRequests(client.id, client.email, client.phone);
 
-    const dest = new URL(state.from, request.url);
+    const dest = oauthAbsoluteUrl(request, state.from, origin);
     const response = NextResponse.redirect(dest);
     clearOAuthCookie(response);
     response.cookies.set(
@@ -133,7 +147,7 @@ export async function GET(request: NextRequest) {
 
   const pro = await linkGoogleToEligiblePro(profile);
   if (pro) {
-    const dest = new URL(state.from, request.url);
+    const dest = oauthAbsoluteUrl(request, state.from, origin);
     const response = NextResponse.redirect(dest);
     clearOAuthCookie(response);
     response.cookies.set(
@@ -157,13 +171,13 @@ export async function GET(request: NextRequest) {
 
   if (isBetaModeFromRequest(request)) {
     const response = NextResponse.redirect(
-      loginUrl(request, "pro", "beta", state.from)
+      loginUrl(request, "pro", "beta", state.from, origin)
     );
     clearOAuthCookie(response);
     return response;
   }
 
-  const signup = new URL("/professionnel", request.url);
+  const signup = oauthAbsoluteUrl(request, "/professionnel", origin);
   signup.searchParams.set("google", "1");
   signup.hash = "inscription";
   const response = NextResponse.redirect(signup);

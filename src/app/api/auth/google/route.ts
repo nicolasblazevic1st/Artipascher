@@ -5,6 +5,7 @@ import {
   createOAuthState,
   encodeOAuthStateCookie,
   isGoogleOAuthConfigured,
+  oauthAbsoluteUrl,
   oauthCookieOptions,
   publicOriginFromRequest,
   sanitizeOAuthFrom,
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   const role: GoogleOAuthRole = roleParam === "pro" ? "pro" : "client";
   if (roleParam !== "client" && roleParam !== "pro") {
     return NextResponse.redirect(
-      new URL(`${loginPath("client")}?google=invalid`, request.url)
+      oauthAbsoluteUrl(request, `${loginPath("client")}?google=invalid`)
     );
   }
 
@@ -30,14 +31,14 @@ export async function GET(request: NextRequest) {
   );
 
   if (!isGoogleOAuthConfigured()) {
-    const dest = new URL(loginPath(role), request.url);
+    const dest = oauthAbsoluteUrl(request, loginPath(role));
     dest.searchParams.set("google", "unavailable");
     dest.searchParams.set("from", from);
     return NextResponse.redirect(dest);
   }
 
   const origin = publicOriginFromRequest(request);
-  const state = createOAuthState(role, from);
+  const state = createOAuthState(role, from, origin);
   const url = buildGoogleAuthorizationUrl(origin, state);
   const response = NextResponse.redirect(url);
   response.cookies.set(
