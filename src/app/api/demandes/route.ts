@@ -28,7 +28,7 @@ import {
   normalizeFrenchMobile,
 } from "@/lib/phone-format";
 import {
-  MAX_CONTACT_UNLOCKS_PER_REQUEST,
+  MAX_CONTACT_UNLOCKS_PUBLIC_FORM,
   parseMaxContactArtisans,
 } from "@/lib/contact-slots";
 import { parseMinGoogleRating } from "@/lib/google-rating";
@@ -268,8 +268,19 @@ export async function POST(request: NextRequest) {
     const requestedContacts = parseMaxContactArtisans(
       formData.get("maxContactArtisans")
     );
-    const maxContactArtisans =
-      requestedContacts ?? MAX_CONTACT_UNLOCKS_PER_REQUEST;
+    if (
+      requestedContacts == null ||
+      requestedContacts > MAX_CONTACT_UNLOCKS_PUBLIC_FORM
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Indiquez combien d’artisans peuvent vous contacter (de 1 à 3).",
+        },
+        { status: 400 }
+      );
+    }
+    const maxContactArtisans = requestedContacts;
 
     const photosError = validatePhotoFiles(photos);
     if (photosError) {

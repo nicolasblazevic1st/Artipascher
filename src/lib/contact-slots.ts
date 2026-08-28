@@ -7,6 +7,8 @@ export const MIN_CONTACT_ARTISANS = 1;
 export const MAX_CONTACT_UNLOCKS_PER_REQUEST = 5;
 /** Petites interventions (ticket bas) : 3 artisans max, le client peut en choisir moins. */
 export const MAX_CONTACT_UNLOCKS_SMALL_JOB = 3;
+/** Formulaire public : le particulier choisit de 1 à 3 artisans. */
+export const MAX_CONTACT_UNLOCKS_PUBLIC_FORM = MAX_CONTACT_UNLOCKS_SMALL_JOB;
 
 /** Plafond selon le ticket : le particulier choisit de 1 jusqu’à ce max. */
 export function maxContactArtisansForTier(
