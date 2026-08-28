@@ -8,7 +8,7 @@ export const TRUST_PILLARS = [
     id: "rc",
     label: "Assurance pro",
     detail:
-      "Chantier assuré — Aucun risque financier en cas d'incident sur les travaux.",
+      "Chantier assuré — Réduction significative du risque financier en cas d'incident sur les travaux.",
   },
   {
     id: "google",
