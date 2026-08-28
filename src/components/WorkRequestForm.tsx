@@ -35,7 +35,10 @@ import {
   trackEvent,
   trackLeadFormConversion,
 } from "@/lib/analytics-events";
-import { MAX_CONTACT_UNLOCKS_PER_REQUEST } from "@/lib/contact-slots";
+import {
+  MAX_CONTACT_UNLOCKS_PUBLIC_FORM,
+  MIN_CONTACT_ARTISANS,
+} from "@/lib/contact-slots";
 import { adsWorkQueryFromParams } from "@/lib/work-categories";
 import { readPersistedAdsLanding } from "@/lib/ads-landing";
 
@@ -96,6 +99,9 @@ export default function WorkRequestForm({
     null
   );
   const [acceptContactTerms, setAcceptContactTerms] = useState(false);
+  const [maxContactArtisans, setMaxContactArtisans] = useState(
+    MAX_CONTACT_UNLOCKS_PUBLIC_FORM
+  );
   const [phone, setPhone] = useState(defaults?.phone ?? "");
   const [phoneVerifiedE164, setPhoneVerifiedE164] = useState(
     defaults?.phoneVerifiedE164 ?? ""
@@ -472,7 +478,7 @@ export default function WorkRequestForm({
     formData.set("phone", phone);
     formData.set("acceptContactTerms", acceptContactTerms ? "true" : "false");
     formData.set("clientKind", "individual");
-    formData.set("maxContactArtisans", String(MAX_CONTACT_UNLOCKS_PER_REQUEST));
+    formData.set("maxContactArtisans", String(maxContactArtisans));
     formData.set("adsHint", adsHint);
     formData.delete("photos");
     photoFiles.forEach((file) => formData.append("photos", file));
@@ -842,6 +848,46 @@ export default function WorkRequestForm({
             )}
           </div>
 
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-slate-900">
+              Combien d&apos;artisans peuvent vous contacter ?
+            </legend>
+            <p className="mb-2 text-xs text-slate-500">
+              Ils débloquent vos coordonnées. 1 à 3, à vous de choisir.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from(
+                {
+                  length:
+                    MAX_CONTACT_UNLOCKS_PUBLIC_FORM - MIN_CONTACT_ARTISANS + 1,
+                },
+                (_, i) => MIN_CONTACT_ARTISANS + i
+              ).map((n) => (
+                <label
+                  key={n}
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border px-2 py-3 text-sm ${
+                    maxContactArtisans === n
+                      ? "border-brand-500 bg-brand-50"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="maxContactArtisans"
+                    value={n}
+                    checked={maxContactArtisans === n}
+                    onChange={() => setMaxContactArtisans(n)}
+                    className="sr-only"
+                  />
+                  <span className="text-lg font-semibold text-slate-900">{n}</span>
+                  <span className="text-[10px] text-slate-500">
+                    {n === 1 ? "artisan" : "artisans"}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
           <label
             className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
               acceptContactTerms
@@ -865,8 +911,9 @@ export default function WorkRequestForm({
                 J&apos;accepte d&apos;être rappelé par des artisans de ma zone
               </span>
               <span className="mt-0.5 block text-xs text-slate-500">
-                Jusqu&apos;à {MAX_CONTACT_UNLOCKS_PER_REQUEST} professionnels
-                peuvent débloquer vos coordonnées.{" "}
+                Jusqu&apos;à {maxContactArtisans} professionnel
+                {maxContactArtisans > 1 ? "s" : ""} peuvent débloquer vos
+                coordonnées.{" "}
                 <Link href="/cgu" className="underline" target="_blank">
                   CGU
                 </Link>{" "}
