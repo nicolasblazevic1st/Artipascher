@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ClientLoginForm from "@/components/client/ClientLoginForm";
+import { isGoogleOAuthConfigured } from "@/lib/google-oauth";
 
 export const metadata: Metadata = {
   title: "Connexion particulier",
@@ -20,11 +21,11 @@ export default function ClientLoginPage() {
           </div>
         </div>
         <p className="mb-6 text-sm text-slate-600">
-          Connectez-vous avec l&apos;email et le mot de passe de votre compte particulier pour
-          suivre vos demandes de travaux (publication possible sans compte).
+          Connectez-vous avec Google, ou avec l&apos;email et le mot de passe de
+          votre compte particulier.
         </p>
         <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
-          <ClientLoginForm />
+          <ClientLoginForm googleEnabled={isGoogleOAuthConfigured()} />
         </Suspense>
       </div>
     </div>

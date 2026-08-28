@@ -228,7 +228,10 @@ export interface ProRegistration {
   qualificationLevel?: QualificationLevel;
   /** Documents transmis à l'inscription (RC pro, etc.). */
   documents?: ProDocument[];
-  passwordHash: string;
+  /** Absent si le compte n’a été créé que via Google. */
+  passwordHash?: string;
+  /** Identifiant Google (`sub`) si le compte est lié. */
+  googleSub?: string;
   status: AdminReviewStatus;
   createdAt: string;
   reviewedAt?: string;
@@ -273,7 +276,10 @@ export type WorkScope = "privatif" | "commun";
 export interface ClientAccount {
   id: string;
   email: string;
-  passwordHash: string;
+  /** Absent si le compte n’a été créé que via Google. */
+  passwordHash?: string;
+  /** Identifiant Google (`sub`) si le compte est lié. */
+  googleSub?: string;
   firstName: string;
   lastName: string;
   phone?: string;

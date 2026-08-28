@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import GoogleSignInButton, {
+  GoogleAuthDivider,
+  googleAuthHref,
+} from "@/components/GoogleSignInButton";
 import HelpTooltip from "@/components/HelpTooltip";
 import ProDocumentFilePicker from "@/components/pro/ProDocumentFilePicker";
 import {
@@ -38,13 +42,18 @@ import { isValidSiretFormat, normalizeSiret, type RcsVerificationResult } from "
 
 type FormStatus = "idle" | "verifying" | "verified" | "submitting" | "success" | "error";
 
-export default function ProRegistrationForm() {
+export default function ProRegistrationForm({
+  googleEnabled = false,
+}: {
+  googleEnabled?: boolean;
+}) {
   const [siret, setSiret] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [googleLinked, setGoogleLinked] = useState(false);
   const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({});
   const [jobByGroup, setJobByGroup] = useState<Record<string, string>>({});
   const [rcsGroupIds, setRcsGroupIds] = useState<Set<string>>(new Set());
@@ -81,6 +90,29 @@ export default function ProRegistrationForm() {
     return () => {
       cancelled = true;
       window.clearTimeout(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (new URLSearchParams(window.location.search).get("google") !== "1") {
+      return;
+    }
+    document.getElementById("inscription")?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/pro/auth/google/pending")
+      .then((res) => res.json())
+      .then((data: { linked?: boolean; email?: string }) => {
+        if (cancelled || !data?.linked || !data.email) return;
+        setGoogleLinked(true);
+        setEmail(data.email);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -230,7 +262,7 @@ export default function ProRegistrationForm() {
       return;
     }
 
-    if (password !== passwordConfirm) {
+    if (!googleLinked && password !== passwordConfirm) {
       setError("Les mots de passe ne correspondent pas.");
       setStatus("error");
       trackProValidationError("password_mismatch");
@@ -366,6 +398,28 @@ export default function ProRegistrationForm() {
       onClick={(e) => noteProSection(e.target)}
       className="space-y-4"
     >
+      {googleEnabled && !googleLinked && (
+        <>
+          <GoogleSignInButton
+            href={googleAuthHref("pro", "/professionnel")}
+            label="Continuer avec Google"
+          />
+          <p className="text-center text-xs text-slate-500">
+            Compte existant : connexion directe. Nouveau : email prérempli, SIRET
+            et documents restent obligatoires.
+          </p>
+          <GoogleAuthDivider />
+        </>
+      )}
+      {googleLinked && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <p className="font-semibold">Compte Google relié</p>
+          <p className="mt-1">
+            Email prérempli. Il reste à vérifier le SIRET, les métiers et les
+            assurances — sans mot de passe.
+          </p>
+        </div>
+      )}
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-semibold">Accès réservé aux entreprises inscrites au RCS</p>
         <p className="mt-1 text-amber-800">
@@ -451,7 +505,7 @@ export default function ProRegistrationForm() {
       {!fieldsEnabled && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
           Vérifiez votre SIRET pour débloquer la suite : coordonnées, métiers,
-          documents obligatoires et mot de passe.
+          documents obligatoires{googleLinked ? "." : " et mot de passe."}
         </p>
       )}
 
@@ -474,7 +528,8 @@ export default function ProRegistrationForm() {
           onChange={(e) => setEmail(e.target.value)}
           className={inputClass}
           required={fieldsEnabled}
-          disabled={!fieldsEnabled}
+          disabled={!fieldsEnabled || googleLinked}
+          readOnly={googleLinked}
         />
 
         <input
@@ -755,6 +810,7 @@ export default function ProRegistrationForm() {
         })}
       </section>
 
+      {!googleLinked && (
       <div className="space-y-4" data-pro-section="password">
         <div>
           <label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
@@ -767,7 +823,7 @@ export default function ProRegistrationForm() {
             onChange={(e) => setPassword(e.target.value)}
             className={inputClass}
             placeholder="Min. 8 caractères, lettre et chiffre"
-            required={fieldsEnabled}
+            required={fieldsEnabled && !googleLinked}
             minLength={8}
             disabled={!fieldsEnabled}
             autoComplete="new-password"
@@ -788,7 +844,7 @@ export default function ProRegistrationForm() {
             onChange={(e) => setPasswordConfirm(e.target.value)}
             className={inputClass}
             placeholder="Retapez le mot de passe"
-            required={fieldsEnabled}
+            required={fieldsEnabled && !googleLinked}
             minLength={8}
             disabled={!fieldsEnabled}
             autoComplete="new-password"
@@ -798,6 +854,7 @@ export default function ProRegistrationForm() {
           </p>
         </div>
       </div>
+      )}
 
       <div data-pro-section="submit">
         <button
@@ -817,14 +874,26 @@ export default function ProRegistrationForm() {
         <div className="space-y-2 text-center text-sm text-emerald-700">
           <p className="font-semibold">Inscription enregistrée.</p>
           <p>
-            Vos documents sont en cours de vérification par notre équipe. Un
-            email de confirmation vient de vous être envoyé. Validez votre
-            adresse puis{" "}
-            <Link href="/pro/login" className="font-semibold underline">
-              connectez-vous à votre espace pro
-            </Link>
-            — l&apos;accès aux contacts s&apos;ouvrira après validation des
-            documents.
+            {googleLinked ? (
+              <>
+                Vos documents sont en cours de vérification.{" "}
+                <Link href="/pro" className="font-semibold underline">
+                  Accéder à l&apos;espace pro
+                </Link>{" "}
+                — les contacts s&apos;ouvrent après validation des documents.
+              </>
+            ) : (
+              <>
+                Vos documents sont en cours de vérification par notre équipe. Un
+                email de confirmation vient de vous être envoyé. Validez votre
+                adresse puis{" "}
+                <Link href="/pro/login" className="font-semibold underline">
+                  connectez-vous à votre espace pro
+                </Link>
+                — l&apos;accès aux contacts s&apos;ouvrira après validation des
+                documents.
+              </>
+            )}
           </p>
         </div>
       )}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ClientContactPublicCta from "@/components/ClientContactPublicCta";
+import OfferJsonLd from "@/components/OfferJsonLd";
 import ContactSlotsBanner from "@/components/ContactSlotsBanner";
 import CoproprieteBanner from "@/components/CoproprieteBanner";
 import OfferClientRequirements from "@/components/OfferClientRequirements";
@@ -17,6 +18,7 @@ import {
   SAMPLE_AUCTIONS,
   formatLocation,
 } from "@/lib/data";
+import { BRAND } from "@/lib/brand";
 import { PUBLIC_OFFERS_PATH, publishedAtForRequest } from "@/lib/public-offers";
 import { countContactUnlocksForAuction } from "@/lib/store";
 import {
@@ -67,8 +69,27 @@ export default async function OffreDetailPage({ params }: Props) {
     resolved.publishedAt ??
     (workRequest ? publishedAtForRequest(workRequest) : undefined);
 
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL ?? BRAND.siteUrl).replace(
+    /\/$/,
+    ""
+  );
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+      {!isTest && (
+        <OfferJsonLd
+          name={resolved.title}
+          url={`${origin}/offres/${id}`}
+          category={workCategory}
+          city={resolved.city}
+          department={resolved.department}
+          unlockPriceEur={unlockPricing.unlockPriceEur}
+          slotsTaken={unlockCount}
+          slotsMax={resolveMaxContactArtisans(workRequest)}
+          status={resolved.status}
+          publishedAt={publishedAt}
+        />
+      )}
       <Link href={PUBLIC_OFFERS_PATH} className="text-sm font-medium text-brand-700">
         ← Retour aux offres
       </Link>

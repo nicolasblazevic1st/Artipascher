@@ -22,6 +22,15 @@ import {
 } from "@/lib/trade-guarantees";
 import { requestEmailVerification } from "@/lib/email-verification";
 import {
+  GOOGLE_PRO_PENDING_COOKIE,
+  decodeGoogleProPending,
+  oauthCookieOptions,
+} from "@/lib/google-oauth";
+import {
+  PRO_SESSION_COOKIE,
+  encodeProSession,
+} from "@/lib/pro-auth";
+import {
   addProRegistration,
   setProRegistrationDocuments,
   setProTradeSelections,
@@ -70,6 +79,23 @@ export async function POST(request: NextRequest) {
     const tradeSelectionsRaw = String(formData.get("tradeSelections") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+    const pendingGoogle = decodeGoogleProPending(
+      request.cookies.get(GOOGLE_PRO_PENDING_COOKIE)?.value
+    );
+    const googleSignup = Boolean(
+      pendingGoogle &&
+        pendingGoogle.email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (pendingGoogle && !googleSignup) {
+      return NextResponse.json(
+        {
+          error:
+            "L’email doit correspondre au compte Google utilisé. Recommencez « Continuer avec Google ».",
+        },
+        { status: 400 }
+      );
+    }
 
     const documentFiles: Record<string, File | null> = {};
     for (const doc of PRO_REGISTRATION_DOCUMENTS) {
@@ -78,9 +104,13 @@ export async function POST(request: NextRequest) {
         entry instanceof File && entry.size > 0 ? entry : null;
     }
 
-    if (!siret || !email || !password || !companyName) {
+    if (!siret || !email || !companyName || (!googleSignup && !password)) {
       return NextResponse.json(
-        { error: "SIRET RCS vérifié, email et mot de passe obligatoires." },
+        {
+          error: googleSignup
+            ? "SIRET RCS vérifié et email Google obligatoires."
+            : "SIRET RCS vérifié, email et mot de passe obligatoires.",
+        },
         { status: 400 }
       );
     }
@@ -103,16 +133,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password !== passwordConfirm) {
-      return NextResponse.json(
-        { error: "Les mots de passe ne correspondent pas." },
-        { status: 400 }
-      );
-    }
+    if (!googleSignup) {
+      if (password !== passwordConfirm) {
+        return NextResponse.json(
+          { error: "Les mots de passe ne correspondent pas." },
+          { status: 400 }
+        );
+      }
 
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      return NextResponse.json({ error: passwordError }, { status: 400 });
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        return NextResponse.json({ error: passwordError }, { status: 400 });
+      }
     }
 
     const tradeSelections = parseTradeSelections(tradeSelectionsRaw);
@@ -185,7 +217,10 @@ export async function POST(request: NextRequest) {
       rcsVerified: true,
       legalRepresentatives: registry.legalRepresentatives ?? [],
       level1Audit,
-      passwordHash: hashPassword(password),
+      passwordHash: googleSignup ? undefined : hashPassword(password),
+      googleSub: googleSignup ? pendingGoogle?.googleSub : undefined,
+      emailVerified: googleSignup ? true : false,
+      emailVerifiedAt: googleSignup ? new Date().toISOString() : undefined,
       documents: [],
     });
 
@@ -290,19 +325,45 @@ export async function POST(request: NextRequest) {
           : "Documents reçus — en attente de validation admin.",
     });
 
-    await requestEmailVerification(email, "pro");
+    if (!googleSignup) {
+      await requestEmailVerification(email, "pro");
+    }
 
-    return NextResponse.json(
-      {
-        success: true,
-        id: entry.id,
-        level1Certified: false,
-        pendingReview: true,
-        message:
-          "Inscription enregistrée. Vos documents sont en cours de vérification par notre équipe. Vérifiez votre email, puis connectez-vous : l’accès aux contacts sera ouvert après validation.",
-      },
-      { status: 201 }
-    );
+    const payload = {
+      success: true,
+      id: entry.id,
+      level1Certified: false,
+      pendingReview: true,
+      googleLinked: googleSignup,
+      message: googleSignup
+        ? "Inscription enregistrée. Vos documents sont en cours de vérification. Vous pouvez accéder à l’espace pro : les contacts s’ouvriront après validation."
+        : "Inscription enregistrée. Vos documents sont en cours de vérification par notre équipe. Vérifiez votre email, puis connectez-vous : l’accès aux contacts sera ouvert après validation.",
+    };
+
+    const response = NextResponse.json(payload, { status: 201 });
+    if (googleSignup && pendingGoogle) {
+      response.cookies.set(GOOGLE_PRO_PENDING_COOKIE, "", {
+        ...oauthCookieOptions(0),
+        maxAge: 0,
+      });
+      response.cookies.set(
+        PRO_SESSION_COOKIE,
+        encodeProSession({
+          proId: entry.id,
+          companyName: entry.companyName,
+          email: entry.email,
+          siret: entry.siret,
+        }),
+        {
+          httpOnly: true,
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7,
+          secure: process.env.NODE_ENV === "production",
+        }
+      );
+    }
+    return response;
   } catch (error) {
     if (error instanceof Error && error.message === "EMAIL_ALREADY_USED") {
       return NextResponse.json(

@@ -6,6 +6,7 @@ import ProRegistrationForm from "@/components/ProRegistrationForm";
 import { FeatureCard } from "@/components/StepCard";
 import StepCard from "@/components/StepCard";
 import { getIsBetaMode } from "@/lib/beta-server";
+import { isGoogleOAuthConfigured } from "@/lib/google-oauth";
 import { formatUnlockPriceRange } from "@/lib/pricing-tiers";
 
 export const metadata: Metadata = {
@@ -159,7 +160,7 @@ export default async function ProfessionnelPage() {
             {beta ? (
               <BetaClosedNotice title="Inscriptions professionnelles fermées" />
             ) : (
-              <ProRegistrationForm />
+              <ProRegistrationForm googleEnabled={isGoogleOAuthConfigured()} />
             )}
           </div>
         </div>

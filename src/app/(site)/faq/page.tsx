@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import BetaAwareLink from "@/components/BetaAwareLink";
+import FaqJsonLd from "@/components/FaqJsonLd";
 import { FAQ_ITEMS } from "@/lib/data";
 import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function FaqPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      <FaqJsonLd />
       <h1 className="text-4xl font-bold text-slate-900">Foire aux questions</h1>
       <p className="mt-2 text-slate-600">
         Tout sur Nord Artisan Pro : demandes de travaux et mise en relation dans le

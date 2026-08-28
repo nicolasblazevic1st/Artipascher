@@ -1611,6 +1611,83 @@ export async function linkOrphanWorkRequests(
   if (changed) await writeStore(store);
 }
 
+export async function getClientByGoogleSub(
+  googleSub: string
+): Promise<ClientAccount | null> {
+  if (!googleSub) return null;
+  const store = await readStore();
+  return store.clientAccounts.find((c) => c.googleSub === googleSub) ?? null;
+}
+
+export async function upsertClientFromGoogle(profile: {
+  sub: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}): Promise<ClientAccount> {
+  const store = await readStore();
+  const emailLower = profile.email.trim().toLowerCase();
+  const now = new Date().toISOString();
+  const bySub = store.clientAccounts.find((c) => c.googleSub === profile.sub);
+  const byEmail = store.clientAccounts.find(
+    (c) => c.email.toLowerCase() === emailLower
+  );
+  const existing = bySub ?? byEmail;
+  if (existing) {
+    existing.googleSub = profile.sub;
+    existing.emailVerified = true;
+    existing.emailVerifiedAt = existing.emailVerifiedAt ?? now;
+    if (!existing.firstName && profile.firstName) {
+      existing.firstName = profile.firstName;
+    }
+    if (!existing.lastName && profile.lastName) {
+      existing.lastName = profile.lastName;
+    }
+    await writeStore(store);
+    return existing;
+  }
+
+  const client: ClientAccount = {
+    id: newId("client"),
+    email: profile.email.trim(),
+    googleSub: profile.sub,
+    firstName: profile.firstName.trim(),
+    lastName: profile.lastName.trim(),
+    emailVerified: true,
+    emailVerifiedAt: now,
+    createdAt: now,
+  };
+  store.clientAccounts.push(client);
+  await writeStore(store);
+  return client;
+}
+
+export async function linkGoogleToEligiblePro(profile: {
+  sub: string;
+  email: string;
+}): Promise<ProRegistration | null> {
+  const store = await readStore();
+  const emailLower = profile.email.trim().toLowerCase();
+  const now = new Date().toISOString();
+  const pro =
+    store.proRegistrations.find(
+      (p) =>
+        p.googleSub === profile.sub &&
+        (p.status === "approved" || p.status === "pending")
+    ) ??
+    store.proRegistrations.find(
+      (p) =>
+        p.email.toLowerCase() === emailLower &&
+        (p.status === "approved" || p.status === "pending")
+    );
+  if (!pro) return null;
+  pro.googleSub = profile.sub;
+  pro.emailVerified = true;
+  pro.emailVerifiedAt = pro.emailVerifiedAt ?? now;
+  await writeStore(store);
+  return pro;
+}
+
 export async function ensureClientAccount(data: {
   email: string;
   password: string;
@@ -1632,7 +1709,14 @@ export async function ensureClientAccount(data: {
     : null;
 
   if (existing) {
-    if (!verifyPassword(data.password, existing.passwordHash)) {
+    const existingHash = existing.passwordHash;
+    if (!existingHash) {
+      return {
+        error:
+          "Un compte existe déjà avec cet email. Connectez-vous avec Google.",
+      };
+    }
+    if (!verifyPassword(data.password, existingHash)) {
       return {
         error:
           "Un compte existe déjà avec cet email. Connectez-vous à votre espace ou utilisez le bon mot de passe.",

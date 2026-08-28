@@ -5,6 +5,7 @@ import {
 } from "@/lib/client-auth";
 import {
   authenticateClient,
+  getClientByEmail,
   isEmailVerified,
   linkOrphanWorkRequests,
 } from "@/lib/store";
@@ -30,6 +31,16 @@ export async function POST(request: NextRequest) {
 
   const client = await authenticateClient(email, password);
   if (!client) {
+    const existing = await getClientByEmail(email);
+    if (existing && !existing.passwordHash) {
+      return NextResponse.json(
+        {
+          error:
+            "Ce compte a été créé avec Google. Utilisez « Continuer avec Google ».",
+        },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { error: "Email ou mot de passe incorrect." },
       { status: 401 }

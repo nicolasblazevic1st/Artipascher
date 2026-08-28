@@ -42,7 +42,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/admin")) {
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
     const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
     if (!isValidSessionToken(token)) {
       const loginUrl = new URL("/admin/login", request.url);
@@ -55,7 +55,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/pro")) {
+  if (pathname === "/pro" || pathname.startsWith("/pro/")) {
     const token = request.cookies.get(PRO_SESSION_COOKIE)?.value;
     if (!isValidProSessionToken(token)) {
       const loginUrl = new URL("/pro/login", request.url);
