@@ -62,6 +62,23 @@ export function validateClientAddress(fields: {
   );
 }
 
+/** Formulaire public : commune BAN seulement (pas de rue). */
+export function validateClientCityLocation(fields: {
+  postalCode: unknown;
+  city: unknown;
+}): string | null {
+  return validatePostalCode(fields.postalCode) ?? validateCity(fields.city);
+}
+
+export function isCityOnlyAddress(request: AddressFields): boolean {
+  const line = (request.addressLine ?? "").trim();
+  if (!line) return true;
+  return (
+    line.localeCompare(request.city.trim(), "fr", { sensitivity: "accent" }) ===
+    0
+  );
+}
+
 type AddressFields = Pick<
   WorkRequest,
   "addressLine" | "addressLine2" | "postalCode" | "city" | "department"
@@ -69,6 +86,11 @@ type AddressFields = Pick<
 
 /** Adresse complète pour admin et coordonnées pro débloquées. */
 export function formatWorkRequestAddress(request: AddressFields): string {
+  if (isCityOnlyAddress(request)) {
+    return request.postalCode
+      ? `${request.postalCode} ${request.city}`
+      : `${request.city} (${request.department})`;
+  }
   if (request.addressLine && request.postalCode) {
     const lines = [request.addressLine];
     if (request.addressLine2?.trim()) lines.push(request.addressLine2.trim());
@@ -80,7 +102,7 @@ export function formatWorkRequestAddress(request: AddressFields): string {
 
 /** Une ligne rue + complément (sans CP/ville). */
 export function formatStreetAddress(request: AddressFields): string {
-  if (!request.addressLine) return request.city;
+  if (isCityOnlyAddress(request) || !request.addressLine) return request.city;
   return request.addressLine2?.trim()
     ? `${request.addressLine}, ${request.addressLine2.trim()}`
     : request.addressLine;

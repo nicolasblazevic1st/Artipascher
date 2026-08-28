@@ -11,7 +11,7 @@ Remplace le métier et la ville selon le groupe (`Plombier sur Bailleul`, `Couvr
 
 - Marque : **Nord Artisan Pro**
 - Site : `https://nord-artisan-pro.com`
-- Page d’arrivée **accueil** : `https://nord-artisan-pro.com/` — le visiteur voit le site, puis clique vers le formulaire. Un métier dans `utm_content` / `utm_term={keyword}` **précoche** la catégorie sur le formulaire ; une recherche vague (`trouver un artisan`, `devis travaux`) ouvre **« Je ne sais pas / plusieurs métiers »**.
+- Page d’arrivée **accueil** : `https://nord-artisan-pro.com/` — le visiteur voit le site, puis clique vers le formulaire. `utm_content` / `utm_term={keyword}` servent d’**indice** pour orienter vers le bon métier (plus de grille à cocher : le particulier décrit le projet, indique la ville, confirme le mobile).
 - Alias **uniquement** pour les pubs / anciens liens déjà envoyés vers `/travaux` (même formulaire). Pas dans le menu ni le sitemap.
 - Hors pub (restent sur le site, pas de groupe) : Rénovation énergétique, Rénovation complète
 
@@ -92,7 +92,7 @@ Garde uniquement **Recherche Google**.
 ### 2.5 Conversion
 
 Si ce n’est pas déjà lié : importer depuis GA4 l’événement `manual_event_SUBMIT_LEAD_FORM` (envoi du formulaire de demande).  
-Les annonces (métier ou générique) pointent vers `/particulier/demande` : le formulaire précoche le métier ou « Je ne sais pas » selon `utm_content` / `utm_term={keyword}`.
+Les annonces (métier ou générique) pointent vers `/particulier/demande` : le particulier décrit le projet ; `utm_content` / `utm_term={keyword}` aident à orienter le métier.
 
 ### 2.6 Groupes d’annonces
 

@@ -1,26 +1,10 @@
 import type { SelectedBanAddress } from "@/components/BanAddressAutocomplete";
-import type { ClientKind, WorkScope } from "@/lib/store-types";
-import type { PricingTierId } from "@/lib/pricing-tiers";
 
 const KEY = "nap_google_work_form_draft";
 
 export type GoogleWorkFormDraft = {
-  category: string;
-  unknownTrade: boolean;
-  selectedNafCodes: string[];
-  workOptionId: string;
-  pricingTier: PricingTierId | "";
-  workOptionOtherDescription: string;
   description: string;
-  descriptionTouched: boolean;
   selectedAddress: SelectedBanAddress | null;
-  propertyType: string;
-  clientKind: ClientKind;
-  workScope: WorkScope | "";
-  clientSiret: string;
-  maxContactArtisans: number;
-  minGoogleRating: number | "";
-  requireRge: boolean;
   phone: string;
 };
 

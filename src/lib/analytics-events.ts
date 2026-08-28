@@ -115,9 +115,9 @@ const UTM_KEYS = [
 ] as const;
 
 const LEAD_FORM_STEP_IDS: Record<LeadFormStepIndex, LeadFormStepId> = {
-  1: "travaux",
+  1: "projet",
   2: "bien",
-  3: "projet",
+  3: "contact",
   4: "contact",
 };
 

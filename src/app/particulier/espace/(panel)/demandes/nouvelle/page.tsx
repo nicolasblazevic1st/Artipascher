@@ -33,8 +33,9 @@ export default async function NouvelleDemandePage({
           compact
           heading="Remplissez le formulaire de travaux"
         >
-          Gratuit, sans commission. Des artisans vérifiés du Nord et du
-          Pas-de-Calais vous recontactent — en général sous 24–48&nbsp;h.
+          Gratuit, sans commission. Décrivez le projet (150 caractères min.),
+          indiquez la ville, confirmez le mobile. On oriente vers les bons
+          artisans.
         </WorkRequestLandingIntro>
       </div>
 
