@@ -3,7 +3,11 @@ import {
   PRO_SESSION_COOKIE,
   encodeProSession,
 } from "@/lib/pro-auth";
-import { authenticatePro, isEmailVerified } from "@/lib/store";
+import {
+  authenticatePro,
+  getLoginEligibleProByEmail,
+  isEmailVerified,
+} from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   let email: string;
@@ -26,6 +30,16 @@ export async function POST(request: NextRequest) {
 
   const pro = await authenticatePro(email, password);
   if (!pro) {
+    const existing = await getLoginEligibleProByEmail(email);
+    if (existing && !existing.passwordHash) {
+      return NextResponse.json(
+        {
+          error:
+            "Ce compte a été créé avec Google. Utilisez « Continuer avec Google ».",
+        },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       {
         error:

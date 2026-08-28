@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ProLoginForm from "@/components/pro/ProLoginForm";
+import { isGoogleOAuthConfigured } from "@/lib/google-oauth";
 
 export const metadata: Metadata = {
   title: "Connexion professionnel",
@@ -20,11 +21,11 @@ export default function ProLoginPage() {
           </div>
         </div>
         <p className="mb-6 text-sm text-slate-600">
-          Connectez-vous avec l&apos;email et le mot de passe définis lors de votre inscription
-          (compte approuvé par l&apos;administrateur).
+          Connexion en un clic avec Google si votre email pro est déjà inscrit,
+          sinon inscription RCS préremplie.
         </p>
         <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
-          <ProLoginForm />
+          <ProLoginForm googleEnabled={isGoogleOAuthConfigured()} />
         </Suspense>
       </div>
     </div>

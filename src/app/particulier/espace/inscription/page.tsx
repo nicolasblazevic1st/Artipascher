@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import BetaClosedNotice from "@/components/BetaClosedNotice";
 import ClientRegisterForm from "@/components/client/ClientRegisterForm";
 import { getIsBetaMode } from "@/lib/beta-server";
+import { isGoogleOAuthConfigured } from "@/lib/google-oauth";
 
 export const metadata: Metadata = {
   title: "Créer un compte particulier",
@@ -30,7 +31,7 @@ export default async function ClientRegisterPage() {
           <BetaClosedNotice title="Inscriptions temporairement fermées" />
         ) : (
           <Suspense fallback={<p className="text-sm text-slate-500">Chargement…</p>}>
-            <ClientRegisterForm />
+            <ClientRegisterForm googleEnabled={isGoogleOAuthConfigured()} />
           </Suspense>
         )}
       </div>

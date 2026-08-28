@@ -4,14 +4,24 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useBetaMode } from "@/components/BetaModeProvider";
+import GoogleSignInButton, {
+  GOOGLE_AUTH_MESSAGES,
+  GoogleAuthDivider,
+  googleAuthHref,
+} from "@/components/GoogleSignInButton";
 
-export default function ProLoginForm() {
+export default function ProLoginForm({
+  googleEnabled = false,
+}: {
+  googleEnabled?: boolean;
+}) {
   const beta = useBetaMode();
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/pro";
   const resetSuccess = searchParams.get("reset") === "1";
   const verifiedSuccess = searchParams.get("verified") === "1";
+  const googleMessage = GOOGLE_AUTH_MESSAGES[searchParams.get("google") ?? ""];
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,6 +87,17 @@ export default function ProLoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {googleEnabled && (
+        <>
+          <GoogleSignInButton href={googleAuthHref("pro", from)} />
+          <GoogleAuthDivider />
+        </>
+      )}
+      {googleMessage && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {googleMessage}
+        </p>
+      )}
       {resetSuccess && (
         <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
           Votre mot de passe a été réinitialisé. Connectez-vous avec votre nouveau mot de passe.

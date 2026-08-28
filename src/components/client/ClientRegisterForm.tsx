@@ -3,12 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import GoogleSignInButton, {
+  GoogleAuthDivider,
+  googleAuthHref,
+} from "@/components/GoogleSignInButton";
 import {
   formatFrenchPhoneDisplay,
   normalizeFrenchMobile,
 } from "@/lib/phone-format";
 
-export default function ClientRegisterForm() {
+export default function ClientRegisterForm({
+  googleEnabled = false,
+}: {
+  googleEnabled?: boolean;
+}) {
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/particulier/espace/demandes";
   const loginHref = `/particulier/espace/login?from=${encodeURIComponent(
@@ -188,6 +196,23 @@ export default function ClientRegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {googleEnabled && (
+        <>
+          <GoogleSignInButton
+            href={googleAuthHref(
+              "client",
+              from.startsWith("/particulier/espace")
+                ? from
+                : "/particulier/espace"
+            )}
+            label="Créer mon compte avec Google"
+          />
+          <p className="text-center text-xs text-slate-500">
+            Le mobile reste à vérifier par SMS pour publier une demande.
+          </p>
+          <GoogleAuthDivider />
+        </>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="reg-firstName" className="mb-1 block text-sm font-medium text-slate-700">
