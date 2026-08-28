@@ -36,7 +36,7 @@ const FEATURES = [
   },
   {
     title: "Places limitées",
-    description: "Maximum 5 artisans par chantier — moins de concurrence inutile.",
+    description: "Jusqu'à 3 artisans par chantier — moins de concurrence inutile.",
   },
   {
     title: "Notifications",
@@ -63,7 +63,7 @@ const STEPS = [
   {
     title: "Débloquez les contacts",
     description:
-      `Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (${unlockRange} selon le ticket, max. 5 artisans).`,
+      `Parcourez les chantiers qui vous correspondent et débloquez les coordonnées (${unlockRange} selon le ticket, jusqu'à 3 artisans).`,
   },
   {
     title: "Concluez hors plateforme",

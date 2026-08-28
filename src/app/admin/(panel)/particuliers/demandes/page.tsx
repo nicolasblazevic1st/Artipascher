@@ -145,10 +145,10 @@ export default function AdminDemandesPage() {
                     </div>
                   )}
                   <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
-                    <div>Adresse : {formatWorkRequestAddress(r)}</div>
+                    <div>Ville : {formatWorkRequestAddress(r)}</div>
                     {r.addressVerifiedAt && (
                       <div className="text-emerald-700">
-                        Adresse vérifiée BAN · {new Date(r.addressVerifiedAt).toLocaleDateString("fr-FR")}
+                        Ville vérifiée BAN · {new Date(r.addressVerifiedAt).toLocaleDateString("fr-FR")}
                       </div>
                     )}
                     <div>
@@ -172,7 +172,7 @@ export default function AdminDemandesPage() {
                       Artisans max :{" "}
                       {typeof r.maxContactArtisans === "number"
                         ? r.maxContactArtisans
-                        : 5}
+                        : 3}
                     </div>
                     <div>
                       Note Google :{" "}
@@ -190,7 +190,7 @@ export default function AdminDemandesPage() {
                       Mise en contact : autorisée (CGU / CGV · max.{" "}
                       {typeof r.maxContactArtisans === "number"
                         ? r.maxContactArtisans
-                        : 5}
+                        : 3}
                       )
                     </div>
                     <div>{r.email}</div>

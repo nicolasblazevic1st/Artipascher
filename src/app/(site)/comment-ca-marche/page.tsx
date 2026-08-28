@@ -3,14 +3,13 @@ import Link from "next/link";
 import BetaAwareLink from "@/components/BetaAwareLink";
 import SiteExplainer from "@/components/SiteExplainer";
 import TrustPillars from "@/components/TrustPillars";
-import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
 import { WORK_REQUEST_FORM_PATH } from "@/lib/work-request-form-path";
 
 export const metadata: Metadata = {
   title: "Comment ça marche — Présentation",
   description:
-    "Jusqu'à 5 artisans vérifiés du Nord 59/62 : décennale, RC pro, avis Google, BODACC. Publiez votre demande, ils vous contactent.",
+    "Jusqu'à 3 artisans vérifiés du Nord 59/62 : décennale, RC pro, avis Google, BODACC. Publiez votre demande, ils vous contactent.",
 };
 
 export default function CommentCaMarchePage() {
@@ -26,7 +25,7 @@ export default function CommentCaMarchePage() {
           </h1>
           <p className="mx-auto mt-3 max-w-2xl text-slate-600">
             Gratuit pour vous — l&apos;artisan paie le contact. Vous publiez une
-            demande dans le Nord-Pas-de-Calais ; jusqu&apos;à 5 professionnels
+            demande dans le Nord-Pas-de-Calais ; jusqu&apos;à 3 artisans
             locaux contrôlés débloquent vos coordonnées et vous joignent.
           </p>
           <BetaAwareLink
@@ -38,7 +37,6 @@ export default function CommentCaMarchePage() {
           <p className="mt-3 text-sm text-slate-500">
             Même si vous ne savez pas le métier — un seul formulaire.
           </p>
-          <WorkTradesIconRow className="mt-6" />
         </div>
       </div>
 

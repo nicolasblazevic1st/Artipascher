@@ -5,11 +5,9 @@ import SiteExplainer from "@/components/SiteExplainer";
 import StepCard from "@/components/StepCard";
 import TrustPillars from "@/components/TrustPillars";
 import WorkRequestCta from "@/components/WorkRequestCta";
-import { WorkCategoryIcon } from "@/components/WorkTradesIcons";
 import { workRequestHrefFromNextParams } from "@/lib/ads-landing";
 import { FAQ_ITEMS } from "@/lib/data";
 import { listPublicAuctions } from "@/lib/work-request-auctions";
-import { WORK_CATEGORIES } from "@/lib/work-categories";
 
 const STEPS = [
   {
@@ -18,7 +16,7 @@ const STEPS = [
       "Décrivez votre projet (ville 59 ou 62, photos, détails). Aucun compte obligatoire. Notre équipe valide puis publie l’annonce.",
   },
   {
-    title: "Jusqu’à 5 artisans vous contactent",
+    title: "Jusqu’à 3 artisans vous contactent",
     description:
       "Des professionnels vérifiés de la région débloquent vos coordonnées et vous joignent pour un devis sur place.",
   },
@@ -77,39 +75,11 @@ export default async function HomePage({
 
       <TrustPillars />
 
-      <section className="bg-white py-12">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-3xl font-bold text-slate-900">
-            Catégories de travaux
-          </h2>
-          <p className="mt-2 text-center text-slate-600">
-            Tous corps de métier du bâtiment, artisans du Nord-Pas-de-Calais
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {WORK_CATEGORIES.map((category) => (
-              <WorkRequestCta
-                key={category}
-                placement="home_category"
-                category={category}
-                href={workRequestHrefFromNextParams(params, { category })}
-                className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:border-brand-300 hover:shadow-sm"
-              >
-                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
-                  <WorkCategoryIcon category={category} className="h-5 w-5" />
-                </span>
-                <p className="mt-3 font-medium text-slate-900">{category}</p>
-                <p className="mt-1 text-xs text-slate-500">Déposer une demande →</p>
-              </WorkRequestCta>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-slate-900">Comment ça marche ?</h2>
           <p className="mt-2 text-slate-600">
-            Une demande, jusqu&apos;à 5 artisans vérifiés, une mise en relation
+            Une demande, jusqu&apos;à 3 artisans vérifiés, une mise en relation
             claire
           </p>
         </div>
@@ -200,7 +170,7 @@ export default async function HomePage({
         <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-bold">Prêt à lancer votre projet ?</h2>
           <p className="mt-4 text-brand-100">
-            Gratuit pour vous — l&apos;artisan paie le contact. Jusqu&apos;à 5
+            Gratuit pour vous — l&apos;artisan paie le contact. Jusqu&apos;à 3
             artisans vérifiés du Nord-Pas-de-Calais.
           </p>
           <WorkRequestCta

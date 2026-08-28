@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import BetaAwareLink from "@/components/BetaAwareLink";
-import { WorkTradesIconRow } from "@/components/WorkTradesIcons";
 import { DATA_HOSTING_NOTICE } from "@/lib/data";
 import { formatUnlockPriceEur } from "@/lib/pricing-tiers";
 import { CONTACT_UNLOCK_REF_EUR } from "@/lib/store-types";
@@ -63,13 +62,11 @@ function SlideIntro() {
           Nord Artisan Pro · 100&nbsp;% Nord-Pas-de-Calais · 59 / 62
         </p>
         <h3 className="mt-4 text-xl font-bold sm:text-2xl">
-          Jusqu&apos;à 5 artisans vérifiés pour vos travaux
-          (vous choisissez le nombre : 1 à 5)
+          Jusqu&apos;à 3 artisans vérifiés pour vos travaux
         </h3>
         <p className="mt-2 text-sm text-brand-100 sm:text-base">
           Gratuit pour vous — l&apos;artisan paie le contact
         </p>
-        <WorkTradesIconRow className="mt-4 justify-start" tone="onDark" maxItems={5} />
         <p className="mt-3 text-xs text-brand-200/90">{DATA_HOSTING_NOTICE}</p>
         <BetaAwareLink
           href={`${WORK_REQUEST_FORM_PATH}#formulaire`}
@@ -124,7 +121,7 @@ function SlideAnnonce() {
         <dl className="grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-2 text-center">
           <div>
             <dt className="text-[10px] text-slate-500">Contacts</dt>
-            <dd className="text-sm font-bold text-brand-700">2 / 5</dd>
+            <dd className="text-sm font-bold text-brand-700">2 / 3</dd>
           </div>
           <div>
             <dt className="text-[10px] text-slate-500">Temps restant</dt>
@@ -136,8 +133,8 @@ function SlideAnnonce() {
             Visible par les artisans correspondants
           </p>
           <p className="mt-1 text-[10px] text-slate-600">
-            Consultation libre · déblocage si critères client OK — max. au choix
-            du client (1–5)
+            Consultation libre · déblocage si critères client OK — jusqu&apos;à
+            3 artisans
           </p>
         </div>
       </div>
@@ -151,9 +148,11 @@ function SlideContact() {
       <div className="explainer-enter space-y-3">
         <div className="flex items-center justify-between gap-2">
           <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-800">
-            Place 3 / 5 · vérifié
+            Place 2 / 3 · vérifié
           </span>
-          <span className="text-[10px] text-slate-500">Max. 1–5 artisans</span>
+          <span className="text-[10px] text-slate-500">
+            Jusqu&apos;à 3 artisans
+          </span>
         </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-xs font-semibold text-emerald-900">
@@ -213,8 +212,7 @@ function SlideCriteres() {
           </li>
         </ul>
         <p className="text-center text-[10px] text-slate-500">
-          Jusqu&apos;à 5 artisans vérifiés vous appellent — vous choisissez
-          combien (1 à 5)
+          Jusqu&apos;à 3 artisans vérifiés vous appellent
         </p>
       </div>
     </MockBrowserChrome>
@@ -226,7 +224,7 @@ function SlideCta() {
     <div className="explainer-enter rounded-xl bg-brand-800 p-6 text-center text-white sm:p-8">
       <h3 className="text-lg font-bold sm:text-xl">Prêt à lancer votre projet ?</h3>
       <p className="mt-2 text-sm text-brand-100">
-        Gratuit pour vous · 1 à 5 artisans vérifiés 59/62
+        Gratuit pour vous · jusqu&apos;à 3 artisans vérifiés 59/62
       </p>
       <BetaAwareLink
         href={`${WORK_REQUEST_FORM_PATH}#formulaire`}

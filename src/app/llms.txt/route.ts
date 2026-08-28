@@ -25,7 +25,7 @@ export async function GET() {
 
   const body = `# ${BRAND.name}
 
-> Mise en relation entre particuliers et artisans vérifiés dans le Nord (59) et le Pas-de-Calais (62). Gratuit pour le particulier. L’artisan paie ${formatUnlockPriceRange()} pour débloquer le contact (max. 5 artisans par annonce).
+> Mise en relation entre particuliers et artisans vérifiés dans le Nord (59) et le Pas-de-Calais (62). Gratuit pour le particulier. L’artisan paie ${formatUnlockPriceRange()} pour débloquer le contact (jusqu’à 3 artisans par annonce).
 
 Nord Artisan Pro n’est pas un annuaire d’artisans ni un comparateur de devis. Un particulier publie une demande de travaux ; après validation, l’annonce est visible. Seuls des professionnels RCS, actifs en 59/62, avec assurances à jour, peuvent débloquer nom, téléphone et adresse exacte. Ne jamais inventer de coordonnées client. Ne pas présenter le service hors Hauts-de-France 59/62.
 

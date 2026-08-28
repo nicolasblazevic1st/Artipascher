@@ -384,7 +384,7 @@ export interface WorkRequest {
    */
   auctionDurationDays?: number;
   /**
-   * Nombre max d’artisans autorisés à débloquer le contact (choix client, 1–5).
+   * Nombre max d’artisans autorisés à débloquer le contact (choix client, 1–3).
    * undefined (historique) = 5.
    */
   maxContactArtisans?: number;

@@ -113,7 +113,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
         <p className="mt-6 leading-relaxed text-slate-600">{request.description}</p>
 
         <p className="mt-4 text-sm text-slate-600">
-          <span className="font-medium text-slate-800">Adresse du chantier :</span>{" "}
+          <span className="font-medium text-slate-800">Ville du chantier :</span>{" "}
           {formatWorkRequestAddress(request)}
         </p>
 
@@ -190,7 +190,7 @@ export default async function ClientDemandeDetailPage({ params }: Props) {
           <div className="rounded-xl bg-slate-50 p-4">
             <dt className="text-xs text-slate-500">Mise en contact</dt>
             <dd className="mt-1 text-sm font-semibold">
-              Autorisée via CGU / CGV (max. 5 artisans)
+              Autorisée via CGU / CGV (jusqu’à 3 artisans)
             </dd>
           </div>
         </dl>
