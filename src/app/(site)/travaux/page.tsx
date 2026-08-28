@@ -19,5 +19,5 @@ export default async function TravauxAliasPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  return <WorkRequestPublicLanding searchParams={searchParams} />;
+  return <WorkRequestPublicLanding searchParams={searchParams} formPath="/travaux" />;
 }

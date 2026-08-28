@@ -23,6 +23,7 @@ interface Props {
   onSelect: (address: SelectedBanAddress | null) => void;
   onManualChange?: () => void;
   required?: boolean;
+  initialSelected?: SelectedBanAddress | null;
 }
 
 export default function BanAddressAutocomplete({
@@ -30,14 +31,24 @@ export default function BanAddressAutocomplete({
   onSelect,
   onManualChange,
   required = true,
+  initialSelected = null,
 }: Props) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialSelected?.label ?? "");
   const [suggestions, setSuggestions] = useState<BanSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
-  const [verified, setVerified] = useState(false);
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(
+    initialSelected?.label ?? null
+  );
+  const [verified, setVerified] = useState(Boolean(initialSelected));
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!initialSelected?.banAddressId) return;
+    setQuery(initialSelected.label);
+    setSelectedLabel(initialSelected.label);
+    setVerified(true);
+  }, [initialSelected?.banAddressId, initialSelected?.label]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

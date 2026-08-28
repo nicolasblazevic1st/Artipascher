@@ -21,6 +21,8 @@ type SignedCookiePayload = {
   from: string;
   verifier: string;
   exp: number;
+  /** Origine publique au moment du départ OAuth (évite localhost:3001 derrière Nginx). */
+  origin?: string;
 };
 
 export type GoogleProPending = {
@@ -78,8 +80,53 @@ function unsignPayload(token: string): string | null {
   }
 }
 
+function hostnameOf(hostOrUrl: string): string {
+  const trimmed = hostOrUrl.replace(/\/$/, "");
+  try {
+    if (trimmed.includes("://")) return new URL(trimmed).hostname.toLowerCase();
+  } catch {
+    /* ignore */
+  }
+  return trimmed.split(":")[0]?.toLowerCase() ?? "";
+}
+
+function isLoopbackHostname(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
+  );
+}
+
+export function isTrustedOAuthOrigin(origin: string): boolean {
+  try {
+    const parsed = new URL(origin);
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    if (isLoopbackHostname(host)) return true;
+    if (
+      host === BRAND.domain ||
+      host === `www.${BRAND.domain}` ||
+      host === `dev.${BRAND.domain}`
+    ) {
+      return parsed.protocol === "https:";
+    }
+    const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+    if (env && hostnameOf(env) === host) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Origine vue par le navigateur — jamais le port interne Next (3001 en prod).
+ * `request.url` derrière Nginx vaut souvent http://localhost:3001/...
+ */
 export function publicOriginFromRequest(request: NextRequest): string {
-  const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
   const host = (
     request.headers.get("x-forwarded-host") ??
     request.headers.get("host") ??
@@ -90,9 +137,34 @@ export function publicOriginFromRequest(request: NextRequest): string {
   const protoHeader = request.headers.get("x-forwarded-proto");
   const proto =
     protoHeader?.split(",")[0]?.trim() ||
-    (host.includes("localhost") || host.startsWith("127.") ? "http" : "https");
+    (host && isLoopbackHostname(hostnameOf(host)) ? "http" : "https");
+
+  const envIsPublic = Boolean(env && !isLoopbackHostname(hostnameOf(env)));
+  if (
+    process.env.NODE_ENV === "production" &&
+    envIsPublic &&
+    (!host || isLoopbackHostname(hostnameOf(host)))
+  ) {
+    return env;
+  }
+
   if (host) return `${proto}://${host}`;
   return env || BRAND.siteUrl;
+}
+
+export function oauthAbsoluteUrl(
+  request: NextRequest,
+  pathWithQuery: string,
+  originOverride?: string
+): URL {
+  const origin = (originOverride || publicOriginFromRequest(request)).replace(
+    /\/$/,
+    ""
+  );
+  const trusted = isTrustedOAuthOrigin(origin)
+    ? origin
+    : publicOriginFromRequest(request).replace(/\/$/, "");
+  return new URL(pathWithQuery, `${trusted}/`);
 }
 
 export function googleCallbackUrl(origin: string): string {
@@ -111,19 +183,34 @@ export function sanitizeOAuthFrom(
   if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("://")) {
     return fallback;
   }
+  const pathOnly = raw.split("?")[0]?.split("#")[0] ?? "";
+  const queryIndex = raw.indexOf("?");
+  const query = queryIndex >= 0 ? raw.slice(queryIndex).split("#")[0] : "";
+
   if (role === "client") {
+    if (pathOnly === "/particulier/demande" || pathOnly === "/travaux") {
+      return `${pathOnly}${query}`;
+    }
     if (
-      raw.startsWith("/particulier/espace") &&
-      !raw.startsWith("/particulier/espace/login") &&
-      !raw.startsWith("/particulier/espace/inscription")
+      pathOnly.startsWith("/particulier/espace") &&
+      !pathOnly.startsWith("/particulier/espace/login") &&
+      !pathOnly.startsWith("/particulier/espace/inscription")
     ) {
-      return raw;
+      return `${pathOnly}${query}`;
     }
     return fallback;
   }
-  if (raw.startsWith("/pro") && !raw.startsWith("/pro/login")) return raw;
-  if (raw.startsWith("/professionnel")) return raw;
+  if (pathOnly.startsWith("/pro") && !pathOnly.startsWith("/pro/login")) {
+    return pathOnly;
+  }
+  if (pathOnly.startsWith("/professionnel")) return pathOnly;
   return fallback;
+}
+
+export function isPublicWorkFormReturn(from: string | undefined): boolean {
+  if (!from) return false;
+  const pathOnly = from.split("?")[0]?.split("#")[0] ?? "";
+  return pathOnly === "/particulier/demande" || pathOnly === "/travaux";
 }
 
 export function encodeOAuthStateCookie(payload: SignedCookiePayload): string {
@@ -146,12 +233,17 @@ export function decodeOAuthStateCookie(
   }
 }
 
-export function createOAuthState(role: GoogleOAuthRole, from: string): SignedCookiePayload {
+export function createOAuthState(
+  role: GoogleOAuthRole,
+  from: string,
+  origin: string
+): SignedCookiePayload {
   return {
     nonce: randomBytes(16).toString("base64url"),
     role,
     from: sanitizeOAuthFrom(role, from),
     verifier: randomBytes(32).toString("base64url"),
+    origin: origin.replace(/\/$/, ""),
     exp: Date.now() + 10 * 60 * 1000,
   };
 }

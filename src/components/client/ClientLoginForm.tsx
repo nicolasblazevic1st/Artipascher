@@ -19,11 +19,17 @@ export default function ClientLoginForm({
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromParam = searchParams.get("from");
+  const fromPath = fromParam?.split("?")[0]?.split("#")[0] ?? "";
   const from =
     fromParam &&
-    fromParam.startsWith("/particulier/espace") &&
-    !fromParam.startsWith("/particulier/espace/inscription") &&
-    !fromParam.startsWith("/particulier/espace/login")
+    fromParam.startsWith("/") &&
+    !fromParam.startsWith("//") &&
+    !fromParam.includes("://") &&
+    (fromPath === "/particulier/demande" ||
+      fromPath === "/travaux" ||
+      (fromPath.startsWith("/particulier/espace") &&
+        !fromPath.startsWith("/particulier/espace/inscription") &&
+        !fromPath.startsWith("/particulier/espace/login")))
       ? fromParam
       : "/particulier/espace";
   const resetSuccess = searchParams.get("reset") === "1";
@@ -74,7 +80,7 @@ export default function ClientLoginForm({
       return;
     }
 
-    router.push(from.startsWith("/particulier/espace") ? from : "/particulier/espace");
+    router.push(from);
     router.refresh();
   }
 
