@@ -13,7 +13,7 @@ export default function CookiesPage() {
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <h1 className="text-4xl font-bold text-slate-900">Politique de cookies</h1>
       <p className="mt-2 text-slate-600">
-        Dernière mise à jour : 6 août 2026
+        Dernière mise à jour : 28 août 2026
       </p>
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-slate-700">
@@ -48,6 +48,14 @@ export default function CookiesPage() {
             Ces cookies sont indispensables au fonctionnement du site (connexion
             à votre espace, sécurité). Ils ne nécessitent pas votre
             consentement.
+          </p>
+          <p className="mt-3">
+            Lors d&apos;une connexion via Google, vous êtes redirigé vers
+            accounts.google.com. Google dépose alors ses propres cookies,
+            selon sa politique de confidentialité. Les cookies{" "}
+            <span className="font-mono text-xs">nap_google_oauth</span> et{" "}
+            <span className="font-mono text-xs">nap_google_pro_pending</span>{" "}
+            sont strictement nécessaires à ce parcours.
           </p>
           <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
             <table className="min-w-full text-left text-sm">
@@ -85,6 +93,26 @@ export default function CookiesPage() {
                     Maintien de la session d&apos;administration
                   </td>
                   <td className="px-4 py-3">8 heures</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    nap_google_oauth
+                  </td>
+                  <td className="px-4 py-3">
+                    Sécurité de la connexion Google (état OAuth / PKCE), le
+                    temps du retour depuis Google
+                  </td>
+                  <td className="px-4 py-3">10 minutes</td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    nap_google_pro_pending
+                  </td>
+                  <td className="px-4 py-3">
+                    Préremplissage de l&apos;inscription artisan après Google
+                    (email, nom), avant dépôt SIRET / documents
+                  </td>
+                  <td className="px-4 py-3">30 minutes</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3 font-mono text-xs">

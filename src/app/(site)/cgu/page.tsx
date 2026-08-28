@@ -103,7 +103,10 @@ export default function CguPage() {
         </ul>
         <p className="mt-3">
           <strong>Nord Artisan Pro n&apos;est pas</strong>{" "} entreprise de travaux,
-          maître d&apos;œuvre, assureur, ni partie au contrat de chantier. Le
+          maître d&apos;œuvre, assureur, ni partie au contrat de chantier. Les
+          mentions du type « nos artisans vérifiés » désignent les
+          Professionnels du <strong>réseau mis en relation</strong>{" "} (indépendants
+          contrôlés), non des salariés ni des mandataires de l&apos;Éditeur. Le
           prix des travaux, le devis formalisé, le planning, la facturation et
           le paiement du chantier sont conclus{" "}
           <strong>directement entre le Client et l&apos;Artisan</strong>, hors
@@ -129,7 +132,14 @@ export default function CguPage() {
         <p className="mt-3">
           L&apos;inscription nécessite des informations exactes et à jour. Le
           Client et le Professionnel s&apos;engagent à maintenir la
-          confidentialité de leurs identifiants.
+          confidentialité de leurs identifiants. Un compte peut être créé ou
+          ouvert via <strong>email et mot de passe</strong>{" "} ou via{" "}
+          <strong>Continuer avec Google</strong>{" "} (email et profil fournis par
+          Google). Dans ce second cas, un mot de passe Plateforme n&apos;est
+          pas obligatoire. Le Professionnel doit ensuite compléter SIRET et
+          documents ; le Client doit toujours{" "}
+          <strong>vérifier son mobile par SMS</strong>{" "} pour publier une
+          demande.
         </p>
         <h3>5.2 Professionnels</h3>
         <p className="mt-3">
@@ -436,9 +446,13 @@ export default function CguPage() {
         </p>
         <h3>12.2 Vérifications</h3>
         <p className="mt-3">
-          Les contrôles (SIRET, documents, vérification du téléphone) visent à
-          renforcer la confiance mais ne constituent pas une garantie absolue.
-          Le Client reste responsable de ses vérifications avant engagement.
+          Les contrôles (SIRET, documents, BODACC, vérification du téléphone)
+          visent à renforcer la confiance et à{" "}
+          <strong>réduire</strong>{" "} certains risques (notamment d&apos;abandon
+          de chantier lié à une procédure collective publiée). Ils{" "}
+          <strong>ne constituent pas une garantie absolue</strong>{" "}
+          d&apos;absence de malfaçon, d&apos;incident ou d&apos;abandon. Le
+          Client reste responsable de ses vérifications avant engagement.
         </p>
         <h3>12.3 Disponibilité</h3>
         <p className="mt-3">

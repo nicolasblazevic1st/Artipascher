@@ -37,20 +37,26 @@ export default function ConfidentialitePage() {
         <ul>
           <li>
             <strong>Compte Client</strong>{" "} : identité, email, téléphone
-            (mobile), statut de vérification SMS, mot de passe (hashé), adresse
+            (mobile), statut de vérification SMS, identifiant de compte Google
+            le cas échéant (email, nom, identifiant technique fourni par
+            Google), mot de passe (hashé, facultatif si connexion Google),
+            adresse
             de chantier, description et photos du projet, préférences (ex.
             ancienneté d&apos;entreprise souhaitée, alerte SMS contact),
             éventuel SIRET (société) ;
           </li>
           <li>
             <strong>Compte Professionnel</strong>{" "} : raison sociale, SIRET/SIREN,
-            email, téléphone, documents (décennale, RC pro…), métiers,
+            email, téléphone, identifiant de compte Google le cas échéant,
+            documents (décennale, RC pro…), métiers,
             historique de déblocages et éventuel solde résiduel ;
           </li>
           <li>
             <strong>Prospects acquisition</strong>{" "} : données d&apos;entreprises
             (SIRET, code NAF, ville, téléphone enrichi le cas échéant, sources
-            publiques type annuaire / enrichissement) utilisées pour la
+            publiques type annuaire / enrichissement, y compris l&apos;API{" "}
+            <strong>Google Places</strong>{" "} pour un numéro professionnel ou une
+            note d&apos;avis publics) utilisées pour la
             prospection SMS, email et/ou téléphonique et le suivi d&apos;opposition
             (STOP SMS / désinscription email / opposition téléphone / déjà contacté) ;
           </li>
@@ -68,6 +74,22 @@ export default function ConfidentialitePage() {
             <strong>Prospection téléphonique</strong>{" "} : traces de contact /
             opposition (numéro, SIRET, date, résultat indicatif) pour éviter
             les relances non souhaitées ;
+          </li>
+          <li>
+            <strong>Connexion Google</strong>{" "} : si vous choisissez « Continuer
+            avec Google », l&apos;Éditeur reçoit de Google (via le protocole
+            OAuth) votre email, votre nom et un identifiant technique, pour
+            créer ou ouvrir votre compte. Le mot de passe Google n&apos;est
+            jamais transmis. Le mobile reste vérifié par SMS pour publier une
+            demande ;
+          </li>
+          <li>
+            <strong>Offres publiques indexables</strong>{" "} : les Annonces
+            publiées (métier, ville, département, places de contact, sans nom,
+            téléphone ni rue) peuvent être exposées en JSON et dans un fichier
+            destiné aux moteurs et assistants (
+            <code className="rounded bg-slate-100 px-1">/llms.txt</code>
+            ), sans données nominatives ;
           </li>
           <li>
             <strong>Paiements</strong>{" "} : données de transaction via le
@@ -110,7 +132,7 @@ export default function ConfidentialitePage() {
         <ul>
           <li>
             Exécution du contrat / mesures précontractuelles : création de
-            compte, vérification du mobile Client, mise en relation, gestion des
+            compte (y compris via Google), vérification du mobile Client, mise en relation, gestion des
             annonces, ventes de mises en contact, alertes de contact ;
           </li>
           <li>
@@ -264,7 +286,8 @@ export default function ConfidentialitePage() {
           <li>
             aux sous-traitants techniques : hébergeur ({LEGAL_HOST.name}),
             emails de compte (OVH), emails et SMS marketing (Brevo), SMS (OVH),
-            paiement (Stripe), analytics (Google) si consentement ;
+            paiement (Stripe), connexion et enrichissement Google (Sign-In,
+            Places) le cas échéant, analytics (Google) si consentement ;
           </li>
           <li>aux autorités compétentes sur réquisition légale.</li>
         </ul>
@@ -277,9 +300,10 @@ export default function ConfidentialitePage() {
         <h2>6. Transferts hors UE</h2>
         <p className="mt-3">
           L&apos;hébergement applicatif principal est situé en France (OVH).
-          Certains sous-traitants (paiement, analytics) peuvent impliquer des
-          traitements hors UE encadrés par des garanties appropriées (clauses
-          contractuelles types, etc.).
+          Certains sous-traitants (paiement Stripe, connexion Google, Places,
+          analytics si consentement) peuvent impliquer des traitements hors UE
+          encadrés par des garanties appropriées (clauses contractuelles types,
+          etc.).
         </p>
       </section>
 

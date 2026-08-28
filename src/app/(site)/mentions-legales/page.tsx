@@ -117,8 +117,8 @@ export default function MentionsLegalesPage() {
             <Link href="/cgu">Conditions générales d&apos;utilisation (CGU)</Link>
           </li>
           <li>
-            <Link href="/cgv">Conditions générales de vente (CGV)</Link> — vente
-            de solde aux professionnels
+            <Link href="/cgv">Conditions générales de vente (CGV)</Link> — mises
+            en contact (déblocage des coordonnées) vendues aux professionnels
           </li>
           <li>
             <Link href="/confidentialite">Politique de confidentialité</Link>
