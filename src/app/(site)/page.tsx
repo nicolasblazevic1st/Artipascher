@@ -50,7 +50,7 @@ export default async function HomePage({
             Nord Artisan Pro · 100&nbsp;% Nord-Pas-de-Calais · 59 / 62
           </p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Jusqu&apos;à 5 artisans vérifiés pour vos travaux
+            Nos artisans vérifiés pour vos travaux
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-brand-100">
             Gratuit pour vous — l&apos;artisan paie le contact. Vous êtes mis en
